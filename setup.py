@@ -41,6 +41,6 @@ setup(
     install_requires=[
         'PyYAML==3.12',
         'Jinja2==2.9.6',
-        'click==6.7'
+        'argh==0.26.2'
     ]
 )

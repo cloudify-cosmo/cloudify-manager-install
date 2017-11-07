@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-import yaml
+import argh
 from time import time
 from traceback import format_exception
 
@@ -57,6 +57,11 @@ COMPONENTS = [
 
 START_TIME = time()
 
+command = argh.EntryPoint(
+    'cfy_manager',
+    dict(description='Cloudify Manager operations')
+)
+
 
 def _print_time():
     running_time = time() - START_TIME
@@ -95,6 +100,7 @@ def install():
 
 def configure():
     logger.notice('Configuring Cloudify Manager...')
+    validate(skip_validations=True)
     set_globals()
 
     for component in COMPONENTS:
@@ -116,4 +122,4 @@ def remove():
 
 
 if __name__ == '__main__':
-    install()
+    argh.dispatch_commands([install, configure, remove])
