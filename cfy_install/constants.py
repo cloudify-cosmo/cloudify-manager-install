@@ -4,8 +4,8 @@ BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 
 CLOUDIFY_INSTALL_DIR = '/opt/cloudify-manager-install'
-USER_CONFIG_PATH = join(CLOUDIFY_INSTALL_DIR, 'config.json')
-DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'defaults.json')
+USER_CONFIG_PATH = join(CLOUDIFY_INSTALL_DIR, 'config.yaml')
+DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'defaults.yaml')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'

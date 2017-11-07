@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import yaml
 from time import time
 from traceback import format_exception
 

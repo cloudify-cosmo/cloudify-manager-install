@@ -41,11 +41,11 @@ pushd cloudify-manager-install
     curl ${MANAGER_RESOURCES_URL} -o ${MANAGER_RESOURCES_TAR}
 
     print_line "Creating cfy_install executable..."
-    pex https://github.com/mcouthon/cloudify-manager-install/archive/master.tar.gz -o cfy_install -m cfy_install.main:install
+    pex https://github.com/mcouthon/cloudify-manager-install/archive/master.tar.gz -o cfy_manager -m cfy_install.main
 
-    print_line "Getting install.sh and config.json from the repo..."
+    print_line "Getting install.sh and config.yaml from the repo..."
     curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/install.sh -o install.sh
-    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/config.json -o config.json
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/config.yaml -o config.yaml
 popd
 
 print_line "Creating rpm..."
@@ -57,7 +57,7 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-manager-install: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-manager-install -v 1.0 --after-install cloudify-manager-install/install.sh cloudify-manager-install/cfy_install=/usr/bin/cfy_install cloudify-manager-install/${MANAGER_RESOURCES_TAR}=/opt/cloudify-manager-install/${MANAGER_RESOURCES_TAR} cloudify-manager-install/config.json=/opt/cloudify-manager-install/config.json cloudify-manager-install
+fpm -s dir -t rpm -n cloudify-manager-install -v 1.0 --after-install cloudify-manager-install/install.sh cloudify-manager-install/cfy_manager=/usr/bin/cfy_manager cloudify-manager-install/${MANAGER_RESOURCES_TAR}=/opt/cloudify-manager-install/${MANAGER_RESOURCES_TAR} cloudify-manager-install/config.yaml=/opt/cloudify-manager-install/config.yaml cloudify-manager-install
 
 print_line "Cleaning up..."
 rm -rf cloudify-manager-install

@@ -17,8 +17,8 @@ def package_files(directory):
 
 
 extra_files = package_files('cfy_install')
-extra_files.append(join('..', 'config.json'))
-extra_files.append(join('..', 'defaults.json'))
+extra_files.append(join('..', 'config.yaml'))
+extra_files.append(join('..', 'defaults.yaml'))
 
 
 setup(
@@ -38,4 +38,9 @@ setup(
     },
     zip_safe=False,
     package_data={'': extra_files},
+    install_requires=[
+        'PyYAML==3.12',
+        'Jinja2==2.9.6',
+        'click==6.7'
+    ]
 )

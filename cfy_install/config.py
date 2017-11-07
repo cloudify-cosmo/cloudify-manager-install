@@ -1,4 +1,4 @@
-import json
+import yaml
 import collections
 from os.path import isfile
 
@@ -30,13 +30,13 @@ class Config(dict):
         super(Config, self).__init__(*args, **kwargs)
 
         with open(DEFAULT_CONFIG_PATH, 'r') as f:
-            self.update(json.load(f))
+            self.update(yaml.load(f))
 
-        # Allow `config.json` not to exist - this is normal for teardown
+        # Allow `config.yaml` not to exist - this is normal for teardown
         if isfile(USER_CONFIG_PATH):
-            # Override any default values with values from config.json
+            # Override any default values with values from config.yaml
             with open(USER_CONFIG_PATH, 'r') as f:
-                dict_merge(self, json.load(f))
+                dict_merge(self, yaml.load(f))
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault('temp_paths_to_remove', [])
