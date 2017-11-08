@@ -1,11 +1,11 @@
 # REST and UI internal server - always SSL enabled
-server {{
+server {
   # server listening for internal requests
-  listen              {constants[internal_rest_port]} ssl default_server;
+  listen              {{ constants.internal_rest_port }} ssl default_server;
   server_name         _;
 
-  ssl_certificate     {constants[internal_cert_path]};
-  ssl_certificate_key {constants[internal_key_path]};
+  ssl_certificate     {{ constants.internal_cert_path }};
+  ssl_certificate_key {{ constants.internal_key_path }};
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 
@@ -20,4 +20,4 @@ server {{
 
   # Serves the File Server (backed by the cloudify-resources upstream).
   include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
-}}
+}

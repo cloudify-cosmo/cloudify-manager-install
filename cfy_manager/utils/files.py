@@ -5,6 +5,8 @@ from glob import glob
 from tempfile import mkstemp
 from os.path import join, isabs
 
+from jinja2 import Environment, FileSystemLoader
+
 from .network import is_url, curl_download
 from .common import move, sudo, copy, remove, chmod
 
@@ -14,6 +16,8 @@ from ..exceptions import FileError
 from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
 
 logger = get_logger('Files')
+
+_template_env = Environment(loader=FileSystemLoader('/'))
 
 
 def _read(path):
@@ -113,8 +117,8 @@ def remove_files(file_list, ignore_failure=False):
 
 def deploy(src, dst, render=True):
     if render:
-        content = _read(src)
-        content = content.format(**config)
+        template = _template_env.get_template(src)
+        content = template.render(**config)
         write_to_file(content, dst)
     else:
         copy(src, dst)

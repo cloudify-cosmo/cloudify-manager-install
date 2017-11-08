@@ -4,7 +4,7 @@ import os
 import shutil
 import argparse
 
-HOME_DIR = "{stage[home_dir]}"
+HOME_DIR = "{{ stage.home_dir }}"
 
 
 def _restore(snapshot_root):

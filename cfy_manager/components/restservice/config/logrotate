@@ -1,4 +1,4 @@
-{restservice[log_dir]}/*.log {{
+{{ restservice.log_dir }}/*.log {
         hourly
         missingok
         rotate 7
@@ -10,4 +10,4 @@
         postrotate
                 [ -f /var/run/gunicorn.pid ] && kill -USR1 $(cat /var/run/gunicorn.pid)
         endscript
-}}
+}

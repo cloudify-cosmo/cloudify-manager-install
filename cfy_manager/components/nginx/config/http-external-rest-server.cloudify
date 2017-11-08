@@ -1,5 +1,5 @@
 # REST and UI server.
-server {{
+server {
   # server listening
   listen              *:80;
   server_name         _;
@@ -17,4 +17,4 @@ server {{
 
   # Serves the File Server (backed by the cloudify-resources upstream).
   include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
-}}
+}

@@ -1,4 +1,4 @@
-{mgmtworker[log_dir]}/logs/*.log {{
+{{ mgmtworker.log_dir }}/logs/*.log {
         hourly
         rotate 7
         size 100M
@@ -7,4 +7,4 @@
         delaycompress
         missingok
         notifempty
-}}
+}
