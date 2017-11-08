@@ -86,6 +86,8 @@ sys.excepthook = _exception_handler
 
 
 def install():
+    """ Install Cloudify Manager """
+
     logger.notice('Installing Cloudify Manager...')
     validate()
     set_globals()
@@ -99,6 +101,8 @@ def install():
 
 
 def configure():
+    """ Configure Cloudify Manager """
+
     logger.notice('Configuring Cloudify Manager...')
     validate(skip_validations=True)
     set_globals()
@@ -112,6 +116,8 @@ def configure():
 
 
 def remove():
+    """ Uninstall Cloudify Manager """
+
     logger.notice('Removing Cloudify Manager...')
 
     for component in COMPONENTS:
