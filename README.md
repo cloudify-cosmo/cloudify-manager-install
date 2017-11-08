@@ -52,7 +52,7 @@ to ensure the `rpm` is then copied to the other machine.
 the private and public IPs are required. Any other values you might
 wish to edit are set in [defaults.yaml](defaults.yaml). The format of
 the file is basic YAML format.
-10. To install the manager, execute  `cfy_install`.
+10. To install the manager, execute  `cfy_manager`.
 11. After the command has finished, you should have a working manager,
 with `cfy` installed for both the current user and `root`.
 
@@ -67,14 +67,14 @@ As stated above, all the available configurations can be found in
 At any point, you can run `cfy_remove`, which will remove everything
 Cloudify related from the machine, except the installation code, that
 will remain in `/opt/cloudify-manager-install/config.yaml`, so that you will
-have the ability to run `cfy_install` again.
+have the ability to run `cfy_manager` again.
 
 
 ## Goodies
-* `cfy_install` and `cfy_config` can be run as many times as you like.
+* `cfy_manager` and `cfy_config` can be run as many times as you like.
 * Want to reconfigure the manager, but don't want to drop the DB?
 Set `"postgres": {"create_db": false}"` in the config file.
-* Working in offline mode? No problem. `cfy_install` can be used as is,
+* Working in offline mode? No problem. `cfy_manager` can be used as is,
 assuming the RPM was somehow delivered to the machine.
 * Running installs on multiple machines in parallel? It's easier than
 ever. Because you no longer need a central CLI location, parallelization

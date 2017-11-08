@@ -40,12 +40,13 @@ pushd cloudify-manager-install
     print_line "Downloading cloudify manager resources tar..."
     curl ${MANAGER_RESOURCES_URL} -o ${MANAGER_RESOURCES_TAR}
 
-    print_line "Creating cfy_install executable..."
-    pex https://github.com/mcouthon/cloudify-manager-install/archive/master.tar.gz -o cfy_manager -m cfy_install.main
+    # TODO: Change branch to master
+    print_line "Creating cfy_manager executable..."
+    pex https://github.com/mcouthon/cloudify-manager-install/archive/add-3rd-party-support.tar.gz -o cfy_manager -m cfy_manager.main
 
     print_line "Getting install.sh and config.yaml from the repo..."
-    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/install.sh -o install.sh
-    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/config.yaml -o config.yaml
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/add-3rd-party-support/install.sh -o install.sh
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/add-3rd-party-support/config.yaml -o config.yaml
 popd
 
 print_line "Creating rpm..."

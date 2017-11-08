@@ -16,14 +16,14 @@ def package_files(directory):
     return paths
 
 
-extra_files = package_files('cfy_install')
+extra_files = package_files('cfy_manager')
 extra_files.append(join('..', 'config.yaml'))
 extra_files.append(join('..', 'defaults.yaml'))
 
 
 setup(
     name='cloudify-manager-install',
-    version='0.2',
+    version='0.3',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
@@ -31,9 +31,9 @@ setup(
     description='Local install of a cloudify manager',
     entry_points={
         'console_scripts': [
-            'cfy_install = cfy_install.main:install',
-            'cfy_remove = cfy_install.main:remove',
-            'cfy_config = cfy_install.main:configure'
+            'cfy_install = cfy_manager.main:install',
+            'cfy_remove = cfy_manager.main:remove',
+            'cfy_config = cfy_manager.main:configure'
         ]
     },
     zip_safe=False,

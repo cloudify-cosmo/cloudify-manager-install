@@ -1,10 +1,10 @@
 # This script has to run using the Python executable with which
-# the install was performed (the one that has cfy_install in it)
+# the install was performed (the one that has cfy_manager in it)
 
 import argparse
 
-from cfy_install.utils import certificates
-from cfy_install.constants import CERT_METADATA_FILE_PATH
+from cfy_manager.utils import certificates
+from cfy_manager.constants import CERT_METADATA_FILE_PATH
 
 
 parser = argparse.ArgumentParser()
