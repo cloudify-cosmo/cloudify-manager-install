@@ -21,7 +21,7 @@ steps 1-6).
 2. Download the [`create_rpm.sh`](create_rpm.sh) script to the machine
 with:
 
-`curl -L https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/create_rpm.sh -o /tmp/create_rpm.sh `
+`curl -L https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/packaging/create_rpm.sh -o /tmp/create_rpm.sh `
 
 3. Give it executable permissions:
 
