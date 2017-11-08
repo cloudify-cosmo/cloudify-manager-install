@@ -30,6 +30,7 @@ from .components.validations import validate
 from .logger import get_logger
 
 from .utils.files import remove_temp_files
+from .utils.certificates import create_internal_certs
 
 logger = get_logger('Bootstrap')
 
@@ -128,4 +129,4 @@ def remove():
 
 
 if __name__ == '__main__':
-    argh.dispatch_commands([install, configure, remove])
+    argh.dispatch_commands([install, configure, remove, create_internal_certs])

@@ -29,9 +29,7 @@ def deploy_cert_script():
 def deploy_sudo_scripts():
     scripts_to_deploy = {
         'manager-ip-setter.sh': 'Run manager IP setter script',
-        'update-provider-context.py': 'Run update provider context script',
-        'create-internal-ssl-certs.py':
-            'Run the scripts that recreates internal SSL certs'
+        'update-provider-context.py': 'Run update provider context script'
     }
 
     for script, description in scripts_to_deploy.items():

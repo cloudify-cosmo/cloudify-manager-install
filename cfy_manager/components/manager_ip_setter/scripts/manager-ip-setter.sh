@@ -30,7 +30,7 @@ function set_manager_ip() {
   /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-provider-context.py ${ip}
 
   echo "Creating internal SSL certificates.."
-  python /opt/cloudify/manager-ip-setter/create-internal-ssl-certs.py ${ip}
+  cfy_manager create-internal-certs --manager-ip ${ip}
 
   echo "Updating logstash config..."
   /usr/bin/sed -i -e 's/host => ".*"/host => "'"${ip}"'"/g' /etc/logstash/conf.d/logstash.conf

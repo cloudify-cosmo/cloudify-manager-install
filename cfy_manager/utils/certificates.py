@@ -1,3 +1,4 @@
+import argh
 import json
 import socket
 from os.path import join
@@ -216,3 +217,31 @@ def generate_ca_cert():
     logger.debug('Generated CA certificate: {0} and key: {1}'.format(
         const.CA_CERT_PATH, const.CA_KEY_PATH
     ))
+
+
+@argh.arg('--metadata',
+          help='File containing the cert metadata. It should be a '
+          'JSON file containing an object with the '
+          '"internal_rest_host" and "networks" fields.')
+@argh.arg('--manager_ip', help='The IP of this machine on the default network')
+def create_internal_certs(manager_ip=None,
+                          metadata=const.CERT_METADATA_FILE_PATH):
+    """
+    Recreate Cloudify Manager's internal certificates, based on the manager IP
+    and a metadata file input
+    """
+    cert_metadata = load_cert_metadata(filename=metadata)
+    internal_rest_host = manager_ip or cert_metadata['internal_rest_host']
+
+    networks = cert_metadata.get('networks', {})
+    networks['default'] = internal_rest_host
+    cert_ips = [internal_rest_host] + list(networks.values())
+    generate_internal_ssl_cert(
+        ips=cert_ips,
+        cn=internal_rest_host
+    )
+    store_cert_metadata(
+        internal_rest_host,
+        networks,
+        filename=metadata
+    )
