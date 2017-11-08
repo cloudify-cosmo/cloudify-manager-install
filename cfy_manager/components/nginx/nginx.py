@@ -188,51 +188,51 @@ def _deploy_nginx_config_files():
 
     resources = [
         resource(
-            src='{0}/http-external-rest-server.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'http-external-rest-server.cloudify'),
             dst='/etc/nginx/conf.d/http-external-rest-server.cloudify'
         ),
         resource(
-            src='{0}/https-external-rest-server.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'https-external-rest-server.cloudify'),
             dst='/etc/nginx/conf.d/https-external-rest-server.cloudify'
         ),
         resource(
-            src='{0}/https-internal-rest-server.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'https-internal-rest-server.cloudify'),
             dst='/etc/nginx/conf.d/https-internal-rest-server.cloudify'
         ),
         resource(
-            src='{0}/https-file-server.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'https-file-server.cloudify'),
             dst='/etc/nginx/conf.d/https-file-server.cloudify'
         ),
         resource(
-            src='{0}/nginx.conf'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'nginx.conf'),
             dst='/etc/nginx/nginx.conf'
         ),
         resource(
-            src='{0}/default.conf'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'default.conf'),
             dst='/etc/nginx/conf.d/default.conf',
         ),
         resource(
-            src='{0}/rest-location.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'rest-location.cloudify'),
             dst='/etc/nginx/conf.d/rest-location.cloudify',
         ),
         resource(
-            src='{0}/fileserver-location.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'fileserver-location.cloudify'),
             dst='/etc/nginx/conf.d/fileserver-location.cloudify',
         ),
         resource(
-            src='{0}/redirect-to-fileserver.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'redirect-to-fileserver.cloudify'),
             dst='/etc/nginx/conf.d/redirect-to-fileserver.cloudify',
         ),
         resource(
-            src='{0}/ui-locations.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'ui-locations.cloudify'),
             dst='/etc/nginx/conf.d/ui-locations.cloudify',
         ),
         resource(
-            src='{0}/composer-location.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'composer-location.cloudify'),
             dst='/etc/nginx/conf.d/composer-location.cloudify',
         ),
         resource(
-            src='{0}/logs-conf.cloudify'.format(CONFIG_PATH),
+            src=join(CONFIG_PATH, 'logs-conf.cloudify'),
             dst='/etc/nginx/conf.d/logs-conf.cloudify',
         )
     ]
