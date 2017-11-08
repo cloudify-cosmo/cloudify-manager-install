@@ -57,7 +57,7 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-manager-install: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-manager-install -v 1.0 --after-install cloudify-manager-install/install.sh cloudify-manager-install/cfy_manager=/usr/bin/cfy_manager cloudify-manager-install/${MANAGER_RESOURCES_TAR}=/opt/cloudify-manager-install/${MANAGER_RESOURCES_TAR} cloudify-manager-install/config.yaml=/opt/cloudify-manager-install/config.yaml cloudify-manager-install
+fpm -s dir -t rpm -n cloudify-manager-install --force -v 0.3 --after-install cloudify-manager-install/install.sh cloudify-manager-install/cfy_manager=/usr/bin/cfy_manager cloudify-manager-install/${MANAGER_RESOURCES_TAR}=/opt/cloudify-manager-install/${MANAGER_RESOURCES_TAR} cloudify-manager-install/config.yaml=/opt/cloudify-manager-install/config.yaml cloudify-manager-install
 
 print_line "Cleaning up..."
 rm -rf cloudify-manager-install
