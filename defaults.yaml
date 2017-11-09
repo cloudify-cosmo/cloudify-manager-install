@@ -145,6 +145,7 @@ mgmtworker:
   log_level: INFO
   min_workers: 2
   max_workers: 100
+  extra_env: {}
 
 cli:
   sources:
