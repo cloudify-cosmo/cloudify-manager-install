@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function create_install_rpm() {
-    # Get the manager single tar
+    # Get the manager single tar (can be either community or premium)
     MANAGER_RESOURCES_URL=`curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${CORE_BRANCH}/packages-urls/manager-single-tar.yaml`
 
     curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${CORE_BRANCH}/packaging/create_rpm.sh -o /tmp/create_rpm.sh
