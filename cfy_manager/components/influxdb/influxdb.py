@@ -102,8 +102,7 @@ def _install_influxdb():
 
 
 def _install():
-    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
-    if not influxdb_endpoint_ip:
+    if config[INFLUXB]['is_internal']:
         _install_influxdb()
 
 
