@@ -5,7 +5,7 @@ from .. import constants
 from ..config import config
 from ..logger import get_logger
 
-from .service_names import RABBITMQ, MANAGER
+from .service_names import RABBITMQ, MANAGER, INFLUXB
 
 from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES, AGENT, CONSTANTS,\
     ADMIN_PASSWORD
@@ -89,6 +89,19 @@ def _generate_password(length=12):
     return password
 
 
+def _set_influx_db_endpoint():
+    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
+
+    if influxdb_endpoint_ip:
+        config[INFLUXB]['is_internal'] = False
+        logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
+            influxdb_endpoint_ip))
+    else:
+        config[INFLUXB]['is_internal'] = True
+        influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
+        config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
+
+
 def set_globals():
     _set_ip_config()
     _set_agent_broker_credentials()
@@ -97,3 +110,4 @@ def set_globals():
     _set_constant_config()
     _set_community_edition()
     _set_admin_password()
+    _set_influx_db_endpoint()

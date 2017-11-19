@@ -7,10 +7,9 @@ from .. import (
     SERVICE_GROUP,
     CONFIG,
     ENDPOINT_IP,
-    PRIVATE_IP
 )
 
-from ..service_names import INFLUXB, MANAGER
+from ..service_names import INFLUXB
 
 from ... import constants
 from ...config import config
@@ -104,16 +103,7 @@ def _install_influxdb():
 
 def _install():
     influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
-
-    if influxdb_endpoint_ip:
-        config[INFLUXB]['is_internal'] = False
-        logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
-            influxdb_endpoint_ip))
-    else:
-        config[INFLUXB]['is_internal'] = True
-        influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
-        config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
-
+    if not influxdb_endpoint_ip:
         _install_influxdb()
 
 
