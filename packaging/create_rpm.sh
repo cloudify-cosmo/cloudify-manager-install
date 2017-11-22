@@ -27,13 +27,20 @@ fi
 
 
 MANAGER_RESOURCES_URL=$1
-BRANCH=${2:-master}
+INSTALL_PIP=${2:-true}
+BRANCH=${3:-master}
 
 print_line "Installing fpm dependencies..."
 sudo yum install -y -q ruby-devel gcc make rpm-build rubygems
 
 print_line "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
+
+if [ ${INSTALL_PIP} = "true" ]; then
+    print_line "Installing pip..."
+    curl -O https://bootstrap.pypa.io/get-pip.py
+    sudo python get-pip.py
+fi
 
 print_line "Installing pex..."
 sudo pip install pex
