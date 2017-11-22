@@ -20,6 +20,12 @@ function print_line() {
   echo -e "$COL_YELLOW $LINE $COL_RESET"
 }
 
+if [ $# -eq 0 ]; then
+    echo "You need to provide a resource URL for the script to work"
+    exit 1
+fi
+
+
 MANAGER_RESOURCES_URL=$1
 BRANCH=${2:-master}
 
