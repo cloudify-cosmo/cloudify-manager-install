@@ -25,6 +25,8 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+print_line "Validating user has sudo permissions..."
+sudo -n true
 
 MANAGER_RESOURCES_URL=$1
 INSTALL_PIP=${2:-true}
