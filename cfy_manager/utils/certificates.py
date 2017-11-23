@@ -260,3 +260,16 @@ def create_internal_certs(manager_ip=None,
         networks,
         filename=metadata
     )
+
+
+@argh.arg('--private-ip', help="The manager's private IP", required=True)
+@argh.arg('--public-ip', help="The manager's public IP", required=True)
+def create_external_certs(private_ip=None, public_ip=None):
+    """
+    Recreate Cloudify Manager's external certificates, based on the public
+    and private IPs
+    """
+    # Note: the function has default values for the arguments, but they
+    # are actually required by argh, so it won't be possible to call this
+    # function without them from the CLI
+    generate_external_ssl_cert(ips=[public_ip, private_ip], cn=public_ip)
