@@ -1,19 +1,42 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: python:2.7.13
+    machine: true
 
     working_directory: ~/cloudify-manager-install
+
+    environment:
+      - CONTAINER_NAME: cfy_manager
 
     steps:
       - checkout
       - run:
-          name: Install tox
-          command: pip install tox
+          name: Build and run base container
+          command: |
+            cd packaging/docker
+
+            docker-compose build
+            docker run --name cfy_manager -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined cfy_manager_image
       - run:
-          name: Run static analysis
-          command: tox -e flake8
+          name: Create RPM
+          command: |
+            cd packaging/docker
+
+            chmod +x build_rpm.sh
+            ./build_rpm.sh
       - run:
-          name: Run test cases
-          command: tox -e py27
+          name: Install Cloudify Manager
+          command: |
+            cd packaging/docker
+
+            chmod +x install_manager.sh
+            ./install_manager.sh
+#      - run:
+#          name: Install tox
+#          command: pip install tox
+#      - run:
+#          name: Run static analysis
+#          command: tox -e flake8
+#      - run:
+#          name: Run test cases
+#          command: tox -e py27
