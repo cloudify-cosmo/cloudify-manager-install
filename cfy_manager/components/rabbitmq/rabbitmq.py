@@ -248,6 +248,6 @@ def remove():
         join('/var/log', RABBITMQ)
     ])
     yum_remove('erlang')
-    delete_group(RABBITMQ)
     delete_service_user(RABBITMQ)
+    delete_group(RABBITMQ)
     logger.notice('RabbitMQ successfully removed')

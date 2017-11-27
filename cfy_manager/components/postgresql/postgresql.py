@@ -192,6 +192,6 @@ def remove():
     files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
     yum_remove('postgresql95')
     yum_remove('postgresql95-libs')
-    delete_group(POSTGRES_USER)
     delete_service_user(POSTGRES_USER)
+    delete_group(POSTGRES_USER)
     logger.notice('PostgreSQL successfully removed')

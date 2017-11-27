@@ -209,6 +209,6 @@ def remove():
     systemd.remove(INFLUXB)
     remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
     yum_remove(INFLUXB)
-    delete_group(INFLUXB)
     delete_service_user(INFLUXB)
+    delete_group(INFLUXB)
     logger.notice('InfluxDB successfully removed')
