@@ -10,6 +10,14 @@ jobs:
 
     steps:
       - checkout
+      # Running this step in the background allows us to run it in parallel
+      - run:
+          name: Python tests
+          background: true
+          command: |
+            pip install tox
+            tox -e flake8
+            tox -e py27
       - run:
           name: Build and run base container
           command: |
@@ -31,12 +39,3 @@ jobs:
 
             chmod +x install_manager.sh
             ./install_manager.sh
-#      - run:
-#          name: Install tox
-#          command: pip install tox
-#      - run:
-#          name: Run static analysis
-#          command: tox -e flake8
-#      - run:
-#          name: Run test cases
-#          command: tox -e py27
