@@ -7,6 +7,8 @@ jobs:
 
     environment:
       - CONTAINER_NAME: cfy_manager
+      - IMAGE_NAME: cfy_manager_image
+      - REMOTE_PATH: /root/cloudify-manager-install
 
     steps:
       - checkout
@@ -23,15 +25,15 @@ jobs:
           command: |
             cd packaging/docker
 
-            docker build -q --tag cfy_manager_image .
-            docker run --name cfy_manager -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN cfy_manager_image
+            docker build -q --tag ${IMAGE_NAME} .
+            docker run --name ${CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
+            docker cp ~/cloudify-manager-install ${CONTAINER_NAME}:${REMOTE_PATH}
+
+            docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
       - run:
           name: Create RPM
           command: |
-            cd packaging/docker
-
-            chmod +x build_rpm.sh
-            ./build_rpm.sh
+            docker exec -t ${CONTAINER_NAME} sh -c "${REMOTE_PATH}/packaging/docker/build_rpm.sh"
       - run:
           name: Install Cloudify Manager
           command: |
