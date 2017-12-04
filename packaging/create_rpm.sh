@@ -158,6 +158,14 @@ pushd tmp-install-rpm
     rm -rf versions
   popd
 
+  print_line "Creating cfy_manager executable..."
+  pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${BRANCH}.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
+
+  print_line "Getting install.sh from the repo..."
+  curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
+
+  print_line "Getting types.yaml from getcloudify..."
+  curl -L -O http://www.getcloudify.org/spec/cloudify/4.3.dev1/types.yaml
   print_line "Creating cfy_manager executable and getting the install.sh script..."
   if [[ -n "${LOCAL_PATH}" ]]; then
     pex ${LOCAL_PATH} -o cfy_manager -m cfy_manager.main --disable-cache
@@ -167,6 +175,7 @@ pushd tmp-install-rpm
     curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
   fi
 popd
+
 
 print_line "Creating rpm..."
 # -s dir: Source is a directory
@@ -189,6 +198,7 @@ RPMLOC=$(fpm \
   ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager \
   ./tmp-install-rpm/cloudify-manager-install=/opt \
   ./tmp-install-rpm/cloudify=/opt \
+  ./tmp-install-rpm/types.yaml=/opt/manager/resources/spec/types.yaml \
 )
 # Maintain something close to standard output but allow printing the actual location
 echo ${RPMLOC}
