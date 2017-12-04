@@ -21,15 +21,17 @@ jobs:
             tox -e flake8
             tox -e py27
       - run:
-          name: Build and run base container
+          name: Build base container
           command: |
-            cd packaging/docker
-
-            docker build -q --tag ${IMAGE_NAME} .
+            docker build --tag ${IMAGE_NAME} packaging/docker
+      - run:
+          name: Run base container
+          command: |
             docker run --name ${CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
+      - run:
+          name: Prepare base container
+          command: |
             docker cp ~/cloudify-manager-install ${CONTAINER_NAME}:${REMOTE_PATH}
-
-            docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
       - run:
           name: Create RPM
           command: |
