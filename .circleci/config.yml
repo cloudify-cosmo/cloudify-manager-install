@@ -23,8 +23,8 @@ jobs:
           command: |
             cd packaging/docker
 
-            docker-compose build
-            docker run --name cfy_manager -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined cfy_manager_image
+            docker build -q --tag cfy_manager_image .
+            docker run --name cfy_manager -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN cfy_manager_image
       - run:
           name: Create RPM
           command: |
