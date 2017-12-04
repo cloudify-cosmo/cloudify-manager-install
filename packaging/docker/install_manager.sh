@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 IMAGE_PUB_NAME="docker_cfy_manager"
 

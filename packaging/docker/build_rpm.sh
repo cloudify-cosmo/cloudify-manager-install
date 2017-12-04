@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 REMOTE_LOCATION='/root/cloudify-manager-install'
 
