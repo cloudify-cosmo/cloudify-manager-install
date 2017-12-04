@@ -14,7 +14,7 @@ echo "manager:
   security:
     admin_password: admin" > config.yaml
 
-docker cp config.yaml ${CONTAINER_NAME}:${REMOTE_PATH:-/root/cloudify-manager-install}/config.yaml
+docker cp config.yaml ${CONTAINER_NAME}:/opt/cloudify-manager-install/config.yaml
 
 echo "Installing manager..."
 docker exec -t ${CONTAINER_NAME} sh -c "cfy_manager install"
