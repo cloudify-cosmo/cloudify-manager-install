@@ -6,9 +6,9 @@ jobs:
     working_directory: ~/cloudify-manager-install
 
     environment:
-      - CONTAINER_NAME: cfy_manager
-      - IMAGE_NAME: cfy_manager_image
-      - REMOTE_PATH: /root/cloudify-manager-install
+      CONTAINER_NAME: cfy_manager
+      IMAGE_NAME: cfy_manager_image
+      REMOTE_PATH: /root/cloudify-manager-install
 
     steps:
       - checkout
