@@ -45,9 +45,9 @@ setup(
     description='Local install of a cloudify manager',
     entry_points={
         'console_scripts': [
-            'cfy_install = cfy_manager.main:install',
-            'cfy_remove = cfy_manager.main:remove',
-            'cfy_config = cfy_manager.main:configure'
+            'cfy_install = cfy_manager.main:install_command',
+            'cfy_remove = cfy_manager.main:remove_command',
+            'cfy_config = cfy_manager.main:configure_command'
         ]
     },
     zip_safe=False,
