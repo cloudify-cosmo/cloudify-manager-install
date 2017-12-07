@@ -17,6 +17,7 @@
 import sys
 import argh
 from time import time
+from functools import wraps
 from traceback import format_exception
 
 from .components import cli
@@ -186,6 +187,18 @@ def remove(verbose=False, force=False):
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
+
+
+def dispatch_argh(func):
+    @wraps(func)
+    def _inner():
+        return argh.dispatch_command(func)
+    return _inner
+
+# entry points for console_scripts
+install_command = dispatch_argh(install)
+configure_command = dispatch_argh(configure)
+remove_command = dispatch_argh(remove)
 
 
 if __name__ == '__main__':
