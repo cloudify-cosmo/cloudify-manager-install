@@ -51,6 +51,8 @@ provider_context:
       rules:
         - {'http://www.getcloudify.org/spec': 'file:///opt/manager/resources/spec'}
         - {'http://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
+        - {'https://www.getcloudify.org/spec': 'file:///opt/manager/resources/spec'}
+        - {'https://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
 
 agent:
   # A dict of network names and IP addresses associated with them.
