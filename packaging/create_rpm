@@ -295,7 +295,8 @@ def retrieve_resources(edition, branch):
 
 
 def retrieve_required_files(edition, types_yaml_url,
-                            installer_path, installer_branch):
+                            installer_path, installer_branch,
+                            diamond_plugin_url):
     """
         Retrieve all files required for the installer build, either locally or
         from repositories.
@@ -349,6 +350,17 @@ def retrieve_required_files(edition, types_yaml_url,
             types_yaml_url,
         ],
         error='Could not retrieve types.yaml!',
+    )
+    # Grab diamond-plugin
+    diamond_destination = os.path.join(RPM_BUILDER_BASE, 'plugin.yaml')
+    exit_helpfully_on_failure(
+        command=[
+            'curl',
+            '--location',  # Follow redirects for moved content
+            '-o', diamond_destination,
+            diamond_plugin_url,
+        ],
+        error='Could not retrieve diamond-plugin.yaml!',
     )
 
     print('Setting premium edition flag in config...')
@@ -514,6 +526,12 @@ def run_build_command(edition):
     ])
 
     mapping = '{source}={destination}'
+
+    types_destination ='/opt/manager/resources/spec'+\
+                       args.types_yaml_url.split('spec')[1]
+    diamond_destination = '/opt/manager/resources/spec'+\
+                       args.diamond_plugin_url.split('spec')[1]
+
     rpm_builder_command.extend([
         # What files to include in the package:
         # <package_path>=<path after RPM is installed>
@@ -526,9 +544,15 @@ def run_build_command(edition):
             source=os.path.join(RPM_BUILDER_BASE, 'cloudify'),
             destination='/opt',
         ),
+
         mapping.format(
             source=os.path.join(RPM_BUILDER_BASE, 'types.yaml'),
-            destination='/opt/manager/resources/spec/types.yaml',
+            destination=types_destination
+        ),
+
+        mapping.format(
+            source=os.path.join(RPM_BUILDER_BASE, 'plugin.yaml'),
+            destination=diamond_destination
         ),
     ])
 
@@ -548,7 +572,7 @@ def run_build_command(edition):
 
 
 def build_package(edition, branch, installer_branch, installer_path,
-                  should_install_pip, types_yaml_url):
+                  should_install_pip, types_yaml_url, diamond_plugin_url):
     """
         Build the package.
     """
@@ -568,6 +592,7 @@ def build_package(edition, branch, installer_branch, installer_path,
         types_yaml_url=types_yaml_url,
         installer_path=installer_path,
         installer_branch=installer_branch,
+        diamond_plugin_url=diamond_plugin_url
     )
 
     create_cfy_manager_command(
@@ -646,6 +671,14 @@ if __name__ == '__main__':
         ),
     )
 
+    parser.add_argument(
+        '-d', '--diamond-plugin-url',
+        help='Which diamond-plugin to bake into the manager.',
+        default=(
+            'http://www.getcloudify.org/spec/diamond-plugin/1.3.6/plugin.yaml'
+        ),
+    )
+
     installer_source_group = parser.add_mutually_exclusive_group()
     installer_source_group.add_argument(
         '-B', '--installer-branch',
@@ -667,4 +700,5 @@ if __name__ == '__main__':
         installer_path=args.local_installer_path,
         should_install_pip=args.install_pip,
         types_yaml_url=args.types_yaml_url,
+        diamond_plugin_url=args.diamond_plugin_url
     )
