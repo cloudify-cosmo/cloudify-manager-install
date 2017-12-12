@@ -197,19 +197,21 @@ def _validate_dependencies():
 
     missing_packages = {}
     for dep, reason in dependencies.items():
-        logger.debug('Validating that `{0}` is installed'.format(dep))
+        logger.debug('Validating that `{dep}` is installed'.format(dep=dep))
         if not RpmPackageHandler.is_package_installed(dep):
             missing_packages[dep] = reason
 
     if missing_packages:
         error_msg = '\n'.join(
-            '`{0}` - {1}'.format(package, reason)
+            '`{package}` - {reason}'.format(package=package, reason=reason)
             for package, reason in missing_packages.items()
         )
+        packages = ' '.join(missing_packages.keys())
         raise ValidationError(
-            'Prerequisite packages missing: \n{0}.\n'
-            'Please ensure these packages are installed and try again.'
-            .format(error_msg)
+            'Prerequisite packages missing: \n{error_msg}.\n'
+            'Please ensure these packages are installed and try again.\n'
+            'Possible solution is to run - sudo yum install {packages}'
+            .format(error_msg=error_msg, packages=packages)
         )
 
 
