@@ -21,7 +21,7 @@ from distutils.version import LooseVersion
 
 from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS
 
-from .service_names import MANAGER, PYTHON
+from .service_names import MANAGER
 
 from ..config import config
 from ..logger import get_logger
@@ -162,23 +162,6 @@ def _validate_inputs():
             )
 
 
-def _validate_python_packages():
-    logger.info('Validating package prerequisites...')
-    dependencies = config[PYTHON]['dependencies']
-    missing_packages = []
-    for dep in dependencies:
-        logger.debug('Validating that `{0}` is installed'.format(dep))
-        if not RpmPackageHandler.is_package_installed(dep):
-            missing_packages.append(dep)
-
-    if missing_packages:
-        _errors.append(
-            'Prerequisite packages missing: {0}.\n'
-            'Please ensure these packages are installed and try again.'
-            ''.format(missing_packages)
-        )
-
-
 def _validate_user_has_sudo_permissions():
     current_user = getuser()
     logger.info('Validating user `{0}` has sudo permissions...'.format(
@@ -194,9 +177,48 @@ def _validate_user_has_sudo_permissions():
         )
 
 
+def _validate_dependencies():
+    logger.info('Validating Cloudify Manager dependencies...')
+    dependencies = {
+        'sudo': 'necessary to run commands with root privileges',
+        'openssl-1.0.2k': 'necessary for creating certificates',
+        'logrotate': 'used in Cloudify logs',
+        'systemd-sysv': 'required by the PostgreSQL DB',
+        'initscripts': 'required by the RabbitMQ server',
+        'java-1.8.0-openjdk': 'required by Logstash and Riemann',
+        'which': 'used when installing Logstash plugins',
+        'python-setuptools': 'required by python',
+        'python-backports': 'required by python',
+        'python-backports-ssl_match_hostname': 'required by python',
+        'openssh': 'required by the sanity check',
+        'openssh-clients': 'required by the sanity check',
+        'openssh-server': 'required by the sanity check'
+    }
+
+    missing_packages = {}
+    for dep, reason in dependencies.items():
+        logger.debug('Validating that `{0}` is installed'.format(dep))
+        if not RpmPackageHandler.is_package_installed(dep):
+            missing_packages[dep] = reason
+
+    if missing_packages:
+        error_msg = '\n'.join(
+            '`{0}` - {1}'.format(package, reason)
+            for package, reason in missing_packages.items()
+        )
+        raise ValidationError(
+            'Prerequisite packages missing: \n{0}.\n'
+            'Please ensure these packages are installed and try again.'
+            .format(error_msg)
+        )
+
+
 def validate(skip_validations=False):
     # Inputs always need to be validated, otherwise the install won't work
     _validate_inputs()
+
+    # These dependencies also need to always be validated
+    _validate_dependencies()
 
     if config[VALIDATIONS]['skip_validations'] or skip_validations:
         logger.info('Skipping validations')
@@ -208,7 +230,6 @@ def validate(skip_validations=False):
     _validate_sufficient_memory()
     _validate_sufficient_disk_space()
     _validate_openssl_version()
-    _validate_python_packages()
     _validate_user_has_sudo_permissions()
 
     if _errors:
