@@ -185,7 +185,6 @@ def _validate_dependencies():
         'logrotate': 'used in Cloudify logs',
         'systemd-sysv': 'required by the PostgreSQL DB',
         'initscripts': 'required by the RabbitMQ server',
-        'java-1.8.0-openjdk': 'required by Logstash and Riemann',
         'which': 'used when installing Logstash plugins',
         'python-setuptools': 'required by python',
         'python-backports': 'required by python',
