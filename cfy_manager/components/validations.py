@@ -189,7 +189,6 @@ def _validate_dependencies():
         'python-setuptools': 'required by python',
         'python-backports': 'required by python',
         'python-backports-ssl_match_hostname': 'required by python',
-        'openssh': 'required by the sanity check',
         'openssh-server': 'required by the sanity check'
     }
 
