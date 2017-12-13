@@ -124,6 +124,7 @@ def _handle_ca_cert():
         certificates.generate_ca_cert()
         has_ca_key = True
 
+    certificates.store_pkcs12_cert()
     return has_ca_key
 
 

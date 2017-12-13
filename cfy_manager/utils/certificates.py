@@ -212,6 +212,12 @@ def generate_ca_cert():
         '-out', const.CA_CERT_PATH,
         '-keyout', const.CA_KEY_PATH
     ])
+    logger.debug('Generated CA certificate: {0} and key: {1}'.format(
+        const.CA_CERT_PATH, const.CA_KEY_PATH
+    ))
+
+
+def store_pkcs12_cert():
     # PKCS12 file required for riemann due to JVM
     # While we don't really want the private key in there, not having it
     # causes failures
@@ -226,12 +232,9 @@ def generate_ca_cert():
         'openssl', 'pkcs12', '-export',
         '-out', pkcs12_path,
         '-in', const.CA_CERT_PATH,
-        '-inkey', const.CA_KEY_PATH,
         '-password', 'pass:cloudify',
+        '-nokeys'
     ])
-    logger.debug('Generated CA certificate: {0} and key: {1}'.format(
-        const.CA_CERT_PATH, const.CA_KEY_PATH
-    ))
 
 
 @argh.arg('--metadata',
