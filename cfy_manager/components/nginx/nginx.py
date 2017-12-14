@@ -224,8 +224,8 @@ def _deploy_nginx_config_files():
             dst='/etc/nginx/nginx.conf'
         ),
         resource(
-            src=join(CONFIG_PATH, 'default.conf'),
-            dst='/etc/nginx/conf.d/default.conf',
+            src=join(CONFIG_PATH, 'cloudify.conf'),
+            dst='/etc/nginx/conf.d/cloudify.conf',
         ),
         resource(
             src=join(CONFIG_PATH, 'rest-location.cloudify'),
