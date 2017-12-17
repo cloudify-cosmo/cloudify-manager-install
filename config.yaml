@@ -118,8 +118,6 @@ rabbitmq:
     metrics_queue_length_limit: 1000000
 
 postgresql:
-  # If set to False, the DB will not be created when configuring the Manager
-  create_db: true
   sources:
     libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
     ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
@@ -134,6 +132,10 @@ postgresql:
   host: localhost
   username: cloudify
   password: cloudify
+
+db:
+  # If set to False, the DB will not be created when configuring the Manager
+  create_db: true
 
 java:
   sources:
