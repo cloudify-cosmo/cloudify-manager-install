@@ -13,10 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import yaml
+from ruamel import yaml
+from ruamel.yaml.error import YAMLError
+
 import collections
 from os.path import isfile
-from yaml.parser import ParserError
 
 from .exceptions import InputError
 from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH
@@ -59,8 +60,8 @@ class Config(dict):
     def _load_yaml(path_to_yaml):
         with open(path_to_yaml, 'r') as f:
             try:
-                return yaml.load(f)
-            except ParserError as e:
+                return yaml.round_trip_load(f)
+            except YAMLError as e:
                 raise InputError(
                     'User config file {0} is not a properly formatted '
                     'YAML file:\n{1}'.format(path_to_yaml, e)
