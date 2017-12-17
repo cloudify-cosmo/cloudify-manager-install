@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import base64
 import string
 import random
 
@@ -20,10 +22,16 @@ from .. import constants
 from ..config import config
 from ..logger import get_logger
 
-from .service_names import RABBITMQ, MANAGER, INFLUXB
+from .service_names import RABBITMQ, MANAGER, INFLUXB, DB
 
-from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, AGENT, CONSTANTS,\
+from . import (
+    PRIVATE_IP,
+    ENDPOINT_IP,
+    SECURITY,
+    AGENT,
+    CONSTANTS,
     ADMIN_PASSWORD
+)
 
 BROKER_IP = 'broker_ip'
 BROKER_USERNAME = 'broker_user'
@@ -109,6 +117,27 @@ def _set_influx_db_endpoint():
         config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
 
 
+def _random_alphanumeric(result_len=31):
+    """
+    :return: random string of unique alphanumeric characters
+    """
+    ascii_alphanumeric = string.ascii_letters + string.digits
+    return ''.join(random.sample(ascii_alphanumeric, result_len))
+
+
+def _generate_hash_salt():
+    if config[DB]['create_db']:
+        logger.info('Generating random hash salt and secret key...')
+        security_configuration = {
+            'hash_salt': base64.b64encode(os.urandom(32)),
+            'secret_key': base64.b64encode(os.urandom(32)),
+            'encoding_alphabet': _random_alphanumeric(),
+            'encoding_block_size': 24,
+            'encoding_min_length': 5
+        }
+        config[DB][SECURITY] = security_configuration
+
+
 def set_globals():
     _set_ip_config()
     _set_agent_broker_credentials()
@@ -117,3 +146,4 @@ def set_globals():
     _set_constant_config()
     _set_admin_password()
     _set_influx_db_endpoint()
+    _generate_hash_salt()
