@@ -76,11 +76,6 @@ def _make_paths():
     config[RESTSERVICE][VENV] = REST_VENV
 
 
-def _install():
-    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
-    yum_install(source_url)
-
-
 def _deploy_rest_configuration():
     logger.info('Deploying REST Service Configuration file...')
     conf_path = join(HOME_DIR, 'cloudify-rest.conf')
@@ -298,7 +293,8 @@ def _configure():
 
 def install():
     logger.notice('Installing Rest Service...')
-    _install()
+    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
+    yum_install(source_url)
     _configure()
     logger.notice('Rest Service successfully installed')
 
