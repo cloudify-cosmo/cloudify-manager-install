@@ -21,6 +21,11 @@ jobs:
             tox -e flake8
             tox -e py27
       - run:
+          name: Fetch RPMs built on CircleCI
+          command: |
+            pip install requests
+            .circleci/fetch_rpms
+      - run:
           name: Build base container
           command: |
             set -eux
@@ -35,6 +40,7 @@ jobs:
           command: |
             set -eux
             docker cp ~/cloudify-manager-install ${CONTAINER_NAME}:${REMOTE_PATH}
+            docker cp ~/cloudify-manager-install-rpms ${CONTAINER_NAME}:/root/cloudify-manager-install-rpms
             docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
       - run:
           name: Create RPM

@@ -4,6 +4,7 @@ import argparse
 import json
 import multiprocessing
 import os
+import re
 import subprocess
 import sys
 import urlparse
@@ -28,6 +29,7 @@ MANAGER_RESOURCES_BASE = os.path.join(
     RPM_BUILDER_BASE,
     'cloudify/sources',
 )
+LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 AGENT_RESOURCES_BASE = os.path.join(
     RPM_BUILDER_BASE,
     'cloudify/sources/agents',
@@ -48,6 +50,8 @@ INSTALLER_REPO_ARCHIVE = (
     'https://github.com/cloudify-cosmo/cloudify-manager-install/'
     'archive/{branch}.tar.gz'
 )
+
+RPM_PREFIX = re.compile('[^0-9]+')
 
 
 def print_in_color(message, color, stream=None):
@@ -237,6 +241,9 @@ def download_listed_resources(resource_file, destination_path):
     """
         Download resources listed in a file.
     """
+    local_files = os.listdir(MANAGER_RESOURCES_BASE)
+    package_names = set(RPM_PREFIX.findall(f)[0] for f in local_files)
+
     with open(resource_file) as resource_list_handle:
         resources = resource_list_handle.readlines()
 
@@ -248,7 +255,11 @@ def download_listed_resources(resource_file, destination_path):
         if (not resource) or resource.startswith('#'):
             # Cope with blank lines and comments
             continue
-        resource_file_name = os.path.split(resource)[-1]
+        resource_file_name = os.path.basename(resource)
+        resource_file_prefix = RPM_PREFIX.findall(resource_file_name)[0]
+        if resource_file_prefix in package_names:
+            # Use local copy instead
+            continue
         results.append(
             downloader_pool.apply_async(
                 download_file,
@@ -461,6 +472,13 @@ def prepare_directory_structure():
         ],
         error='Could not create directory tree in /tmp/tmp-install-rpm',
     )
+
+    if os.path.isdir(LOCAL_PACKAGES_DIR):
+        subprocess.check_call(
+            'cp -R "{dir}/"* "{dest}"'.format(
+                dir=LOCAL_PACKAGES_DIR, dest=MANAGER_RESOURCES_BASE),
+            shell=True,
+            )
 
 
 def create_cfy_manager_command(installer_path, installer_branch):

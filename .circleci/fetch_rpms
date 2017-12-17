@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+"""
+Collect & install the RPMs from other CircleCI jobs
+"""
+
+import itertools
+import os
+from shutil import copyfileobj
+
+import requests
+
+
+OFFSET_STEP = 100
+API_PREFIX = (
+        'https://circleci.com/api/v1.1/project/github/'
+        '{organization}/{{project}}/'.format(
+            organization=os.getenv(
+                'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo')))
+
+URL_TEMPLATE = API_PREFIX + 'tree/{branch}?limit=' + str(OFFSET_STEP)
+ARTIFACTS_TEMPLATE = API_PREFIX + '{build[build_num]}/artifacts'
+
+LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
+
+REPOS = {
+        'cloudify-manager': [
+            'rest-service-rpm',
+            ],
+        }
+
+
+def get_build(repo, rpm):
+    url = URL_TEMPLATE.format(
+            organization=os.getenv(
+                'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
+            project=repo,
+            branch=os.getenv('CIRCLE_BRANCH'),
+            )
+
+    for offset in itertools.count(0, OFFSET_STEP):
+        resp = requests.get('{url}&offset={offset}'.format(
+            url=url, offset=offset))
+        json = resp.json()
+
+        if not json:
+            raise ValueError
+
+        for build in json:
+            if (rpm in build['workflows']['job_name']
+                    and build['status'] == 'success'):
+                return build
+
+
+def get_artifacts(repo, build):
+    url = ARTIFACTS_TEMPLATE.format(project=repo, build=build)
+    resp = requests.get(url)
+
+    for artifact in resp.json():
+        print('Downloading ' + artifact['path'])
+        filename = os.path.basename(artifact['path'])
+        resp = requests.get(artifact['url'], stream=True)
+        with open(os.path.join(LOCAL_PACKAGES_DIR, filename), 'wb') as f:
+            resp.raw.decode_content = True
+            copyfileobj(resp.raw, f)
+
+
+def main():
+    os.makedirs(LOCAL_PACKAGES_DIR)
+    for repo, rpms in REPOS.items():
+        for rpm in rpms:
+            build = get_build(repo, rpm)
+            get_artifacts(repo, build)
+
+
+if __name__ == '__main__':
+    main()
