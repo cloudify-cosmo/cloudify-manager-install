@@ -284,7 +284,7 @@ def _start_restservice():
 def _configure():
     _make_paths()
     _configure_restservice()
-    systemd.configure(RESTSERVICE, tmpfiles=True)
+    systemd.configure(RESTSERVICE)
     _create_db_tables_and_add_defaults()
     _start_restservice()
 
