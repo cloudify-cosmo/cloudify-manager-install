@@ -73,12 +73,13 @@ class SystemD(object):
 
         self.systemctl('daemon-reload')
 
-    def remove(self, service_name):
+    def remove(self, service_name, service_file=True):
         """Stop and disable the service, and then delete its data
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
-        remove(self.get_service_file_path(service_name))
+        if service_file:
+            remove(self.get_service_file_path(service_name))
         remove(self.get_vars_file_path(service_name))
 
     @staticmethod
