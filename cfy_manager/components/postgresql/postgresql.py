@@ -17,7 +17,7 @@ import os
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
-from .. import SOURCES, SCRIPTS
+from .. import SOURCES
 
 from ..service_names import POSTGRESQL
 
@@ -136,30 +136,6 @@ def _create_postgres_pass_file():
     logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
 
 
-def _create_default_db():
-    pg_config = config[POSTGRESQL]
-    if not pg_config['create_db']:
-        return
-    logger.info(
-        'Creating default PostgreSQL DB: {0}...'.format(pg_config['db_name'])
-    )
-    script_path = join(
-        constants.COMPONENTS_DIR,
-        POSTGRESQL,
-        SCRIPTS,
-        'create_default_db.sh'
-    )
-    tmp_script_path = files.temp_copy(script_path)
-    common.chmod('+x', tmp_script_path)
-    common.sudo(
-        'su - postgres -c "{cmd} {db} {user} {password}"'.format(
-            cmd=tmp_script_path,
-            db=pg_config['db_name'],
-            user=pg_config['username'],
-            password=pg_config['password'])
-    )
-
-
 def _configure():
     files.copy_notice(POSTGRESQL)
     _init_postgresql()
@@ -168,8 +144,6 @@ def _configure():
 
     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
     systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
-
-    _create_default_db()
 
 
 def install():
