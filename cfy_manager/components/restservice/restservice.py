@@ -48,7 +48,7 @@ from ...utils import common, sudoers
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
-from ...utils.files import deploy, remove_notice, copy_notice
+from ...utils.files import deploy
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import write_to_tempfile, remove_files, write_to_file
 
@@ -322,7 +322,6 @@ def _start_restservice():
 
 
 def _configure():
-    copy_notice(RESTSERVICE)
     _make_paths()
     set_logrotate(RESTSERVICE)
     _deploy_sudo_commands()
@@ -347,7 +346,6 @@ def configure():
 
 def remove():
     logger.notice('Removing Restservice...')
-    remove_notice(RESTSERVICE)
     remove_logrotate(RESTSERVICE)
     systemd.remove(RESTSERVICE, service_file=False)
     remove_files([HOME_DIR, LOG_DIR])
