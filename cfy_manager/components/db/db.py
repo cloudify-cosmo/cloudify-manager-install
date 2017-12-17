@@ -20,7 +20,8 @@ from .. import (
     ENDPOINT_IP,
     PROVIDER_CONTEXT,
     AGENT,
-    SECURITY
+    SECURITY,
+    CLEAN_DB
 )
 
 from ..service_names import (
@@ -46,8 +47,6 @@ REST_HOME_DIR = '/opt/manager'
 def _create_default_db():
     pg_config = config[POSTGRESQL]
 
-    if not config[DB]['create_db']:
-        return
     logger.info('Creating default SQL DB: {0}...'.format(pg_config['db_name']))
     script_path = join(
         constants.COMPONENTS_DIR,
@@ -133,7 +132,7 @@ def install():
 
 
 def configure():
-    if config[DB]['create_db']:
+    if config[DB][CLEAN_DB]:
         logger.notice('Configuring DB...')
         _create_default_db()
         _create_db_tables_and_add_defaults()

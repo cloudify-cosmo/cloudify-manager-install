@@ -134,8 +134,11 @@ postgresql:
   password: cloudify
 
 db:
-  # If set to False, the DB will not be created when configuring the Manager
-  create_db: true
+  # If set to "false", the DB will not be recreated when
+  # installing/configuring the Manager. Must be set to "true" on the first
+  # installation. If set to "false", the hash salt and admin password won't
+  # be generated
+  clean_db: true
 
 java:
   sources:

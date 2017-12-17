@@ -30,7 +30,8 @@ from . import (
     SECURITY,
     AGENT,
     CONSTANTS,
-    ADMIN_PASSWORD
+    ADMIN_PASSWORD,
+    CLEAN_DB
 )
 
 BROKER_IP = 'broker_ip'
@@ -126,7 +127,7 @@ def _random_alphanumeric(result_len=31):
 
 
 def _generate_hash_salt():
-    if config[DB]['create_db']:
+    if config[DB][CLEAN_DB]:
         logger.info('Generating random hash salt and secret key...')
         security_configuration = {
             'hash_salt': base64.b64encode(os.urandom(32)),

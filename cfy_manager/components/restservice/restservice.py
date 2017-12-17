@@ -29,6 +29,7 @@ from .. import (
     SERVICE_USER,
     SERVICE_GROUP,
     SECURITY,
+    CLEAN_DB
 )
 
 from ..service_names import RESTSERVICE, DB
@@ -158,7 +159,7 @@ def _deploy_security_configuration():
     )
 
     # This should only happen if we're recreating the DB
-    if config[DB]['create_db']:
+    if config[DB][CLEAN_DB]:
         logger.info('Deploying REST Security configuration file...')
 
         rest_security_path = join(HOME_DIR, 'rest-security.conf')

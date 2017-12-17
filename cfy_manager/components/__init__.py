@@ -43,5 +43,6 @@ CONSTANTS = 'constants'
 SSL_INPUTS = 'ssl_inputs'
 VALIDATIONS = 'validations'
 PROVIDER_CONTEXT = 'provider_context'
+CLEAN_DB = 'clean_db'
 
 # endregion
