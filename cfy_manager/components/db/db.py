@@ -128,7 +128,7 @@ def _log_results(result):
 
 
 def install():
-    pass
+    configure()
 
 
 def configure():
