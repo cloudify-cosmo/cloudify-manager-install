@@ -341,6 +341,5 @@ def configure():
 def remove():
     logger.notice('Removing Restservice...')
     systemd.remove(RESTSERVICE, service_file=False)
-    remove_files([HOME_DIR, LOG_DIR])
     yum_remove('cloudify-rest-service')
     logger.notice('Rest Service successfully installed')
