@@ -48,12 +48,7 @@ def _create_default_db():
     pg_config = config[POSTGRESQL]
 
     logger.info('Creating default SQL DB: {0}...'.format(pg_config['db_name']))
-    script_path = join(
-        constants.COMPONENTS_DIR,
-        POSTGRESQL,
-        SCRIPTS,
-        'create_default_db.sh'
-    )
+    script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
     common.chmod('+x', tmp_script_path)
     common.sudo(
