@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
+from os.path import exists, join
 
 from .files import deploy
 from .common import sudo, remove
@@ -59,8 +59,9 @@ class SystemD(object):
 
         logger.debug('Deploying systemd EnvironmentFile...')
         deploy(env_src, env_dst, render=render)
-        logger.debug('Deploying systemd .service file...')
-        deploy(srv_src, srv_dst, render=render)
+        if exists(srv_src):
+            logger.debug('Deploying systemd .service file...')
+            deploy(srv_src, srv_dst, render=render)
         logger.debug('Enabling systemd .service...')
         self.systemctl('enable', '{0}.service'.format(sid))
 
