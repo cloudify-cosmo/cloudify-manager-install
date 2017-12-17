@@ -49,7 +49,7 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import deploy
-from ...utils.files import write_to_tempfile, remove_files, write_to_file
+from ...utils.files import write_to_tempfile, write_to_file
 
 
 HOME_DIR = '/opt/manager'
@@ -74,23 +74,6 @@ def _make_paths():
     config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
     config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
     config[RESTSERVICE][VENV] = REST_VENV
-
-
-def _deploy_sudo_commands():
-    sudoers.deploy_sudo_command_script(
-        script='/usr/bin/systemctl',
-        description='Run systemctl'
-    )
-    sudoers.deploy_sudo_command_script(
-        script='/usr/sbin/shutdown',
-        description='Perform shutdown (reboot)'
-    )
-    sudoers.deploy_sudo_command_script(
-        'set-manager-ssl.py',
-        'Script for setting manager SSL',
-        component=RESTSERVICE,
-        render=False
-    )
 
 
 def _install():
@@ -318,7 +301,6 @@ def _start_restservice():
 
 def _configure():
     _make_paths()
-    _deploy_sudo_commands()
     _configure_restservice()
     systemd.configure(RESTSERVICE, tmpfiles=True)
     _create_db_tables_and_add_defaults()
