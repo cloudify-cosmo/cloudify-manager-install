@@ -149,11 +149,6 @@ def _pre_create_snapshot_paths():
 
 
 def _deploy_security_configuration():
-    logger.info('Deploying REST Security configuration file...')
-
-    security_configuration = config[DB][SECURITY]
-    config[RESTSERVICE][SECURITY] = security_configuration
-
     # Pre-creating paths so permissions fix can work correctly in mgmtworker
     _pre_create_snapshot_paths()
     common.chown(
@@ -161,14 +156,19 @@ def _deploy_security_configuration():
         constants.CLOUDIFY_GROUP,
         constants.MANAGER_RESOURCES_HOME
     )
-    rest_security_path = join(HOME_DIR, 'rest-security.conf')
-    write_to_file(security_configuration, rest_security_path, json_dump=True)
-    common.chown(
-        constants.CLOUDIFY_USER,
-        constants.CLOUDIFY_GROUP,
-        rest_security_path
-    )
-    common.chmod('g+r', rest_security_path)
+
+    # This should only happen if we're recreating the DB
+    if config[DB]['create_db']:
+        logger.info('Deploying REST Security configuration file...')
+
+        rest_security_path = join(HOME_DIR, 'rest-security.conf')
+        write_to_file(config[DB][SECURITY], rest_security_path, json_dump=True)
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            rest_security_path
+        )
+        common.chmod('g+r', rest_security_path)
 
 
 def _allow_creating_cluster():
