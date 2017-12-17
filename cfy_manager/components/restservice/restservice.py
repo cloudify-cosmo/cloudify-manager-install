@@ -29,8 +29,6 @@ from .. import (
     SCRIPTS,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
-    SERVICE_USER,
-    SERVICE_GROUP,
     SECURITY,
     ENDPOINT_IP,
     PROVIDER_CONTEXT
@@ -165,8 +163,6 @@ def _calculate_worker_count():
 
 
 def _configure_restservice():
-    config[RESTSERVICE][SERVICE_USER] = constants.CLOUDIFY_USER
-    config[RESTSERVICE][SERVICE_GROUP] = constants.CLOUDIFY_GROUP
     _calculate_worker_count()
     _deploy_rest_configuration()
     _deploy_security_configuration()
