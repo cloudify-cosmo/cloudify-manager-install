@@ -20,15 +20,12 @@ from .. import (
     ENDPOINT_IP,
     PROVIDER_CONTEXT,
     AGENT,
-    SECURITY,
-    VENV,
-    HOME_DIR_KEY
+    SECURITY
 )
 
 from ..service_names import (
     DB,
     POSTGRESQL,
-    RESTSERVICE,
     RABBITMQ,
     MANAGER
 )
@@ -43,6 +40,7 @@ from ...utils.files import temp_copy, write_to_tempfile
 logger = get_logger(DB)
 
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, DB, SCRIPTS)
+REST_HOME_DIR = '/opt/manager'
 
 
 def _create_default_db():
@@ -80,8 +78,8 @@ def _create_args_dict():
     script that creates and populates the DB to run
     """
     return {
-        'hash_salt': config[RESTSERVICE][SECURITY]['hash_salt'],
-        'secret_key': config[RESTSERVICE][SECURITY]['secret_key'],
+        'hash_salt': config[DB][SECURITY]['hash_salt'],
+        'secret_key': config[DB][SECURITY]['secret_key'],
         'admin_username': config[MANAGER][SECURITY]['admin_username'],
         'admin_password': config[MANAGER][SECURITY]['admin_password'],
         'amqp_host': config[RABBITMQ][ENDPOINT_IP],
@@ -89,8 +87,7 @@ def _create_args_dict():
         'amqp_password': config[RABBITMQ]['password'],
         'postgresql_host': config[POSTGRESQL]['host'],
         'provider_context': _get_provider_context(),
-        'authorization_file_path':
-            join(config[RESTSERVICE][HOME_DIR_KEY], 'authorization.conf'),
+        'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir':
             join(constants.MANAGER_RESOURCES_HOME, 'cloudify', 'migrations')
     }
@@ -109,7 +106,7 @@ def _create_db_tables_and_add_defaults():
 
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
-    python_path = join(config[RESTSERVICE][VENV], 'bin', 'python')
+    python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
     result = common.sudo([python_path, script_path, args_json_path])
 
     _log_results(result)

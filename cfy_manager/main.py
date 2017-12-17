@@ -65,6 +65,7 @@ COMPONENTS = [
     python,
     postgresql,
     rabbitmq,
+    db,
     restservice,
     influxdb,
     amqpinflux,
@@ -76,7 +77,6 @@ COMPONENTS = [
     composer,
     logstash,
     mgmtworker,
-    db,
     cli,
     sanity
 ]
