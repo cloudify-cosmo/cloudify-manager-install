@@ -71,10 +71,6 @@ def _random_alphanumeric(result_len=31):
 
 
 def _make_paths():
-    common.mkdir(HOME_DIR)
-    common.mkdir(LOG_DIR)
-    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, LOG_DIR)
-
     # Used in the service templates
     config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
     config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
