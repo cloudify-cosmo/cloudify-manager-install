@@ -31,7 +31,7 @@ from .. import (
     SECURITY,
 )
 
-from ..service_names import RESTSERVICE, MANAGER, DB
+from ..service_names import RESTSERVICE, DB
 
 from ... import constants
 from ...config import config
@@ -152,7 +152,6 @@ def _deploy_security_configuration():
     logger.info('Deploying REST Security configuration file...')
 
     security_configuration = config[DB][SECURITY]
-    security_configuration.update(config[MANAGER][SECURITY])
     config[RESTSERVICE][SECURITY] = security_configuration
 
     # Pre-creating paths so permissions fix can work correctly in mgmtworker
