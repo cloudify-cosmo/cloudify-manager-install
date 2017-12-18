@@ -15,6 +15,7 @@
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
+from ruamel.yaml.comments import CommentedMap
 
 import collections
 from os.path import isfile
@@ -43,11 +44,8 @@ def dict_merge(dct, merge_dct):
             dct[k] = merge_dct[k]
 
 
-class Config(dict):
+class Config(CommentedMap):
     TEMP_PATHS = 'temp_paths_to_remove'
-
-    def __init__(self, *args, **kwargs):
-        super(Config, self).__init__(*args, **kwargs)
 
     def _load_defaults_config(self):
         default_config = self._load_yaml(DEFAULT_CONFIG_PATH)
@@ -75,7 +73,7 @@ class Config(dict):
         self.pop(self.TEMP_PATHS, None)
         with open(USER_CONFIG_PATH, 'w') as f:
             try:
-                yaml.dump(dict(self), f)
+                yaml.dump(CommentedMap(self, relax=True), f)
             except YAMLError as e:
                 raise BootstrapError(
                     'Could not dump config to {0}:\n{1}'.format(
