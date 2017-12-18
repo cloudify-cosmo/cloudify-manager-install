@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ruamel import yaml
+from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 import collections
@@ -21,6 +21,8 @@ from os.path import isfile
 
 from .exceptions import InputError, BootstrapError
 from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH
+
+yaml = YAML()
 
 
 def dict_merge(dct, merge_dct):
@@ -62,7 +64,7 @@ class Config(dict):
     def _load_yaml(path_to_yaml):
         with open(path_to_yaml, 'r') as f:
             try:
-                return yaml.round_trip_load(f)
+                return yaml.load(f)
             except YAMLError as e:
                 raise InputError(
                     'User config file {0} is not a properly formatted '
@@ -70,10 +72,10 @@ class Config(dict):
                 )
 
     def dump_config(self):
-        self.pop(self.TEMP_PATHS)
+        self.pop(self.TEMP_PATHS, None)
         with open(USER_CONFIG_PATH, 'w') as f:
             try:
-                yaml.round_trip_dump(self, f)
+                yaml.dump(dict(self), f)
             except YAMLError as e:
                 raise BootstrapError(
                     'Could not dump config to {0}:\n{1}'.format(
