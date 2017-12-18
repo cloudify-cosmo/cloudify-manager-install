@@ -394,4 +394,4 @@ def remove():
     systemd.remove(RESTSERVICE)
     _remove_files()
     yum_remove('cloudify-rest-service')
-    logger.notice('Rest Service successfully installed')
+    logger.notice('Rest Service successfully removed')
