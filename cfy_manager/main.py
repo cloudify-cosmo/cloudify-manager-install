@@ -128,6 +128,13 @@ def _print_finish_message():
     logger.notice('#' * 50)
 
 
+def _finish_configuration():
+    remove_temp_files()
+    _print_finish_message()
+    _print_time()
+    config.dump_config()
+
+
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
@@ -143,10 +150,8 @@ def install(verbose=False,
     for component in COMPONENTS:
         component.install()
 
-    remove_temp_files()
     logger.notice('Cloudify Manager successfully installed!')
-    _print_finish_message()
-    _print_time()
+    _finish_configuration()
 
 
 def configure(verbose=False,
@@ -164,10 +169,8 @@ def configure(verbose=False,
     for component in COMPONENTS:
         component.configure()
 
-    remove_temp_files()
     logger.notice('Cloudify Manager successfully configured!')
-    _print_finish_message()
-    _print_time()
+    _finish_configuration()
 
 
 def remove(verbose=False, force=False):

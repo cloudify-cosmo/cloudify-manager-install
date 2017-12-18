@@ -392,6 +392,8 @@ def install_dependencies():
         'rubygems',
         # Requirements for this script
         'git',
+        # Requirements for building the python package
+        'python-devel',
     ]
     exit_helpfully_on_failure(
         command=install_rpms,
