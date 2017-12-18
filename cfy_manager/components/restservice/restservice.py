@@ -359,13 +359,17 @@ def _configure():
 
 def _remove_files():
     """
-    Remove all files related to the REST service except the spec files which
-    are handled by the installation RPM
+    Remove all files related to the REST service and uninstall the RPM,
+    but don't remove the spec files which are handled by the installation RPM
     """
     tmp_dir = mkdtemp()
     # Keep the spec files in a temp location
     common.move(join(constants.MANAGER_RESOURCES_HOME, 'spec'), tmp_dir)
+
     remove_files([HOME_DIR, LOG_DIR, RESTSERVICE_RESOURCES])
+    # Removing the RPM before recreating /opt/manager/resources, because
+    # yum remove will delete this folder
+    yum_remove('cloudify-rest-service')
 
     # Recreate /opt/manager/resources and move the spec files back in
     common.mkdir(constants.MANAGER_RESOURCES_HOME)
@@ -393,5 +397,4 @@ def remove():
     remove_logrotate(RESTSERVICE)
     systemd.remove(RESTSERVICE)
     _remove_files()
-    yum_remove('cloudify-rest-service')
     logger.notice('Rest Service successfully removed')
