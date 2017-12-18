@@ -258,10 +258,7 @@ def _deploy_nginx_config_files():
 
     # remove the default configuration which reserves localhost:80 for a
     # nginx default landing page
-    try:
-        common.remove('/etc/nginx/conf.d/default.conf')
-    except OSError:
-        pass
+    common.remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
 
 
 def _verify_nginx():
