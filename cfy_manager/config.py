@@ -13,13 +13,17 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+from ruamel.yaml.comments import CommentedMap
+
 import collections
 from os.path import isfile
-from yaml.parser import ParserError
 
-from .exceptions import InputError
+from .exceptions import InputError, BootstrapError
 from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH
+
+yaml = YAML()
 
 
 def dict_merge(dct, merge_dct):
@@ -40,9 +44,8 @@ def dict_merge(dct, merge_dct):
             dct[k] = merge_dct[k]
 
 
-class Config(dict):
-    def __init__(self, *args, **kwargs):
-        super(Config, self).__init__(*args, **kwargs)
+class Config(CommentedMap):
+    TEMP_PATHS = 'temp_paths_to_remove'
 
     def _load_defaults_config(self):
         default_config = self._load_yaml(DEFAULT_CONFIG_PATH)
@@ -60,10 +63,22 @@ class Config(dict):
         with open(path_to_yaml, 'r') as f:
             try:
                 return yaml.load(f)
-            except ParserError as e:
+            except YAMLError as e:
                 raise InputError(
                     'User config file {0} is not a properly formatted '
                     'YAML file:\n{1}'.format(path_to_yaml, e)
+                )
+
+    def dump_config(self):
+        self.pop(self.TEMP_PATHS, None)
+        with open(USER_CONFIG_PATH, 'w') as f:
+            try:
+                yaml.dump(CommentedMap(self, relax=True), f)
+            except YAMLError as e:
+                raise BootstrapError(
+                    'Could not dump config to {0}:\n{1}'.format(
+                        USER_CONFIG_PATH, e
+                    )
                 )
 
     def load_config(self):
@@ -71,7 +86,7 @@ class Config(dict):
         self._load_user_config()
 
     def add_temp_path_to_clean(self, new_path_to_remove):
-        paths_to_remove = self.setdefault('temp_paths_to_remove', [])
+        paths_to_remove = self.setdefault(self.TEMP_PATHS, [])
         paths_to_remove.append(new_path_to_remove)
 
 

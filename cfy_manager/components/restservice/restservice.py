@@ -21,6 +21,7 @@ import base64
 import urllib2
 import subprocess
 from os.path import join
+from tempfile import mkdtemp
 
 from .. import (
     AGENT,
@@ -55,6 +56,7 @@ REST_VENV = join(HOME_DIR, 'env')
 LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
+RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
 
 logger = get_logger(RESTSERVICE)
 
@@ -64,7 +66,8 @@ def _random_alphanumeric(result_len=31):
     :return: random string of unique alphanumeric characters
     """
     ascii_alphanumeric = string.ascii_letters + string.digits
-    return ''.join(random.sample(ascii_alphanumeric, result_len))
+    return ''.join(
+        random.SystemRandom().sample(ascii_alphanumeric, result_len))
 
 
 def _make_paths():
@@ -287,6 +290,27 @@ def _configure():
     _start_restservice()
 
 
+def _remove_files():
+    """
+    Remove all files related to the REST service and uninstall the RPM,
+    but don't remove the spec files which are handled by the installation RPM
+    """
+    tmp_dir = mkdtemp()
+    # Keep the spec files in a temp location
+    common.move(join(constants.MANAGER_RESOURCES_HOME, 'spec'), tmp_dir)
+
+    remove_files([HOME_DIR, LOG_DIR, RESTSERVICE_RESOURCES])
+    # Removing the RPM before recreating /opt/manager/resources, because
+    # yum remove will delete this folder
+    yum_remove('cloudify-rest-service')
+
+    # Recreate /opt/manager/resources and move the spec files back in
+    common.mkdir(constants.MANAGER_RESOURCES_HOME)
+    common.move(join(tmp_dir, 'spec'), constants.MANAGER_RESOURCES_HOME)
+
+    common.remove(tmp_dir)
+
+
 def install():
     logger.notice('Installing Rest Service...')
     source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
@@ -305,4 +329,4 @@ def remove():
     logger.notice('Removing Restservice...')
     systemd.remove(RESTSERVICE, service_file=False)
     yum_remove('cloudify-rest-service')
-    logger.notice('Rest Service successfully installed')
+    logger.notice('Rest Service successfully removed')

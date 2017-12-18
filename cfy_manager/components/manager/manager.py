@@ -89,7 +89,7 @@ def _normalize_agent_names():
     for agent_file in os.listdir(agents_path):
         agent_id = normalize_agent_name(agent_file)
         agent_extension = splitext(agent_file)
-        common.move(
+        common.copy(
             os.path.join(agents_path, agent_file),
             os.path.join(constants.AGENT_ARCHIVES_PATH,
                          agent_id + agent_extension)
@@ -159,7 +159,6 @@ def remove():
     delete_service_user(constants.CLOUDIFY_USER)
     delete_group(constants.CLOUDIFY_GROUP)
     remove_files([
-        constants.BASE_RESOURCES_PATH,
         constants.CLOUDIFY_HOME_DIR,
         join(_get_exec_tempdir(), 'cloudify-ctx')
     ])
