@@ -20,7 +20,7 @@ import string
 import base64
 import urllib2
 import subprocess
-from os.path import join, islink, isdir
+from os.path import join
 
 from .. import (
     AGENT,
@@ -29,9 +29,6 @@ from .. import (
     SCRIPTS,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
-    VENV,
-    SERVICE_USER,
-    SERVICE_GROUP,
     SECURITY,
     ENDPOINT_IP,
     PROVIDER_CONTEXT
@@ -48,9 +45,8 @@ from ...utils import common, sudoers
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
-from ...utils.files import deploy, remove_notice, copy_notice
-from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.files import ln, write_to_tempfile, remove_files, write_to_file
+from ...utils.files import deploy
+from ...utils.files import write_to_tempfile, write_to_file
 
 
 HOME_DIR = '/opt/manager'
@@ -71,58 +67,9 @@ def _random_alphanumeric(result_len=31):
 
 
 def _make_paths():
-    common.mkdir(HOME_DIR)
-    common.mkdir(LOG_DIR)
-    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, LOG_DIR)
-
     # Used in the service templates
     config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
     config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
-    config[RESTSERVICE][VENV] = REST_VENV
-
-
-def _deploy_sudo_commands():
-    sudoers.deploy_sudo_command_script(
-        script='/usr/bin/systemctl',
-        description='Run systemctl'
-    )
-    sudoers.deploy_sudo_command_script(
-        script='/usr/sbin/shutdown',
-        description='Perform shutdown (reboot)'
-    )
-    sudoers.deploy_sudo_command_script(
-        'set-manager-ssl.py',
-        'Script for setting manager SSL',
-        component=RESTSERVICE,
-        render=False
-    )
-
-
-def _configure_dbus():
-    # link dbus-python-1.1.1-9.el7.x86_64 to the venv for `cfy status`
-    # (module in pypi is very old)
-    site_packages = 'lib64/python2.7/site-packages'
-    dbus_relative_path = join(site_packages, 'dbus')
-    dbuslib = join('/usr', dbus_relative_path)
-    dbus_glib_bindings = join('/usr', site_packages, '_dbus_glib_bindings.so')
-    dbus_bindings = join('/usr', site_packages, '_dbus_bindings.so')
-    if isdir(dbuslib):
-        dbus_venv_path = join(REST_VENV, dbus_relative_path)
-        if not islink(dbus_venv_path):
-            ln(source=dbuslib, target=dbus_venv_path, params='-sf')
-            ln(source=dbus_bindings, target=dbus_venv_path, params='-sf')
-        if not islink(join(REST_VENV, site_packages)):
-            ln(source=dbus_glib_bindings, target=join(
-                    REST_VENV, site_packages), params='-sf')
-    else:
-        logger.warn('Could not find dbus install, cfy status will not work')
-
-
-def _install():
-    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
-    yum_install(source_url)
-
-    _configure_dbus()
 
 
 def _deploy_rest_configuration():
@@ -137,16 +84,6 @@ def _deploy_authorization_configuration():
     conf_path = join(HOME_DIR, 'authorization.conf')
     deploy(join(CONFIG_PATH, 'authorization.conf'), conf_path)
     common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, conf_path)
-
-
-def _deploy_db_cleanup_script():
-    logger.info('Deploying Logs/Events cleanup script...')
-    script_name = 'delete_logs_and_events_from_db.py'
-    deploy(
-        join(SCRIPTS_PATH, script_name),
-        join(constants.CLOUDIFY_HOME_DIR, script_name),
-        render=False
-    )
 
 
 def _pre_create_snapshot_paths():
@@ -226,13 +163,10 @@ def _calculate_worker_count():
 
 
 def _configure_restservice():
-    config[RESTSERVICE][SERVICE_USER] = constants.CLOUDIFY_USER
-    config[RESTSERVICE][SERVICE_GROUP] = constants.CLOUDIFY_GROUP
     _calculate_worker_count()
     _deploy_rest_configuration()
     _deploy_security_configuration()
     _deploy_authorization_configuration()
-    _deploy_db_cleanup_script()
     _allow_creating_cluster()
 
 
@@ -344,19 +278,17 @@ def _start_restservice():
 
 
 def _configure():
-    copy_notice(RESTSERVICE)
     _make_paths()
-    set_logrotate(RESTSERVICE)
-    _deploy_sudo_commands()
     _configure_restservice()
-    systemd.configure(RESTSERVICE, tmpfiles=True)
+    systemd.configure(RESTSERVICE)
     _create_db_tables_and_add_defaults()
     _start_restservice()
 
 
 def install():
     logger.notice('Installing Rest Service...')
-    _install()
+    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
+    yum_install(source_url)
     _configure()
     logger.notice('Rest Service successfully installed')
 
@@ -369,9 +301,6 @@ def configure():
 
 def remove():
     logger.notice('Removing Restservice...')
-    remove_notice(RESTSERVICE)
-    remove_logrotate(RESTSERVICE)
-    systemd.remove(RESTSERVICE)
-    remove_files([HOME_DIR, LOG_DIR])
+    systemd.remove(RESTSERVICE, service_file=False)
     yum_remove('cloudify-rest-service')
     logger.notice('Rest Service successfully installed')
