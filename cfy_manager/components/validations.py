@@ -17,6 +17,7 @@ import sys
 import platform
 import subprocess
 from getpass import getuser
+from collections import namedtuple
 from distutils.version import LooseVersion
 
 from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS
@@ -151,13 +152,24 @@ def _validate_openssl_version():
 
 
 def _validate_inputs():
-    for key in (PRIVATE_IP, PUBLIC_IP):
-        ip = config[MANAGER].get(key)
+    Input = namedtuple('Input', 'key string flag')
+    required_inputs = [
+        Input(key=PRIVATE_IP, flag='--private-ip', string='Private IP'),
+        Input(key=PUBLIC_IP, flag='--public-ip', string='Public IP')
+    ]
+    for inp in required_inputs:
+        ip = config[MANAGER].get(inp.key)
         if not ip:
             raise ValidationError(
-                '{0} not set in the config.\n'
-                'Edit {1} to set it'.format(
-                    key, USER_CONFIG_PATH
+                '{string} not set in the config.\n'
+                'Possible solutions are:\n'
+                '1. Set the `{key}` key in {config_path}\n'
+                '2. Use the `{flag}` flag when running '
+                '`cfy_manager install/configure`'.format(
+                    string=inp.string,
+                    key=inp.key,
+                    config_path=USER_CONFIG_PATH,
+                    flag=inp.flag
                 )
             )
 
