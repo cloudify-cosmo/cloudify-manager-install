@@ -272,6 +272,6 @@ def validate(skip_validations=False):
 
     if _errors:
         printable_error = 'Validation error(s):\n' \
-                          '{0}'.format('\n'.join(_errors))
+                          ' - {0}'.format('\n - '.join(_errors))
         raise ValidationError(printable_error)
     logger.notice('All validations passed successfully!')
