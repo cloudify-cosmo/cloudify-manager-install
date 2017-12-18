@@ -20,6 +20,7 @@ import string
 import base64
 import urllib2
 import subprocess
+from tempfile import mkdtemp
 from os.path import join, islink, isdir
 
 from .. import (
@@ -356,6 +357,23 @@ def _configure():
     _start_restservice()
 
 
+def _remove_files():
+    """
+    Remove all files related to the REST service except the spec files which
+    are handled by the installation RPM
+    """
+    tmp_dir = mkdtemp()
+    # Keep the spec files in a temp location
+    common.move(join(constants.MANAGER_RESOURCES_HOME, 'spec'), tmp_dir)
+    remove_files([HOME_DIR, LOG_DIR, RESTSERVICE_RESOURCES])
+
+    # Recreate /opt/manager/resources and move the spec files back in
+    common.mkdir(constants.MANAGER_RESOURCES_HOME)
+    common.move(join(tmp_dir, 'spec'), constants.MANAGER_RESOURCES_HOME)
+
+    common.remove(tmp_dir)
+
+
 def install():
     logger.notice('Installing Rest Service...')
     _install()
@@ -374,6 +392,6 @@ def remove():
     remove_notice(RESTSERVICE)
     remove_logrotate(RESTSERVICE)
     systemd.remove(RESTSERVICE)
-    remove_files([HOME_DIR, LOG_DIR, RESTSERVICE_RESOURCES])
+    _remove_files()
     yum_remove('cloudify-rest-service')
     logger.notice('Rest Service successfully installed')
