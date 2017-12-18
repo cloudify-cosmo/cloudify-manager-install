@@ -67,7 +67,8 @@ def _random_alphanumeric(result_len=31):
     :return: random string of unique alphanumeric characters
     """
     ascii_alphanumeric = string.ascii_letters + string.digits
-    return ''.join(random.sample(ascii_alphanumeric, result_len))
+    return ''.join(
+        random.SystemRandom().sample(ascii_alphanumeric, result_len))
 
 
 def _make_paths():
@@ -113,7 +114,7 @@ def _configure_dbus():
             ln(source=dbus_bindings, target=dbus_venv_path, params='-sf')
         if not islink(join(REST_VENV, site_packages)):
             ln(source=dbus_glib_bindings, target=join(
-                    REST_VENV, site_packages), params='-sf')
+               REST_VENV, site_packages), params='-sf')
     else:
         logger.warn('Could not find dbus install, cfy status will not work')
 
