@@ -29,6 +29,7 @@ from .. import (
     SCRIPTS,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
+    VENV,
     SECURITY,
     ENDPOINT_IP,
     PROVIDER_CONTEXT
@@ -70,6 +71,7 @@ def _make_paths():
     # Used in the service templates
     config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
     config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
+    config[RESTSERVICE][VENV] = REST_VENV
 
 
 def _deploy_rest_configuration():
