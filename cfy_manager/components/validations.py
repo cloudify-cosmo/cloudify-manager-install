@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import sys
+import socket
 import platform
 import subprocess
 from getpass import getuser
@@ -26,8 +27,8 @@ from .service_names import MANAGER
 
 from ..config import config
 from ..logger import get_logger
-from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
+from ..constants import USER_CONFIG_PATH, INTERNAL_REST_PORT
 
 from ..utils.common import run
 from ..utils.install import RpmPackageHandler
@@ -174,6 +175,31 @@ def _validate_inputs():
             )
 
 
+def _validate_host(host, input_name):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((host, INTERNAL_REST_PORT))
+    except socket.error as e:
+        _errors.append(
+            'Could not connect to the {input_name} ({host}) via port {port}\n'
+            'Error: {error}\n'
+            'Check that the IP/hostname is written correctly, is '
+            'reachable and that port {port} is open'.format(
+                input_name=input_name,
+                host=host,
+                error=e,
+                port=INTERNAL_REST_PORT
+            )
+        )
+
+
+def _validate_hosts():
+    logger.info('Validating private and public IPs...')
+
+    _validate_host(config[MANAGER][PRIVATE_IP], 'private IP')
+    _validate_host(config[MANAGER][PUBLIC_IP], 'public IP')
+
+
 def _validate_user_has_sudo_permissions():
     current_user = getuser()
     logger.info('Validating user `{0}` has sudo permissions...'.format(
@@ -236,6 +262,7 @@ def validate(skip_validations=False):
         return
 
     logger.notice('Validating local machine...')
+    _validate_hosts()
     _validate_python_version()
     _validate_supported_distros()
     _validate_sufficient_memory()
@@ -245,6 +272,6 @@ def validate(skip_validations=False):
 
     if _errors:
         printable_error = 'Validation error(s):\n' \
-                          '{0}'.format('\n'.join(_errors))
+                          ' - {0}'.format('\n - '.join(_errors))
         raise ValidationError(printable_error)
     logger.notice('All validations passed successfully!')
