@@ -23,7 +23,7 @@ from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
-from ...constants import INTERNAL_CERT_PATH
+from ...constants import EXTERNAL_CERT_PATH
 from ...utils.install import yum_install, yum_remove
 
 
@@ -59,7 +59,7 @@ def _configure():
     set_cmd = [
         'cfy', 'profiles', 'set', '-u', username,
         '-p', password, '-t', 'default_tenant',
-        '-c', INTERNAL_CERT_PATH, '--skip-credentials-validation'
+        '-c', EXTERNAL_CERT_PATH, '--skip-credentials-validation'
     ]
     logger.info('Setting CLI for default user...')
     common.run(use_cmd)
