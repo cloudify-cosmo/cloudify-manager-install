@@ -58,6 +58,7 @@ REST_VENV = join(HOME_DIR, 'env')
 LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
+RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
 
 logger = get_logger(RESTSERVICE)
 
@@ -373,6 +374,6 @@ def remove():
     remove_notice(RESTSERVICE)
     remove_logrotate(RESTSERVICE)
     systemd.remove(RESTSERVICE)
-    remove_files([HOME_DIR, LOG_DIR])
+    remove_files([HOME_DIR, LOG_DIR, RESTSERVICE_RESOURCES])
     yum_remove('cloudify-rest-service')
     logger.notice('Rest Service successfully installed')
