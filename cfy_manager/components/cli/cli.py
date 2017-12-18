@@ -23,6 +23,7 @@ from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
+from ...constants import EXTERNAL_CERT_PATH
 from ...utils.install import yum_install, yum_remove
 
 
@@ -53,9 +54,12 @@ def _configure():
 
     use_cmd = ['cfy', 'profiles', 'use', 'localhost',
                '--skip-credentials-validation']
+
+    # TODO: Don't skip validation after CFY-7689 is done
     set_cmd = [
         'cfy', 'profiles', 'set', '-u', username,
-        '-p', password, '-t', 'default_tenant'
+        '-p', password, '-t', 'default_tenant',
+        '-c', EXTERNAL_CERT_PATH, '--skip-credentials-validation'
     ]
     logger.info('Setting CLI for default user...')
     common.run(use_cmd)
