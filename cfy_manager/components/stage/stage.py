@@ -201,5 +201,11 @@ def remove():
     systemd.remove(STAGE)
     delete_service_user(STAGE_USER)
     delete_group(STAGE_GROUP)
-    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR, NODE_EXECUTABLE_PATH])
+    files.remove_files([
+        HOME_DIR,
+        NODEJS_DIR,
+        LOG_DIR,
+        NODE_EXECUTABLE_PATH,
+        STAGE_RESOURCES
+    ])
     logger.notice('Stage successfully removed')
