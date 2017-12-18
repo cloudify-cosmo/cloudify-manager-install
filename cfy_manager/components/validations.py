@@ -158,8 +158,8 @@ def _validate_inputs():
         Input(key=PUBLIC_IP, flag='--public-ip', string='Public IP')
     ]
     for inp in required_inputs:
-        ip = config[MANAGER].get(inp.key)
-        if not ip:
+        input_value = config[MANAGER].get(inp.key)
+        if not input_value:
             raise ValidationError(
                 '{string} not set in the config.\n'
                 'Possible solutions are:\n'
