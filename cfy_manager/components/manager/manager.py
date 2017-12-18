@@ -159,7 +159,6 @@ def remove():
     delete_service_user(constants.CLOUDIFY_USER)
     delete_group(constants.CLOUDIFY_GROUP)
     remove_files([
-        constants.BASE_RESOURCES_PATH,
         constants.CLOUDIFY_HOME_DIR,
         join(_get_exec_tempdir(), 'cloudify-ctx')
     ])
