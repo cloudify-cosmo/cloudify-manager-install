@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 from os.path import join, isfile
 from collections import namedtuple
 
@@ -260,7 +259,7 @@ def _deploy_nginx_config_files():
     # remove the default configuration which reserves localhost:80 for a
     # nginx default landing page
     try:
-        os.unlink('/etc/nginx/conf.d/default.conf')
+        common.remove('/etc/nginx/conf.d/default.conf')
     except OSError:
         pass
 
