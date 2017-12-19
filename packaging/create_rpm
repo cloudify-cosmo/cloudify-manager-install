@@ -52,6 +52,7 @@ INSTALLER_REPO_ARCHIVE = (
 )
 
 RPM_PREFIX = re.compile('[^0-9]+')
+# regex to extract a package name from a full RPM filename
 
 
 def print_in_color(message, color, stream=None):
@@ -242,6 +243,7 @@ def download_listed_resources(resource_file, destination_path):
         Download resources listed in a file.
     """
     local_files = os.listdir(MANAGER_RESOURCES_BASE)
+    # Collect a list of local packages (package name, not full filename)
     package_names = set(RPM_PREFIX.findall(f)[0] for f in local_files)
 
     with open(resource_file) as resource_list_handle:
@@ -256,6 +258,8 @@ def download_listed_resources(resource_file, destination_path):
             # Cope with blank lines and comments
             continue
         resource_file_name = os.path.basename(resource)
+        # Trim the filename to before the first digit, so that we're comparing
+        # by package name only, not version.
         resource_file_prefix = RPM_PREFIX.findall(resource_file_name)[0]
         if resource_file_prefix in package_names:
             # Use local copy instead
