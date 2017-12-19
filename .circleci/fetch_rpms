@@ -30,6 +30,12 @@ REPOS = {
 
 
 def get_build(repo, rpm):
+    """For the given repo, find a build which successfully built the rpm.
+
+    This will examine the CircleCI build outputs going backwards (fetching
+    the builds list in batches of OFFSET_STEP), looking for a successful
+    build that had built the rpm.
+    """
     url = URL_TEMPLATE.format(
             organization=os.getenv(
                 'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
