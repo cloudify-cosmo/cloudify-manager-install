@@ -29,7 +29,6 @@ MANAGER_RESOURCES_BASE = os.path.join(
     RPM_BUILDER_BASE,
     'cloudify/sources',
 )
-LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 AGENT_RESOURCES_BASE = os.path.join(
     RPM_BUILDER_BASE,
     'cloudify/sources/agents',
@@ -462,7 +461,7 @@ def validate_pip():
     )
 
 
-def prepare_directory_structure():
+def prepare_directory_structure(local_packages_dir):
     """
         Prepare the directory structure needed for building the installer.
     """
@@ -479,10 +478,10 @@ def prepare_directory_structure():
         error='Could not create directory tree in /tmp/tmp-install-rpm',
     )
 
-    if os.path.isdir(LOCAL_PACKAGES_DIR):
+    if os.path.isdir(local_packages_dir):
         subprocess.check_call(
             'cp -R "{dir}/"* "{dest}"'.format(
-                dir=LOCAL_PACKAGES_DIR, dest=MANAGER_RESOURCES_BASE),
+                dir=local_packages_dir, dest=MANAGER_RESOURCES_BASE),
             shell=True,
             )
 
@@ -595,8 +594,10 @@ def run_build_command(edition):
     return determine_rpm_location(rpmbuild_output)
 
 
-def build_package(edition, branch, installer_branch, installer_path,
-                  should_install_pip, types_yaml_url, diamond_plugin_url):
+def build_package(
+        edition, branch, installer_branch, installer_path, should_install_pip,
+        types_yaml_url, diamond_plugin_url, local_packages_dir,
+        ):
     """
         Build the package.
     """
@@ -609,7 +610,7 @@ def build_package(edition, branch, installer_branch, installer_path,
 
     install_dependencies()
 
-    prepare_directory_structure()
+    prepare_directory_structure(local_packages_dir)
 
     retrieve_required_files(
         edition=edition,
@@ -702,6 +703,12 @@ if __name__ == '__main__':
             'http://www.getcloudify.org/spec/diamond-plugin/1.3.6/plugin.yaml'
         ),
     )
+    parser.add_argument(
+        '--local_packages_dir',
+        help='Local directory to fetch RPMs from (will fall back to the'
+             'locations in the manager-packages.yaml file',
+        default=os.path.expanduser('~/cloudify-manager-install-rpms'),
+    )
 
     installer_source_group = parser.add_mutually_exclusive_group()
     installer_source_group.add_argument(
@@ -724,5 +731,6 @@ if __name__ == '__main__':
         installer_path=args.local_installer_path,
         should_install_pip=args.install_pip,
         types_yaml_url=args.types_yaml_url,
-        diamond_plugin_url=args.diamond_plugin_url
+        diamond_plugin_url=args.diamond_plugin_url,
+        local_packages_dir=args.local_packages_dir,
     )
