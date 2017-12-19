@@ -54,9 +54,14 @@ class SystemD(object):
 
         logger.debug('Deploying systemd EnvironmentFile...')
         deploy(env_src, env_dst, render=render)
+
+        # components that have had their service file moved to a RPM, won't
+        # have the file here.
+        # TODO: after this is done to all components, this can be removed
         if exists(srv_src):
             logger.debug('Deploying systemd .service file...')
             deploy(srv_src, srv_dst, render=render)
+
         logger.debug('Enabling systemd .service...')
         self.systemctl('enable', '{0}.service'.format(sid))
 
@@ -67,8 +72,13 @@ class SystemD(object):
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
+
+        # components that have had their unit file moved to the RPM, will
+        # also remove it during RPM uninstall
+        # TODO: remove this after all components have been changed to use RPMs
         if service_file:
             remove(self.get_service_file_path(service_name))
+
         remove(self.get_vars_file_path(service_name))
 
     @staticmethod

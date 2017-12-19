@@ -299,7 +299,6 @@ def _remove_files():
     # Keep the spec files in a temp location
     common.move(join(constants.MANAGER_RESOURCES_HOME, 'spec'), tmp_dir)
 
-    remove_files([HOME_DIR, LOG_DIR, RESTSERVICE_RESOURCES])
     # Removing the RPM before recreating /opt/manager/resources, because
     # yum remove will delete this folder
     yum_remove('cloudify-rest-service')
@@ -313,8 +312,7 @@ def _remove_files():
 
 def install():
     logger.notice('Installing Rest Service...')
-    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
-    yum_install(source_url)
+    yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
     _configure()
     logger.notice('Rest Service successfully installed')
 
@@ -328,5 +326,5 @@ def configure():
 def remove():
     logger.notice('Removing Restservice...')
     systemd.remove(RESTSERVICE, service_file=False)
-    yum_remove('cloudify-rest-service')
+    _remove_files()
     logger.notice('Rest Service successfully removed')

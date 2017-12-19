@@ -5,49 +5,55 @@ Collect & install the RPMs from other CircleCI jobs
 
 import itertools
 import os
+import urllib
 from shutil import copyfileobj
 
 import requests
 
 
-OFFSET_STEP = 100
+BATCH_SIZE = 100
 API_PREFIX = (
-        'https://circleci.com/api/v1.1/project/github/'
-        '{organization}/{{project}}/'.format(
-            organization=os.getenv(
-                'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo')))
+    'https://circleci.com/api/v1.1/project/github/'
+    '{organization}/{{project}}/'.format(
+        organization=os.getenv(
+            'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo')))
 
-URL_TEMPLATE = API_PREFIX + 'tree/{branch}?limit=' + str(OFFSET_STEP)
+URL_TEMPLATE = API_PREFIX + 'tree/{branch}'
 ARTIFACTS_TEMPLATE = API_PREFIX + '{build[build_num]}/artifacts'
 
 LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 
 REPOS = {
-        'cloudify-manager': [
-            'rest-service-rpm',
-            ],
-        }
+    'cloudify-manager': [
+        'rest-service-rpm',
+    ],
+}
 
 
 def get_build(repo, rpm):
+    """For the given repo, find a build which successfully built the rpm.
+
+    This will examine the CircleCI build outputs going backwards (fetching
+    the builds list in batches of BATCH_SIZE), looking for a successful
+    build that had built the rpm.
+    """
     url = URL_TEMPLATE.format(
-            organization=os.getenv(
-                'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
-            project=repo,
-            branch=os.getenv('CIRCLE_BRANCH'),
-            )
+        organization=os.getenv('CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
+        project=repo,
+        branch=os.getenv('CIRCLE_BRANCH'),
+    )
 
-    for offset in itertools.count(0, OFFSET_STEP):
-        resp = requests.get('{url}&offset={offset}'.format(
-            url=url, offset=offset))
-        json = resp.json()
+    for offset in itertools.count(0, BATCH_SIZE):
+        query = urllib.urlencode({'offset': offset, 'limit': BATCH_SIZE})
+        resp = requests.get('{url}?{query}'.format(url=url, query=query))
+        builds = resp.json()
 
-        if not json:
-            raise ValueError
+        if not builds:
+            raise ValueError('{0}: empty build list'.format(url))
 
-        for build in json:
-            if (rpm in build['workflows']['job_name']
-                    and build['status'] == 'success'):
+        for build in builds:
+            if (rpm in build['workflows']['job_name'] and
+                    build['status'] == 'success'):
                 return build
 
 
