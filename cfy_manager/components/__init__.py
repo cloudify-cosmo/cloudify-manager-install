@@ -33,6 +33,7 @@ PUBLIC_IP = 'public_ip'
 ENDPOINT_IP = 'endpoint_ip'
 SECURITY = 'security'
 ADMIN_PASSWORD = 'admin_password'
+ADMIN_USERNAME = 'admin_username'
 
 # endregion
 

@@ -21,7 +21,9 @@ from .. import (
     PROVIDER_CONTEXT,
     AGENT,
     SECURITY,
-    CLEAN_DB
+    CLEAN_DB,
+    ADMIN_PASSWORD,
+    ADMIN_USERNAME
 )
 
 from ..service_names import (
@@ -74,8 +76,8 @@ def _create_args_dict():
     return {
         'hash_salt': config[DB][SECURITY]['hash_salt'],
         'secret_key': config[DB][SECURITY]['secret_key'],
-        'admin_username': config[MANAGER][SECURITY]['admin_username'],
-        'admin_password': config[MANAGER][SECURITY]['admin_password'],
+        'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
+        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
         'amqp_host': config[RABBITMQ][ENDPOINT_IP],
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
