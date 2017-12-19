@@ -72,8 +72,13 @@ class SystemD(object):
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
+
+        # components that have had their unit file moved to the RPM, will
+        # also remove it during RPM uninstall
+        # TODO: remove this after all components have been changed to use RPMs
         if service_file:
             remove(self.get_service_file_path(service_name))
+
         remove(self.get_vars_file_path(service_name))
 
     @staticmethod
