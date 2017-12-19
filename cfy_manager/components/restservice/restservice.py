@@ -289,8 +289,7 @@ def _configure():
 
 def install():
     logger.notice('Installing Rest Service...')
-    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
-    yum_install(source_url)
+    yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
     _configure()
     logger.notice('Rest Service successfully installed')
 
