@@ -224,8 +224,8 @@ def _deploy_nginx_config_files():
             dst='/etc/nginx/nginx.conf'
         ),
         resource(
-            src=join(CONFIG_PATH, 'default.conf'),
-            dst='/etc/nginx/conf.d/default.conf',
+            src=join(CONFIG_PATH, 'cloudify.conf'),
+            dst='/etc/nginx/conf.d/cloudify.conf',
         ),
         resource(
             src=join(CONFIG_PATH, 'rest-location.cloudify'),
@@ -255,6 +255,10 @@ def _deploy_nginx_config_files():
 
     for resource in resources:
         deploy(resource.src, resource.dst)
+
+    # remove the default configuration which reserves localhost:80 for a
+    # nginx default landing page
+    common.remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
 
 
 def _verify_nginx():

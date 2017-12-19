@@ -403,6 +403,8 @@ def install_dependencies():
         'rubygems',
         # Requirements for this script
         'git',
+        # Requirements for building the python package
+        'python-devel',
     ]
     exit_helpfully_on_failure(
         command=install_rpms,
@@ -545,10 +547,10 @@ def run_build_command(edition):
 
     mapping = '{source}={destination}'
 
-    types_destination ='/opt/manager/resources/spec'+\
-                       args.types_yaml_url.split('spec')[1]
-    diamond_destination = '/opt/manager/resources/spec'+\
-                       args.diamond_plugin_url.split('spec')[1]
+    types_destination = '/opt/manager/resources/spec' + \
+                        args.types_yaml_url.split('spec')[1]
+    diamond_destination = '/opt/manager/resources/spec' + \
+                          args.diamond_plugin_url.split('spec')[1]
 
     rpm_builder_command.extend([
         # What files to include in the package:
