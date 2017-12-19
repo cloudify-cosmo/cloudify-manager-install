@@ -21,6 +21,7 @@ import random
 from .. import constants
 from ..config import config
 from ..logger import get_logger
+from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXB, DB
 
@@ -126,17 +127,36 @@ def _random_alphanumeric(result_len=31):
     return ''.join(random.sample(ascii_alphanumeric, result_len))
 
 
-def _generate_hash_salt():
-    if config[DB][CLEAN_DB]:
-        logger.info('Generating random hash salt and secret key...')
-        security_configuration = {
-            'hash_salt': base64.b64encode(os.urandom(32)),
-            'secret_key': base64.b64encode(os.urandom(32)),
-            'encoding_alphabet': _random_alphanumeric(),
-            'encoding_block_size': 24,
-            'encoding_min_length': 5
-        }
-        config[DB][SECURITY] = security_configuration
+def _generate_security_config():
+    logger.info('Generating random hash salt and secret key...')
+    security_configuration = {
+        'hash_salt': base64.b64encode(os.urandom(32)),
+        'secret_key': base64.b64encode(os.urandom(32)),
+        'encoding_alphabet': _random_alphanumeric(),
+        'encoding_block_size': 24,
+        'encoding_min_length': 5
+    }
+    config[DB][SECURITY] = security_configuration
+
+
+def _validate_admin_password_and_security_config():
+    if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
+        raise InputError(
+            'Admin password not found in {config_path} and '
+            'was not provided as an argument.\n'
+            'The password was not generated because `clean_db` was set '
+            'to False'.format(
+                config_path=constants.USER_CONFIG_PATH
+            )
+        )
+    if not config[DB][SECURITY]:
+        raise InputError(
+            'Security configuration not found in {config_path}.\n'
+            'The security configuration was not generated because '
+            '`clean_db` was set to False'.format(
+                config_path=constants.USER_CONFIG_PATH
+            )
+        )
 
 
 def set_globals():
@@ -145,6 +165,9 @@ def set_globals():
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
-    _set_admin_password()
     _set_influx_db_endpoint()
-    _generate_hash_salt()
+    if config[DB][CLEAN_DB]:
+        _set_admin_password()
+        _generate_security_config()
+    else:
+        _validate_admin_password_and_security_config()
