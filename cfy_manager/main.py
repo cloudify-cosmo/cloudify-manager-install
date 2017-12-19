@@ -43,8 +43,14 @@ from .components import manager_ip_setter
 from .components.globals import set_globals
 from .components.validations import validate
 
-from .components.service_names import MANAGER
-from .components import SECURITY, PRIVATE_IP, PUBLIC_IP, ADMIN_PASSWORD
+from .components.service_names import MANAGER, DB
+from .components import (
+    SECURITY,
+    PRIVATE_IP,
+    PUBLIC_IP,
+    ADMIN_PASSWORD,
+    CLEAN_DB
+)
 
 from .config import config
 from .exceptions import BootstrapError
@@ -109,7 +115,8 @@ sys.excepthook = _exception_handler
 def _load_config_and_logger(verbose=False,
                             private_ip=None,
                             public_ip=None,
-                            admin_password=None):
+                            admin_password=None,
+                            clean_db=False):
     setup_console_logger(verbose)
     config.load_config()
     manager_config = config[MANAGER]
@@ -119,6 +126,8 @@ def _load_config_and_logger(verbose=False,
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
+    if clean_db:
+        config[DB][CLEAN_DB] = clean_db
 
 
 def _print_finish_message():
@@ -140,10 +149,17 @@ def _finish_configuration():
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
-            admin_password=None):
+            admin_password=None,
+            clean_db=False):
     """ Install Cloudify Manager """
 
-    _load_config_and_logger(verbose, private_ip, public_ip, admin_password)
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db
+    )
 
     logger.notice('Installing Cloudify Manager...')
     validate()
@@ -159,10 +175,17 @@ def install(verbose=False,
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
-              admin_password=None):
+              admin_password=None,
+              clean_db=False):
     """ Configure Cloudify Manager """
 
-    _load_config_and_logger(verbose, private_ip, public_ip, admin_password)
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db
+    )
 
     logger.notice('Configuring Cloudify Manager...')
     validate(skip_validations=True)
