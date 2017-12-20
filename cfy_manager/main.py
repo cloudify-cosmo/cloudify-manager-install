@@ -20,7 +20,6 @@ import argh
 from time import time
 from traceback import format_exception
 
-from .components import db
 from .components import cli
 from .components import java
 from .components import nginx
@@ -73,7 +72,6 @@ COMPONENTS = [
     python,
     postgresql,
     rabbitmq,
-    db,
     restservice,
     influxdb,
     amqpinflux,

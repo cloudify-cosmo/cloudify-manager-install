@@ -21,17 +21,16 @@ from .. import (
     PROVIDER_CONTEXT,
     AGENT,
     SECURITY,
-    CLEAN_DB,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
     FLASK_SECURITY
 )
 
 from ..service_names import (
-    DB,
     POSTGRESQL,
     RABBITMQ,
-    MANAGER
+    MANAGER,
+    RESTSERVICE
 )
 
 from ... import constants
@@ -41,16 +40,16 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils.files import temp_copy, write_to_tempfile
 
-logger = get_logger(DB)
+logger = get_logger('DB')
 
-SCRIPTS_PATH = join(constants.COMPONENTS_DIR, DB, SCRIPTS)
+SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
 
 
-def _create_default_db():
+def prepare_db():
+    logger.notice('Configuring SQL DB...')
     pg_config = config[POSTGRESQL]
 
-    logger.info('Creating default SQL DB: {0}...'.format(pg_config['db_name']))
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
     common.chmod('+x', tmp_script_path)
@@ -61,6 +60,7 @@ def _create_default_db():
             user=pg_config['username'],
             password=pg_config['password'])
     )
+    logger.notice('SQL DB configured successfully')
 
 
 def _get_provider_context():
@@ -90,8 +90,8 @@ def _create_args_dict():
     }
 
 
-def _create_db_tables_and_add_defaults():
-    logger.info('Creating SQL tables and adding default values...')
+def populate_db():
+    logger.notice('Populating DB...')
     script_name = 'create_tables_and_add_defaults.py'
     script_path = join(SCRIPTS_PATH, script_name)
 
@@ -107,6 +107,7 @@ def _create_db_tables_and_add_defaults():
     result = common.sudo([python_path, script_path, args_json_path])
 
     _log_results(result)
+    logger.notice('DB populated successfully...')
 
 
 def _log_results(result):
@@ -123,23 +124,3 @@ def _log_results(result):
         output = [line.strip() for line in output if line.strip()]
         for line in output:
             logger.error(line)
-
-
-def install():
-    configure()
-
-
-def configure():
-    if config[CLEAN_DB]:
-        logger.notice('Configuring DB...')
-        _create_default_db()
-        _create_db_tables_and_add_defaults()
-        logger.notice('DB successfully configured')
-    else:
-        logger.notice('Skipping DB creation and configuration...')
-
-
-def remove():
-    logger.notice('Removing DB...')
-
-    logger.notice('DB successfully removed')

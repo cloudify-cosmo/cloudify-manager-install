@@ -19,6 +19,8 @@ import subprocess
 from tempfile import mkdtemp
 from os.path import join, islink, isdir
 
+from . import db
+
 from .. import (
     SOURCES,
     CONFIG,
@@ -271,8 +273,12 @@ def _configure():
     set_logrotate(RESTSERVICE)
     _deploy_sudo_commands()
     _configure_restservice()
+    if config[CLEAN_DB]:
+        db.prepare_db()
     systemd.configure(RESTSERVICE, tmpfiles=True)
     _start_restservice()
+    if config[CLEAN_DB]:
+        db.populate_db()
 
 
 def _remove_files():
