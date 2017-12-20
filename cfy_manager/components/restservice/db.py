@@ -60,7 +60,7 @@ def prepare_db():
             user=pg_config['username'],
             password=pg_config['password'])
     )
-    logger.notice('SQL DB configured successfully')
+    logger.notice('SQL DB successfully configured')
 
 
 def _get_provider_context():
@@ -119,14 +119,14 @@ def populate_db():
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict()
     _run_script('create_tables_and_add_defaults.py', args_dict)
-    logger.notice('DB populated and AMQP resources created successfully')
+    logger.notice('DB populated and AMQP resources successfully created')
 
 
 def create_amqp_resources():
     logger.notice('Creating AMQP resources...')
     args_dict = _create_args_dict(amqp_only=True)
     _run_script('create_amqp_resources.py', args_dict)
-    logger.notice('AMQP resources created successfully')
+    logger.notice('AMQP resources successfully created')
 
 
 def _log_results(result):
