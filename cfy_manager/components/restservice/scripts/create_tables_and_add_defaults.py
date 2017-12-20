@@ -14,8 +14,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import sys
 import json
+import argparse
 
 from flask_migrate import upgrade
 
@@ -71,9 +71,16 @@ def _add_provider_context(config):
 
 
 if __name__ == '__main__':
-    # We're expecting to receive as an argument the path to the config file
-    assert len(sys.argv) == 2, 'No config file path was provided'
-    with open(sys.argv[1], 'r') as f:
+    parser = argparse.ArgumentParser(
+        description='Create SQL DB tables and populate them with defaults'
+    )
+    parser.add_argument(
+        'config_path',
+        help='Path to a config file containing info needed by this script'
+    )
+
+    args = parser.parse_args()
+    with open(args.config_path, 'r') as f:
         config = json.load(f)
     _init_db_tables(config)
     amqp_manager = _get_amqp_manager(config)

@@ -14,8 +14,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import sys
 import json
+import argparse
 
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.constants import DEFAULT_TENANT_ID
@@ -45,9 +45,16 @@ def _get_default_tenant():
 
 
 if __name__ == '__main__':
-    # We're expecting to receive as an argument the path to the config file
-    assert len(sys.argv) == 2, 'No config file path was provided'
-    with open(sys.argv[1], 'r') as f:
+    parser = argparse.ArgumentParser(
+        description='Create AMQP vhost/user for the default tenant'
+    )
+    parser.add_argument(
+        'config_path',
+        help='Path to a config file containing info needed by this script'
+    )
+
+    args = parser.parse_args()
+    with open(args.config_path, 'r') as f:
         config = json.load(f)
     _setup_flask_app(config)
     amqp_manager = _get_amqp_manager(config)
