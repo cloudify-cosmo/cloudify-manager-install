@@ -18,11 +18,6 @@ from os.path import join, dirname
 BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 
-CLOUDIFY_INSTALL_DIR = '/opt/cloudify'
-USER_CONFIG_PATH = join(CLOUDIFY_INSTALL_DIR, 'config.yaml')
-# For defaults, use the version supplied in the package
-DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'config.yaml')
-
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
 CLOUDIFY_HOME_DIR = '/etc/cloudify'
@@ -33,6 +28,10 @@ BASE_RESOURCES_PATH = '/opt/cloudify'
 CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
 MANAGER_RESOURCES_HOME = '/opt/manager/resources'
 AGENT_ARCHIVES_PATH = '{0}/packages/agents'.format(MANAGER_RESOURCES_HOME)
+
+USER_CONFIG_PATH = join(BASE_RESOURCES_PATH, 'config.yaml')
+# For defaults, use the version supplied in the package
+DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'config.yaml')
 
 BASE_LOG_DIR = '/var/log/cloudify'
 
