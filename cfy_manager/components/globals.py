@@ -125,7 +125,9 @@ def _random_alphanumeric(result_len=31):
     :return: random string of unique alphanumeric characters
     """
     ascii_alphanumeric = string.ascii_letters + string.digits
-    return ''.join(random.sample(ascii_alphanumeric, result_len))
+    return ''.join(
+        random.SystemRandom().sample(ascii_alphanumeric, result_len)
+    )
 
 
 def _generate_flask_security_config():
