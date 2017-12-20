@@ -19,7 +19,16 @@ import json
 
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.constants import DEFAULT_TENANT_ID
+from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import models, get_storage_manager
+
+
+def _setup_flask_app(config):
+    setup_flask_app(
+        manager_ip=config['postgresql_host'],
+        hash_salt=config['hash_salt'],
+        secret_key=config['secret_key']
+    )
 
 
 def _get_amqp_manager(config):
@@ -40,6 +49,7 @@ if __name__ == '__main__':
     assert len(sys.argv) == 2, 'No config file path was provided'
     with open(sys.argv[1], 'r') as f:
         config = json.load(f)
+    _setup_flask_app(config)
     amqp_manager = _get_amqp_manager(config)
     default_tenant = _get_default_tenant()
     amqp_manager.create_tenant_vhost_and_user(default_tenant)

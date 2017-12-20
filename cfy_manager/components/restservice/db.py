@@ -69,7 +69,7 @@ def _get_provider_context():
     return context
 
 
-def _create_args_dict(amqp_only=False):
+def _create_args_dict(full_config=False):
     """
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
@@ -77,17 +77,16 @@ def _create_args_dict(amqp_only=False):
     args_dict = {
         'amqp_host': config[RABBITMQ][ENDPOINT_IP],
         'amqp_username': config[RABBITMQ]['username'],
-        'amqp_password': config[RABBITMQ]['password']
+        'amqp_password': config[RABBITMQ]['password'],
+        'hash_salt': config[FLASK_SECURITY]['hash_salt'],
+        'secret_key': config[FLASK_SECURITY]['secret_key'],
+        'postgresql_host': config[POSTGRESQL]['host']
     }
-    if not amqp_only:
+    if full_config:
         args_dict.update(
             {
-                'hash_salt': config[FLASK_SECURITY]['hash_salt'],
-                'secret_key': config[FLASK_SECURITY]['secret_key'],
                 'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
                 'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-
-                'postgresql_host': config[POSTGRESQL]['host'],
                 'provider_context': _get_provider_context(),
                 'authorization_file_path': join(REST_HOME_DIR,
                                                 'authorization.conf'),
@@ -117,14 +116,14 @@ def _run_script(script_name, args_dict):
 
 def populate_db():
     logger.notice('Populating DB and creating AMQP resources...')
-    args_dict = _create_args_dict()
+    args_dict = _create_args_dict(full_config=True)
     _run_script('create_tables_and_add_defaults.py', args_dict)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
 def create_amqp_resources():
     logger.notice('Creating AMQP resources...')
-    args_dict = _create_args_dict(amqp_only=True)
+    args_dict = _create_args_dict()
     _run_script('create_amqp_resources.py', args_dict)
     logger.notice('AMQP resources successfully created')
 
