@@ -33,6 +33,7 @@ PUBLIC_IP = 'public_ip'
 ENDPOINT_IP = 'endpoint_ip'
 SECURITY = 'security'
 ADMIN_PASSWORD = 'admin_password'
+ADMIN_USERNAME = 'admin_username'
 
 # endregion
 
@@ -43,5 +44,7 @@ CONSTANTS = 'constants'
 SSL_INPUTS = 'ssl_inputs'
 VALIDATIONS = 'validations'
 PROVIDER_CONTEXT = 'provider_context'
+CLEAN_DB = 'clean_db'
+FLASK_SECURITY = 'flask_security'
 
 # endregion

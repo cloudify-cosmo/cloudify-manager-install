@@ -13,17 +13,28 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import base64
 import string
 import random
 
 from .. import constants
 from ..config import config
 from ..logger import get_logger
+from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXB
 
-from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, AGENT, CONSTANTS,\
-    ADMIN_PASSWORD
+from . import (
+    PRIVATE_IP,
+    ENDPOINT_IP,
+    SECURITY,
+    AGENT,
+    CONSTANTS,
+    ADMIN_PASSWORD,
+    CLEAN_DB,
+    FLASK_SECURITY
+)
 
 BROKER_IP = 'broker_ip'
 BROKER_USERNAME = 'broker_user'
@@ -109,11 +120,57 @@ def _set_influx_db_endpoint():
         config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
 
 
+def _random_alphanumeric(result_len=31):
+    """
+    :return: random string of unique alphanumeric characters
+    """
+    ascii_alphanumeric = string.ascii_letters + string.digits
+    return ''.join(
+        random.SystemRandom().sample(ascii_alphanumeric, result_len)
+    )
+
+
+def _generate_flask_security_config():
+    logger.info('Generating random hash salt and secret key...')
+    config[FLASK_SECURITY] = {
+        'hash_salt': base64.b64encode(os.urandom(32)),
+        'secret_key': base64.b64encode(os.urandom(32)),
+        'encoding_alphabet': _random_alphanumeric(),
+        'encoding_block_size': 24,
+        'encoding_min_length': 5
+    }
+
+
+def _validate_admin_password_and_security_config():
+    if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
+        raise InputError(
+            'Admin password not found in {config_path} and '
+            'was not provided as an argument.\n'
+            'The password was not generated because the `--clean-db` flag '
+            'was not passed cfy_manager install/configure'.format(
+                config_path=constants.USER_CONFIG_PATH
+            )
+        )
+    if not config[FLASK_SECURITY]:
+        raise InputError(
+            'Flask security configuration not found in {config_path}.\n'
+            'The Flask security configuration was not generated because '
+            'the `--clean-db` flag was not passed cfy_manager '
+            'install/configure'.format(
+                config_path=constants.USER_CONFIG_PATH
+            )
+        )
+
+
 def set_globals():
     _set_ip_config()
     _set_agent_broker_credentials()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
-    _set_admin_password()
     _set_influx_db_endpoint()
+    if config[CLEAN_DB]:
+        _set_admin_password()
+        _generate_flask_security_config()
+    else:
+        _validate_admin_password_and_security_config()

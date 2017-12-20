@@ -13,18 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 import json
-import random
-import string
-import base64
 import urllib2
 import subprocess
 from tempfile import mkdtemp
 from os.path import join, islink, isdir
 
+from . import db
+
 from .. import (
-    AGENT,
     SOURCES,
     CONFIG,
     SCRIPTS,
@@ -33,12 +30,11 @@ from .. import (
     VENV,
     SERVICE_USER,
     SERVICE_GROUP,
-    SECURITY,
-    ENDPOINT_IP,
-    PROVIDER_CONTEXT
+    FLASK_SECURITY,
+    CLEAN_DB
 )
 
-from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL
+from ..service_names import RESTSERVICE
 
 from ... import constants
 from ...config import config
@@ -51,7 +47,7 @@ from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import deploy, remove_notice, copy_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.files import ln, write_to_tempfile, remove_files, write_to_file
+from ...utils.files import ln, remove_files, write_to_file
 
 
 HOME_DIR = '/opt/manager'
@@ -62,15 +58,6 @@ SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
 
 logger = get_logger(RESTSERVICE)
-
-
-def _random_alphanumeric(result_len=31):
-    """
-    :return: random string of unique alphanumeric characters
-    """
-    ascii_alphanumeric = string.ascii_letters + string.digits
-    return ''.join(
-        random.SystemRandom().sample(ascii_alphanumeric, result_len))
 
 
 def _make_paths():
@@ -165,19 +152,6 @@ def _pre_create_snapshot_paths():
 
 
 def _deploy_security_configuration():
-    logger.info('Deploying REST Security configuration file...')
-
-    # Generating random hash salt and secret key
-    security_configuration = {
-        'hash_salt': base64.b64encode(os.urandom(32)),
-        'secret_key': base64.b64encode(os.urandom(32)),
-        'encoding_alphabet': _random_alphanumeric(),
-        'encoding_block_size': 24,
-        'encoding_min_length': 5
-    }
-    security_configuration.update(config[MANAGER][SECURITY])
-    config[RESTSERVICE][SECURITY] = security_configuration
-
     # Pre-creating paths so permissions fix can work correctly in mgmtworker
     _pre_create_snapshot_paths()
     common.chown(
@@ -185,8 +159,11 @@ def _deploy_security_configuration():
         constants.CLOUDIFY_GROUP,
         constants.MANAGER_RESOURCES_HOME
     )
+
+    logger.info('Deploying REST Security configuration file...')
+
     rest_security_path = join(HOME_DIR, 'rest-security.conf')
-    write_to_file(security_configuration, rest_security_path, json_dump=True)
+    write_to_file(config[FLASK_SECURITY], rest_security_path, json_dump=True)
     common.chown(
         constants.CLOUDIFY_USER,
         constants.CLOUDIFY_GROUP,
@@ -239,65 +216,6 @@ def _configure_restservice():
     _allow_creating_cluster()
 
 
-def _get_provider_context():
-    context = {'cloudify': config[PROVIDER_CONTEXT]}
-    context['cloudify']['cloudify_agent'] = config[AGENT]
-    return context
-
-
-def _create_db_tables_and_add_defaults():
-    # TODO: Separate into its own component
-    logger.info('Creating SQL tables and adding default values...')
-    script_name = 'create_tables_and_add_defaults.py'
-    script_path = join(SCRIPTS_PATH, script_name)
-
-    # A dictionary with all the information necessary for the script to run
-    args_dict = {
-        'hash_salt': config[RESTSERVICE][SECURITY]['hash_salt'],
-        'secret_key': config[RESTSERVICE][SECURITY]['secret_key'],
-        'admin_username': config[MANAGER][SECURITY]['admin_username'],
-        'admin_password': config[MANAGER][SECURITY]['admin_password'],
-        'amqp_host': config[RABBITMQ][ENDPOINT_IP],
-        'amqp_username': config[RABBITMQ]['username'],
-        'amqp_password': config[RABBITMQ]['password'],
-        'postgresql_host': config[POSTGRESQL]['host'],
-        'provider_context': _get_provider_context(),
-        'authorization_file_path': join(HOME_DIR, 'authorization.conf'),
-        'db_migrate_dir': join(
-            constants.MANAGER_RESOURCES_HOME,
-            'cloudify',
-            'migrations'
-        )
-    }
-
-    # The script won't have access to the config, so we dump the relevant args
-    # to a JSON file, and pass its path to the script
-    args_json_path = write_to_tempfile(args_dict, json_dump=True)
-
-    # Directly calling with this python bin, in order to make sure it's run
-    # in the correct venv
-    python_path = join(HOME_DIR, 'env', 'bin', 'python')
-    result = common.sudo([python_path, script_path, args_json_path])
-
-    _log_results(result)
-
-
-def _log_results(result):
-    """Log stdout/stderr output from the script
-    """
-    if result.aggr_stdout:
-        output = result.aggr_stdout.split('\n')
-        output = [line.strip() for line in output if line.strip()]
-        for line in output[:-1]:
-            logger.debug(line)
-        logger.info(output[-1])
-    if result.aggr_stderr:
-        output = result.aggr_stderr.split('\n')
-        output = [line.strip() for line in output if line.strip()]
-        for line in output:
-            logger.error(line)
-
-
 def _verify_restservice():
     """To verify that the REST service is working, GET the blueprints list.
 
@@ -346,14 +264,22 @@ def _start_restservice():
     _verify_restservice()
 
 
+def _configure_db():
+    if config[CLEAN_DB]:
+        db.prepare_db()
+        db.populate_db()
+    else:
+        db.create_amqp_resources()
+
+
 def _configure():
     copy_notice(RESTSERVICE)
     _make_paths()
     set_logrotate(RESTSERVICE)
     _deploy_sudo_commands()
     _configure_restservice()
+    _configure_db()
     systemd.configure(RESTSERVICE, tmpfiles=True)
-    _create_db_tables_and_add_defaults()
     _start_restservice()
 
 

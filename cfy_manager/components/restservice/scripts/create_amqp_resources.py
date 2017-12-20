@@ -17,38 +17,17 @@
 import json
 import argparse
 
-from flask_migrate import upgrade
-
-from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.amqp_manager import AMQPManager
+from manager_rest.constants import DEFAULT_TENANT_ID
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
+from manager_rest.storage import models, get_storage_manager
 
 
-def _init_db_tables(config):
-    print 'Setting up a Flask app'
+def _setup_flask_app(config):
     setup_flask_app(
         manager_ip=config['postgresql_host'],
         hash_salt=config['hash_salt'],
         secret_key=config['secret_key']
-    )
-
-    # Clean up the DB, in case it's not a clean install
-    db.drop_all()
-    db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
-
-    print 'Creating tables in the DB'
-    upgrade(directory=config['db_migrate_dir'])
-
-
-def _add_default_user_and_tenant(config, amqp_manager):
-    print 'Creating bootstrap admin, default tenant and security roles'
-    create_default_user_tenant_and_roles(
-        admin_username=config['admin_username'],
-        admin_password=config['admin_password'],
-        amqp_manager=amqp_manager,
-        authorization_file_path=config['authorization_file_path']
     )
 
 
@@ -60,19 +39,14 @@ def _get_amqp_manager(config):
     )
 
 
-def _add_provider_context(config):
+def _get_default_tenant():
     sm = get_storage_manager()
-    provider_context = models.ProviderContext(
-        id='CONTEXT',
-        name='provider',
-        context=config['provider_context']
-    )
-    sm.put(provider_context)
+    return sm.get(models.Tenant, DEFAULT_TENANT_ID)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Create SQL DB tables and populate them with defaults'
+        description='Create AMQP vhost/user for the default tenant'
     )
     parser.add_argument(
         'config_path',
@@ -82,8 +56,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with open(args.config_path, 'r') as f:
         config = json.load(f)
-    _init_db_tables(config)
+    _setup_flask_app(config)
     amqp_manager = _get_amqp_manager(config)
-    _add_default_user_and_tenant(config, amqp_manager)
-    _add_provider_context(config)
-    print 'Finished creating bootstrap admin, default tenant and provider ctx'
+    default_tenant = _get_default_tenant()
+    amqp_manager.create_tenant_vhost_and_user(default_tenant)
+    print 'Finished creating AMQP resources'
