@@ -267,18 +267,21 @@ def _start_restservice():
     _verify_restservice()
 
 
+def _configure_db():
+    if config[CLEAN_DB]:
+        db.prepare_db()
+        db.populate_db()
+
+
 def _configure():
     copy_notice(RESTSERVICE)
     _make_paths()
     set_logrotate(RESTSERVICE)
     _deploy_sudo_commands()
     _configure_restservice()
-    if config[CLEAN_DB]:
-        db.prepare_db()
+    _configure_db()
     systemd.configure(RESTSERVICE, tmpfiles=True)
     _start_restservice()
-    if config[CLEAN_DB]:
-        db.populate_db()
 
 
 def _remove_files():
