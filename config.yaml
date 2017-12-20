@@ -133,13 +133,6 @@ postgresql:
   username: cloudify
   password: cloudify
 
-db:
-  # If set to "false", the DB will not be recreated when
-  # installing/configuring the Manager. Must be set to "true" on the first
-  # installation. If set to "false", the hash salt and admin password won't
-  # be generated
-  clean_db: true
-
 java:
   sources:
     java_source_url: jre1.8.0_45-1.8.0_45-fcs.x86_64.rpm

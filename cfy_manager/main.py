@@ -90,6 +90,14 @@ COMPONENTS = [
 START_TIME = time()
 
 
+CLEAN_DB_HELP_MSG = (
+    'If set to "false", the DB will not be recreated when '
+    'installing/configuring the Manager. Must be set to "true" on the first '
+    'installation. If set to "false", the hash salt and admin password '
+    'will not be generated'
+)
+
+
 def _print_time():
     running_time = time() - START_TIME
     m, s = divmod(running_time, 60)
@@ -126,8 +134,7 @@ def _load_config_and_logger(verbose=False,
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-    if clean_db:
-        config[DB][CLEAN_DB] = clean_db
+    config[DB][CLEAN_DB] = clean_db
 
 
 def _print_finish_message():
@@ -146,6 +153,7 @@ def _finish_configuration():
     config.dump_config()
 
 
+@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
@@ -172,6 +180,7 @@ def install(verbose=False,
     _finish_configuration()
 
 
+@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
