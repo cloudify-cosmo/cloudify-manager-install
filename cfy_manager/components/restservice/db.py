@@ -69,33 +69,39 @@ def _get_provider_context():
     return context
 
 
-def _create_args_dict():
+def _create_args_dict(amqp_only=False):
     """
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
     """
-    return {
-        'hash_salt': config[FLASK_SECURITY]['hash_salt'],
-        'secret_key': config[FLASK_SECURITY]['secret_key'],
-        'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
-        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
+    args_dict = {
         'amqp_host': config[RABBITMQ][ENDPOINT_IP],
         'amqp_username': config[RABBITMQ]['username'],
-        'amqp_password': config[RABBITMQ]['password'],
-        'postgresql_host': config[POSTGRESQL]['host'],
-        'provider_context': _get_provider_context(),
-        'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
-        'db_migrate_dir':
-            join(constants.MANAGER_RESOURCES_HOME, 'cloudify', 'migrations')
+        'amqp_password': config[RABBITMQ]['password']
     }
+    if not amqp_only:
+        args_dict.update(
+            {
+                'hash_salt': config[FLASK_SECURITY]['hash_salt'],
+                'secret_key': config[FLASK_SECURITY]['secret_key'],
+                'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
+                'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
+
+                'postgresql_host': config[POSTGRESQL]['host'],
+                'provider_context': _get_provider_context(),
+                'authorization_file_path': join(REST_HOME_DIR,
+                                                'authorization.conf'),
+                'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME,
+                                       'cloudify',
+                                       'migrations')
+            }
+        )
+
+    return args_dict
 
 
-def populate_db():
-    logger.notice('Populating DB...')
-    script_name = 'create_tables_and_add_defaults.py'
+def _run_script(script_name, args_dict):
     script_path = join(SCRIPTS_PATH, script_name)
-
-    args_dict = _create_args_dict()
 
     # The script won't have access to the config, so we dump the relevant args
     # to a JSON file, and pass its path to the script
@@ -107,7 +113,20 @@ def populate_db():
     result = common.sudo([python_path, script_path, args_json_path])
 
     _log_results(result)
-    logger.notice('DB populated successfully...')
+
+
+def populate_db():
+    logger.notice('Populating DB and creating AMQP resources...')
+    args_dict = _create_args_dict()
+    _run_script('create_tables_and_add_defaults.py', args_dict)
+    logger.notice('DB populated and AMQP resources created successfully')
+
+
+def create_amqp_resources():
+    logger.notice('Creating AMQP resources...')
+    args_dict = _create_args_dict(amqp_only=True)
+    _run_script('create_amqp_resources.py', args_dict)
+    logger.notice('AMQP resources created successfully')
 
 
 def _log_results(result):

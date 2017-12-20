@@ -268,6 +268,8 @@ def _configure_db():
     if config[CLEAN_DB]:
         db.prepare_db()
         db.populate_db()
+    else:
+        db.create_amqp_resources()
 
 
 def _configure():
