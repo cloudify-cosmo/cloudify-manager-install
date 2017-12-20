@@ -159,17 +159,18 @@ def _deploy_security_configuration():
     )
 
     # This should only happen if we're recreating the DB
-    if config[DB][CLEAN_DB]:
-        logger.info('Deploying REST Security configuration file...')
+    if not config[DB][CLEAN_DB]:
+        return
+    logger.info('Deploying REST Security configuration file...')
 
-        rest_security_path = join(HOME_DIR, 'rest-security.conf')
-        write_to_file(config[DB][SECURITY], rest_security_path, json_dump=True)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            rest_security_path
-        )
-        common.chmod('g+r', rest_security_path)
+    rest_security_path = join(HOME_DIR, 'rest-security.conf')
+    write_to_file(config[DB][SECURITY], rest_security_path, json_dump=True)
+    common.chown(
+        constants.CLOUDIFY_USER,
+        constants.CLOUDIFY_GROUP,
+        rest_security_path
+    )
+    common.chmod('g+r', rest_security_path)
 
 
 def _allow_creating_cluster():
