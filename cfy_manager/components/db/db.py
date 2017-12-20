@@ -23,7 +23,8 @@ from .. import (
     SECURITY,
     CLEAN_DB,
     ADMIN_PASSWORD,
-    ADMIN_USERNAME
+    ADMIN_USERNAME,
+    FLASK_SECURITY
 )
 
 from ..service_names import (
@@ -74,8 +75,8 @@ def _create_args_dict():
     script that creates and populates the DB to run
     """
     return {
-        'hash_salt': config[DB][SECURITY]['hash_salt'],
-        'secret_key': config[DB][SECURITY]['secret_key'],
+        'hash_salt': config[FLASK_SECURITY]['hash_salt'],
+        'secret_key': config[FLASK_SECURITY]['secret_key'],
         'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
         'amqp_host': config[RABBITMQ][ENDPOINT_IP],

@@ -28,11 +28,11 @@ from .. import (
     VENV,
     SERVICE_USER,
     SERVICE_GROUP,
-    SECURITY,
+    FLASK_SECURITY,
     CLEAN_DB
 )
 
-from ..service_names import RESTSERVICE, DB
+from ..service_names import RESTSERVICE
 
 from ... import constants
 from ...config import config
@@ -164,7 +164,7 @@ def _deploy_security_configuration():
     logger.info('Deploying REST Security configuration file...')
 
     rest_security_path = join(HOME_DIR, 'rest-security.conf')
-    write_to_file(config[DB][SECURITY], rest_security_path, json_dump=True)
+    write_to_file(config[FLASK_SECURITY], rest_security_path, json_dump=True)
     common.chown(
         constants.CLOUDIFY_USER,
         constants.CLOUDIFY_GROUP,

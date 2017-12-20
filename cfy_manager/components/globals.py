@@ -23,7 +23,7 @@ from ..config import config
 from ..logger import get_logger
 from ..exceptions import InputError
 
-from .service_names import RABBITMQ, MANAGER, INFLUXB, DB
+from .service_names import RABBITMQ, MANAGER, INFLUXB
 
 from . import (
     PRIVATE_IP,
@@ -32,7 +32,8 @@ from . import (
     AGENT,
     CONSTANTS,
     ADMIN_PASSWORD,
-    CLEAN_DB
+    CLEAN_DB,
+    FLASK_SECURITY
 )
 
 BROKER_IP = 'broker_ip'
@@ -127,16 +128,15 @@ def _random_alphanumeric(result_len=31):
     return ''.join(random.sample(ascii_alphanumeric, result_len))
 
 
-def _generate_security_config():
+def _generate_flask_security_config():
     logger.info('Generating random hash salt and secret key...')
-    security_configuration = {
+    config[FLASK_SECURITY] = {
         'hash_salt': base64.b64encode(os.urandom(32)),
         'secret_key': base64.b64encode(os.urandom(32)),
         'encoding_alphabet': _random_alphanumeric(),
         'encoding_block_size': 24,
         'encoding_min_length': 5
     }
-    config[DB][SECURITY] = security_configuration
 
 
 def _validate_admin_password_and_security_config():
@@ -144,16 +144,17 @@ def _validate_admin_password_and_security_config():
         raise InputError(
             'Admin password not found in {config_path} and '
             'was not provided as an argument.\n'
-            'The password was not generated because `clean_db` was set '
-            'to False'.format(
+            'The password was not generated because the `--clean-db` flag '
+            'was not passed cfy_manager install/configure'.format(
                 config_path=constants.USER_CONFIG_PATH
             )
         )
-    if not config[DB][SECURITY]:
+    if not config[FLASK_SECURITY]:
         raise InputError(
-            'Security configuration not found in {config_path}.\n'
-            'The security configuration was not generated because '
-            '`clean_db` was set to False'.format(
+            'Flask security configuration not found in {config_path}.\n'
+            'The Flask security configuration was not generated because '
+            'the `--clean-db` flag was not passed cfy_manager '
+            'install/configure'.format(
                 config_path=constants.USER_CONFIG_PATH
             )
         )
@@ -168,6 +169,6 @@ def set_globals():
     _set_influx_db_endpoint()
     if config[CLEAN_DB]:
         _set_admin_password()
-        _generate_security_config()
+        _generate_flask_security_config()
     else:
         _validate_admin_password_and_security_config()
