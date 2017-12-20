@@ -156,3 +156,8 @@ def temp_copy(source):
     """ Create a copy at a temporary location """
     content = _read(source)
     return write_to_tempfile(content)
+
+
+def touch(file_path):
+    """ Create an empty file in the provided path """
+    sudo(['touch', file_path])

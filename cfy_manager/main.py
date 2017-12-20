@@ -57,7 +57,7 @@ from .exceptions import BootstrapError
 from .constants import INITIAL_DB_CREATION_FILE
 from .logger import get_logger, setup_console_logger
 
-from .utils.files import remove_temp_files
+from .utils.files import remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs
@@ -160,8 +160,7 @@ def _update_initial_db_file():
     """
     # Only create if --clean-db was passed and the file doesn't exist
     if config[CLEAN_DB] and not _is_db_initiated():
-        with open(INITIAL_DB_CREATION_FILE, 'w'):
-            pass
+        touch(INITIAL_DB_CREATION_FILE)
 
 
 def _finish_configuration():
