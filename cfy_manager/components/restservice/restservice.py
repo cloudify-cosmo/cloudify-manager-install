@@ -160,9 +160,6 @@ def _deploy_security_configuration():
         constants.MANAGER_RESOURCES_HOME
     )
 
-    # This should only happen if we're recreating the DB
-    if not config[CLEAN_DB]:
-        return
     logger.info('Deploying REST Security configuration file...')
 
     rest_security_path = join(HOME_DIR, 'rest-security.conf')
