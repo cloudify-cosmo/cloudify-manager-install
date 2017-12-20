@@ -159,7 +159,7 @@ def _deploy_security_configuration():
     )
 
     # This should only happen if we're recreating the DB
-    if not config[DB][CLEAN_DB]:
+    if not config[CLEAN_DB]:
         return
     logger.info('Deploying REST Security configuration file...')
 

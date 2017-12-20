@@ -166,7 +166,7 @@ def set_globals():
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_influx_db_endpoint()
-    if config[DB][CLEAN_DB]:
+    if config[CLEAN_DB]:
         _set_admin_password()
         _generate_security_config()
     else:

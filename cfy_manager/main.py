@@ -44,7 +44,7 @@ from .components import manager_ip_setter
 from .components.globals import set_globals
 from .components.validations import validate
 
-from .components.service_names import MANAGER, DB
+from .components.service_names import MANAGER
 from .components import (
     SECURITY,
     PRIVATE_IP,
@@ -138,7 +138,7 @@ def _load_config_and_logger(verbose=False,
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[DB][CLEAN_DB] = clean_db or not _is_db_initiated()
+    config[CLEAN_DB] = clean_db or not _is_db_initiated()
 
 
 def _print_finish_message():
@@ -161,7 +161,7 @@ def _update_initial_db_file():
     :return:
     """
     # Only create if --clean-db was passed and the file doesn't exist
-    if config[DB][CLEAN_DB] and not _is_db_initiated():
+    if config[CLEAN_DB] and not _is_db_initiated():
         with open(INITIAL_DB_CREATION_FILE, 'w'):
             pass
 

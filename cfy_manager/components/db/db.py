@@ -129,7 +129,7 @@ def install():
 
 
 def configure():
-    if config[DB][CLEAN_DB]:
+    if config[CLEAN_DB]:
         logger.notice('Configuring DB...')
         _create_default_db()
         _create_db_tables_and_add_defaults()
