@@ -14,6 +14,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import sys
 import argh
 from time import time
@@ -54,6 +55,7 @@ from .components import (
 
 from .config import config
 from .exceptions import BootstrapError
+from .constants import INITIAL_DB_CREATION_FILE
 from .logger import get_logger, setup_console_logger
 
 from .utils.files import remove_temp_files
@@ -134,7 +136,9 @@ def _load_config_and_logger(verbose=False,
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-    config[DB][CLEAN_DB] = clean_db
+
+    # If the DB wasn't initiated even once yet, always set clean_db to True
+    config[DB][CLEAN_DB] = clean_db or not _is_db_initiated()
 
 
 def _print_finish_message():
@@ -146,11 +150,28 @@ def _print_finish_message():
     logger.notice('#' * 50)
 
 
+def _is_db_initiated():
+    return os.path.isfile(INITIAL_DB_CREATION_FILE)
+
+
+def _update_initial_db_file():
+    """
+    Update /etc/cloudify/.db_created if the --clean-db flag was passed, and
+    the install/configure process finished successfully
+    :return:
+    """
+    # Only create if --clean-db was passed and the file doesn't exist
+    if config[DB][CLEAN_DB] and not _is_db_initiated():
+        with open(INITIAL_DB_CREATION_FILE, 'w'):
+            pass
+
+
 def _finish_configuration():
     remove_temp_files()
     _print_finish_message()
     _print_time()
     config.dump_config()
+    _update_initial_db_file()
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
