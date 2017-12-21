@@ -14,6 +14,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import sys
 import argh
 from time import time
@@ -43,13 +44,20 @@ from .components.globals import set_globals
 from .components.validations import validate
 
 from .components.service_names import MANAGER
-from .components import SECURITY, PRIVATE_IP, PUBLIC_IP, ADMIN_PASSWORD
+from .components import (
+    SECURITY,
+    PRIVATE_IP,
+    PUBLIC_IP,
+    ADMIN_PASSWORD,
+    CLEAN_DB
+)
 
 from .config import config
 from .exceptions import BootstrapError
+from .constants import INITIAL_DB_CREATION_FILE
 from .logger import get_logger, setup_console_logger
 
-from .utils.files import remove_temp_files
+from .utils.files import remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs
@@ -82,6 +90,14 @@ COMPONENTS = [
 START_TIME = time()
 
 
+CLEAN_DB_HELP_MSG = (
+    'If set to "false", the DB will not be recreated when '
+    'installing/configuring the Manager. Must be set to "true" on the first '
+    'installation. If set to "false", the hash salt and admin password '
+    'will not be generated'
+)
+
+
 def _print_time():
     running_time = time() - START_TIME
     m, s = divmod(running_time, 60)
@@ -107,7 +123,8 @@ sys.excepthook = _exception_handler
 def _load_config_and_logger(verbose=False,
                             private_ip=None,
                             public_ip=None,
-                            admin_password=None):
+                            admin_password=None,
+                            clean_db=False):
     setup_console_logger(verbose)
     config.load_config()
     manager_config = config[MANAGER]
@@ -117,6 +134,9 @@ def _load_config_and_logger(verbose=False,
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
+
+    # If the DB wasn't initiated even once yet, always set clean_db to True
+    config[CLEAN_DB] = clean_db or not _is_db_initiated()
 
 
 def _print_finish_message():
@@ -128,20 +148,44 @@ def _print_finish_message():
     logger.notice('#' * 50)
 
 
+def _is_db_initiated():
+    return os.path.isfile(INITIAL_DB_CREATION_FILE)
+
+
+def _update_initial_db_file():
+    """
+    Update /etc/cloudify/.db_created if the --clean-db flag was passed, and
+    the install/configure process finished successfully
+    :return:
+    """
+    # Only create if --clean-db was passed and the file doesn't exist
+    if config[CLEAN_DB] and not _is_db_initiated():
+        touch(INITIAL_DB_CREATION_FILE)
+
+
 def _finish_configuration():
     remove_temp_files()
     _print_finish_message()
     _print_time()
     config.dump_config()
+    _update_initial_db_file()
 
 
+@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
-            admin_password=None):
+            admin_password=None,
+            clean_db=False):
     """ Install Cloudify Manager """
 
-    _load_config_and_logger(verbose, private_ip, public_ip, admin_password)
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db
+    )
 
     logger.notice('Installing Cloudify Manager...')
     validate()
@@ -154,13 +198,21 @@ def install(verbose=False,
     _finish_configuration()
 
 
+@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
-              admin_password=None):
+              admin_password=None,
+              clean_db=False):
     """ Configure Cloudify Manager """
 
-    _load_config_and_logger(verbose, private_ip, public_ip, admin_password)
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db
+    )
 
     logger.notice('Configuring Cloudify Manager...')
     validate(skip_validations=True)

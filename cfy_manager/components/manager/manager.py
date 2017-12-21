@@ -31,7 +31,8 @@ from ...utils.users import (create_service_user,
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
-                            remove_files)
+                            remove_files,
+                            touch)
 
 logger = get_logger(MANAGER)
 
@@ -51,7 +52,7 @@ def _create_cloudify_user():
 
 def _create_sudoers_file_and_disable_sudo_requiretty():
     common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
-    common.sudo(['touch', constants.CLOUDIFY_SUDOERS_FILE])
+    touch(constants.CLOUDIFY_SUDOERS_FILE)
     common.chmod('440', constants.CLOUDIFY_SUDOERS_FILE)
     entry = 'Defaults:{user} !requiretty'.format(user=constants.CLOUDIFY_USER)
     description = 'Disable sudo requiretty for {0}'.format(
