@@ -93,6 +93,7 @@ def _set_constant_config():
     const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
 
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
+    const_conf['dhparams_path'] = constants.DHPARAMS_PATH
 
 
 def _set_admin_password():

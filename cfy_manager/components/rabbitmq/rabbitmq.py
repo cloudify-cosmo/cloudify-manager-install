@@ -100,7 +100,6 @@ def _init_service():
     deploy(
         src=join(CONFIG_PATH, 'rabbitmq.config'),
         dst=rabbit_config_path,
-        render=False
     )
 
 
