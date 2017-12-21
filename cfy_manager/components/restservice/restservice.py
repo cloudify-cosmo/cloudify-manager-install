@@ -39,7 +39,7 @@ from ...config import config
 from ...logger import get_logger
 from ...exceptions import BootstrapError, FileError, NetworkError
 
-from ...utils import common, sudoers
+from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
@@ -110,24 +110,6 @@ def _deploy_security_configuration():
     common.chmod('g+r', rest_security_path)
 
 
-def _allow_creating_cluster():
-    systemd_run = '/usr/bin/systemd-run'
-    journalctl = '/usr/bin/journalctl'
-
-    create_cluster_node = join(HOME_DIR, 'env', 'bin', 'create_cluster_node')
-    cluster_unit_name = 'cloudify-ha-cluster'
-
-    cmd = '{0} --unit {1} {2} --config *'.format(
-        systemd_run,
-        cluster_unit_name,
-        create_cluster_node
-    )
-    sudoers.allow_user_to_sudo_command(cmd, description='Start a cluster')
-
-    cmd = '{0} --unit {1}*'.format(journalctl, cluster_unit_name)
-    sudoers.allow_user_to_sudo_command(cmd, description='Read cluster logs')
-
-
 def _calculate_worker_count():
     gunicorn_config = config[RESTSERVICE]['gunicorn']
     worker_count = gunicorn_config['worker_count']
@@ -148,7 +130,6 @@ def _configure_restservice():
     _deploy_rest_configuration()
     _deploy_security_configuration()
     _deploy_authorization_configuration()
-    _allow_creating_cluster()
 
 
 def _verify_restservice():
