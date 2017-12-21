@@ -234,6 +234,18 @@ def generate_ca_cert():
     ))
 
 
+def generate_dh_group():
+    """Generate a file with a 2048-bit DH group
+
+    This is to be used for secure key exchange by nginx and rabbitmq.
+    Using low-bit DH groups (as is the default) is potentially vulnerable
+    to the logjam attack.
+    """
+    sudo([
+        'openssl', 'dhparam', '-out', const.DHPARAMS_PATH, '2048'
+    ])
+
+
 @argh.arg('--metadata',
           help='File containing the cert metadata. It should be a '
           'JSON file containing an object with the '

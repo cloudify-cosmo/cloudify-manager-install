@@ -196,6 +196,7 @@ def _handle_certs():
     has_ca_key = _handle_ca_cert()
     _handle_internal_cert(has_ca_key)
     _handle_external_cert()
+    certificates.generate_dh_group()
 
 
 def _deploy_nginx_config_files():
