@@ -37,14 +37,13 @@ from ..service_names import RESTSERVICE
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import BootstrapError, NetworkError
+from ...exceptions import BootstrapError, FileError, NetworkError
 
 from ...utils import common, sudoers
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
-from ...utils.files import deploy
-from ...utils.files import write_to_file
+from ...utils.files import deploy, get_local_source_path, write_to_file
 
 
 HOME_DIR = '/opt/manager'
@@ -239,6 +238,17 @@ def _remove_files():
 def install():
     logger.notice('Installing Rest Service...')
     yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
+
+    premium_source_url = config[RESTSERVICE][SOURCES]['premium_source_url']
+    try:
+        get_local_source_path(premium_source_url)
+    except FileError:
+        logger.info('premium package not found in manager resources package')
+        logger.notice('premium will not be installed.')
+    else:
+        logger.notice('Installing Cloudify Premium...')
+        yum_install(config[RESTSERVICE][SOURCES]['premium_source_url'])
+
     _configure()
     logger.notice('Rest Service successfully installed')
 
