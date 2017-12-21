@@ -3,7 +3,7 @@
 function create_install_rpm() {
     curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${CORE_BRANCH}/packaging/create_rpm -o /tmp/create_rpm
     chmod +x /tmp/create_rpm
-    /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH}
+    /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${VERSIONS_BRANCH}
 }
 
 export CORE_TAG_NAME="4.3.dev1"
@@ -13,6 +13,7 @@ AWS_ACCESS_KEY=$2
 export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
+VERSIONS_BRANCH=${6:-master}
 
 if [ "${REPO}" == "cloudify-versions" ]; then
     export EDITION="community"
