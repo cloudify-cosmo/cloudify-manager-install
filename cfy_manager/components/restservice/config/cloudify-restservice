@@ -9,3 +9,6 @@ REST_PORT={{ restservice.port }}
 # gunicorn configuration
 WORKER_COUNT={{ restservice.gunicorn.worker_count }}
 MAX_WORKER_COUNT={{ restservice.gunicorn.max_worker_count }}
+
+GUNICORN_WORKER_COUNT={{ restservice.gunicorn.worker_count }}
+GUNICORN_MAX_REQUESTS={{ restservice.gunicorn.max_requests }}

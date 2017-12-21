@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
+from os.path import exists, join
 
 from .files import deploy
 from .common import sudo, remove
@@ -34,7 +34,7 @@ class SystemD(object):
         return sudo(systemctl_cmd, retries=retries,
                     ignore_failures=ignore_failure)
 
-    def configure(self, service_name, render=True, tmpfiles=False):
+    def configure(self, service_name, render=True):
         """This configures systemd for a specific service.
 
         It requires that two files are present for each service one containing
@@ -42,10 +42,6 @@ class SystemD(object):
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
 
-        If `tmpfiles` is True, the directory
-        `components/{service_name}/tmpfiles.d` must exist and contain the file
-        `cloudify-{service_name}.config`. This will be deployed to
-        `/usr/lib/tmpfiles.d`.
         """
         sid = 'cloudify-{0}'.format(service_name)
         env_dst = "/etc/sysconfig/{0}".format(sid)
@@ -55,29 +51,34 @@ class SystemD(object):
         src_dir = join(COMPONENTS_DIR, service_dir_name, 'config')
         env_src = join(src_dir, sid)
         srv_src = join(src_dir, '{0}.service'.format(sid))
-        tmp_src = join(src_dir, 'tmpfiles.d', '{0}.conf'.format(sid))
 
         logger.debug('Deploying systemd EnvironmentFile...')
         deploy(env_src, env_dst, render=render)
-        logger.debug('Deploying systemd .service file...')
-        deploy(srv_src, srv_dst, render=render)
+
+        # components that have had their service file moved to a RPM, won't
+        # have the file here.
+        # TODO: after this is done to all components, this can be removed
+        if exists(srv_src):
+            logger.debug('Deploying systemd .service file...')
+            deploy(srv_src, srv_dst, render=render)
+
         logger.debug('Enabling systemd .service...')
         self.systemctl('enable', '{0}.service'.format(sid))
 
-        if tmpfiles:
-            tmp_dst = "/usr/lib/tmpfiles.d/{0}.conf".format(sid)
-            logger.debug('Deploying tmpfiles.d file...')
-            deploy(tmp_src, tmp_dst, render=render)
-            sudo(['systemd-tmpfiles', '--create'])
-
         self.systemctl('daemon-reload')
 
-    def remove(self, service_name):
+    def remove(self, service_name, service_file=True):
         """Stop and disable the service, and then delete its data
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
-        remove(self.get_service_file_path(service_name))
+
+        # components that have had their unit file moved to the RPM, will
+        # also remove it during RPM uninstall
+        # TODO: remove this after all components have been changed to use RPMs
+        if service_file:
+            remove(self.get_service_file_path(service_name))
+
         remove(self.get_vars_file_path(service_name))
 
     @staticmethod

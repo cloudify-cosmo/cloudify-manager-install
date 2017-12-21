@@ -4,6 +4,7 @@ import argparse
 import json
 import multiprocessing
 import os
+import re
 import subprocess
 import sys
 import urlparse
@@ -48,6 +49,9 @@ INSTALLER_REPO_ARCHIVE = (
     'https://github.com/cloudify-cosmo/cloudify-manager-install/'
     'archive/{branch}.tar.gz'
 )
+
+RPM_PREFIX = re.compile('[^0-9]+')
+# regex to extract a package name from a full RPM filename
 
 
 def print_in_color(message, color, stream=None):
@@ -237,6 +241,10 @@ def download_listed_resources(resource_file, destination_path):
     """
         Download resources listed in a file.
     """
+    local_files = os.listdir(MANAGER_RESOURCES_BASE)
+    # Collect a list of local packages (package name, not full filename)
+    package_names = set(RPM_PREFIX.findall(f)[0] for f in local_files)
+
     with open(resource_file) as resource_list_handle:
         resources = resource_list_handle.readlines()
 
@@ -248,7 +256,13 @@ def download_listed_resources(resource_file, destination_path):
         if (not resource) or resource.startswith('#'):
             # Cope with blank lines and comments
             continue
-        resource_file_name = os.path.split(resource)[-1]
+        resource_file_name = os.path.basename(resource)
+        # Trim the filename to before the first digit, so that we're comparing
+        # by package name only, not version.
+        resource_file_prefix = RPM_PREFIX.findall(resource_file_name)[0]
+        if resource_file_prefix in package_names:
+            # Use local copy instead
+            continue
         results.append(
             downloader_pool.apply_async(
                 download_file,
@@ -447,7 +461,7 @@ def validate_pip():
     )
 
 
-def prepare_directory_structure():
+def prepare_directory_structure(local_packages_dir):
     """
         Prepare the directory structure needed for building the installer.
     """
@@ -463,6 +477,13 @@ def prepare_directory_structure():
         ],
         error='Could not create directory tree in /tmp/tmp-install-rpm',
     )
+
+    if os.path.isdir(local_packages_dir):
+        subprocess.check_call(
+            'cp -R "{dir}/"* "{dest}"'.format(
+                dir=local_packages_dir, dest=MANAGER_RESOURCES_BASE),
+            shell=True,
+            )
 
 
 def create_cfy_manager_command(installer_path, installer_branch):
@@ -573,8 +594,10 @@ def run_build_command(edition):
     return determine_rpm_location(rpmbuild_output)
 
 
-def build_package(edition, branch, installer_branch, installer_path,
-                  should_install_pip, types_yaml_url, diamond_plugin_url):
+def build_package(
+        edition, branch, installer_branch, installer_path, should_install_pip,
+        types_yaml_url, diamond_plugin_url, local_packages_dir,
+        ):
     """
         Build the package.
     """
@@ -587,7 +610,7 @@ def build_package(edition, branch, installer_branch, installer_path,
 
     install_dependencies()
 
-    prepare_directory_structure()
+    prepare_directory_structure(local_packages_dir)
 
     retrieve_required_files(
         edition=edition,
@@ -680,6 +703,12 @@ if __name__ == '__main__':
             'http://www.getcloudify.org/spec/diamond-plugin/1.3.6/plugin.yaml'
         ),
     )
+    parser.add_argument(
+        '--local_packages_dir',
+        help='Local directory to fetch RPMs from (will fall back to the'
+             'locations in the manager-packages.yaml file',
+        default=os.path.expanduser('~/cloudify-manager-install-rpms'),
+    )
 
     installer_source_group = parser.add_mutually_exclusive_group()
     installer_source_group.add_argument(
@@ -702,5 +731,6 @@ if __name__ == '__main__':
         installer_path=args.local_installer_path,
         should_install_pip=args.install_pip,
         types_yaml_url=args.types_yaml_url,
-        diamond_plugin_url=args.diamond_plugin_url
+        diamond_plugin_url=args.diamond_plugin_url,
+        local_packages_dir=args.local_packages_dir,
     )

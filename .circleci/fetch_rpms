@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+"""
+Collect & install the RPMs from other CircleCI jobs
+"""
+from __future__ import print_function
+
+import itertools
+import os
+import sys
+import threading
+from shutil import copyfileobj
+
+import requests
+
+
+BATCH_SIZE = 100
+API_PREFIX = (
+    'https://circleci.com/api/v1.1/project/github/'
+    '{organization}/{{project}}/'.format(
+        organization=os.getenv(
+            'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo')))
+
+URL_TEMPLATE = API_PREFIX + 'tree/{branch}'
+ARTIFACTS_TEMPLATE = API_PREFIX + '{build[build_num]}/artifacts'
+TRY_BRANCHES = (os.getenv('CIRCLE_BRANCH'), 'master')
+
+LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
+
+REPOS = {
+    'cloudify-manager': {
+        'rest-service-rpm',
+    },
+}
+
+
+def list_builds(repo):
+    """List all builds for the given repo (filtered to only the current
+    CIRCLE_BRANCH and then master branches)
+    """
+    for branch in TRY_BRANCHES:
+        url = URL_TEMPLATE.format(
+                organization=os.getenv(
+                    'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
+                project=repo,
+                branch=branch,
+                )
+
+        print('API path', url)
+        for offset in itertools.count(0, BATCH_SIZE):
+            resp = requests.get(
+                    url, params={'branch': branch, 'offset': offset})
+            builds = resp.json()
+
+            if not builds:
+                # Empty list means we reached the end of the build list for
+                # this branch
+                break
+
+            for build in builds:
+                yield build
+
+        print('WARNING: matching build not found in branch', branch)
+
+
+def get_builds(repo, rpms):
+    """For the given repo, find a build which successfully built each rpm.
+
+    This will examine the CircleCI build outputs going backwards (fetching
+    the builds list in batches of BATCH_SIZE), looking for a successful
+    build that had built the rpm.
+    """
+    for build in list_builds(repo):
+        if (build.get('workflows', {'job_name': None})['job_name'] in rpms
+                and build['status'] == 'success'):
+            rpms.remove(build['workflows']['job_name'])
+
+            yield build
+
+            if not rpms:
+                # All rpms for this repo found
+                break
+
+    if rpms:
+        raise ValueError("Didn't find builds for rpms", rpms)
+
+
+def get_artifacts(repo, build):
+    url = ARTIFACTS_TEMPLATE.format(project=repo, build=build)
+    resp = requests.get(url)
+
+    for artifact in resp.json():
+        print('Downloading {} (build {})'.format(
+            artifact['path'], build['build_num']))
+        filename = os.path.basename(artifact['path'])
+        resp = requests.get(artifact['url'], stream=True)
+        with open(os.path.join(LOCAL_PACKAGES_DIR, filename), 'wb') as f:
+            resp.raw.decode_content = True
+            copyfileobj(resp.raw, f)
+
+
+def main():
+    os.makedirs(LOCAL_PACKAGES_DIR)
+    downloads = []
+    for repo, rpms in REPOS.items():
+        for build in get_builds(repo, rpms):
+            download = threading.Thread(
+                target=get_artifacts,
+                args=(repo, build),
+                )
+            download.start()
+            downloads.append(download)
+
+    for download in downloads:
+        download.join()
+
+
+if __name__ == '__main__':
+    main()
