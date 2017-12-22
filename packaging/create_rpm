@@ -137,13 +137,15 @@ def exit_helpfully_on_failure(command, error, return_output=False):
             # parse the resulting output if we need to
             print(result)
             return result
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         message = 'Tried to execute: {command}'.format(
             # This is not necessarily exactly what we tried to execute, but is
             # often good enough to provide pointers for troubleshooting.
             command=' '.join(command),
         )
         print_in_color(message, 'red', stream=sys.stderr)
+        if return_output:
+            print(e.output)
         exit_with_sadness(error)
 
 
