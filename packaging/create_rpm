@@ -594,21 +594,22 @@ def run_build_command(edition):
     return determine_rpm_location(rpmbuild_output)
 
 
-def build_package(
-        edition, branch, installer_branch, installer_path, should_install_pip,
-        types_yaml_url, diamond_plugin_url, local_packages_dir,
-        ):
+def build_package(edition, branch, installer_branch, installer_path,
+                  should_install_pip, types_yaml_url, diamond_plugin_url,
+                  should_install_dependencies, local_packages_dir):
     """
         Build the package.
     """
-    validate_sudo()
+    if should_install_dependencies or should_install_pip:
+        validate_sudo()
 
     if should_install_pip:
         install_pip()
 
     validate_pip()
 
-    install_dependencies()
+    if should_install_dependencies:
+        install_dependencies()
 
     prepare_directory_structure(local_packages_dir)
 
@@ -668,6 +669,14 @@ if __name__ == '__main__':
         '--skip-pip-install',
         dest='install_pip',
         help='If this is set, pip will not be installed.',
+        action='store_false',
+        default=True,
+    )
+
+    parser.add_argument(
+        '--skip-dependencies',
+        dest='install_dependencies',
+        help='Skip installing fpm, pex, and their dependencies.',
         action='store_false',
         default=True,
     )
@@ -733,4 +742,5 @@ if __name__ == '__main__':
         types_yaml_url=args.types_yaml_url,
         diamond_plugin_url=args.diamond_plugin_url,
         local_packages_dir=args.local_packages_dir,
+        should_install_dependencies=args.install_dependencies
     )
