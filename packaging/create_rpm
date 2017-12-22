@@ -511,7 +511,7 @@ def create_cfy_manager_command(installer_path, installer_branch):
     )
 
 
-def run_build_command(edition):
+def run_build_command(edition, package_output_dir):
     """
         Run the command to build the installer package and return the path to
         the created package.
@@ -522,7 +522,7 @@ def run_build_command(edition):
         '-s', 'dir',  # Source is a directory
         '-t', 'rpm',  # Build an RPM
         '-n', 'cloudify-manager-install',  # The name of the package
-        '--package', '/tmp',  # Put the package in /tmp when it is built
+        '--package', package_output_dir,  # Put the package in /tmp when it is built
         '--force',  # Force run even if this will overwrite an existing RPM
         # Command to run after rpm is installed
         '--after-install', INSTALL_SCRIPT_DESTINATION,
@@ -598,7 +598,9 @@ def run_build_command(edition):
 
 def build_package(edition, branch, installer_branch, installer_path,
                   should_install_pip, types_yaml_url, diamond_plugin_url,
-                  should_install_dependencies, local_packages_dir):
+                  should_install_dependencies, local_packages_dir,
+                  package_output_dir,
+                  ):
     """
         Build the package.
     """
@@ -635,6 +637,7 @@ def build_package(edition, branch, installer_branch, installer_path,
 
     rpm_location = run_build_command(
         edition=edition,
+        package_output_dir=package_output_dir,
     )
 
     print_status_update('RPM created: {location}'.format(
@@ -720,6 +723,7 @@ if __name__ == '__main__':
              'locations in the manager-packages.yaml file',
         default=os.path.expanduser('~/cloudify-manager-install-rpms'),
     )
+    parser.add_argument('--package_output_dir', default='/tmp')
 
     installer_source_group = parser.add_mutually_exclusive_group()
     installer_source_group.add_argument(
@@ -744,5 +748,6 @@ if __name__ == '__main__':
         types_yaml_url=args.types_yaml_url,
         diamond_plugin_url=args.diamond_plugin_url,
         local_packages_dir=args.local_packages_dir,
-        should_install_dependencies=args.install_dependencies
+        should_install_dependencies=args.install_dependencies,
+        package_output_dir=args.package_output_dir,
     )
