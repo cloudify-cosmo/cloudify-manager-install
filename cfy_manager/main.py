@@ -25,7 +25,6 @@ from .components import java
 from .components import nginx
 from .components import stage
 from .components import sanity
-from .components import consul
 from .components import python
 from .components import manager
 from .components import riemann
@@ -33,7 +32,6 @@ from .components import composer
 from .components import logstash
 from .components import rabbitmq
 from .components import influxdb
-from .components import syncthing
 from .components import amqpinflux
 from .components import mgmtworker
 from .components import postgresql
@@ -77,8 +75,6 @@ COMPONENTS = [
     amqpinflux,
     java,
     riemann,
-    consul,
-    syncthing,
     stage,
     composer,
     logstash,
