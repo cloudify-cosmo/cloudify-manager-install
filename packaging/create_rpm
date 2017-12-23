@@ -137,13 +137,15 @@ def exit_helpfully_on_failure(command, error, return_output=False):
             # parse the resulting output if we need to
             print(result)
             return result
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         message = 'Tried to execute: {command}'.format(
             # This is not necessarily exactly what we tried to execute, but is
             # often good enough to provide pointers for troubleshooting.
             command=' '.join(command),
         )
         print_in_color(message, 'red', stream=sys.stderr)
+        if return_output:
+            print(e.output)
         exit_with_sadness(error)
 
 
@@ -509,7 +511,7 @@ def create_cfy_manager_command(installer_path, installer_branch):
     )
 
 
-def run_build_command(edition):
+def run_build_command(edition, package_output_dir):
     """
         Run the command to build the installer package and return the path to
         the created package.
@@ -520,7 +522,7 @@ def run_build_command(edition):
         '-s', 'dir',  # Source is a directory
         '-t', 'rpm',  # Build an RPM
         '-n', 'cloudify-manager-install',  # The name of the package
-        '--package', '/tmp',  # Put the package in /tmp when it is built
+        '--package', package_output_dir,  # Put the package in /tmp when it is built
         '--force',  # Force run even if this will overwrite an existing RPM
         # Command to run after rpm is installed
         '--after-install', INSTALL_SCRIPT_DESTINATION,
@@ -594,21 +596,24 @@ def run_build_command(edition):
     return determine_rpm_location(rpmbuild_output)
 
 
-def build_package(
-        edition, branch, installer_branch, installer_path, should_install_pip,
-        types_yaml_url, diamond_plugin_url, local_packages_dir,
-        ):
+def build_package(edition, branch, installer_branch, installer_path,
+                  should_install_pip, types_yaml_url, diamond_plugin_url,
+                  should_install_dependencies, local_packages_dir,
+                  package_output_dir,
+                  ):
     """
         Build the package.
     """
-    validate_sudo()
+    if should_install_dependencies or should_install_pip:
+        validate_sudo()
 
     if should_install_pip:
         install_pip()
 
     validate_pip()
 
-    install_dependencies()
+    if should_install_dependencies:
+        install_dependencies()
 
     prepare_directory_structure(local_packages_dir)
 
@@ -632,6 +637,7 @@ def build_package(
 
     rpm_location = run_build_command(
         edition=edition,
+        package_output_dir=package_output_dir,
     )
 
     print_status_update('RPM created: {location}'.format(
@@ -673,6 +679,14 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--skip-dependencies',
+        dest='install_dependencies',
+        help='Skip installing fpm, pex, and their dependencies.',
+        action='store_false',
+        default=True,
+    )
+
+    parser.add_argument(
         '-e', '--edition',
         help='Specify which edition of cloudify to build',
         choices=EDITIONS.keys(),
@@ -709,6 +723,7 @@ if __name__ == '__main__':
              'locations in the manager-packages.yaml file',
         default=os.path.expanduser('~/cloudify-manager-install-rpms'),
     )
+    parser.add_argument('--package_output_dir', default='/tmp')
 
     installer_source_group = parser.add_mutually_exclusive_group()
     installer_source_group.add_argument(
@@ -733,4 +748,6 @@ if __name__ == '__main__':
         types_yaml_url=args.types_yaml_url,
         diamond_plugin_url=args.diamond_plugin_url,
         local_packages_dir=args.local_packages_dir,
+        should_install_dependencies=args.install_dependencies,
+        package_output_dir=args.package_output_dir,
     )
