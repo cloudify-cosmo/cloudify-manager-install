@@ -24,7 +24,7 @@ from .. import (
     ENDPOINT_IP,
 )
 
-from ..service_names import INFLUXB
+from ..service_names import INFLUXDB
 
 from ... import constants
 from ...config import config
@@ -39,15 +39,15 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import wait_for_port, check_http_response
 from ...utils.files import copy_notice, remove_notice, remove_files, temp_copy
 
-logger = get_logger(INFLUXB)
+logger = get_logger(INFLUXDB)
 
 # Currently, cannot be changed due to webui not allowing to configure it.
 INFLUXDB_ENDPOINT_PORT = 8086
 
-HOME_DIR = join('/opt', INFLUXB)
-LOG_DIR = join(constants.BASE_LOG_DIR, INFLUXB)
-INIT_D_PATH = join('/etc', 'init.d', INFLUXB)
-CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXB, CONFIG)
+HOME_DIR = join('/opt', INFLUXDB)
+LOG_DIR = join(constants.BASE_LOG_DIR, INFLUXDB)
+INIT_D_PATH = join('/etc', 'init.d', INFLUXDB)
+CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXDB, CONFIG)
 
 
 def _configure_database(host, port):
@@ -113,12 +113,12 @@ def _configure_database(host, port):
 
 
 def _install_influxdb():
-    source_url = config[INFLUXB][SOURCES]['influxdb_source_url']
+    source_url = config[INFLUXDB][SOURCES]['influxdb_source_url']
     yum_install(source_url)
 
 
 def _install():
-    if config[INFLUXB]['is_internal']:
+    if config[INFLUXDB]['is_internal']:
         _install_influxdb()
 
 
@@ -128,8 +128,8 @@ def _create_paths():
 
     _deploy_config_file()
 
-    common.chown(INFLUXB, INFLUXB, HOME_DIR)
-    common.chown(INFLUXB, INFLUXB, LOG_DIR)
+    common.chown(INFLUXDB, INFLUXDB, HOME_DIR)
+    common.chown(INFLUXDB, INFLUXDB, LOG_DIR)
 
 
 def _deploy_config_file():
@@ -141,20 +141,20 @@ def _deploy_config_file():
 
 
 def _configure_local_influxdb():
-    config[INFLUXB][SERVICE_USER] = INFLUXB
-    config[INFLUXB][SERVICE_GROUP] = INFLUXB
+    config[INFLUXDB][SERVICE_USER] = INFLUXDB
+    config[INFLUXDB][SERVICE_GROUP] = INFLUXDB
 
     _create_paths()
-    copy_notice(INFLUXB)
+    copy_notice(INFLUXDB)
 
-    systemd.configure(INFLUXB)
+    systemd.configure(INFLUXDB)
     # Provided with InfluxDB's package. Will be removed if it exists.
     common.remove(INIT_D_PATH)
-    set_logrotate(INFLUXB)
+    set_logrotate(INFLUXDB)
 
 
 def _check_response():
-    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
+    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
     influxdb_url = 'http://{0}:{1}'.format(
         influxdb_endpoint_ip,
         INFLUXDB_ENDPOINT_PORT
@@ -169,18 +169,18 @@ def _check_response():
 
 def _start_and_verify_alive():
     logger.info('Starting InfluxDB Service...')
-    systemd.restart(INFLUXB)
-    systemd.verify_alive(INFLUXB)
+    systemd.restart(INFLUXDB)
+    systemd.verify_alive(INFLUXDB)
     wait_for_port(INFLUXDB_ENDPOINT_PORT)
     _check_response()
 
 
 def _configure():
-    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
-    is_internal = config[INFLUXB]['is_internal']
+    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
+    is_internal = config[INFLUXDB]['is_internal']
     if is_internal:
         _configure_local_influxdb()
-        systemd.restart(INFLUXB)
+        systemd.restart(INFLUXDB)
 
     wait_for_port(INFLUXDB_ENDPOINT_PORT, influxdb_endpoint_ip)
     _configure_database(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
@@ -204,11 +204,11 @@ def configure():
 
 def remove():
     logger.notice('Removing Influxdb...')
-    remove_notice(INFLUXB)
-    remove_logrotate(INFLUXB)
-    systemd.remove(INFLUXB)
+    remove_notice(INFLUXDB)
+    remove_logrotate(INFLUXDB)
+    systemd.remove(INFLUXDB)
     remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
-    yum_remove(INFLUXB)
-    delete_service_user(INFLUXB)
-    delete_group(INFLUXB)
+    yum_remove(INFLUXDB)
+    delete_service_user(INFLUXDB)
+    delete_group(INFLUXDB)
     logger.notice('InfluxDB successfully removed')
