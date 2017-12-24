@@ -23,7 +23,7 @@ from ..config import config
 from ..logger import get_logger
 from ..exceptions import InputError
 
-from .service_names import RABBITMQ, MANAGER, INFLUXB
+from .service_names import RABBITMQ, MANAGER, INFLUXDB
 
 from . import (
     PRIVATE_IP,
@@ -108,16 +108,16 @@ def _generate_password(length=12):
 
 
 def _set_influx_db_endpoint():
-    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
+    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
 
     if influxdb_endpoint_ip:
-        config[INFLUXB]['is_internal'] = False
+        config[INFLUXDB]['is_internal'] = False
         logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
             influxdb_endpoint_ip))
     else:
-        config[INFLUXB]['is_internal'] = True
+        config[INFLUXDB]['is_internal'] = True
         influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
-        config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
+        config[INFLUXDB][ENDPOINT_IP] = influxdb_endpoint_ip
 
 
 def _random_alphanumeric(result_len=31):
