@@ -211,6 +211,14 @@ def configure(verbose=False,
     )
 
     logger.notice('Configuring Cloudify Manager...')
+    if not _is_db_initiated():
+        raise BootstrapError(
+            'Could not find {touched_file}.\nThis most likely means '
+            'that you need to run `cfy_manager install` before '
+            'running `cfy_manager configure`'.format(
+                touched_file=INITIAL_DB_CREATION_FILE
+            )
+        )
     validate(skip_validations=True)
     set_globals()
 
