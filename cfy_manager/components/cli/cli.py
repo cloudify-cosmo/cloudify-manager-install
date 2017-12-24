@@ -55,11 +55,14 @@ def _configure():
     use_cmd = ['cfy', 'profiles', 'use', 'localhost',
                '--skip-credentials-validation']
 
+    ssl_enabled = 'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
+
     # TODO: Don't skip validation after CFY-7689 is done
     set_cmd = [
         'cfy', 'profiles', 'set', '-u', username,
         '-p', password, '-t', 'default_tenant',
-        '-c', EXTERNAL_CERT_PATH, '--skip-credentials-validation'
+        '-c', EXTERNAL_CERT_PATH, '--ssl', ssl_enabled,
+        '--skip-credentials-validation'
     ]
     logger.info('Setting CLI for default user...')
     common.run(use_cmd)
