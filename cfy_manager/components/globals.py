@@ -111,9 +111,12 @@ def _set_influx_db_endpoint():
     influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
 
     if influxdb_endpoint_ip:
-        config[INFLUXDB]['is_internal'] = False
-        logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
-            influxdb_endpoint_ip))
+        # The InfluxDB endpoint and `is_internal` could've been set by a
+        # previous install/configure, so we validate before setting
+        is_internal = config[INFLUXDB].setdefault('is_internal', False)
+        if not is_internal:
+            logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
+                influxdb_endpoint_ip))
     else:
         config[INFLUXDB]['is_internal'] = True
         influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
