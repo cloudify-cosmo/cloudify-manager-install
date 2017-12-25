@@ -52,7 +52,7 @@ from .components import (
 
 from .config import config
 from .exceptions import BootstrapError
-from .constants import INITIAL_DB_CREATION_FILE
+from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
 
 from .utils.files import remove_temp_files, touch
@@ -132,7 +132,7 @@ def _load_config_and_logger(verbose=False,
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _is_db_initiated()
+    config[CLEAN_DB] = clean_db or not _is_manager_installed()
 
 
 def _print_finish_message():
@@ -144,19 +144,17 @@ def _print_finish_message():
     logger.notice('#' * 50)
 
 
-def _is_db_initiated():
-    return os.path.isfile(INITIAL_DB_CREATION_FILE)
+def _is_manager_installed():
+    return os.path.isfile(INITIAL_INSTALL_FILE)
 
 
-def _update_initial_db_file():
+def _create_initial_install_file():
     """
-    Update /etc/cloudify/.db_created if the --clean-db flag was passed, and
-    the install/configure process finished successfully
-    :return:
+    Create /etc/cloudify/.installed if install finished successfully
+    for the first time
     """
-    # Only create if --clean-db was passed and the file doesn't exist
-    if config[CLEAN_DB] and not _is_db_initiated():
-        touch(INITIAL_DB_CREATION_FILE)
+    if not _is_manager_installed():
+        touch(INITIAL_INSTALL_FILE)
 
 
 def _finish_configuration():
@@ -164,7 +162,7 @@ def _finish_configuration():
     _print_finish_message()
     _print_time()
     config.dump_config()
-    _update_initial_db_file()
+    _create_initial_install_file()
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
@@ -211,6 +209,14 @@ def configure(verbose=False,
     )
 
     logger.notice('Configuring Cloudify Manager...')
+    if not _is_manager_installed():
+        raise BootstrapError(
+            'Could not find {touched_file}.\nThis most likely means '
+            'that you need to run `cfy_manager install` before '
+            'running `cfy_manager configure`'.format(
+                touched_file=INITIAL_INSTALL_FILE
+            )
+        )
     validate(skip_validations=True)
     set_globals()
 
