@@ -92,6 +92,11 @@ CLEAN_DB_HELP_MSG = (
     'installation. If set to "false", the hash salt and admin password '
     'will not be generated'
 )
+ADMIN_PASSWORD_HELP_MSG = (
+    'The password of the Cloudify Manager system administrator. '
+    'Can only be used on the first install of the manager, or when using '
+    'the --clean-db flag'
+)
 
 
 def _print_time():
@@ -124,15 +129,22 @@ def _load_config_and_logger(verbose=False,
     setup_console_logger(verbose)
     config.load_config()
     manager_config = config[MANAGER]
+
+    # If the DB wasn't initiated even once yet, always set clean_db to True
+    config[CLEAN_DB] = clean_db or not _is_manager_installed()
+
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
     if public_ip:
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
-        manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-
-    # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _is_manager_installed()
+        if config[CLEAN_DB]:
+            manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
+        else:
+            raise BootstrapError(
+                'The --admin-password argument can only be used in '
+                'conjunction with the --clean-db flag.'
+            )
 
 
 def _print_finish_message():
@@ -166,6 +178,7 @@ def _finish_configuration():
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
@@ -193,6 +206,7 @@ def install(verbose=False,
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
