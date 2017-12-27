@@ -208,6 +208,7 @@ def _remove_files():
     # Removing the RPM before recreating /opt/manager/resources, because
     # yum remove will delete this folder
     yum_remove('cloudify-rest-service')
+    yum_remove('cloudify-premium', ignore_failures=True)
 
     # Recreate /opt/manager/resources and move the spec files back in
     common.mkdir(constants.MANAGER_RESOURCES_HOME)
