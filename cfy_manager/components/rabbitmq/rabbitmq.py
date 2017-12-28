@@ -26,7 +26,7 @@ from ...logger import get_logger
 from ...exceptions import ValidationError, NetworkError
 
 from ...utils.systemd import systemd
-from ...utils.install import yum_install
+from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, remove as remove_file
 from ...utils.files import deploy
@@ -194,5 +194,6 @@ def configure():
 
 def remove():
     logger.notice('Removing RabbitMQ...')
+    yum_remove('erlang')
     systemd.remove(RABBITMQ, service_file=False)
     logger.notice('RabbitMQ successfully removed')
