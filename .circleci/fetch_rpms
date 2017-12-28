@@ -28,7 +28,7 @@ LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 
 REPOS = {
     'cloudify-manager': {
-        'rest-service-rpm',
+        'build-rpms',
     },
 }
 
