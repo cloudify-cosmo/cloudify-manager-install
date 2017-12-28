@@ -1,4 +1,4 @@
 RABBITMQ_LOG_BASE="/var/log/cloudify/rabbitmq"
 RABBITMQ_PID_FILE="/tmp/rabbitmq.pid"
-RABBITMQ_CONFIG_FILE=/etc/cloudify/rabbitmq
+RABBITMQ_CONFIG_FILE=/etc/cloudify/rabbitmq/rabbitmq.config
 RABBITMQ_ENABLED_PLUGINS_FILE=/etc/cloudify/rabbitmq/enabled_plugins
