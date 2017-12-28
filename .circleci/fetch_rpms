@@ -6,7 +6,6 @@ from __future__ import print_function
 
 import itertools
 import os
-import sys
 import threading
 from shutil import copyfileobj
 
@@ -28,7 +27,7 @@ LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 
 REPOS = {
     'cloudify-manager': {
-        'rest-service-rpm',
+        'build-rpms',
     },
 }
 
