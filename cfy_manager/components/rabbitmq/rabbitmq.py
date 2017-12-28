@@ -29,7 +29,6 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, remove as remove_file
-from ...utils.files import deploy
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
@@ -60,12 +59,6 @@ def _init_service():
     # rabbitmq restart exits with 143 status code that is valid in this case.
     systemd.restart(RABBITMQ, ignore_failure=True)
     wait_for_port(SECURE_PORT)
-
-    deploy(
-        src=join(CONFIG_PATH, 'rabbitmq.config'),
-        dst=rabbit_config_path,
-        render=False
-    )
 
 
 def user_exists(username):
