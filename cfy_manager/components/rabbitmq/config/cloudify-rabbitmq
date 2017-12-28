@@ -1,4 +1,3 @@
-RABBITMQ_NODENAME=cloudify-manager@localhost
 RABBITMQ_LOG_BASE="/var/log/cloudify/rabbitmq"
 RABBITMQ_PID_FILE="/tmp/rabbitmq.pid"
 RABBITMQ_CONFIG_FILE=/etc/cloudify/rabbitmq/rabbitmq
