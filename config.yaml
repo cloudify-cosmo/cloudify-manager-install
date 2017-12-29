@@ -1,9 +1,10 @@
 manager:
-  # The manager's private IP address. This is the address which will be used by the
-  # application hosts to connect to the Manager's fileserver and message broker.
+  # The manager's private IP address. This is the address which will be used by
+  # agent hosts to connect to the Manager's fileserver and message broker.
   private_ip: ''
 
-  # The public IP of the manager to which the CLI will connect.
+  # An IP address by which the Manager is accessible externally, such as via the CLI
+  # or external clients. If not applicable, provide the same value as "private_ip".
   public_ip: ''
 
   ######################################################################################
