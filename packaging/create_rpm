@@ -225,18 +225,24 @@ def file_downloader(to_download, log_lock):
         source, destination = to_download.get()
         with log_lock:
             print('Downloading {url}...'.format(url=source))
-        subprocess.check_output(
-            [
-                'curl', '--retry', '10', '--fail', '--silent',
-                '--show-error', '--location',
-                '-o', destination,
-                source,
-            ],
-            stderr=subprocess.STDOUT,
-        )
-        with log_lock:
-            print('...finished downloading {url}'.format(url=source))
-        to_download.task_done()
+        try:
+            subprocess.check_output(
+                [
+                    'curl', '--retry', '10', '--fail', '--silent',
+                    '--show-error', '--location',
+                    '-o', destination,
+                    source,
+                ],
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as e:
+            with log_lock:
+                print('Error downloading {url}: {e}'.format(url=source, e=e))
+        else:
+            with log_lock:
+                print('...finished downloading {url}'.format(url=source))
+        finally:
+            to_download.task_done()
 
 
 def download_listed_resources(resource_file, destination_path, concurrency=5):
