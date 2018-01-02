@@ -8,7 +8,7 @@ import subprocess
 import sys
 import urlparse
 
-from Queue import Queue
+from Queue import Empty, Queue
 from threading import Thread, Lock
 
 
@@ -222,7 +222,10 @@ def get_package_urls_file(edition, branch, repo_destination_path):
 
 def file_downloader(to_download, log_lock):
     while True:
-        source, destination = to_download.get()
+        try:
+            source, destination = to_download.get_nowait()
+        except Empty:
+            return
         with log_lock:
             print('Downloading {url}...'.format(url=source))
         try:
