@@ -284,7 +284,8 @@ def download_listed_resources(resource_file, destination_path, concurrency=5):
 
     download_queue.join()
     if has_errors.is_set():
-        raise RuntimeError('Some of the resources were not downloaded')
+        raise RuntimeError('Some of the resources were not downloaded! '
+                           'See the log above for details')
 
 
 def retrieve_resources(edition, branch):
