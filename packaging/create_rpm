@@ -249,9 +249,8 @@ def file_downloader(download_queue, log_lock, has_errors):
             download_queue.task_done()
 
 
-def download_listed_resources(resource_file, destination_path, concurrency=5):
-    """
-        Download resources listed in a file.
+def _resources_download_queue(resource_file, destination_path):
+    """Prepare a Queue populated with resource paths to download
     """
     local_files = os.listdir(MANAGER_RESOURCES_BASE)
     # Collect a list of local packages (package name, not full filename)
@@ -273,7 +272,12 @@ def download_listed_resources(resource_file, destination_path, concurrency=5):
                 continue
             destination = os.path.join(destination_path, resource_file_name)
             download_queue.put((resource, destination))
+    return download_queue
 
+
+def download_listed_resources(resource_file, destination_path, concurrency=5):
+    """Download resources listed in a file."""
+    download_queue = _resources_download_queue(resource_file, destination_path)
     log_lock = Lock()
     has_errors = Event()
     for _ in range(concurrency):
