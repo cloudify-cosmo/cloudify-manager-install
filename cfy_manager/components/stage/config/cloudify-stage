@@ -1,2 +1,3 @@
 NODEJS_HOME=/opt/nodejs
 STAGE_HOME=/opt/cloudify-stage
+STAGE_ARGS="{{ stage.community_mode }}"

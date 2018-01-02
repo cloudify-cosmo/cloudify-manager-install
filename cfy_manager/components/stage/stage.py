@@ -19,7 +19,6 @@ from .. import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
-    HOME_DIR_KEY,
     VENV
 )
 
@@ -27,15 +26,12 @@ from ..service_names import STAGE, MANAGER, RESTSERVICE
 
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import FileError
-from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH, CLOUDIFY_GROUP
 
-from ...utils import sudoers
-from ...utils import common, files
+from ...utils import common
+from ...utils.install import yum_install, yum_remove
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
-from ...utils.users import create_service_user
-from ...utils.logrotate import set_logrotate, remove_logrotate
+
 
 logger = get_logger(STAGE)
 
@@ -44,18 +40,7 @@ STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 NODEJS_DIR = join('/opt', 'nodejs')
-LOG_DIR = join(BASE_LOG_DIR, STAGE)
-RESOURCES_DIR = join(HOME_DIR, 'resources')
-STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
-
-NODE_EXECUTABLE_PATH = '/usr/bin/node'
-
-
-def _create_paths():
-    common.mkdir(NODEJS_DIR)
-    common.mkdir(HOME_DIR)
-    common.mkdir(LOG_DIR)
-    common.mkdir(RESOURCES_DIR)
+CREATE_AUTH_TOKEN_SCRIPT = '/opt/manager/scripts/create-auth-token.py'
 
 
 def _set_community_mode():
@@ -67,89 +52,19 @@ def _set_community_mode():
 
 
 def _install():
-    stage_source_url = config[STAGE][SOURCES]['stage_source_url']
-    try:
-        stage_tar = files.get_local_source_path(stage_source_url)
-    except FileError:
-        logger.info('Stage package not found in manager resources package')
-        logger.notice('Stage will not be installed.')
-        config[STAGE]['skip_installation'] = True
-        return
-
-    _create_paths()
-
-    logger.info('Extracting Stage package...')
-    common.untar(stage_tar, HOME_DIR)
-
-    logger.info('Creating symlink to {0}...'.format(NODE_EXECUTABLE_PATH))
-    files.ln(
-        source=join(NODEJS_DIR, 'bin', 'node'),
-        target=NODE_EXECUTABLE_PATH,
-        params='-sf'
-    )
-
-
-def _create_user_and_set_permissions():
-    create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
-
-    logger.debug('Fixing permissions...')
-    common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
-    common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
-    common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
-
-
-def _install_nodejs():
-    logger.info('Installing NodeJS...')
-    nodejs_source_url = config[STAGE][SOURCES]['nodejs_source_url']
-    nodejs = files.get_local_source_path(nodejs_source_url)
-    common.untar(nodejs, NODEJS_DIR)
-
-
-def _deploy_script(script_name, description):
-    sudoers.deploy_sudo_command_script(
-        script_name,
-        description,
-        component=STAGE,
-        allow_as=STAGE_USER
-    )
-    common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
-    common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
-
-
-def _deploy_scripts():
-    config[STAGE][HOME_DIR_KEY] = HOME_DIR
-    _deploy_script(
-        'restore-snapshot.py',
-        'Restore stage directories from a snapshot path'
-    )
-    _deploy_script(
-        'make-auth-token.py',
-        'Update auth token for stage user'
-    )
-
-
-def _allow_snapshot_restore_to_restore_token(rest_service_python):
-    sudoers.allow_user_to_sudo_command(
-        rest_service_python,
-        'Snapshot update auth token for stage user',
-        allow_as=STAGE_USER
-    )
+    sources = config[STAGE][SOURCES]
+    for source in sources.values():
+        yum_install(source)
 
 
 def _create_auth_token(rest_service_python):
     common.run([
-        'sudo', '-u', STAGE_USER, rest_service_python,
-        join(STAGE_RESOURCES, 'make-auth-token.py')
+        'sudo', '-u', STAGE_USER, rest_service_python, CREATE_AUTH_TOKEN_SCRIPT
     ])
 
 
 def _run_db_migrate():
-    backend_dir = join(HOME_DIR, 'backend')
-    npm_path = join(NODEJS_DIR, 'bin', 'npm')
-    common.run(
-        'cd {0}; {1} run db-migrate'.format(backend_dir, npm_path),
-        shell=True
-    )
+    common.run('npm run db-migrate', cwd=join(HOME_DIR, 'backend'))
 
 
 def _start_and_validate_stage():
@@ -165,13 +80,7 @@ def _start_and_validate_stage():
 
 
 def _configure():
-    files.copy_notice(STAGE)
-    set_logrotate(STAGE)
-    _create_user_and_set_permissions()
-    _install_nodejs()
-    _deploy_scripts()
     rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
-    _allow_snapshot_restore_to_restore_token(rest_service_python)
     _create_auth_token(rest_service_python)
     _run_db_migrate()
     _start_and_validate_stage()
@@ -180,8 +89,6 @@ def _configure():
 def install():
     logger.notice('Installing Stage...')
     _install()
-    if config[STAGE]['skip_installation']:
-        return
     _configure()
     logger.notice('Stage successfully installed')
 
@@ -194,14 +101,6 @@ def configure():
 
 def remove():
     logger.notice('Removing Stage...')
-    files.remove_notice(STAGE)
-    remove_logrotate(STAGE)
-    systemd.remove(STAGE)
-    files.remove_files([
-        HOME_DIR,
-        NODEJS_DIR,
-        LOG_DIR,
-        NODE_EXECUTABLE_PATH,
-        STAGE_RESOURCES
-    ])
+    yum_remove('nodejs')
+    systemd.remove(STAGE, service_file=False)
     logger.notice('Stage successfully removed')
