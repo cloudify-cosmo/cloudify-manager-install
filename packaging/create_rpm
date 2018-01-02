@@ -220,10 +220,10 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     }
 
 
-def file_downloader(to_download, log_lock, has_errors):
+def file_downloader(download_queue, log_lock, has_errors):
     while True:
         try:
-            source, destination = to_download.get_nowait()
+            source, destination = download_queue.get_nowait()
         except Empty:
             return
         with log_lock:
@@ -246,7 +246,7 @@ def file_downloader(to_download, log_lock, has_errors):
             with log_lock:
                 print('...finished downloading {url}'.format(url=source))
         finally:
-            to_download.task_done()
+            download_queue.task_done()
 
 
 def download_listed_resources(resource_file, destination_path, concurrency=5):
