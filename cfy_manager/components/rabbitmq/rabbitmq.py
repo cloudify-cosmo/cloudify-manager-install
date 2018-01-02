@@ -28,19 +28,13 @@ from ...exceptions import ValidationError, NetworkError
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
-from ...utils.users import delete_service_user, delete_group
-from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.common import sudo, mkdir, chown, remove as remove_file
-from ...utils.files import copy_notice, remove_notice, remove_files, deploy
+from ...utils.common import sudo, remove as remove_file
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
-FD_LIMIT_PATH = '/etc/security/limits.d/rabbitmq.conf'
-
 SECURE_PORT = 5671
-INSECURE_PORT = 5672
 
 RABBITMQ_CTL = 'rabbitmqctl'
 
@@ -51,37 +45,6 @@ def _install():
     sources = config[RABBITMQ][SOURCES]
     for source in sources.values():
         yum_install(source)
-
-
-def _deploy_resources():
-    deploy(
-        src=join(CONFIG_PATH, 'rabbitmq_ulimit.conf'),
-        dst=FD_LIMIT_PATH
-    )
-    deploy(
-        src=join(CONFIG_PATH, 'rabbitmq-definitions.json'),
-        dst=join(HOME_DIR, 'definitions.json'),
-        render=False
-    )
-    deploy(
-        src=join(CONFIG_PATH, 'rabbitmq-env.conf'),
-        dst=join(HOME_DIR, 'rabbitmq-env.conf')
-    )
-    chown(RABBITMQ, RABBITMQ, HOME_DIR)
-
-
-def _enable_plugins():
-    logger.info('Enabling RabbitMQ Plugins...')
-    # Occasional timing issues with rabbitmq starting have resulted in
-    # failures when first trying to enable plugins
-    sudo(
-        ['rabbitmq-plugins', 'enable', 'rabbitmq_management'],
-        retries=5
-    )
-    sudo(
-        ['rabbitmq-plugins', 'enable', 'rabbitmq_tracing'],
-        retries=5
-    )
 
 
 def _init_service():
@@ -95,13 +58,7 @@ def _init_service():
 
     # rabbitmq restart exits with 143 status code that is valid in this case.
     systemd.restart(RABBITMQ, ignore_failure=True)
-    wait_for_port(INSECURE_PORT)
-
-    deploy(
-        src=join(CONFIG_PATH, 'rabbitmq.config'),
-        dst=rabbit_config_path,
-        render=False
-    )
+    wait_for_port(SECURE_PORT)
 
 
 def user_exists(username):
@@ -207,14 +164,8 @@ def _validate_rabbitmq_running():
 
 
 def _configure():
-    copy_notice(RABBITMQ)
-    mkdir(LOG_DIR)
-    chown(RABBITMQ, RABBITMQ, LOG_DIR)
-    set_logrotate(RABBITMQ)
     systemd.configure(RABBITMQ)
-    _deploy_resources()
     _init_service()
-    _enable_plugins()
     _delete_guest_user()
     _create_rabbitmq_user()
     _start_rabbitmq()
@@ -236,18 +187,6 @@ def configure():
 
 def remove():
     logger.notice('Removing RabbitMQ...')
-    remove_notice(RABBITMQ)
-    remove_logrotate(RABBITMQ)
-    systemd.remove(RABBITMQ)
-    remove_files([
-        HOME_DIR,
-        LOG_DIR,
-        FD_LIMIT_PATH,
-        join('/var/lib', RABBITMQ),
-        join('/usr/lib', RABBITMQ),
-        join('/var/log', RABBITMQ)
-    ])
     yum_remove('erlang')
-    delete_service_user(RABBITMQ)
-    delete_group(RABBITMQ)
+    systemd.remove(RABBITMQ, service_file=False)
     logger.notice('RabbitMQ successfully removed')

@@ -87,6 +87,7 @@ rabbitmq:
   sources:
     erlang_rpm_source_url: erlang-17.4-1.el6.x86_64.rpm
     rabbitmq_rpm_source_url: rabbitmq-server-3.5.3-1.noarch.rpm
+    cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
