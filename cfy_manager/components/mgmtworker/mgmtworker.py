@@ -33,9 +33,9 @@ from ... import constants as const
 from ...exceptions import ValidationError
 
 from ...utils import common
+from ...utils.files import deploy
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-from ...utils.files import deploy
 
 HOME_DIR = '/opt/mgmtworker'
 MGMTWORKER_VENV = join(HOME_DIR, 'env')
