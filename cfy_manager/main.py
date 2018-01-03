@@ -74,11 +74,11 @@ COMPONENTS = [
     influxdb,
     amqpinflux,
     java,
-    riemann,
     stage,
     composer,
     logstash,
     mgmtworker,
+    riemann,
     cli,
     sanity
 ]

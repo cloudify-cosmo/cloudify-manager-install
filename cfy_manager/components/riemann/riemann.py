@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .. import SOURCES, CONFIG, SERVICE_USER, SERVICE_GROUP
+from .. import SCRIPTS, SOURCES, CONFIG, SERVICE_USER, SERVICE_GROUP
 
 from ..service_names import RIEMANN
 
@@ -35,6 +35,7 @@ logger = get_logger(RIEMANN)
 
 HOME_DIR = join('/opt', RIEMANN)
 CONFIG_PATH = join('/etc', RIEMANN)
+SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RIEMANN, SCRIPTS)
 LOG_DIR = join(constants.BASE_LOG_DIR, RIEMANN)
 LANGOHR_HOME = '/opt/lib'
 LANGOHR_JAR_PATH = join(LANGOHR_HOME, 'langohr.jar')
@@ -88,6 +89,18 @@ def _deploy_riemann_config():
     common.chown(RIEMANN, RIEMANN, CONFIG_PATH)
 
 
+def _deploy_riemann_activation_script():
+    logger.info('Deploying riemann activation script')
+    # This is called using the mgmtworker python by riemann's unit file
+    # This is done using mgmtworker because mgmtworker activates these
+    # policies in the first place, so placing it here should make it slightly
+    # less fragile
+    common.copy(
+        source=join(SCRIPTS_PATH, 'activate_riemann_policies'),
+        destination='/opt/manager/scripts/activate_riemann_policies',
+    )
+
+
 def _start_and_verify_service():
     logger.info('Starting Riemann service...')
     systemd.configure(RIEMANN)
@@ -110,6 +123,7 @@ def _configure():
     set_logrotate(RIEMANN)
     _configure_riemann()
     _deploy_riemann_config()
+    _deploy_riemann_activation_script()
     _start_and_verify_service()
 
 
