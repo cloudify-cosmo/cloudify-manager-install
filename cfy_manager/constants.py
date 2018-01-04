@@ -30,7 +30,7 @@ CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
 MANAGER_RESOURCES_HOME = '/opt/manager/resources'
 AGENT_ARCHIVES_PATH = '{0}/packages/agents'.format(MANAGER_RESOURCES_HOME)
 
-USER_CONFIG_PATH = join(BASE_RESOURCES_PATH, 'config.yaml')
+USER_CONFIG_PATH = join(CLOUDIFY_HOME_DIR, 'config.yaml')
 # For defaults, use the version supplied in the package
 DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'config.yaml')
 
