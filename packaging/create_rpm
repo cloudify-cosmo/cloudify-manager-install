@@ -38,6 +38,7 @@ AGENT_RESOURCES_BASE = os.path.join(
 )
 CONFIG_DIR = os.path.join(
     RPM_BUILDER_BASE,
+    'etc',
     'cloudify',
 )
 
@@ -539,7 +540,7 @@ def run_build_command(edition, package_output_dir):
         '--after-install', INSTALL_SCRIPT_DESTINATION,
         # Which files are considered config files (path as it will be when the
         # RPM has been installed)
-        '--config-files', '/opt/cloudify/config.yaml',
+        '--config-files', '/etc/cloudify/config.yaml',
     ]
     if 'VERSION' in os.environ:
         version = os.environ['VERSION']
@@ -579,6 +580,11 @@ def run_build_command(edition, package_output_dir):
             # This will put all of the cloudify directory in /opt/cloudify
             source=os.path.join(RPM_BUILDER_BASE, 'cloudify'),
             destination='/opt',
+        ),
+        mapping.format(
+            # This will put all of the config files in /etc/cloudify
+            source=os.path.join(RPM_BUILDER_BASE, 'etc', 'cloudify'),
+            destination='/etc',
         ),
 
         mapping.format(
