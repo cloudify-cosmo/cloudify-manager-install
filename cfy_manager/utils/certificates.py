@@ -214,6 +214,10 @@ def generate_ca_cert():
         '-out', const.CA_CERT_PATH,
         '-keyout', const.CA_KEY_PATH
     ])
+    create_pkcs12()
+
+
+def create_pkcs12():
     # PKCS12 file required for riemann due to JVM
     # While we don't really want the private key in there, not having it
     # causes failures

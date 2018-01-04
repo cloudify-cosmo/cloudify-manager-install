@@ -58,7 +58,8 @@ from .logger import get_logger, setup_console_logger
 from .utils.files import remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
-    create_external_certs
+    create_external_certs,
+    create_pkcs12,
 )
 
 logger = get_logger('Main')
@@ -266,7 +267,8 @@ def main():
         configure,
         remove,
         create_internal_certs,
-        create_external_certs
+        create_external_certs,
+        create_pkcs12,
     ])
 
 
