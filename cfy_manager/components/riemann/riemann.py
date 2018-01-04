@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .. import SCRIPTS, SOURCES, CONFIG
+from .. import SCRIPTS, SOURCES
 
 from ..service_names import RIEMANN
 
@@ -23,7 +23,6 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
@@ -44,18 +43,6 @@ def _install():
     yum_install(sources['cloudify_riemann_url'])
 
 
-def _deploy_riemann_activation_script():
-    logger.info('Deploying riemann activation script')
-    # This is called using the mgmtworker python by riemann's unit file
-    # This is done using mgmtworker because mgmtworker activates these
-    # policies in the first place, so placing it here should make it slightly
-    # less fragile
-    common.copy(
-        source=join(SCRIPTS_PATH, 'activate_riemann_policies'),
-        destination='/opt/manager/scripts/activate_riemann_policies',
-    )
-
-
 def _start_and_verify_service():
     logger.info('Starting Riemann service...')
     systemd.configure(RIEMANN)
@@ -64,7 +51,6 @@ def _start_and_verify_service():
 
 
 def _configure():
-    _deploy_riemann_activation_script()
     _start_and_verify_service()
 
 
