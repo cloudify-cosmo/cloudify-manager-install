@@ -23,7 +23,7 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common, files
+from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
@@ -42,15 +42,6 @@ def _install():
     yum_install(sources['daemonize_source_url'])
     yum_install(sources['riemann_source_url'])
     yum_install(sources['cloudify_riemann_url'])
-
-
-def _deploy_riemann_config():
-    logger.info('Deploying Riemann config...')
-    files.deploy(
-        src=join(constants.COMPONENTS_DIR, RIEMANN, CONFIG, 'main.clj'),
-        dst=join(CONFIG_PATH, 'main.clj')
-    )
-    common.chown(RIEMANN, RIEMANN, CONFIG_PATH)
 
 
 def _deploy_riemann_activation_script():
@@ -73,8 +64,6 @@ def _start_and_verify_service():
 
 
 def _configure():
-    files.copy_notice(RIEMANN)
-    _deploy_riemann_config()
     _deploy_riemann_activation_script()
     _start_and_verify_service()
 
