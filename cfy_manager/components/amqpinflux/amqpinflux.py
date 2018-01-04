@@ -26,9 +26,6 @@ from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.files import remove_files, remove_notice, copy_notice
-from ...utils.users import (create_service_user,
-                            delete_service_user,
-                            delete_group)
 
 
 logger = get_logger(AMQPINFLUX)
@@ -54,8 +51,6 @@ def _configure():
     config[AMQPINFLUX][SERVICE_GROUP] = AMQPINFLUX
 
     copy_notice(AMQPINFLUX)
-    common.mkdir(HOME_DIR)
-    create_service_user(AMQPINFLUX, AMQPINFLUX, HOME_DIR)
     common.chown(AMQPINFLUX, AMQPINFLUX, HOME_DIR)
     _start_and_verify()
 
@@ -75,10 +70,6 @@ def configure():
 
 def remove():
     logger.notice('Removing AMQP-Influx...')
-    systemd.remove(AMQPINFLUX)
-    remove_notice(AMQPINFLUX)
-    remove_files([HOME_DIR])
+    systemd.remove(AMQPINFLUX, service_file=False)
     yum_remove('cloudify-amqp-influx')
-    delete_service_user(AMQPINFLUX)
-    delete_group(AMQPINFLUX)
     logger.notice('AMQP-Influx successfully removed')
