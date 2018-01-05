@@ -15,17 +15,15 @@
 
 from os.path import join
 
-from .. import SOURCES, SERVICE_USER, SERVICE_GROUP
+from .. import SOURCES
 
 from ..service_names import AMQPINFLUX
 
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-from ...utils.files import remove_files, remove_notice, copy_notice
 
 
 logger = get_logger(AMQPINFLUX)
@@ -47,11 +45,6 @@ def _start_and_verify():
 
 
 def _configure():
-    config[AMQPINFLUX][SERVICE_USER] = AMQPINFLUX
-    config[AMQPINFLUX][SERVICE_GROUP] = AMQPINFLUX
-
-    copy_notice(AMQPINFLUX)
-    common.chown(AMQPINFLUX, AMQPINFLUX, HOME_DIR)
     _start_and_verify()
 
 
