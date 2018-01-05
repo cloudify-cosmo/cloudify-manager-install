@@ -29,7 +29,7 @@ LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 # Keys: other repositories in the same organization
 # Values: collection of Workflow jobs from which we need to fetch artifacts.
 REPOS = {
-    'cloudify-amqp-influx': {
+    'cloudify-amqp-influxdb': {
         'build-rpm': {'cloudify-*.rpm'},
     },
     'cloudify-manager': {
