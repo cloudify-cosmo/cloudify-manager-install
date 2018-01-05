@@ -7,6 +7,7 @@ from __future__ import print_function
 import itertools
 import os
 import threading
+from fnmatch import fnmatch
 from shutil import copyfileobj
 
 import requests
@@ -25,9 +26,14 @@ TRY_BRANCHES = (os.getenv('CIRCLE_BRANCH'), 'master')
 
 LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
 
+# Keys: other repositories in the same organization
+# Values: collection of Workflow jobs from which we need to fetch artifacts.
 REPOS = {
+    'cloudify-amqp-influx': {
+        'build-rpm': {'cloudify-*.rpm'},
+    },
     'cloudify-manager': {
-        'build-rpms',
+        'build-rpms': {'cloudify-*.rpm'},
     },
 }
 
@@ -61,7 +67,7 @@ def list_builds(repo):
         print('WARNING: matching build not found in branch', branch)
 
 
-def get_builds(repo, rpms):
+def get_builds(repo, jobs):
     """For the given repo, find a build which successfully built each rpm.
 
     This will examine the CircleCI build outputs going backwards (fetching
@@ -69,42 +75,42 @@ def get_builds(repo, rpms):
     build that had built the rpm.
     """
     for build in list_builds(repo):
-        if (build.get('workflows', {'job_name': None})['job_name'] in rpms
-                and build['status'] == 'success'):
-            rpms.remove(build['workflows']['job_name'])
+        job = build.get('workflows', {'job_name': None})['job_name']
+        if job in jobs and build['status'] == 'success':
 
-            yield build
+            yield build, jobs.pop(job)
 
-            if not rpms:
+            if not jobs:
                 # All rpms for this repo found
                 break
 
-    if rpms:
-        raise ValueError("Didn't find builds for rpms", rpms)
+    if jobs:
+        raise ValueError("Didn't find builds for jobs", jobs)
 
 
-def get_artifacts(repo, build):
+def get_artifacts(repo, build, rpms):
     url = ARTIFACTS_TEMPLATE.format(project=repo, build=build)
     resp = requests.get(url)
 
     for artifact in resp.json():
-        print('Downloading {} (build {})'.format(
-            artifact['path'], build['build_num']))
         filename = os.path.basename(artifact['path'])
-        resp = requests.get(artifact['url'], stream=True)
-        with open(os.path.join(LOCAL_PACKAGES_DIR, filename), 'wb') as f:
-            resp.raw.decode_content = True
-            copyfileobj(resp.raw, f)
+        if any(fnmatch(filename, glob) for glob in rpms):
+            print('Downloading {} (build {})'.format(
+                artifact['path'], build['build_num']))
+            resp = requests.get(artifact['url'], stream=True)
+            with open(os.path.join(LOCAL_PACKAGES_DIR, filename), 'wb') as f:
+                resp.raw.decode_content = True
+                copyfileobj(resp.raw, f)
 
 
 def main():
     os.makedirs(LOCAL_PACKAGES_DIR)
     downloads = []
-    for repo, rpms in REPOS.items():
-        for build in get_builds(repo, rpms):
+    for repo, jobs in REPOS.items():
+        for build, rpms in get_builds(repo, jobs):
             download = threading.Thread(
                 target=get_artifacts,
-                args=(repo, build),
+                args=(repo, build, rpms),
                 )
             download.start()
             downloads.append(download)
