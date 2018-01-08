@@ -68,13 +68,3 @@ def create_service_user(user, group, home):
             '--gid', group,
             user,
         ])
-
-
-def delete_service_user(user):
-    if user:
-        sudo(['userdel', '--force', user], ignore_failures=True)
-
-
-def delete_group(group):
-    if group:
-        sudo(['groupdel', group], ignore_failures=True)
