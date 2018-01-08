@@ -28,9 +28,7 @@ from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.users import (create_service_user,
-                            delete_service_user,
-                            delete_group)
+from ...utils.users import create_service_user
 
 logger = get_logger(COMPOSER)
 
@@ -126,7 +124,5 @@ def remove():
     files.remove_notice(COMPOSER)
     remove_logrotate(COMPOSER)
     systemd.remove(COMPOSER)
-    delete_service_user(COMPOSER_USER)
-    delete_group(COMPOSER_GROUP)
     files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
     logger.notice('Cloudify Composer successfully removed')

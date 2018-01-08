@@ -34,9 +34,7 @@ from ...utils import sudoers
 from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
-from ...utils.users import (create_service_user,
-                            delete_service_user,
-                            delete_group)
+from ...utils.users import create_service_user
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 logger = get_logger(STAGE)
@@ -199,8 +197,6 @@ def remove():
     files.remove_notice(STAGE)
     remove_logrotate(STAGE)
     systemd.remove(STAGE)
-    delete_service_user(STAGE_USER)
-    delete_group(STAGE_GROUP)
     files.remove_files([
         HOME_DIR,
         NODEJS_DIR,
