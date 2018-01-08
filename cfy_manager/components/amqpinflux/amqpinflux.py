@@ -29,7 +29,6 @@ from ...utils.install import yum_install, yum_remove
 logger = get_logger(AMQPINFLUX)
 
 HOME_DIR = join('/opt', AMQPINFLUX)
-AMQPINFLUX_VENV = join(HOME_DIR, 'env')
 
 
 def _install():
@@ -37,15 +36,11 @@ def _install():
     yum_install(source_url)
 
 
-def _start_and_verify():
+def _configure():
     logger.info('Starting AMQP-Influx Broker Service...')
     systemd.configure(AMQPINFLUX)
     systemd.restart(AMQPINFLUX)
     systemd.verify_alive(AMQPINFLUX)
-
-
-def _configure():
-    _start_and_verify()
 
 
 def install():
