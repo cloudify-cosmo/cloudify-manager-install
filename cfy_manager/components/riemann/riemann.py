@@ -27,9 +27,7 @@ from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.users import (create_service_user,
-                            delete_service_user,
-                            delete_group)
+from ...utils.users import create_service_user
 
 logger = get_logger(RIEMANN)
 
@@ -145,8 +143,6 @@ def remove():
     files.remove_notice(RIEMANN)
     systemd.remove(RIEMANN)
     remove_logrotate(RIEMANN)
-    delete_service_user(RIEMANN)
-    delete_group(RIEMANN)
     files.remove_files([
         HOME_DIR,
         CONFIG_PATH,
