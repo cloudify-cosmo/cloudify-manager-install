@@ -8,9 +8,14 @@ import subprocess
 import sys
 import urlparse
 
+from itertools import chain
 from Queue import Empty, Queue
 from threading import Thread, Lock, Event
 
+
+ADDITIONAL_RESOURCES = [
+    'https://rpm.nodesource.com/pub_9.x/el/7/x86_64/nodejs-9.3.0-1nodesource.x86_64.rpm'  # NOQA
+]
 
 # Not using click or the cfy_manager/logging.py so that this remains a single
 # file download that is immediately usable without installing anything outside
@@ -260,7 +265,7 @@ def _resources_download_queue(resource_file, destination_path):
 
     download_queue = Queue()
     with open(resource_file) as resources:
-        for resource in resources:
+        for resource in chain(resources, ADDITIONAL_RESOURCES):
             resource = resource.strip()
             if (not resource) or resource.startswith('#'):
                 # Cope with blank lines and comments
