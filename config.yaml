@@ -174,10 +174,9 @@ python:
 
 riemann:
   sources:
-    langohr_source_url: langohr.jar
     daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
     riemann_source_url: riemann-0.2.6-1.noarch.rpm
-    cloudify_resources_url: cloudify-manager-*.tar.gz
+    cloudify_riemann_url: cloudify-riemann-*.rpm
 
 restservice:
   log:
