@@ -25,9 +25,7 @@ from ...logger import get_logger
 from ...exceptions import FileError
 
 from ...utils import common
-from ...utils.users import (create_service_user,
-                            delete_service_user,
-                            delete_group)
+from ...utils.users import create_service_user
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
@@ -157,8 +155,6 @@ def configure():
 
 def remove():
     logger.notice('Removing Cloudify Manager resources...')
-    delete_service_user(constants.CLOUDIFY_USER)
-    delete_group(constants.CLOUDIFY_GROUP)
     remove_files([
         constants.CLOUDIFY_HOME_DIR,
         join(_get_exec_tempdir(), 'cloudify-ctx')
