@@ -40,7 +40,7 @@ def _install():
     yum_install(source_url)
 
 
-def _start_and_verify():
+def start_and_verify():
     logger.info('Starting AMQP-Influx Broker Service...')
     systemd.configure(AMQPINFLUX)
     systemd.restart(AMQPINFLUX)
@@ -55,7 +55,7 @@ def _configure():
     common.mkdir(HOME_DIR)
     create_service_user(AMQPINFLUX, AMQPINFLUX, HOME_DIR)
     common.chown(AMQPINFLUX, AMQPINFLUX, HOME_DIR)
-    _start_and_verify()
+    start_and_verify()
 
 
 def install():

@@ -150,7 +150,7 @@ def _deploy_logstash_sysconfig():
     )
 
 
-def _start_and_validate_logstash():
+def start_and_verify():
     logger.debug('Checking logstash config...')
     common.sudo(['/sbin/chkconfig', 'logstash', 'on'])
     logger.info('Starting Logstash service...')
@@ -166,7 +166,7 @@ def _configure():
     _deploy_logstash_sysconfig()
     set_logrotate(LOGSTASH)
     copy_notice(LOGSTASH)
-    _start_and_validate_logstash()
+    start_and_verify()
 
 
 def install():

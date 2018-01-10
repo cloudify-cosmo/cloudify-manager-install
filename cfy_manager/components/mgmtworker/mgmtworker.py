@@ -109,7 +109,7 @@ def _check_worker_running():
     raise ValidationError('Could not validate that celery is running')
 
 
-def _start_and_verify_mgmtworker():
+def start_and_verify():
     systemd.restart(MGMTWORKER)
     systemd.verify_alive(MGMTWORKER)
     _check_worker_running()
@@ -119,7 +119,7 @@ def _configure():
     _deploy_mgmtworker_config()
     systemd.configure(MGMTWORKER)
     _prepare_snapshot_permissions()
-    _start_and_verify_mgmtworker()
+    start_and_verify()
 
 
 def install():

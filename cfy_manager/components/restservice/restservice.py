@@ -172,7 +172,7 @@ def _verify_restservice():
             'REST service returned malformed JSON: {0}'.format(e))
 
 
-def _start_restservice():
+def start_and_verify():
     systemd.restart(RESTSERVICE)
     systemd.verify_alive(RESTSERVICE)
 
@@ -193,7 +193,7 @@ def _configure():
     _configure_restservice()
     _configure_db()
     systemd.configure(RESTSERVICE)
-    _start_restservice()
+    start_and_verify()
 
 
 def _remove_files():
