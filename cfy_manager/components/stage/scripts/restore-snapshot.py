@@ -22,7 +22,7 @@ HOME_DIR = "{{ stage.home_dir }}"
 
 
 def _restore(snapshot_root, override=False):
-    for folder in ['conf', 'dist/widgets', 'dist/templates']:
+    for folder in ['conf']:
         destination = os.path.join(HOME_DIR, folder)
         if not override:
             destination = os.path.join(destination, 'from_snapshot')
