@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .. import SOURCES, CONFIG
+from .. import SOURCES, CONFIG, LOG_DIR_KEY
 
 from ..service_names import LOGSTASH
 
@@ -29,7 +29,10 @@ from ...utils.install import yum_install, yum_remove
 from ...utils.files import replace_in_file
 from ...utils.files import deploy
 
+LOGSTASH_CONF_DIR = join('/etc', LOGSTASH)
+REMOTE_CONFIG_PATH = join(LOGSTASH_CONF_DIR, 'conf.d')
 INIT_D_FILE = '/etc/init.d/logstash'
+LOG_DIR = join(constants.BASE_LOG_DIR, LOGSTASH)
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, LOGSTASH, CONFIG)
 
@@ -46,6 +49,17 @@ def _install():
             'cloudify_logstash_source_url',
             ):
         yum_install(sources[source])
+
+
+def _deploy_logstash_config():
+    logger.info('Deploying Logstash configuration...')
+    config[LOGSTASH][LOG_DIR_KEY] = LOG_DIR  # Used in config files
+
+    deploy(
+        join(CONFIG_PATH, 'logstash.conf'),
+        join(REMOTE_CONFIG_PATH, 'logstash.conf')
+    )
+    common.chown(LOGSTASH, LOGSTASH, REMOTE_CONFIG_PATH)
 
 
 def _edit_init_d_file():
@@ -72,6 +86,7 @@ def _start_and_validate_logstash():
 
 
 def _configure():
+    _deploy_logstash_config()
     _edit_init_d_file()
     _start_and_validate_logstash()
 
