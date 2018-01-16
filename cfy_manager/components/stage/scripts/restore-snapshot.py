@@ -28,6 +28,7 @@ def _restore(snapshot_root, override=False):
             destination = os.path.join(destination, 'from_snapshot')
         if os.path.exists(destination):
             shutil.rmtree(destination)
+        # in old snapshots, userData might not exist
         try:
             shutil.copytree(os.path.join(snapshot_root, folder), destination)
         except OSError:
