@@ -199,7 +199,9 @@ def generate_external_ssl_cert(ips, cn):
         ips,
         cn,
         const.EXTERNAL_CERT_PATH,
-        const.EXTERNAL_KEY_PATH
+        const.EXTERNAL_KEY_PATH,
+        sign_cert=const.CA_CERT_PATH,
+        sign_key=const.CA_KEY_PATH
     )
 
 
