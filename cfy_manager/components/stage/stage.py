@@ -152,7 +152,7 @@ def _run_db_migrate():
     )
 
 
-def _start_and_validate_stage():
+def start_and_verify():
     _set_community_mode()
     # Used in the service template
     config[STAGE][SERVICE_USER] = STAGE_USER
@@ -174,7 +174,7 @@ def _configure():
     _allow_snapshot_restore_to_restore_token(rest_service_python)
     _create_auth_token(rest_service_python)
     _run_db_migrate()
-    _start_and_validate_stage()
+    start_and_verify()
 
 
 def install():

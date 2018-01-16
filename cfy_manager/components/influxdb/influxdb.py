@@ -166,7 +166,7 @@ def _check_response():
         raise ValidationError('Could not validate InfluxDB')
 
 
-def _start_and_verify_alive():
+def start_and_verify():
     logger.info('Starting InfluxDB Service...')
     systemd.restart(INFLUXDB)
     systemd.verify_alive(INFLUXDB)
@@ -185,7 +185,7 @@ def _configure():
     _configure_database(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
 
     if is_internal:
-        _start_and_verify_alive()
+        start_and_verify()
 
 
 def install():

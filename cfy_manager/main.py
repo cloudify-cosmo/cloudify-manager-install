@@ -20,24 +20,6 @@ import argh
 from time import time
 from traceback import format_exception
 
-from .components import cli
-from .components import java
-from .components import nginx
-from .components import stage
-from .components import sanity
-from .components import python
-from .components import manager
-from .components import riemann
-from .components import composer
-from .components import logstash
-from .components import rabbitmq
-from .components import influxdb
-from .components import amqpinflux
-from .components import mgmtworker
-from .components import postgresql
-from .components import restservice
-from .components import manager_ip_setter
-
 from .components.globals import set_globals
 from .components.validations import validate
 
@@ -61,28 +43,12 @@ from .utils.certificates import (
     create_external_certs,
     create_pkcs12,
 )
+from .components import (
+    handlers,
+    services
+)
 
 logger = get_logger('Main')
-
-COMPONENTS = [
-    manager,
-    manager_ip_setter,
-    nginx,
-    python,
-    postgresql,
-    rabbitmq,
-    restservice,
-    influxdb,
-    amqpinflux,
-    java,
-    stage,
-    composer,
-    logstash,
-    mgmtworker,
-    riemann,
-    cli,
-    sanity
-]
 
 START_TIME = time()
 
@@ -98,6 +64,7 @@ ADMIN_PASSWORD_HELP_MSG = (
     'Can only be used on the first install of the manager, or when using '
     'the --clean-db flag'
 )
+SERVICE_NAME_HELP_MSG = 'The service to {op}'
 
 
 def _print_time():
@@ -199,7 +166,7 @@ def install(verbose=False,
     validate()
     set_globals()
 
-    for component in COMPONENTS:
+    for component in handlers.COMPONENTS:
         component.install()
 
     logger.notice('Cloudify Manager successfully installed!')
@@ -235,7 +202,7 @@ def configure(verbose=False,
     validate(skip_validations=True)
     set_globals()
 
-    for component in COMPONENTS:
+    for component in handlers.COMPONENTS:
         component.configure()
 
     logger.notice('Cloudify Manager successfully configured!')
@@ -253,11 +220,32 @@ def remove(verbose=False, force=False):
 
     logger.notice('Removing Cloudify Manager...')
 
-    for component in COMPONENTS:
+    for component in handlers.COMPONENTS:
         component.remove()
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
+
+
+@argh.arg('-s', '--service',
+          action='append',
+          help=SERVICE_NAME_HELP_MSG.format(op='start'))
+def start_service(verbose=False, force=False, service=None):
+    """Start a manager services"""
+    import pydevd; pydevd.settrace('localhost', suspend=False, port=11223)
+    logger.notice('Starting services')
+    services.start(service)
+    logger.notice('Services started')
+
+
+@argh.arg('-s', '--service',
+          action='append',
+          help=SERVICE_NAME_HELP_MSG.format(op='stop'))
+def stop_service(verbose=False, force=False, service='all'):
+    """Stop a manager services"""
+    logger.notice('Stopping services')
+    services.stop(service)
+    logger.notice('Services stopped')
 
 
 def main():
@@ -266,6 +254,8 @@ def main():
         install,
         configure,
         remove,
+        start_service,
+        stop_service,
         create_internal_certs,
         create_external_certs,
         create_pkcs12,

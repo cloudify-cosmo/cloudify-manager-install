@@ -280,7 +280,7 @@ def _verify_nginx():
         raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
 
-def _start_and_verify_service():
+def start_and_verify():
     logger.info('Starting NGINX service...')
     systemd.enable(NGINX, append_prefix=False)
     systemd.restart(NGINX, append_prefix=False)
@@ -295,7 +295,7 @@ def _configure():
     set_logrotate(NGINX)
     _handle_certs()
     _deploy_nginx_config_files()
-    _start_and_verify_service()
+    start_and_verify()
 
 
 def install():

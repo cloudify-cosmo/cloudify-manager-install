@@ -43,7 +43,7 @@ def _install():
     yum_install(sources['cloudify_riemann_url'])
 
 
-def _start_and_verify_service():
+def start_and_verify():
     logger.info('Starting Riemann service...')
     systemd.configure(RIEMANN)
     systemd.restart(RIEMANN)
@@ -51,7 +51,7 @@ def _start_and_verify_service():
 
 
 def _configure():
-    _start_and_verify_service()
+    start_and_verify()
 
 
 def install():

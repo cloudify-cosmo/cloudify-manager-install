@@ -140,8 +140,12 @@ def _configure():
     _init_postgresql()
     _update_configuration()
     _create_postgres_pass_file()
+    start_and_verify()
 
-    systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
+
+def start_and_verify():
+    logger.info('PostgreSQL NGINX service...')
+    systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
     systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
 
