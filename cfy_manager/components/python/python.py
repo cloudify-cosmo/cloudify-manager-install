@@ -13,15 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .. import SOURCES
-
 from ..service_names import PYTHON
 
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import ValidationError
 
-from ...utils.common import sudo
 from ...utils.install import yum_install, yum_remove
 from ...utils.files import copy_notice, remove_notice
 
@@ -29,8 +25,6 @@ logger = get_logger(PYTHON)
 
 
 def _install():
-    yum_install(config[PYTHON][SOURCES]['pip_source_url'])
-
     if config[PYTHON]['install_python_compilers']:
         logger.info('Installing Compilers...')
         yum_install('python-devel', disable_all_repos=False)
@@ -38,18 +32,8 @@ def _install():
         yum_install('gcc-c++', disable_all_repos=False)
 
 
-def _validate_pip_installed():
-    logger.info('Validating pip installation...')
-    pip_result = sudo(['pip'], ignore_failures=True)
-    if pip_result.returncode != 0:
-        raise ValidationError(
-            'Python runtime installation error: pip was not installed'
-        )
-
-
 def _configure():
     copy_notice(PYTHON)
-    _validate_pip_installed()
 
 
 def install():
@@ -69,7 +53,6 @@ def remove():
     remove_notice(PYTHON)
     if config[PYTHON]['remove_on_teardown']:
         logger.notice('Removing Python dependencies...')
-        yum_remove('python-pip')
         if config[PYTHON]['install_python_compilers']:
             yum_remove('python-devel')
             yum_remove('gcc')
