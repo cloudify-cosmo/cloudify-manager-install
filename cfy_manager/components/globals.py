@@ -17,6 +17,7 @@ import os
 import base64
 import string
 import random
+from uuid import uuid4
 
 from .. import constants
 from ..config import config
@@ -165,6 +166,18 @@ def _validate_admin_password_and_security_config():
         )
 
 
+def _create_manager_unique_id():
+    manager_id_path = '/opt/manager/.id'
+
+    if os.path.exists(manager_id_path):
+        with open(manager_id_path) as f:
+            existing_manager_id = f.read().strip()
+            if existing_manager_id:
+                return
+    with open(manager_id_path, 'w') as f:
+        f.write(uuid4().hex)
+
+
 def set_globals():
     _set_ip_config()
     _set_agent_broker_credentials()
@@ -172,6 +185,7 @@ def set_globals():
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_influx_db_endpoint()
+    _create_manager_unique_id()
     if config[CLEAN_DB]:
         _set_admin_password()
         _generate_flask_security_config()
