@@ -36,6 +36,7 @@ from .components import amqpinflux
 from .components import mgmtworker
 from .components import postgresql
 from .components import restservice
+from .components import usage_collector
 from .components import manager_ip_setter
 
 from .components.globals import set_globals
@@ -81,6 +82,7 @@ COMPONENTS = [
     mgmtworker,
     riemann,
     cli,
+    usage_collector,
     sanity
 ]
 
