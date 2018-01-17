@@ -26,7 +26,6 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-from ...utils.files import replace_in_file
 from ...utils.files import deploy
 
 LOGSTASH_CONF_DIR = join('/etc', LOGSTASH)
@@ -44,7 +43,6 @@ def _install():
     sources = config[LOGSTASH][SOURCES]
 
     for source in (
-            'logstash_source_url',
             'postgresql_jdbc_url',
             'cloudify_logstash_source_url',
             ):
@@ -62,21 +60,6 @@ def _deploy_logstash_config():
     common.chown(LOGSTASH, LOGSTASH, REMOTE_CONFIG_PATH)
 
 
-def _edit_init_d_file():
-    # Due to a bug in the handling of configuration files,
-    # configuration files with the same name cannot be deployed.
-    # Since the logrotate config file is called `logstash`,
-    # we change the name of the logstash env vars config file
-    # from logstash to cloudify-logstash to be consistent with
-    # other service env var files.
-    replace_in_file(
-        'sysconfig/\$name',
-        'sysconfig/cloudify-$name',
-        INIT_D_FILE)
-    common.chmod('755', INIT_D_FILE)
-    common.chown('root', 'root', INIT_D_FILE)
-
-
 def _start_and_validate_logstash():
     logger.debug('Checking logstash config...')
     common.sudo(['/sbin/chkconfig', 'logstash', 'on'])
@@ -87,7 +70,6 @@ def _start_and_validate_logstash():
 
 def _configure():
     _deploy_logstash_config()
-    _edit_init_d_file()
     _start_and_validate_logstash()
 
 
