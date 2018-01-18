@@ -35,6 +35,9 @@ REPOS = {
     'cloudify-manager': {
         'build-rpms': {'cloudify-*.rpm'},
     },
+    'cloudify-stage': {
+        'build_rpm': {'cloudify-*.rpm'},
+    },
 }
 
 
