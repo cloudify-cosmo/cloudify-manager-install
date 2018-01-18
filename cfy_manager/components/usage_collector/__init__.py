@@ -13,22 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-AMQPINFLUX = 'amqpinflux'
-CLI = 'cli'
-COMPOSER = 'composer'
-DEV = 'dev'
-INFLUXDB = 'influxdb'
-JAVA = 'java'
-LOGSTASH = 'logstash'
-MANAGER = 'manager'
-MANAGER_IP_SETTER = 'manager-ip-setter'
-MGMTWORKER = 'mgmtworker'
-NGINX = 'nginx'
-POSTGRESQL = 'postgresql'
-PYTHON = 'python'
-RABBITMQ = 'rabbitmq'
-RESTSERVICE = 'restservice'
-RIEMANN = 'riemann'
-SANITY = 'sanity'
-STAGE = 'stage'
-USAGE_COLLECTOR = 'usage_collector'
+from .usage_collector import install, configure, remove  # NOQA
