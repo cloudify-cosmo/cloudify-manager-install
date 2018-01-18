@@ -145,7 +145,7 @@ java:
 
 logstash:
   sources:
-    postgresql_jdbc_url: https://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/postgresql94-jdbc-9.4.1207-2.rhel7.noarch.rpm
+    postgresql_jdbc_url: postgresql94-jdbc-9.4*.rpm
     cloudify_logstash_source_url: cloudify-logstash-*.rpm
 
 stage:
