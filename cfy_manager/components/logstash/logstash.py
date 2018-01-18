@@ -42,10 +42,7 @@ def _install():
     """Install logstash as a systemd service."""
     sources = config[LOGSTASH][SOURCES]
 
-    for source in (
-            'postgresql_jdbc_url',
-            'cloudify_logstash_source_url',
-            ):
+    for source in sources:
         yum_install(sources[source])
 
 
