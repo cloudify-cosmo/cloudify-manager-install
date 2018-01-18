@@ -3,7 +3,7 @@ from requests import post
 
 
 MANAGER_ID_PATH = '/etc/cloudify/.id'
-CLOUDIFY_ENDPOINT_URL = \
+CLOUDIFY_ENDPOINT_UPTIME_URL = \
     'https://us-central1-omer-tenant.cloudfunctions.net/cloudifyAlive'
 
 
@@ -14,7 +14,7 @@ def _collect_metadata(data):
 
 
 def _send_data(data):
-    post(CLOUDIFY_ENDPOINT_URL, data=data)
+    post(CLOUDIFY_ENDPOINT_UPTIME_URL, data=data)
 
 
 def main():
