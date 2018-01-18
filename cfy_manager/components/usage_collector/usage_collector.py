@@ -16,20 +16,28 @@
 import os
 from uuid import uuid4
 
-from ...utils import common
+from ... import constants
+from ...logger import get_logger
+from ...utils import common, files
+from ..service_names import USAGE_COLLECTOR
 
 
 MANAGER_ID_PATH = '/etc/cloudify/.id'
+logger = get_logger(USAGE_COLLECTOR)
 
 
 def _create_manager_id_file():
+    logger.info('Creating manager id file...')
     if os.path.exists(MANAGER_ID_PATH):
         with open(MANAGER_ID_PATH) as f:
             existing_manager_id = f.read().strip()
             if existing_manager_id:
                 return
-    with open(MANAGER_ID_PATH, 'w') as f:
-        f.write(uuid4().hex)
+    files.write_to_file(uuid4().hex, MANAGER_ID_PATH)
+    common.chown(constants.CLOUDIFY_USER,
+                 constants.CLOUDIFY_GROUP,
+                 MANAGER_ID_PATH)
+    logger.info('Manager id file successfully created')
 
 
 def install():
