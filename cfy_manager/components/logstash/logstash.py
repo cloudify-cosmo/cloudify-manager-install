@@ -86,6 +86,5 @@ def configure():
 def remove():
     logger.notice('Removing Logstash...')
     systemd.remove(LOGSTASH, service_file=False)
-    for package in LOGSTASH, 'postgresql-jdbc', 'cloudify-logstash':
-        yum_remove(package)
+    yum_remove('postgresql94-jdbc')
     logger.notice('Logstash successfully removed')
