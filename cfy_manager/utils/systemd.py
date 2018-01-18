@@ -52,8 +52,9 @@ class SystemD(object):
         env_src = join(src_dir, sid)
         srv_src = join(src_dir, '{0}.service'.format(sid))
 
-        logger.debug('Deploying systemd EnvironmentFile...')
-        deploy(env_src, env_dst, render=render)
+        if exists(env_src):
+            logger.debug('Deploying systemd EnvironmentFile...')
+            deploy(env_src, env_dst, render=render)
 
         # components that have had their service file moved to a RPM, won't
         # have the file here.
