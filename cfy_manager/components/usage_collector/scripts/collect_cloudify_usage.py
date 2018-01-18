@@ -11,7 +11,7 @@ from cloudify_cli.env import get_rest_client
 GIGA_SIZE = 1024 * 1024 * 1024
 MANAGER_ID_PATH = '/etc/cloudify/.id'
 PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
-CLOUDIFY_ENDPOINT_URL = \
+CLOUDIFY_ENDPOINT_USAGE_DATA_URL = \
     'https://us-central1-omer-tenant.cloudfunctions.net/cloudifyUsage'
 
 
@@ -73,7 +73,7 @@ def _collect_cloudify_config(data):
 
 
 def _send_data(data):
-    post(CLOUDIFY_ENDPOINT_URL, data=data)
+    post(CLOUDIFY_ENDPOINT_USAGE_DATA_URL, data=data)
 
 
 def main():
