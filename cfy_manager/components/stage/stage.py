@@ -40,7 +40,7 @@ STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 NODEJS_DIR = join('/opt', 'nodejs')
-CREATE_AUTH_TOKEN_SCRIPT = '/opt/manager/scripts/create-auth-token.py'
+MAKE_AUTH_TOKEN_SCRIPT = '/opt/manager/scripts/make-auth-token.py'
 
 
 def _set_community_mode():
@@ -59,7 +59,7 @@ def _install():
 
 def _create_auth_token(rest_service_python):
     common.run([
-        'sudo', '-u', STAGE_USER, rest_service_python, CREATE_AUTH_TOKEN_SCRIPT
+        'sudo', '-u', STAGE_USER, rest_service_python, MAKE_AUTH_TOKEN_SCRIPT
     ])
 
 
