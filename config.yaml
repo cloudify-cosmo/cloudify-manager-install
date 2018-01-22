@@ -145,7 +145,6 @@ java:
 
 logstash:
   sources:
-    postgresql_jdbc_url: postgresql94-jdbc-9.4*.rpm
     cloudify_logstash_source_url: cloudify-logstash-*.rpm
 
 stage:
