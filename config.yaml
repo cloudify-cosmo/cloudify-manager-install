@@ -145,11 +145,8 @@ java:
 
 logstash:
   sources:
-    logstash_source_url: logstash-1.5.0-1.noarch.rpm
-    logstash_filter_json_encode_plugin_url: logstash-filter-json_encode-0.1.5.gem
-    logstash_output_jdbc_plugin_url: logstash-output-jdbc-0.2.10.gem
-    postgresql_jdbc_driver_url: postgresql-9.4.1212.jar
-
+    postgresql_jdbc_url: postgresql94-jdbc-9.4*.rpm
+    cloudify_logstash_source_url: cloudify-logstash-*.rpm
 
 stage:
   sources:
