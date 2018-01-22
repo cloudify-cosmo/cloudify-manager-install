@@ -116,7 +116,18 @@ def _is_clustered():
     return bool(node_status.get('initialized'))
 
 
+def _is_active_manager():
+    if _is_clustered():
+        try:
+            return is_master()
+        except Exception:
+            return False
+    return True
+
+
 def main():
+    if not _is_active_manager():
+        return
     data = {}
     _collect_metadata(data)
     _collect_system_data(data)
