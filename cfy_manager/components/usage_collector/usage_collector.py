@@ -59,6 +59,7 @@ def configure():
 def remove():
     logger.notice('Removing Usage Collector...')
     _remove_cron_jobs()
+    common.remove(SCRIPTS_DESTINATION_PATH)
     common.remove(MANAGER_ID_PATH)
     logger.notice('Usage Collector successfully removed')
 
