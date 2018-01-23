@@ -49,6 +49,13 @@ jobs:
             BUILD_SCRIPT_PATH=${REMOTE_PATH}/packaging/docker/build_rpm.sh
             docker exec -t ${CONTAINER_NAME} sh -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH}"
       - run:
+          name: RPM Artifact
+          command: |
+            set -eux
+            RPM=$(docker exec ${CONTAINER_NAME} find /tmp -name 'cloudify-manager-install*.rpm')
+            mkdir result
+            docker cp "${CONTAINER_NAME}:${RPM}" result
+      - run:
           name: Install Cloudify Manager
           command: |
             set -eux
@@ -56,3 +63,7 @@ jobs:
 
             chmod +x install_manager.sh
             ./install_manager.sh
+
+      - store_artifacts:
+          path: result
+          destination: result
