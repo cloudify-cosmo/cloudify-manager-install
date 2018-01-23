@@ -149,9 +149,9 @@ def _get_cron_time_string(interval_type, interval):
         )
 
     if interval_type == HOURS_INTERVAL:
-        return '* */{} * * *'.format(interval)
+        return '0 */{0} * * *'.format(interval)
     if interval_type == DAYS_INTERVAL:
-        return '* * */{} * *'.format(interval)
+        return '0 0 */{0} * *'.format(interval)
 
 
 def _remove_cron_jobs():
