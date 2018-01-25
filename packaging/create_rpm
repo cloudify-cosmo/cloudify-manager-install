@@ -122,6 +122,7 @@ def exit_with_sadness(message):
         Display an error then exit with an error status.
     """
     print_in_color(message, 'red', stream=sys.stderr)
+    sys.exit(1)
 
 
 def exit_helpfully_on_failure(command, error, return_output=False):
@@ -534,7 +535,7 @@ def run_build_command(edition, package_output_dir):
         '-s', 'dir',  # Source is a directory
         '-t', 'rpm',  # Build an RPM
         '-n', 'cloudify-manager-install',  # The name of the package
-        '--package', package_output_dir,  # Put the package in /tmp when it is built
+        '--package', package_output_dir,  # Put the package in /tmp when built
         '--force',  # Force run even if this will overwrite an existing RPM
         # Command to run after rpm is installed
         '--after-install', INSTALL_SCRIPT_DESTINATION,

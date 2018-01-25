@@ -32,6 +32,10 @@ manager:
     # to you at the end of the install process.
     admin_password: ''
 
+manager-ip-setter:
+  sources:
+    manager_ip_setter_rpm: cloudify-manager-ip-setter-*.rpm
+
 provider_context:
   workflows:
     # Sets the number of times a failed task will be retried on recoverable error.
@@ -141,11 +145,7 @@ java:
 
 logstash:
   sources:
-    logstash_source_url: logstash-1.5.0-1.noarch.rpm
-    logstash_filter_json_encode_plugin_url: logstash-filter-json_encode-0.1.5.gem
-    logstash_output_jdbc_plugin_url: logstash-output-jdbc-0.2.10.gem
-    postgresql_jdbc_driver_url: postgresql-9.4.1212.jar
-
+    cloudify_logstash_source_url: cloudify-logstash-*.rpm
 
 stage:
   # If set to true, Cloudify UI will not be installed
@@ -174,10 +174,9 @@ python:
 
 riemann:
   sources:
-    langohr_source_url: langohr.jar
     daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
     riemann_source_url: riemann-0.2.6-1.noarch.rpm
-    cloudify_resources_url: cloudify-manager-*.tar.gz
+    cloudify_riemann_url: cloudify-riemann-*.rpm
 
 restservice:
   log:
@@ -313,3 +312,18 @@ ssl_inputs:
   internal_key_path: ''
   ca_cert_path: ''
   ca_key_path: ''
+
+usage_collector:
+  collect_cloudify_uptime:
+    # True if the uptime collector will be installed
+    active: true
+
+    # Sets the interval between running the uptime collector in hours
+    interval_in_hours: 2
+
+  collect_cloudify_usage:
+    # True if the usage collector will be installed
+    active: true
+
+    # Sets the interval between running the usage collector in days
+    interval_in_days: 2
