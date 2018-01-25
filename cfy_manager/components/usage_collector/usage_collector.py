@@ -40,8 +40,6 @@ logger = get_logger(USAGE_COLLECTOR)
 
 def install():
     logger.notice('Installing Usage Collector...')
-    if not _validate_cronie_installed():
-        return
     _create_manager_id_file()
     _deploy_collector_scripts()
     _configure()
@@ -50,21 +48,22 @@ def install():
 
 def configure():
     logger.notice('Configuring Usage Collector...')
-    if not _validate_cronie_installed():
-        return
     _configure()
     logger.notice('Usage Collector successfully configured')
 
 
 def remove():
     logger.notice('Removing Usage Collector...')
-    _remove_cron_jobs()
+    if _validate_cronie_installed():
+        _remove_cron_jobs()
     common.remove(SCRIPTS_DESTINATION_PATH)
     common.remove(MANAGER_ID_PATH)
     logger.notice('Usage Collector successfully removed')
 
 
 def _configure():
+    if not _validate_cronie_installed():
+        return
     _remove_cron_jobs()
     _create_cron_jobs()
 

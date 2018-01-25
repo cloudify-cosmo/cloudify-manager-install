@@ -48,17 +48,17 @@ def _collect_metadata(data):
     with open(MANAGER_ID_PATH) as id_file:
         manager_id = id_file.read().strip()
     data['metadata'] = {
-        'manager_id': manager_id
+        'manager-id': manager_id
     }
 
 
 def _collect_system_data(data):
     sys_tech = platform().lower()
     data['system'] = {
-        'centos_os': 'centos' in sys_tech,
-        'redhat_os': 'redhat' in sys_tech,
-        'cpu_count': cpu_count(),
-        'mem_size_gb':
+        'centos-os': 'centos' in sys_tech,
+        'redhat-os': 'redhat' in sys_tech,
+        'cpu-count': cpu_count(),
+        'mem-size-gb':
             sysconf('SC_PAGE_SIZE') * sysconf('SC_PHYS_PAGES') / GIGA_SIZE
     }
 
@@ -67,21 +67,21 @@ def _collect_cloudify_data(data):
     with _get_storage_manager() as sm:
         plugins_list = [plugin.package_name.lower()
                         for plugin in sm.list(models.Plugin, all_tenants=True)]
-        data['cloudify_usage'] = {
-            'tenants_count': len(sm.list(models.Tenant)),
-            'users_count': len(sm.list(models.User)),
-            'usergroups_count': len(sm.list(models.Group)),
-            'blueprints_count': len(sm.list(models.Blueprint,
+        data['cloudify-usage'] = {
+            'tenants-count': len(sm.list(models.Tenant)),
+            'users-count': len(sm.list(models.User)),
+            'usergroups-count': len(sm.list(models.Group)),
+            'blueprints-count': len(sm.list(models.Blueprint,
                                             all_tenants=True)),
-            'deployments_count': len(sm.list(models.Deployment,
+            'deployments-count': len(sm.list(models.Deployment,
                                              all_tenants=True)),
-            'executions_count': len(sm.list(models.Execution,
+            'executions-count': len(sm.list(models.Execution,
                                             all_tenants=True)),
-            'secrets_count': len(sm.list(models.Secret, all_tenants=True)),
-            'nodes_count': len(sm.list(models.Node, all_tenants=True)),
-            'node_instances_count': len(sm.list(models.NodeInstance,
+            'secrets-count': len(sm.list(models.Secret, all_tenants=True)),
+            'nodes-count': len(sm.list(models.Node, all_tenants=True)),
+            'node-instances_count': len(sm.list(models.NodeInstance,
                                                 all_tenants=True)),
-            'plugins_count': len(plugins_list),
+            'plugins-count': len(plugins_list),
             'aws-plugin': _find_substring_in_list(plugins_list, 'aws'),
             'azure-plugin': _find_substring_in_list(plugins_list, 'azure'),
             'gcp-plugin': _find_substring_in_list(plugins_list, 'gcp'),
@@ -98,10 +98,10 @@ def _collect_cloudify_config(data):
     try:
         with app.app_context():
             ldap = bool(app.ldap)
-        data['cloudify_config'] = {
-            'ldap_enabled': ldap,
-            'ha_enabled': _is_clustered(),
-            'premium_edition': config.instance.edition.lower() == 'premium',
+        data['cloudify-config'] = {
+            'ldap-enabled': ldap,
+            'ha-enabled': _is_clustered(),
+            'premium-edition': config.instance.edition.lower() == 'premium',
             'version': manager_version
         }
     finally:
