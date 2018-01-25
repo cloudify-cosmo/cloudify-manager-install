@@ -1,4 +1,6 @@
 
+from os import path
+from uuid import uuid4
 from requests import post
 
 try:
@@ -36,7 +38,18 @@ def _is_active_manager():
     return True
 
 
+def _create_manager_id_file():
+    if path.exists(MANAGER_ID_PATH):
+        with open(MANAGER_ID_PATH) as f:
+            existing_manager_id = f.read().strip()
+            if existing_manager_id:
+                return
+    with open(MANAGER_ID_PATH, 'w') as f:
+        f.write(uuid4().hex)
+
+
 def main():
+    _create_manager_id_file()
     if not _is_active_manager():
         return
     data = {}

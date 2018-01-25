@@ -1,5 +1,6 @@
 
-from os import sysconf
+from uuid import uuid4
+from os import sysconf, path
 from platform import platform
 from os.path import expanduser
 from multiprocessing import cpu_count
@@ -38,6 +39,16 @@ def _get_storage_manager():
             yield sm
     finally:
         config.reset(config.Config())
+
+
+def _create_manager_id_file():
+    if path.exists(MANAGER_ID_PATH):
+        with open(MANAGER_ID_PATH) as f:
+            existing_manager_id = f.read().strip()
+            if existing_manager_id:
+                return
+    with open(MANAGER_ID_PATH, 'w') as f:
+        f.write(uuid4().hex)
 
 
 def _find_substring_in_list(str_list, substring):
@@ -126,6 +137,7 @@ def _is_active_manager():
 
 
 def main():
+    _create_manager_id_file()
     if not _is_active_manager():
         return
     data = {}
