@@ -317,9 +317,7 @@ def retrieve_resources(edition, branch):
     )
 
 
-def retrieve_required_files(edition, types_yaml_url,
-                            installer_path, installer_branch,
-                            diamond_plugin_url):
+def retrieve_required_files(edition, installer_path, installer_branch):
     """
         Retrieve all files required for the installer build, either locally or
         from repositories.
@@ -362,29 +360,6 @@ def retrieve_required_files(edition, types_yaml_url,
                     )
                 ),
             )
-
-    # Grab types.yaml to make sanity work offline
-    types_destination = os.path.join(RPM_BUILDER_BASE, 'types.yaml')
-    exit_helpfully_on_failure(
-        command=[
-            'curl',
-            '--location',  # Follow redirects for moved content
-            '-o', types_destination,
-            types_yaml_url,
-        ],
-        error='Could not retrieve types.yaml!',
-    )
-    # Grab diamond-plugin
-    diamond_destination = os.path.join(RPM_BUILDER_BASE, 'plugin.yaml')
-    exit_helpfully_on_failure(
-        command=[
-            'curl',
-            '--location',  # Follow redirects for moved content
-            '-o', diamond_destination,
-            diamond_plugin_url,
-        ],
-        error='Could not retrieve diamond-plugin.yaml!',
-    )
 
     print('Setting premium edition flag in config...')
     premium = json.dumps(edition == 'premium')
