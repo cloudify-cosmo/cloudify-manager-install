@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
-from uuid import uuid4
 from os.path import join
 
 from .. import SCRIPTS
@@ -40,7 +38,6 @@ logger = get_logger(USAGE_COLLECTOR)
 
 def install():
     logger.notice('Installing Usage Collector...')
-    _create_manager_id_file()
     _deploy_collector_scripts()
     _configure()
     logger.notice('Usage Collector successfully installed')
@@ -74,20 +71,6 @@ def _validate_cronie_installed():
                        'Usage Collector')
         return False
     return True
-
-
-def _create_manager_id_file():
-    logger.info('Creating manager id file...')
-    if os.path.exists(MANAGER_ID_PATH):
-        with open(MANAGER_ID_PATH) as f:
-            existing_manager_id = f.read().strip()
-            if existing_manager_id:
-                return
-    files.write_to_file(uuid4().hex, MANAGER_ID_PATH)
-    common.chown(constants.CLOUDIFY_USER,
-                 constants.CLOUDIFY_GROUP,
-                 MANAGER_ID_PATH)
-    logger.info('Manager id file successfully created')
 
 
 def _deploy_collector_scripts():
