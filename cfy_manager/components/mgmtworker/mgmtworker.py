@@ -139,4 +139,5 @@ def remove():
     logger.notice('Removing Management Worker...')
     systemd.remove(MGMTWORKER, service_file=False)
     yum_remove('cloudify-management-worker')
+    common.remove('/opt/mgmtworker')
     logger.notice('Management Worker successfully removed')
