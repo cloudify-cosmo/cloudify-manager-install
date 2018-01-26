@@ -218,6 +218,7 @@ restservice:
     dn_extra: ''
 
   sources:
+    agents_source_url: cloudify-agents-*.rpm
     restservice_source_url: cloudify-rest-service-*.x86_64.rpm
     premium_source_url: cloudify-premium-*.x86_64.rpm
 
