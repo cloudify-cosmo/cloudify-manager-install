@@ -17,7 +17,6 @@ import json
 import urllib2
 import subprocess
 from os.path import join
-from tempfile import mkdtemp
 
 from . import db
 
@@ -199,21 +198,11 @@ def _configure():
 def _remove_files():
     """
     Remove all files related to the REST service and uninstall the RPM,
-    but don't remove the spec files which are handled by the installation RPM
     """
-    tmp_dir = mkdtemp()
-    # Keep the spec files in a temp location
-    common.move(join(constants.MANAGER_RESOURCES_HOME, 'spec'), tmp_dir)
-
-    # Removing the RPM before recreating /opt/manager/resources, because
-    # yum remove will delete this folder
     yum_remove('cloudify-rest-service')
+    yum_remove('cloudify-agents')
 
-    # Recreate /opt/manager/resources and move the spec files back in
-    common.mkdir(constants.MANAGER_RESOURCES_HOME)
-    common.move(join(tmp_dir, 'spec'), constants.MANAGER_RESOURCES_HOME)
-
-    common.remove(tmp_dir)
+    common.remove('/opt/manager')
 
 
 def install():
