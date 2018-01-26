@@ -1,4 +1,4 @@
-
+import json
 from uuid import uuid4
 from os import sysconf, path
 from platform import platform
@@ -120,6 +120,8 @@ def _collect_cloudify_config(data):
 
 
 def _send_data(data):
+    # for some reason. multi hierarchy dict doesn't pass well to the end point
+    data = {'data': json.dumps(data)}
     post(CLOUDIFY_ENDPOINT_USAGE_DATA_URL, data=data)
 
 

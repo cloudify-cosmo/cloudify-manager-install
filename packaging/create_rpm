@@ -323,9 +323,7 @@ def retrieve_resources(edition, branch):
     )
 
 
-def retrieve_required_files(edition, types_yaml_url,
-                            installer_path, installer_branch,
-                            diamond_plugin_url):
+def retrieve_required_files(edition, installer_path, installer_branch):
     """
         Retrieve all files required for the installer build, either locally or
         from repositories.
@@ -368,29 +366,6 @@ def retrieve_required_files(edition, types_yaml_url,
                     )
                 ),
             )
-
-    # Grab types.yaml to make sanity work offline
-    types_destination = os.path.join(RPM_BUILDER_BASE, 'types.yaml')
-    exit_helpfully_on_failure(
-        command=[
-            'curl',
-            '--location',  # Follow redirects for moved content
-            '-o', types_destination,
-            types_yaml_url,
-        ],
-        error='Could not retrieve types.yaml!',
-    )
-    # Grab diamond-plugin
-    diamond_destination = os.path.join(RPM_BUILDER_BASE, 'plugin.yaml')
-    exit_helpfully_on_failure(
-        command=[
-            'curl',
-            '--location',  # Follow redirects for moved content
-            '-o', diamond_destination,
-            diamond_plugin_url,
-        ],
-        error='Could not retrieve diamond-plugin.yaml!',
-    )
 
     print('Setting premium edition flag in config...')
     premium = json.dumps(edition == 'premium')
@@ -565,11 +540,6 @@ def run_build_command(edition, package_output_dir):
 
     mapping = '{source}={destination}'
 
-    types_destination = '/opt/manager/resources/spec' + \
-                        args.types_yaml_url.split('spec')[1]
-    diamond_destination = '/opt/manager/resources/spec' + \
-                          args.diamond_plugin_url.split('spec')[1]
-
     rpm_builder_command.extend([
         # What files to include in the package:
         # <package_path>=<path after RPM is installed>
@@ -586,16 +556,6 @@ def run_build_command(edition, package_output_dir):
             # This will put all of the config files in /etc/cloudify
             source=os.path.join(RPM_BUILDER_BASE, 'etc', 'cloudify'),
             destination='/etc',
-        ),
-
-        mapping.format(
-            source=os.path.join(RPM_BUILDER_BASE, 'types.yaml'),
-            destination=types_destination
-        ),
-
-        mapping.format(
-            source=os.path.join(RPM_BUILDER_BASE, 'plugin.yaml'),
-            destination=diamond_destination
         ),
     ])
 
@@ -615,7 +575,7 @@ def run_build_command(edition, package_output_dir):
 
 
 def build_package(edition, branch, installer_branch, installer_path,
-                  should_install_pip, types_yaml_url, diamond_plugin_url,
+                  should_install_pip,
                   should_install_dependencies, local_packages_dir,
                   package_output_dir,
                   ):
@@ -637,10 +597,8 @@ def build_package(edition, branch, installer_branch, installer_path,
 
     retrieve_required_files(
         edition=edition,
-        types_yaml_url=types_yaml_url,
         installer_path=installer_path,
         installer_branch=installer_branch,
-        diamond_plugin_url=diamond_plugin_url
     )
 
     create_cfy_manager_command(
@@ -721,21 +679,6 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '-t', '--types-yaml-url',
-        help='Which types.yaml to bake into the manager.',
-        default=(
-            'http://www.getcloudify.org/spec/cloudify/4.3.dev1/types.yaml'
-        ),
-    )
-
-    parser.add_argument(
-        '-d', '--diamond-plugin-url',
-        help='Which diamond-plugin to bake into the manager.',
-        default=(
-            'http://www.getcloudify.org/spec/diamond-plugin/1.3.6/plugin.yaml'
-        ),
-    )
-    parser.add_argument(
         '--local_packages_dir',
         help='Local directory to fetch RPMs from (will fall back to the'
              'locations in the manager-packages.yaml file',
@@ -763,8 +706,6 @@ if __name__ == '__main__':
         installer_branch=args.installer_branch,
         installer_path=args.local_installer_path,
         should_install_pip=args.install_pip,
-        types_yaml_url=args.types_yaml_url,
-        diamond_plugin_url=args.diamond_plugin_url,
         local_packages_dir=args.local_packages_dir,
         should_install_dependencies=args.install_dependencies,
         package_output_dir=args.package_output_dir,
