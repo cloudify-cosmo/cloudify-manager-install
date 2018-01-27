@@ -32,10 +32,6 @@ MANAGER_RESOURCES_BASE = os.path.join(
     RPM_BUILDER_BASE,
     'cloudify/sources',
 )
-AGENT_RESOURCES_BASE = os.path.join(
-    RPM_BUILDER_BASE,
-    'cloudify/sources/agents',
-)
 CONFIG_DIR = os.path.join(
     RPM_BUILDER_BASE,
     'etc',
@@ -157,7 +153,6 @@ def exit_helpfully_on_failure(command, error, return_output=False):
 def get_package_urls_file(edition, branch, repo_destination_path):
     """
         Get the package urls list, returning the paths to the file (in a dict)
-        for 'agent' and 'manager' package urls.
     """
     edition_details = EDITIONS[edition]
     repo_path = edition_details['repo']
@@ -217,8 +212,6 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     return {
         'manager': os.path.join(repo_destination_path,
                                 'packages-urls/manager-packages.yaml'),
-        'agent': os.path.join(repo_destination_path,
-                              'packages-urls/agent-packages.yaml'),
     }
 
 
@@ -309,10 +302,6 @@ def retrieve_resources(edition, branch):
     download_listed_resources(
         package_url_files['manager'],
         MANAGER_RESOURCES_BASE,
-    )
-    download_listed_resources(
-        package_url_files['agent'],
-        AGENT_RESOURCES_BASE,
     )
 
     exit_helpfully_on_failure(
@@ -462,7 +451,6 @@ def prepare_directory_structure(local_packages_dir):
             'mkdir', '-p',
             RPM_BUILDER_BASE,
             MANAGER_RESOURCES_BASE,
-            AGENT_RESOURCES_BASE,
             CONFIG_DIR,
         ],
         error='Could not create directory tree in /tmp/tmp-install-rpm',
