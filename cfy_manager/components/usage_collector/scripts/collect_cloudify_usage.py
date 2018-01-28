@@ -22,8 +22,7 @@ GIGA_SIZE = 1024 * 1024 * 1024
 MANAGER_ID_PATH = '/etc/cloudify/.id'
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
-CLOUDIFY_ENDPOINT_USAGE_DATA_URL = \
-    'https://us-central1-omer-tenant.cloudfunctions.net/cloudifyUsage'
+CLOUDIFY_ENDPOINT_USAGE_DATA_URL = 'https://api.cloudify.co/cloudifyUsage'
 
 
 @contextmanager
