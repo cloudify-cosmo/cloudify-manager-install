@@ -11,8 +11,7 @@ except ImportError:
 
 
 MANAGER_ID_PATH = '/etc/cloudify/.id'
-CLOUDIFY_ENDPOINT_UPTIME_URL = \
-    'https://us-central1-omer-tenant.cloudfunctions.net/cloudifyUptime'
+CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
 
 
 def _collect_metadata(data):
