@@ -17,7 +17,7 @@ CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
 def _collect_metadata(data):
     with open(MANAGER_ID_PATH) as id_file:
         manager_id = id_file.read().strip()
-    data['metadata'] = {'manager-id': manager_id}
+    data['metadata'] = {'manager_id': manager_id}
 
 
 def _send_data(data):
