@@ -207,7 +207,9 @@ def _remove_files():
 
 def install():
     logger.notice('Installing Rest Service...')
-    for source in config[RESTSERVICE][SOURCES].values():
+    for label, source in config[RESTSERVICE][SOURCES].items():
+        if label == 'premium_source_url':
+            continue
         yum_install(source)
 
     premium_source_url = config[RESTSERVICE][SOURCES]['premium_source_url']
