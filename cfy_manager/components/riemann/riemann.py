@@ -23,6 +23,7 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
+from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
@@ -71,4 +72,5 @@ def remove():
     logger.notice('Removing Riemann...')
     systemd.remove(RIEMANN, service_file=False)
     yum_remove(RIEMANN)
+    common.remove('/etc/riemann')
     logger.notice('Riemann successfully removed')
