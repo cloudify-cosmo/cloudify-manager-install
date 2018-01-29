@@ -526,6 +526,9 @@ def run_build_command(edition, package_output_dir):
         '--iteration', iteration,
     ])
 
+    # So that the dir is cleanly removed when uninstalling
+    rpm_builder_command.extend(['--directories', '/opt/cloudify'])
+
     mapping = '{source}={destination}'
 
     rpm_builder_command.extend([
