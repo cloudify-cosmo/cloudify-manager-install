@@ -8,7 +8,7 @@ from multiprocessing import cpu_count
 import pkg_resources
 from requests import post
 from contextlib import contextmanager
-from manager_rest import config, server
+from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
 try:
@@ -61,7 +61,7 @@ def _collect_metadata(data):
         manager_id = id_file.read().strip()
     data['metadata'] = {
         'manager_id': manager_id,
-        'premium_edition': config.instance.edition.lower() == 'premium',
+        'premium_edition': premium_enabled,
         'version': manager_version
     }
 
