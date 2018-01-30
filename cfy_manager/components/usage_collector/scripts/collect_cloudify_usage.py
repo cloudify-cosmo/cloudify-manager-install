@@ -59,11 +59,13 @@ def _collect_metadata(data):
     manager_version = pkg_distribution.version
     with open(MANAGER_ID_PATH) as id_file:
         manager_id = id_file.read().strip()
+    config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
     data['metadata'] = {
         'manager_id': manager_id,
         'premium_edition': premium_enabled,
         'version': manager_version
     }
+    config.reset(config.Config())
 
 
 def _collect_system_data(data):
