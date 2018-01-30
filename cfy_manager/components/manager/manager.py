@@ -22,7 +22,6 @@ from ..service_names import MANAGER
 
 from ... import constants
 from ...logger import get_logger
-from ...exceptions import FileError
 
 from ...utils import common
 from ...utils.users import create_service_user
@@ -59,42 +58,6 @@ def _create_sudoers_file_and_disable_sudo_requiretty():
     add_entry_to_sudoers(entry, description)
 
 
-def _normalize_agent_names():
-    logger.info('Copying agent packages...')
-
-    def splitext(filename):
-        # not using os.path.splitext as it would return .gz instead of
-        # .tar.gz
-        if filename.endswith('.tar.gz'):
-            return '.tar.gz'
-        elif filename.endswith('.exe'):
-            return '.exe'
-        else:
-            raise FileError(
-                'Unknown agent format for {0}. '
-                'Must be either tar.gz or exe'.format(filename))
-
-    def normalize_agent_name(filename):
-        # this returns the normalized name of an agent upon which our agent
-        # installer retrieves agent packages for installation.
-        # e.g. Ubuntu-trusty-agent_3.4.0-m3-b392.tar.gz returns
-        # ubuntu-trusty-agent
-        return filename.split('_', 1)[0].lower()
-
-    logger.debug('Moving agent packages...')
-    common.mkdir(constants.AGENT_ARCHIVES_PATH)
-    agents_path = os.path.join(constants.CLOUDIFY_SOURCES_PATH, 'agents')
-
-    for agent_file in os.listdir(agents_path):
-        agent_id = normalize_agent_name(agent_file)
-        agent_extension = splitext(agent_file)
-        common.copy(
-            os.path.join(agents_path, agent_file),
-            os.path.join(constants.AGENT_ARCHIVES_PATH,
-                         agent_id + agent_extension)
-        )
-
-
 def _get_selinux_state():
     try:
         return subprocess.check_output('getenforce').rstrip('\n\r')
@@ -128,10 +91,6 @@ def _create_manager_resources_dirs():
     common.mkdir(join(resources_root, 'packages', 'templates'))
 
 
-def _install():
-    _normalize_agent_names()
-
-
 def _configure():
     _create_cloudify_user()
     _create_sudoers_file_and_disable_sudo_requiretty()
@@ -142,7 +101,6 @@ def _configure():
 
 def install():
     logger.notice('Installing Cloudify Manager resources...')
-    _install()
     _configure()
     logger.notice('Cloudify Manager resources successfully installed')
 

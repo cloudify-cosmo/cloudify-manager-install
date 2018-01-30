@@ -145,7 +145,6 @@ java:
 
 logstash:
   sources:
-    postgresql_jdbc_url: postgresql94-jdbc-9.4*.rpm
     cloudify_logstash_source_url: cloudify-logstash-*.rpm
 
 stage:
@@ -217,6 +216,7 @@ restservice:
     dn_extra: ''
 
   sources:
+    agents_source_url: cloudify-agents-*.rpm
     restservice_source_url: cloudify-rest-service-*.x86_64.rpm
     premium_source_url: cloudify-premium-*.x86_64.rpm
 
@@ -311,3 +311,18 @@ ssl_inputs:
   internal_key_path: ''
   ca_cert_path: ''
   ca_key_path: ''
+
+usage_collector:
+  collect_cloudify_uptime:
+    # True if the uptime collector will be installed
+    active: true
+
+    # Sets the interval between running the uptime collector in hours
+    interval_in_hours: 2
+
+  collect_cloudify_usage:
+    # True if the usage collector will be installed
+    active: true
+
+    # Sets the interval between running the usage collector in days
+    interval_in_days: 2

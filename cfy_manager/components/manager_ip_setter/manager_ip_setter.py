@@ -20,6 +20,7 @@ from ..service_names import MANAGER, MANAGER_IP_SETTER
 from ...config import config
 from ...logger import get_logger
 
+from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
@@ -57,4 +58,5 @@ def remove():
     logger.notice('Removing Manager IP Setter...')
     systemd.remove(MANAGER_IP_SETTER, service_file=False)
     yum_remove('cloudify-manager-ip-setter')
+    common.remove('/opt/cloudify/manager-ip-setter')
     logger.notice('Manager IP Setter successfully removed')
