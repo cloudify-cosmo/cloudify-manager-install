@@ -216,11 +216,9 @@ def install():
     except FileError:
         logger.info('premium package not found in manager resources package')
         logger.notice('premium will not be installed.')
-        config[RESTSERVICE]['edition'] = 'community'
     else:
         logger.notice('Installing Cloudify Premium...')
         yum_install(config[RESTSERVICE][SOURCES]['premium_source_url'])
-        config[RESTSERVICE]['edition'] = 'premium'
 
     _configure()
     logger.notice('Rest Service successfully installed')
