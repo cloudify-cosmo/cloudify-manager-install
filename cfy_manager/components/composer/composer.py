@@ -34,7 +34,6 @@ logger = get_logger(COMPOSER)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(COMPOSER))
 CONF_DIR = join(HOME_DIR, 'backend', 'conf')
-NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 
 COMPOSER_USER = '{0}_user'.format(COMPOSER)
@@ -42,7 +41,6 @@ COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
 
 
 def _create_paths():
-    common.mkdir(NODEJS_DIR)
     common.mkdir(HOME_DIR)
     common.mkdir(LOG_DIR)
 
@@ -75,7 +73,7 @@ def _start_and_validate_composer():
 
 
 def _run_db_migrate():
-    npm_path = join(NODEJS_DIR, 'bin', 'npm')
+    npm_path = join('/bin', 'npm')
     common.run(
         'cd {}; {} run db-migrate'.format(HOME_DIR, npm_path),
         shell=True
@@ -124,5 +122,5 @@ def remove():
     files.remove_notice(COMPOSER)
     remove_logrotate(COMPOSER)
     systemd.remove(COMPOSER)
-    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
+    files.remove_files([HOME_DIR, LOG_DIR])
     logger.notice('Cloudify Composer successfully removed')

@@ -39,7 +39,6 @@ STAGE_USER = '{0}_user'.format(STAGE)
 STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
-NODEJS_DIR = join('/opt', 'nodejs')
 MAKE_AUTH_TOKEN_SCRIPT = '/opt/manager/scripts/make-auth-token.py'
 
 
