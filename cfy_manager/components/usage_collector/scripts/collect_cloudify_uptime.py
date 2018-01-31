@@ -5,7 +5,7 @@ from requests import post
 
 import pkg_resources
 
-from manager_rest import config
+from manager_rest import premium_enabled
 
 try:
     from cloudify_premium.ha import node_status
@@ -25,7 +25,7 @@ def _collect_metadata(data):
         manager_id = id_file.read().strip()
     data['metadata'] = {
         'manager_id': manager_id,
-        'premium_edition': config.instance.edition.lower() == 'premium',
+        'premium_edition': premium_enabled,
         'version': manager_version
     }
 
