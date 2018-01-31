@@ -504,8 +504,10 @@ def run_build_command(edition, package_output_dir):
         '--after-install', INSTALL_SCRIPT_DESTINATION,
         # Which files are considered config files (path as it will be when the
         # RPM has been installed)
-        '--config-files', '/etc/cloudify/config.yaml',
-        '--rpm-attr', '660,root,wheel', '/etc/cloudify/config.yaml',
+        '--rpm-attr',
+        '660,root,wheel) %config(noreplace:/etc/cloudify/config.yaml',
+        # This is a hack to work around the lack of support in fpm for applying
+        # %config and %attr to the same path
     ]
     if 'VERSION' in os.environ:
         version = os.environ['VERSION']
