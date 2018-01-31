@@ -56,7 +56,7 @@ from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
 
-from .utils.files import remove_temp_files, touch
+from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
@@ -257,6 +257,9 @@ def remove(verbose=False, force=False):
 
     for component in COMPONENTS:
         component.remove()
+
+    if _is_manager_installed():
+        _remove(INITIAL_INSTALL_FILE)
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
