@@ -505,6 +505,7 @@ def run_build_command(edition, package_output_dir):
         # Which files are considered config files (path as it will be when the
         # RPM has been installed)
         '--config-files', '/etc/cloudify/config.yaml',
+        '--rpm-attr', '660,root,wheel', '/etc/cloudify/config.yaml',
     ]
     if 'VERSION' in os.environ:
         version = os.environ['VERSION']
