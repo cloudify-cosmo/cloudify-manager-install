@@ -2,6 +2,6 @@
 
 echo "###################################################################"
 echo "Cloudify installer is ready!"
-echo "Edit ${CONFIG_FILE}, and run cfy_manager install"
+echo "Edit /etc/cloudify/config.yaml, and run cfy_manager install"
 echo "(members of group wheel have write access)"
 echo "###################################################################"
