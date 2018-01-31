@@ -114,7 +114,6 @@ def configure():
 def remove():
     logger.notice('Removing Cloudify Manager resources...')
     remove_files([
-        constants.CLOUDIFY_HOME_DIR,
         join(_get_exec_tempdir(), 'cloudify-ctx')
     ])
     logger.notice('Cloudify Manager resources successfully removed')
