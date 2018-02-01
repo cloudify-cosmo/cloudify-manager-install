@@ -6,8 +6,8 @@ function create_install_rpm() {
     /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH}
 }
 
-export CORE_TAG_NAME="4.3.dev1"
-export CORE_BRANCH="master"
+export CORE_TAG_NAME="4.2.0.1"
+export CORE_BRANCH="4.2.0.1-build"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
