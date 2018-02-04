@@ -327,4 +327,4 @@ usage_collector:
     active: true
 
     # Sets the interval between running the usage collector in days
-    interval_in_days: 2
+    interval_in_days: 1
