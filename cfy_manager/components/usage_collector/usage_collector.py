@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from os.path import join
+from random import randint
 
 from .. import SCRIPTS
 from ... import constants
@@ -130,10 +131,12 @@ def _get_cron_time_string(interval_type, interval):
             .format(interval_type)
         )
 
+    random_minute = randint(0, 59)
     if interval_type == HOURS_INTERVAL:
-        return '0 */{0} * * *'.format(interval)
+        return '{0} */{1} * * *'.format(random_minute, interval)
     if interval_type == DAYS_INTERVAL:
-        return '0 0 */{0} * *'.format(interval)
+        random_hour = randint(0, 23)
+        return '{0} {1} */{2} * *'.format(random_minute, random_hour, interval)
 
 
 def _remove_cron_jobs():
