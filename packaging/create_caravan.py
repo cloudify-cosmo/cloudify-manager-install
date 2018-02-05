@@ -28,6 +28,7 @@ def download_file(url, dst):
                 dst_file.write(chunk)
     except requests.exceptions.RequestException as ex:
         print('Failed to download {0}. ({1})'.format(url, str(ex)))
+        raise
 
 
 def _create_caravan(mappings, dest, tar_name):
