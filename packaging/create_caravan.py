@@ -7,7 +7,7 @@ import tempfile
 import os
 import shutil
 import tarfile
-from cloudify_cli.utils import get_local_path
+import requests
 
 PLUGINS_TO_BUNDLE = ['vSphere',
                      'OpenStack',
@@ -15,6 +15,16 @@ PLUGINS_TO_BUNDLE = ['vSphere',
                      'GCP',
                      'AWS',
                      'Azure']
+
+DISTROS_TO_BUNDLE = ['Centos Core', 'Redhat Maipo']
+
+
+def download_file(url, dst):
+    print('Downloading {0} to {1}'.format(url, dst))
+    response = requests.get(url, stream=True)
+    with open(dst, 'wb') as dst_file:
+        for chunk in response.iter_content(1024):
+            dst_file.write(chunk)
 
 
 def _create_caravan(mappings, dest, tar_name):
@@ -30,8 +40,9 @@ def _create_caravan(mappings, dest, tar_name):
         dest_yaml_path = os.path.join(plugin_root_dir,
                                       os.path.basename(yaml_path))
 
-        get_local_path(wgn_path, os.path.join(tempdir, dest_wgn_path))
-        get_local_path(yaml_path, os.path.join(tempdir, dest_yaml_path))
+        download_file(wgn_path, os.path.join(tempdir, dest_wgn_path))
+        download_file(yaml_path, os.path.join(tempdir, dest_yaml_path))
+
         metadata[dest_wgn_path] = dest_yaml_path
 
     with open(os.path.join(tempdir, 'METADATA'), 'w+') as f:
@@ -55,8 +66,10 @@ def build_caravan(dir, name, path):
 
     for plugin in plugins:
         if plugin['title'] in PLUGINS_TO_BUNDLE:
-            mapping[plugin['wagons'][0]['url']] = plugin['link']
-            mapping[plugin['wagons'][1]['url']] = plugin['link']
+            plugin_yaml = plugin['link']
+            for wagon in plugin['wagons']:
+                if wagon['name'] in DISTROS_TO_BUNDLE:
+                    mapping[wagon['url']] = plugin_yaml
 
     return _create_caravan(mapping, dir, name)
 
