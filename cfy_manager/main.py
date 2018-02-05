@@ -100,6 +100,16 @@ ADMIN_PASSWORD_HELP_MSG = (
     'Can only be used on the first install of the manager, or when using '
     'the --clean-db flag'
 )
+PRIVATE_IP_HELP_MSG = (
+    "The private IP of the manager. This is the address which will be "
+    "used by the manager's internal components as well as by the agents to "
+    "connect to the manager"
+)
+PUBLIC_IP_HELP_MSG = (
+    'The public IP of the manager. This is the IP through which users '
+    'will connect to the manager via the CLI or the UI. Can be the same as '
+    'the private IP if the manager is only connected to a single network'
+)
 
 
 def _print_time():
@@ -181,6 +191,8 @@ def _finish_configuration():
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
 @argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
 def install(verbose=False,
             private_ip=None,
@@ -209,6 +221,8 @@ def install(verbose=False,
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
 @argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
 def configure(verbose=False,
               private_ip=None,
