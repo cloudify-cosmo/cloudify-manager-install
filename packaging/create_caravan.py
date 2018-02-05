@@ -21,7 +21,10 @@ DISTROS_TO_BUNDLE = ['Centos Core', 'Redhat Maipo']
 
 def download_file(url, dst):
     print('Downloading {0} to {1}'.format(url, dst))
-    response = requests.get(url, stream=True)
+    try:
+        response = requests.get(url, stream=True)
+    except requests.exceptions.RequestException as ex:
+        print('Failed to download {0}. ({1})'.format(url, str(ex)))
     with open(dst, 'wb') as dst_file:
         for chunk in response.iter_content(1024):
             dst_file.write(chunk)
