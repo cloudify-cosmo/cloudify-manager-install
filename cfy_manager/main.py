@@ -102,13 +102,13 @@ ADMIN_PASSWORD_HELP_MSG = (
 )
 PRIVATE_IP_HELP_MSG = (
     "The private IP of the manager. This is the address which will be "
-    "used by the manager's internal components as well as by the agents to "
-    "connect to the manager"
+    "used by the manager's internal components. It is also the "
+    "default address through which agents will connect to the manager."
 )
 PUBLIC_IP_HELP_MSG = (
     'The public IP of the manager. This is the IP through which users '
-    'will connect to the manager via the CLI or the UI. Can be the same as '
-    'the private IP if the manager is only connected to a single network'
+    'will connect to the manager via the CLI, the UI or the REST API. '
+    'May be the same as the private IP if not applicable in your environment.'
 )
 
 
