@@ -168,8 +168,8 @@ def _print_finish_message():
     logger.notice('Manager password is {0}'.format(
         manager_config[SECURITY][ADMIN_PASSWORD]))
     logger.notice('#' * 50)
-    logger.notice("To install the default plugins bundle run:\n"
-                  "'cfy plugins bundle-upload'")
+    logger.notice("To install the default plugins bundle run:")
+    logger.notice("'cfy plugins bundle-upload'")
     logger.notice('#' * 50)
 
 
