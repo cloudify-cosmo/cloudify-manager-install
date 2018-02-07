@@ -100,6 +100,17 @@ ADMIN_PASSWORD_HELP_MSG = (
     'Can only be used on the first install of the manager, or when using '
     'the --clean-db flag'
 )
+PRIVATE_IP_HELP_MSG = (
+    "The private IP of the manager. This is the address which will be "
+    "used by the manager's internal components. It is also the "
+    "default address through which agents connect to the manager."
+)
+PUBLIC_IP_HELP_MSG = (
+    'The public IP of the manager. This is the IP through which users '
+    'connect to the manager via the CLI, the UI or the REST API. '
+    'If your environment does not require a public IP, you can enter the '
+    'private IP here.'
+)
 
 
 def _print_time():
@@ -157,6 +168,9 @@ def _print_finish_message():
     logger.notice('Manager password is {0}'.format(
         manager_config[SECURITY][ADMIN_PASSWORD]))
     logger.notice('#' * 50)
+    logger.notice("To install the default plugins bundle run:")
+    logger.notice("'cfy plugins bundle-upload'")
+    logger.notice('#' * 50)
 
 
 def _is_manager_installed():
@@ -181,6 +195,8 @@ def _finish_configuration():
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
 @argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
 def install(verbose=False,
             private_ip=None,
@@ -209,6 +225,8 @@ def install(verbose=False,
 
 
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
 @argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
 def configure(verbose=False,
               private_ip=None,
