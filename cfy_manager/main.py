@@ -103,12 +103,13 @@ ADMIN_PASSWORD_HELP_MSG = (
 PRIVATE_IP_HELP_MSG = (
     "The private IP of the manager. This is the address which will be "
     "used by the manager's internal components. It is also the "
-    "default address through which agents will connect to the manager."
+    "default address through which agents connect to the manager."
 )
 PUBLIC_IP_HELP_MSG = (
     'The public IP of the manager. This is the IP through which users '
-    'will connect to the manager via the CLI, the UI or the REST API. '
-    'May be the same as the private IP if not applicable in your environment.'
+    'connect to the manager via the CLI, the UI or the REST API. '
+    'If your environment does not require a public IP, you can enter the '
+    'private IP here.'
 )
 
 
@@ -166,6 +167,9 @@ def _print_finish_message():
     logger.notice('#' * 50)
     logger.notice('Manager password is {0}'.format(
         manager_config[SECURITY][ADMIN_PASSWORD]))
+    logger.notice('#' * 50)
+    logger.notice("To install the default plugins bundle run:\n"
+                  "'cfy plugins bundle-upload'")
     logger.notice('#' * 50)
 
 
