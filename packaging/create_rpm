@@ -383,6 +383,7 @@ def install_dependencies():
         'make',
         'rpm-build',
         'rubygems',
+        'libffi-devel',
         # Requirements for this script
         'git',
         # Requirements for building the python package
