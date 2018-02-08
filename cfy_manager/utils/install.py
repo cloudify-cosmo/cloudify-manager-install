@@ -70,10 +70,13 @@ class RpmPackageHandler(object):
         return package_details['Name']
 
 
-def _yum_install(package, package_name=None):
+def _yum_install(package, package_name=None, disable_all_repos=True):
     package_name = package_name or package
     logger.info('Installing {0}...'.format(package_name))
-    sudo(['yum', 'install', '-y', '--disablerepo=*', package])
+    install_cmd = ['yum', 'install', '-y', '--disablerepo=*', package]
+    if not disable_all_repos:
+        install_cmd.remove('--disablerepo=*')
+    sudo(install_cmd)
 
 
 def _install_rpm(rpm_path):
@@ -96,7 +99,7 @@ def _install_rpm(rpm_path):
     _yum_install(rpm_path, package_name=rpm_handler.package_name)
 
 
-def _install_yum_package(package_name):
+def _install_yum_package(package_name, disable_all_repos=True):
     is_installed = run(
         ['yum', '-q', 'list', 'installed', package_name],
         ignore_failures=True
@@ -105,10 +108,10 @@ def _install_yum_package(package_name):
         logger.debug('Package {0} is already installed.'.format(
             package_name))
         return
-    _yum_install(package=package_name)
+    _yum_install(package=package_name, disable_all_repos=disable_all_repos)
 
 
-def yum_install(source):
+def yum_install(source, disable_all_repos=True):
     """Installs a package using yum.
 
     yum supports installing from URL, path and the default yum repo
@@ -141,7 +144,8 @@ def yum_install(source):
         _install_rpm(local_path)
     # source is the name of a yum-repo based package name
     else:
-        _install_yum_package(package_name=source)
+        _install_yum_package(package_name=source,
+                             disable_all_repos=disable_all_repos)
 
 
 def yum_remove(package, ignore_failures=False):
