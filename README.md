@@ -24,7 +24,7 @@ see below steps 1-6.
 2. Download the [`create_rpm`](packaging/create_rpm) script to the machine
 with:
 
-`curl -L -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/packaging/create_rpm`
+`curl -L -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/packaging/create_rpm`
 
 3. Give it executable permissions:
 
