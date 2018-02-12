@@ -192,6 +192,7 @@ def generate_internal_ssl_cert(ips, cn):
         sign_cert=const.CA_CERT_PATH,
         sign_key=const.CA_KEY_PATH
     )
+    create_pkcs12()
 
 
 def generate_external_ssl_cert(ips, cn):
@@ -214,7 +215,6 @@ def generate_ca_cert():
         '-out', const.CA_CERT_PATH,
         '-keyout', const.CA_KEY_PATH
     ])
-    create_pkcs12()
 
 
 def create_pkcs12():
@@ -231,13 +231,14 @@ def create_pkcs12():
     sudo([
         'openssl', 'pkcs12', '-export',
         '-out', pkcs12_path,
-        '-in', const.CA_CERT_PATH,
-        '-inkey', const.CA_KEY_PATH,
+        '-in', const.INTERNAL_CERT_PATH,
+        '-inkey', const.INTERNAL_KEY_PATH,
         '-password', 'pass:cloudify',
     ])
-    logger.debug('Generated CA certificate: {0} and key: {1}'.format(
-        const.CA_CERT_PATH, const.CA_KEY_PATH
-    ))
+    logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
+                 'and key: {2}'
+                 .format(const.INTERNAL_CERT_PATH, const.INTERNAL_KEY_PATH))
+
 
 def remove_key_encryption(src_key_path,
                           dst_key_path,
@@ -248,6 +249,7 @@ def remove_key_encryption(src_key_path,
         '-out', dst_key_path,
         '-passin', 'pass:' + key_password
     ])
+
 
 @argh.arg('--metadata',
           help='File containing the cert metadata. It should be a '
