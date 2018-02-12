@@ -152,6 +152,7 @@ def _handle_internal_cert(has_ca_key):
 
     if cert_deployed and key_deployed:
         logger.info('Deployed user provided internal cert and key')
+        certificates.create_pkcs12()
     elif not cert_deployed and not key_deployed:
         if has_ca_key:
             _generate_internal_certs()
