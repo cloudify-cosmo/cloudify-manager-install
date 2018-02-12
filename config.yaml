@@ -313,6 +313,7 @@ ssl_inputs:
   internal_key_path: ''
   ca_cert_path: ''
   ca_key_path: ''
+  ca_key_password: ''
 
 usage_collector:
   collect_cloudify_uptime:
