@@ -241,6 +241,15 @@ def create_pkcs12():
         const.CA_CERT_PATH, const.CA_KEY_PATH
     ))
 
+def remove_key_encryption(src_key_path,
+                          dst_key_path,
+                          key_password):
+    sudo([
+        'openssl', 'rsa',
+        '-in', src_key_path,
+        '-out', dst_key_path,
+        '-passin', 'pass:' + key_password
+    ])
 
 @argh.arg('--metadata',
           help='File containing the cert metadata. It should be a '
