@@ -237,7 +237,8 @@ def create_pkcs12():
     ])
     logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
                  'and key: {2}'
-                 .format(const.INTERNAL_CERT_PATH, const.INTERNAL_KEY_PATH))
+                 .format(pkcs12_path, const.INTERNAL_CERT_PATH,
+                         const.INTERNAL_KEY_PATH))
 
 
 def remove_key_encryption(src_key_path,
