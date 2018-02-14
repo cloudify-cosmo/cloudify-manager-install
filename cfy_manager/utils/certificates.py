@@ -184,7 +184,7 @@ def _generate_ssl_certificate(ips,
 
 
 def generate_internal_ssl_cert(ips, cn):
-    return _generate_ssl_certificate(
+    cert_path, key_path = _generate_ssl_certificate(
         ips,
         cn,
         const.INTERNAL_CERT_PATH,
@@ -193,6 +193,7 @@ def generate_internal_ssl_cert(ips, cn):
         sign_key=const.CA_KEY_PATH
     )
     create_pkcs12()
+    return cert_path, key_path
 
 
 def generate_external_ssl_cert(ips, cn):
