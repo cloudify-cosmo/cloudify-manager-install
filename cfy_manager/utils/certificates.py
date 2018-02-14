@@ -184,7 +184,7 @@ def _generate_ssl_certificate(ips,
 
 
 def generate_internal_ssl_cert(ips, cn):
-    return _generate_ssl_certificate(
+    cert_path, key_path = _generate_ssl_certificate(
         ips,
         cn,
         const.INTERNAL_CERT_PATH,
@@ -192,6 +192,8 @@ def generate_internal_ssl_cert(ips, cn):
         sign_cert=const.CA_CERT_PATH,
         sign_key=const.CA_KEY_PATH
     )
+    create_pkcs12()
+    return cert_path, key_path
 
 
 def generate_external_ssl_cert(ips, cn):
@@ -199,9 +201,7 @@ def generate_external_ssl_cert(ips, cn):
         ips,
         cn,
         const.EXTERNAL_CERT_PATH,
-        const.EXTERNAL_KEY_PATH,
-        sign_cert=const.CA_CERT_PATH,
-        sign_key=const.CA_KEY_PATH
+        const.EXTERNAL_KEY_PATH
     )
 
 
@@ -216,7 +216,6 @@ def generate_ca_cert():
         '-out', const.CA_CERT_PATH,
         '-keyout', const.CA_KEY_PATH
     ])
-    create_pkcs12()
 
 
 def create_pkcs12():
@@ -233,13 +232,25 @@ def create_pkcs12():
     sudo([
         'openssl', 'pkcs12', '-export',
         '-out', pkcs12_path,
-        '-in', const.CA_CERT_PATH,
-        '-inkey', const.CA_KEY_PATH,
+        '-in', const.INTERNAL_CERT_PATH,
+        '-inkey', const.INTERNAL_KEY_PATH,
         '-password', 'pass:cloudify',
     ])
-    logger.debug('Generated CA certificate: {0} and key: {1}'.format(
-        const.CA_CERT_PATH, const.CA_KEY_PATH
-    ))
+    logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
+                 'and key: {2}'
+                 .format(pkcs12_path, const.INTERNAL_CERT_PATH,
+                         const.INTERNAL_KEY_PATH))
+
+
+def remove_key_encryption(src_key_path,
+                          dst_key_path,
+                          key_password):
+    sudo([
+        'openssl', 'rsa',
+        '-in', src_key_path,
+        '-out', dst_key_path,
+        '-passin', 'pass:' + key_password
+    ])
 
 
 @argh.arg('--metadata',

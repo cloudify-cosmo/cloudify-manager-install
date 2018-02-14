@@ -42,6 +42,7 @@ logger = get_logger(NGINX)
 def _deploy_cert_and_key(cert, key, cert_dst_path, key_dst_path):
     cert_path = config[SSL_INPUTS][cert]
     key_path = config[SSL_INPUTS][key]
+    key_password = config[SSL_INPUTS]['ca_key_password']
 
     cert_deployed = False
     key_deployed = False
@@ -50,7 +51,12 @@ def _deploy_cert_and_key(cert, key, cert_dst_path, key_dst_path):
         common.copy(cert_path, cert_dst_path)
         cert_deployed = True
     if isfile(key_path):
-        common.copy(key_path, key_dst_path)
+        if key_password:
+            certificates.remove_key_encryption(key_path,
+                                               key_dst_path,
+                                               key_password)
+        else:
+            common.copy(key_path, key_dst_path)
         key_deployed = True
 
     return cert_deployed, key_deployed
@@ -146,6 +152,7 @@ def _handle_internal_cert(has_ca_key):
 
     if cert_deployed and key_deployed:
         logger.info('Deployed user provided internal cert and key')
+        certificates.create_pkcs12()
     elif not cert_deployed and not key_deployed:
         if has_ca_key:
             _generate_internal_certs()
