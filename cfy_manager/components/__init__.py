@@ -30,6 +30,7 @@ VENV = 'venv'
 
 PRIVATE_IP = 'private_ip'
 PUBLIC_IP = 'public_ip'
+SSL_ENABLED = 'ssl_enabled'
 ENDPOINT_IP = 'endpoint_ip'
 SECURITY = 'security'
 ADMIN_PASSWORD = 'admin_password'
