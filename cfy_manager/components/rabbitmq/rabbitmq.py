@@ -37,7 +37,6 @@ CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 SECURE_PORT = 5671
 
 RABBITMQ_CTL = 'rabbitmqctl'
-
 logger = get_logger(RABBITMQ)
 
 
@@ -61,16 +60,21 @@ def _init_service():
     wait_for_port(SECURE_PORT)
 
 
+def _rabbitmqctl(command, **kwargs):
+    nodename = config[RABBITMQ]['nodename']
+    return sudo([RABBITMQ_CTL, '-n', nodename] + command, **kwargs)
+
+
 def user_exists(username):
-    output = sudo([RABBITMQ_CTL, 'list_users'], retries=5).aggr_stdout
+    output = _rabbitmqctl(['list_users'], retries=5).aggr_stdout
     return username in output
 
 
 def _delete_guest_user():
     if user_exists('guest'):
         logger.info('Disabling RabbitMQ guest user...')
-        sudo([RABBITMQ_CTL, 'clear_permissions', 'guest'], retries=5)
-        sudo([RABBITMQ_CTL, 'delete_user', 'guest'], retries=5)
+        _rabbitmqctl(['clear_permissions', 'guest'], retries=5)
+        _rabbitmqctl(['delete_user', 'guest'], retries=5)
 
 
 def _create_rabbitmq_user():
@@ -80,11 +84,10 @@ def _create_rabbitmq_user():
         logger.info('Creating new user and setting permissions...'.format(
             rabbitmq_username, rabbitmq_password)
         )
-        sudo([RABBITMQ_CTL, 'add_user', rabbitmq_username, rabbitmq_password])
-        sudo([RABBITMQ_CTL, 'set_permissions',
-              rabbitmq_username, '.*', '.*', '.*'], retries=5)
-        sudo([RABBITMQ_CTL, 'set_user_tags', rabbitmq_username,
-              'administrator'])
+        _rabbitmqctl(['add_user', rabbitmq_username, rabbitmq_password])
+        _rabbitmqctl(['set_permissions', rabbitmq_username, '.*', '.*', '.*'],
+                     retries=5)
+        _rabbitmqctl(['set_user_tags', rabbitmq_username, 'administrator'])
 
 
 def _set_rabbitmq_policy(name, expression, policy):
@@ -93,8 +96,8 @@ def _set_rabbitmq_policy(name, expression, policy):
         name, expression, policy))
     # shlex screws this up because we need to pass json and shlex
     # strips quotes so we explicitly pass it as a list.
-    sudo([RABBITMQ_CTL, 'set_policy', name,
-          expression, policy, '--apply-to', 'queues'])
+    _rabbitmqctl(['set_policy', name,
+                  expression, policy, '--apply-to', 'queues'])
 
 
 def _set_policies():
@@ -152,7 +155,7 @@ def _validate_rabbitmq_running():
     logger.info('Making sure RabbitMQ is live...')
     systemd.verify_alive(RABBITMQ)
 
-    result = sudo([RABBITMQ_CTL, 'status'])
+    result = _rabbitmqctl(['status'])
     if result.returncode != 0:
         raise ValidationError('Rabbitmq failed to start')
 
