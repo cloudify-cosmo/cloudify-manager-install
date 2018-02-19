@@ -34,7 +34,6 @@ from ...exceptions import ValidationError, BootstrapError
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import wait_for_port, check_http_response
 from ...utils.files import copy_notice, remove_notice, remove_files, temp_copy
 
@@ -149,7 +148,6 @@ def _configure_local_influxdb():
     systemd.configure(INFLUXDB)
     # Provided with InfluxDB's package. Will be removed if it exists.
     common.remove(INIT_D_PATH)
-    set_logrotate(INFLUXDB)
 
 
 def _check_response():
@@ -204,7 +202,6 @@ def configure():
 def remove():
     logger.notice('Removing Influxdb...')
     remove_notice(INFLUXDB)
-    remove_logrotate(INFLUXDB)
     systemd.remove(INFLUXDB)
     remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
     yum_remove(INFLUXDB)
