@@ -163,7 +163,12 @@ def _load_config_and_logger(verbose=False,
 
 def _print_finish_message():
     manager_config = config[MANAGER]
-    logger.notice('Manager is up at {0}'.format(manager_config[PUBLIC_IP]))
+    protocol = 'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
+    logger.notice(
+        'Manager is up at {protocol}://{ip}'.format(
+            protocol=protocol,
+            ip=manager_config[PUBLIC_IP])
+    )
     logger.notice('#' * 50)
     logger.notice('Manager password is {0}'.format(
         manager_config[SECURITY][ADMIN_PASSWORD]))
