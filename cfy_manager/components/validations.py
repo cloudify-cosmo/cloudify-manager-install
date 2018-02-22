@@ -16,11 +16,12 @@
 import sys
 import platform
 import subprocess
+import netifaces
 from getpass import getuser
 from collections import namedtuple
 from distutils.version import LooseVersion
 
-from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS
+from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS
 
 from .service_names import MANAGER
 
@@ -88,6 +89,45 @@ def _validate_supported_distros():
                 version, supported_distro_versions
             )
         )
+
+
+def _validate_private_ip():
+    logger.info('Validating private IP address...')
+    private_ip = config[MANAGER][PRIVATE_IP]
+    all_addresses = set()
+    found = False
+    all_interfaces = netifaces.interfaces()
+    for interface in all_interfaces:
+        int_addresses = netifaces.ifaddresses(interface)
+        if not int_addresses:
+            logger.debug('Could not find any addresses for interface {}'.
+                format(interface))
+            continue
+        inet_addresses = int_addresses.get(netifaces.AF_INET)
+        if not inet_addresses:
+            logger.debug('No AF_INET addresses found for interface {}'.format(
+                interface))
+            continue
+        for inet_addr in inet_addresses:
+            addr = inet_addr.get('addr')
+            if not addr:
+                logger.debug('No addr found for {}'.format(inet_addr))
+                continue
+            if addr == private_ip:
+                found = True
+                break
+            all_addresses.add(addr)
+        if found:
+            break
+
+    if not found:
+        _errors.append(
+            'The provided private IP ({}) is not associated with any INET-'
+            'type address available on this machine (available INET-type '
+            'addresses: {}). This will cause installation to fail. If you '
+            'are certain that this IP address should be used, please set '
+            'the \'{}\' parameter to \'false\''.format(
+                private_ip, ', '.join(all_addresses), SKIP_VALIDATIONS))
 
 
 def _validate_python_version():
@@ -231,11 +271,12 @@ def validate(skip_validations=False):
     # These dependencies also need to always be validated
     _validate_dependencies()
 
-    if config[VALIDATIONS]['skip_validations'] or skip_validations:
+    if config[VALIDATIONS][SKIP_VALIDATIONS] or skip_validations:
         logger.info('Skipping validations')
         return
 
     logger.notice('Validating local machine...')
+    _validate_private_ip()
     _validate_python_version()
     _validate_supported_distros()
     _validate_sufficient_memory()
