@@ -62,7 +62,7 @@ def _get_selinux_state():
     try:
         return subprocess.check_output(['/usr/sbin/getenforce']).rstrip('\n\r')
     except OSError:
-        logger.warning('SELinux is not installed')
+        logger.warning('SELinux is not installed', exc_info=True)
         return None
 
 
