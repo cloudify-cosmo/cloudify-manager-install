@@ -335,3 +335,5 @@ usage_collector:
 
     # Sets the interval between running the usage collector in days
     interval_in_days: 1
+    
+flask_security: {}
