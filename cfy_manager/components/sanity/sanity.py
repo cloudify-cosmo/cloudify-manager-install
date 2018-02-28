@@ -33,6 +33,7 @@ from ...utils.files import get_local_source_path
 logger = get_logger(SANITY)
 
 AUTHORIZED_KEYS_PATH = expanduser('~/.ssh/authorized_keys')
+SANITY_WEB_SERVER_PORT = 12774
 
 
 def _create_ssh_key():
@@ -86,7 +87,8 @@ def _deploy_app(ssh_key_path):
     common.run(['cfy', 'deployments', 'create', '-b', SANITY, SANITY,
                 '-i', 'server_ip={0}'.format(manager_ip),
                 '-i', 'agent_user={0}'.format(ssh_user),
-                '-i', 'agent_private_key_path={0}'.format(ssh_key_path)],
+                '-i', 'agent_private_key_path={0}'.format(ssh_key_path),
+                '-i', 'webserver_port={0}'.format(SANITY_WEB_SERVER_PORT)],
                stdout=sys.stdout)
 
 
@@ -97,7 +99,7 @@ def _install_sanity():
 
 
 def _verify_sanity():
-    wait_for_port(8080)
+    wait_for_port(SANITY_WEB_SERVER_PORT)
 
 
 def _clean_old_sanity():
