@@ -96,22 +96,21 @@ def _validate_private_ip():
     private_ip = config[MANAGER][PRIVATE_IP]
     all_addresses = set()
     found = False
-    all_interfaces = netifaces.interfaces()
-    for interface in all_interfaces:
+    for interface in netifaces.interfaces():
         int_addresses = netifaces.ifaddresses(interface)
         if not int_addresses:
-            logger.debug('Could not find any addresses for interface {}'.
+            logger.debug('Could not find any addresses for interface {0}'.
                 format(interface))
             continue
         inet_addresses = int_addresses.get(netifaces.AF_INET)
         if not inet_addresses:
-            logger.debug('No AF_INET addresses found for interface {}'.format(
+            logger.debug('No AF_INET addresses found for interface {0}'.format(
                 interface))
             continue
         for inet_addr in inet_addresses:
             addr = inet_addr.get('addr')
             if not addr:
-                logger.debug('No addr found for {}'.format(inet_addr))
+                logger.debug('No addr found for {0}'.format(inet_addr))
                 continue
             if addr == private_ip:
                 found = True
@@ -122,12 +121,14 @@ def _validate_private_ip():
 
     if not found:
         _errors.append(
-            'The provided private IP ({}) is not associated with any INET-'
-            'type address available on this machine (available INET-type '
-            'addresses: {}). This will cause installation to fail. If you '
-            'are certain that this IP address should be used, please set '
-            'the \'{}\' parameter to \'false\''.format(
-                private_ip, ', '.join(all_addresses), SKIP_VALIDATIONS))
+            "The provided private IP ({ip}) is not associated with any INET-"
+            "type address available on this machine (available INET-type "
+            "addresses: {addresses}). This will cause installation to fail. "
+            "If you are certain that this IP address should be used, please "
+            "set the '{param}' parameter to 'false'".format(
+                ip=private_ip,
+                addresses=', '.join(all_addresses),
+                param=SKIP_VALIDATIONS))
 
 
 def _validate_python_version():
