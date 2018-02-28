@@ -99,8 +99,9 @@ def _validate_private_ip():
     for interface in netifaces.interfaces():
         int_addresses = netifaces.ifaddresses(interface)
         if not int_addresses:
-            logger.debug('Could not find any addresses for interface {0}'.
-                format(interface))
+            logger.debug(
+                'Could not find any addresses for interface {0}'.format(
+                    interface))
             continue
         inet_addresses = int_addresses.get(netifaces.AF_INET)
         if not inet_addresses:
