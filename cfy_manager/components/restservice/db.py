@@ -78,6 +78,7 @@ def _create_args_dict(full_config=False):
         'amqp_host': config[RABBITMQ][ENDPOINT_IP],
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
+        'amqp_ca_cert': constants.CA_CERT_PATH,
         'hash_salt': config[FLASK_SECURITY]['hash_salt'],
         'secret_key': config[FLASK_SECURITY]['secret_key'],
         'postgresql_host': config[POSTGRESQL]['host']
