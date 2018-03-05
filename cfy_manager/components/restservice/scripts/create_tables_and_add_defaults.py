@@ -56,7 +56,8 @@ def _get_amqp_manager(config):
     return AMQPManager(
         host=config['amqp_host'],
         username=config['amqp_username'],
-        password=config['amqp_password']
+        password=config['amqp_password'],
+        verify=config['amqp_ca_cert']
     )
 
 
