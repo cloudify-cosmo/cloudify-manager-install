@@ -17,7 +17,6 @@ from os.path import join
 
 from .. import (
     SCRIPTS,
-    ENDPOINT_IP,
     PROVIDER_CONTEXT,
     AGENT,
     SECURITY,
@@ -75,7 +74,7 @@ def _create_args_dict(full_config=False):
     script that creates and populates the DB to run
     """
     args_dict = {
-        'amqp_host': config[RABBITMQ][ENDPOINT_IP],
+        'amqp_host': '127.0.0.1',
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
         'amqp_ca_cert': constants.CA_CERT_PATH,
