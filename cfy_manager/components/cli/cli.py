@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from os.path import join, expanduser
+from getpass import getuser
 
 from .. import SOURCES, SECURITY
 
@@ -64,16 +65,21 @@ def _configure():
         '-c', EXTERNAL_CERT_PATH, '--ssl', ssl_enabled,
         '--skip-credentials-validation'
     ]
-    logger.info('Setting CLI for default user...')
+
+    current_user = getuser()
+
+    logger.info('Setting CLI for the current user ({0})...'.format(
+        current_user))
     common.run(use_cmd)
     common.run(set_cmd)
     _set_colors(is_root=False)
 
-    logger.info('Setting CLI for root user...')
-    for cmd in (use_cmd, set_cmd):
-        root_cmd = ['sudo', '-u', 'root'] + cmd
-        common.run(root_cmd)
-    _set_colors(is_root=True)
+    if current_user != 'root':
+        logger.info('Setting CLI for the root user...')
+        for cmd in (use_cmd, set_cmd):
+            root_cmd = ['sudo', '-u', 'root'] + cmd
+            common.run(root_cmd)
+        _set_colors(is_root=True)
 
 
 def install():
