@@ -91,6 +91,7 @@ def _set_constant_config():
     const_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
     const_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
     const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
+    const_conf['pkcs12_cert_path'] = constants.CA_CERT_PATH
 
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
