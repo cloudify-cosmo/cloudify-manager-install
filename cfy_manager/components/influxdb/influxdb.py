@@ -201,10 +201,12 @@ def configure():
 
 def remove():
     logger.notice('Removing Influxdb...')
-    remove_notice(INFLUXDB)
-    systemd.remove(INFLUXDB)
-    remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
-    yum_remove(INFLUXDB)
+    is_internal = config[INFLUXDB]['is_internal']
+    if is_internal:
+        remove_notice(INFLUXDB)
+        systemd.remove(INFLUXDB)
+        remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
+        yum_remove(INFLUXDB)
     logger.notice('InfluxDB successfully removed')
 
 

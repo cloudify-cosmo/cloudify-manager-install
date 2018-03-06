@@ -151,33 +151,40 @@ def _start_rabbitmq():
     systemd.restart(RABBITMQ)
 
 
-def _validate_rabbitmq_running():
+def _validate_local_rabbitmq():
     logger.info('Making sure RabbitMQ is live...')
     systemd.verify_alive(RABBITMQ)
-
     result = _rabbitmqctl(['status'])
     if result.returncode != 0:
         raise ValidationError('Rabbitmq failed to start')
 
-    if not is_port_open(SECURE_PORT, host='127.0.0.1'):
+
+def _validate_rabbitmq_running():
+    endpoint_ip = config[RABBITMQ]['endpoint_ip']
+    if not is_port_open(SECURE_PORT, host=endpoint_ip):
         raise NetworkError(
             '{0} error: port {1}:{2} was not open'.format(
-                RABBITMQ, '127.0.0.1', SECURE_PORT)
+                RABBITMQ, endpoint_ip, SECURE_PORT)
         )
 
 
 def _configure():
     systemd.configure(RABBITMQ)
-    _init_service()
-    _delete_guest_user()
-    _create_rabbitmq_user()
-    _start_rabbitmq()
+    is_internal = config[RABBITMQ]['is_internal']
+    if is_internal:
+        _init_service()
+        _delete_guest_user()
+        _create_rabbitmq_user()
+        _start_rabbitmq()
+        _validate_local_rabbitmq()
     _validate_rabbitmq_running()
 
 
 def install():
     logger.notice('Installing RabbitMQ...')
-    _install()
+    is_internal = config[RABBITMQ]['is_internal']
+    if is_internal:
+        _install()
     _configure()
     logger.notice('RabbitMQ successfully installed')
 
@@ -190,8 +197,10 @@ def configure():
 
 def remove():
     logger.notice('Removing RabbitMQ...')
-    yum_remove('erlang')
-    systemd.remove(RABBITMQ, service_file=False)
+    is_internal = config[RABBITMQ]['is_internal']
+    if is_internal:
+        yum_remove('erlang')
+        systemd.remove(RABBITMQ, service_file=False)
     logger.notice('RabbitMQ successfully removed')
 
 

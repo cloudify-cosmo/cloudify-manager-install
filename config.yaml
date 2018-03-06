@@ -94,6 +94,9 @@ rabbitmq:
     rabbitmq_rpm_source_url: rabbitmq-server-3.5.3-1.noarch.rpm
     cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
+  # using an external rabbitmq node is not supported yet, only enable this
+  # if you know what you are doing
+  endpoint_ip: ''
   # IP of the management API, should be localhost unless an external rabbitmq
   # is used
   management_endpoint_ip: 'localhost'
@@ -332,5 +335,5 @@ usage_collector:
 
     # Sets the interval between running the usage collector in days
     interval_in_days: 1
-    
+
 flask_security: {}

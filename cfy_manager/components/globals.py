@@ -107,19 +107,19 @@ def _generate_password(length=12):
     return password
 
 
-def _set_influx_db_endpoint():
-    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
+def _set_endpoint(service):
+    endpoint_ip = config[service][ENDPOINT_IP]
 
-    if influxdb_endpoint_ip:
-        # The InfluxDB endpoint and `is_internal` could've been set by a
+    if endpoint_ip:
+        # The endpoint ip and `is_internal` could've been set by a
         # previous install/configure, so we validate before setting
-        is_internal = config[INFLUXDB].setdefault('is_internal', False)
+        is_internal = config[service].setdefault('is_internal', False)
         if not is_internal:
-            logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
-                influxdb_endpoint_ip))
+            logger.info('External {0} Endpoint IP provided: {1}'.format(
+                service, endpoint_ip))
     else:
-        config[INFLUXDB]['is_internal'] = True
-        config[INFLUXDB][ENDPOINT_IP] = "localhost"
+        config[service]['is_internal'] = True
+        config[service][ENDPOINT_IP] = "localhost"
 
 
 def _random_alphanumeric(result_len=31):
@@ -170,7 +170,8 @@ def set_globals():
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
-    _set_influx_db_endpoint()
+    _set_endpoint(RABBITMQ)
+    _set_endpoint(INFLUXDB)
     if config[CLEAN_DB]:
         _set_admin_password()
         _generate_flask_security_config()
