@@ -18,6 +18,7 @@ from ruamel.yaml.error import YAMLError
 from ruamel.yaml.comments import CommentedMap
 
 import collections
+import os
 from os.path import isfile
 
 from .exceptions import InputError, BootstrapError
@@ -57,6 +58,23 @@ class Config(CommentedMap):
             # Override any default values with values from config.yaml
             user_config = self._load_yaml(USER_CONFIG_PATH)
             dict_merge(self, user_config)
+
+    @staticmethod
+    def validate_access(write_required):
+        # It's OK if file doesn't exist.
+        if isfile(USER_CONFIG_PATH):
+            if write_required:
+                mode = os.R_OK | os.W_OK
+                label = 'readable and writable'
+            else:
+                mode = os.R_OK
+                label = 'readable'
+
+            if not os.access(USER_CONFIG_PATH, mode):
+                raise BootstrapError(
+                    'Configuration file ({0}) must be {1} '
+                    'by the current user'.format(
+                        USER_CONFIG_PATH, label))
 
     @staticmethod
     def _load_yaml(path_to_yaml):

@@ -139,8 +139,10 @@ def _load_config_and_logger(verbose=False,
                             private_ip=None,
                             public_ip=None,
                             admin_password=None,
-                            clean_db=False):
+                            clean_db=False,
+                            config_write_required=True):
     setup_console_logger(verbose)
+    config.validate_access(config_write_required)
     config.load_config()
     manager_config = config[MANAGER]
 
@@ -270,7 +272,7 @@ def configure(verbose=False,
 def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
-    _load_config_and_logger(verbose)
+    _load_config_and_logger(verbose, config_write_required=False)
     if not force:
         raise BootstrapError(
             'The --force flag must be passed to `cfy_manager remove`'
