@@ -74,7 +74,7 @@ def _create_args_dict(full_config=False):
     script that creates and populates the DB to run
     """
     args_dict = {
-        'amqp_host': '127.0.0.1',
+        'amqp_host': config[RABBITMQ]['management_endpoint_ip'],
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
         'amqp_ca_cert': constants.CA_CERT_PATH,

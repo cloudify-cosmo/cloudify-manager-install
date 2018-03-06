@@ -94,6 +94,10 @@ rabbitmq:
     rabbitmq_rpm_source_url: rabbitmq-server-3.5.3-1.noarch.rpm
     cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
+  # IP of the management API, should be localhost unless an external rabbitmq
+  # is used
+  management_endpoint_ip: 'localhost'
+
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
     # in the events queue. Not used if an external endpoint is used.
