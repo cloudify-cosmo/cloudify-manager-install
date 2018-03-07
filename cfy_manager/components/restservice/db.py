@@ -118,16 +118,14 @@ def _run_script(script_name, args_dict=None, configs=None):
     _log_results(result)
 
 
-def populate_db(configs):
+def populate_db(configs=None):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict()
     _run_script('create_tables_and_add_defaults.py', args_dict, configs)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
-def create_amqp_resources(configs):
-    if configs is None:
-        configs = {}
+def create_amqp_resources(configs=None):
     logger.notice('Creating AMQP resources...')
     _run_script('create_amqp_resources.py', configs=configs)
     logger.notice('AMQP resources successfully created')
