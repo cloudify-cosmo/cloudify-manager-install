@@ -14,29 +14,29 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 import argparse
 
+from manager_rest import config
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.constants import DEFAULT_TENANT_ID
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import models, get_storage_manager
 
 
-def _setup_flask_app(config):
+def _setup_flask_app():
     setup_flask_app(
-        manager_ip=config['postgresql_host'],
-        hash_salt=config['hash_salt'],
-        secret_key=config['secret_key']
+        manager_ip=config.instance.postgresql_host,
+        hash_salt=config.instance.security_hash_salt,
+        secret_key=config.instance.security_secret_key
     )
 
 
-def _get_amqp_manager(config):
+def _get_amqp_manager():
     return AMQPManager(
-        host=config['amqp_host'],
-        username=config['amqp_username'],
-        password=config['amqp_password'],
-        verify=config['amqp_ca_cert']
+        host=config.instance.amqp_management_host,
+        username=config.instance.amqp_username,
+        password=config.instance.amqp_password,
+        verify=config.instance.amqp_ca_cert
     )
 
 
@@ -55,10 +55,9 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    with open(args.config_path, 'r') as f:
-        config = json.load(f)
-    _setup_flask_app(config)
-    amqp_manager = _get_amqp_manager(config)
+    config.instance.load_configuration()
+    _setup_flask_app()
+    amqp_manager = _get_amqp_manager()
     default_tenant = _get_default_tenant()
     amqp_manager.create_tenant_vhost_and_user(default_tenant)
     print 'Finished creating AMQP resources'
