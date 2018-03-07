@@ -22,12 +22,10 @@ from .. import (
     SECURITY,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
-    FLASK_SECURITY
 )
 
 from ..service_names import (
     POSTGRESQL,
-    RABBITMQ,
     MANAGER,
     RESTSERVICE
 )
@@ -68,63 +66,68 @@ def _get_provider_context():
     return context
 
 
-def _create_args_dict(full_config=False):
+def _create_args_dict():
     """
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
     """
     args_dict = {
-        'amqp_host': config[RABBITMQ]['management_endpoint_ip'],
-        'amqp_username': config[RABBITMQ]['username'],
-        'amqp_password': config[RABBITMQ]['password'],
-        'amqp_ca_cert': constants.CA_CERT_PATH,
-        'hash_salt': config[FLASK_SECURITY]['hash_salt'],
-        'secret_key': config[FLASK_SECURITY]['secret_key'],
-        'postgresql_host': config[POSTGRESQL]['host']
+        'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
+        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
+        'provider_context': _get_provider_context(),
+        'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
+        'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
+                               'migrations')
     }
-    if full_config:
-        args_dict.update(
-            {
-                'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
-                'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-                'provider_context': _get_provider_context(),
-                'authorization_file_path': join(REST_HOME_DIR,
-                                                'authorization.conf'),
-                'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME,
-                                       'cloudify',
-                                       'migrations')
-            }
-        )
-
     return args_dict
 
 
-def _run_script(script_name, args_dict):
-    script_path = join(SCRIPTS_PATH, script_name)
+def _create_process_env(rest_config=None, authorization_config=None,
+                        security_config=None):
+    env = {}
+    for value, envvar in [
+            (rest_config, 'MANAGER_REST_CONFIG_PATH'),
+            (security_config, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
+            (authorization_config, 'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
+    ]:
+        if value is not None:
+            env[envvar] = value
+    return env
 
-    # The script won't have access to the config, so we dump the relevant args
-    # to a JSON file, and pass its path to the script
-    args_json_path = write_to_tempfile(args_dict, json_dump=True)
+
+def _run_script(script_name, args_dict=None, configs=None):
+    env_dict = None
+    if configs is not None:
+        env_dict = _create_process_env(**configs)
+
+    script_path = join(SCRIPTS_PATH, script_name)
 
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    result = common.sudo([python_path, script_path, args_json_path])
+    cmd = [python_path, script_path]
+
+    if args_dict:
+        # The script won't have access to the config, so we dump the relevant
+        # args to a JSON file, and pass its path to the script
+        args_json_path = write_to_tempfile(args_dict, json_dump=True)
+        cmd.append(args_json_path)
+
+    result = common.sudo(cmd, env=env_dict)
 
     _log_results(result)
 
 
-def populate_db():
+def populate_db(configs=None):
     logger.notice('Populating DB and creating AMQP resources...')
-    args_dict = _create_args_dict(full_config=True)
-    _run_script('create_tables_and_add_defaults.py', args_dict)
+    args_dict = _create_args_dict()
+    _run_script('create_tables_and_add_defaults.py', args_dict, configs)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
-def create_amqp_resources():
+def create_amqp_resources(configs=None):
     logger.notice('Creating AMQP resources...')
-    args_dict = _create_args_dict()
-    _run_script('create_amqp_resources.py', args_dict)
+    _run_script('create_amqp_resources.py', configs=configs)
     logger.notice('AMQP resources successfully created')
 
 
