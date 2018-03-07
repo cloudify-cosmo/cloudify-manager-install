@@ -171,8 +171,7 @@ def _verify_restservice():
             'REST service returned malformed JSON: {0}'.format(e))
 
 
-def _start_restservice():
-    systemd.restart(RESTSERVICE)
+def _verify_restservice_alive():
     systemd.verify_alive(RESTSERVICE)
 
     logger.info('Verifying Rest service is working as expected...')
@@ -192,7 +191,8 @@ def _configure():
     _configure_restservice()
     _configure_db()
     systemd.configure(RESTSERVICE)
-    _start_restservice()
+    systemd.restart(RESTSERVICE)
+    _verify_restservice_alive()
 
 
 def _remove_files():
@@ -235,3 +235,16 @@ def remove():
     systemd.remove(RESTSERVICE, service_file=False)
     _remove_files()
     logger.notice('Rest Service successfully removed')
+
+
+def start():
+    logger.notice('Starting Restservice...')
+    systemd.start(RESTSERVICE)
+    _verify_restservice_alive()
+    logger.notice('Restservice successfully started')
+
+
+def stop():
+    logger.notice('Stopping Restservice...')
+    systemd.stop(RESTSERVICE)
+    logger.notice('Restservice successfully stopped')

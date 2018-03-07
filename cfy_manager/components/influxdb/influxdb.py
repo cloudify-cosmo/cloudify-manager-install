@@ -164,9 +164,7 @@ def _check_response():
         raise ValidationError('Could not validate InfluxDB')
 
 
-def _start_and_verify_alive():
-    logger.info('Starting InfluxDB Service...')
-    systemd.restart(INFLUXDB)
+def _verify_influxdb_alive():
     systemd.verify_alive(INFLUXDB)
     wait_for_port(INFLUXDB_ENDPOINT_PORT)
     _check_response()
@@ -183,7 +181,9 @@ def _configure():
     _configure_database(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
 
     if is_internal:
-        _start_and_verify_alive()
+        logger.info('Starting InfluxDB Service...')
+        systemd.restart(INFLUXDB)
+        _verify_influxdb_alive()
 
 
 def install():
@@ -206,3 +206,20 @@ def remove():
     remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
     yum_remove(INFLUXDB)
     logger.notice('InfluxDB successfully removed')
+
+
+def start():
+    is_internal = config[INFLUXDB]['is_internal']
+    if is_internal:
+        logger.notice('Starting Influxdb...')
+        systemd.start(INFLUXDB)
+        _verify_influxdb_alive()
+        logger.notice('Influxdb successfully started')
+
+
+def stop():
+    is_internal = config[INFLUXDB]['is_internal']
+    if is_internal:
+        logger.notice('Stopping Influxdb...')
+        systemd.stop(INFLUXDB)
+        logger.notice('Influxdb successfully stopped')

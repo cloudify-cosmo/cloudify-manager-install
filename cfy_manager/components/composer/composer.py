@@ -63,6 +63,11 @@ def _install():
     common.untar(composer_tar, HOME_DIR)
 
 
+def _verify_composer_alive():
+    systemd.verify_alive(COMPOSER)
+    wait_for_port(3000)
+
+
 def _start_and_validate_composer():
     # Used in the service template
     config[COMPOSER][SERVICE_USER] = COMPOSER_USER
@@ -71,7 +76,7 @@ def _start_and_validate_composer():
 
     logger.info('Starting Composer service...')
     systemd.restart(COMPOSER)
-    wait_for_port(3000)
+    _verify_composer_alive()
 
 
 def _run_db_migrate():
@@ -126,3 +131,16 @@ def remove():
     systemd.remove(COMPOSER)
     files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
     logger.notice('Cloudify Composer successfully removed')
+
+
+def start():
+    logger.notice('Starting Cloudify Composer...')
+    systemd.start(COMPOSER)
+    _verify_composer_alive()
+    logger.notice('Cloudify Composer successfully started')
+
+
+def stop():
+    logger.notice('Stopping Cloudify Composer...')
+    systemd.stop(COMPOSER)
+    logger.notice('Cloudify Composer successfully stopped')

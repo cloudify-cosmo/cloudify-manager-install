@@ -292,7 +292,6 @@ def _start_and_verify_service():
     systemd.enable(NGINX, append_prefix=False)
     systemd.restart(NGINX, append_prefix=False)
     systemd.verify_alive(NGINX, append_prefix=False)
-    # _verify_nginx()
 
 
 def _configure():
@@ -331,3 +330,16 @@ def remove():
     ])
     yum_remove(NGINX)
     logger.notice('NGINX successfully removed')
+
+
+def start():
+    logger.notice('Starting NGINX...')
+    systemd.start(NGINX, append_prefix=False)
+    systemd.verify_alive(NGINX, append_prefix=False)
+    logger.notice('NGINX successfully started')
+
+
+def stop():
+    logger.notice('Stopping NGINX...')
+    systemd.stop(NGINX, append_prefix=False)
+    logger.notice('NGINX successfully stopped')

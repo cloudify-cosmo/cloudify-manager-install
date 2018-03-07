@@ -109,8 +109,7 @@ def _check_worker_running():
     raise ValidationError('Could not validate that celery is running')
 
 
-def _start_and_verify_mgmtworker():
-    systemd.restart(MGMTWORKER)
+def _verify_mgmtworker_alive():
     systemd.verify_alive(MGMTWORKER)
     _check_worker_running()
 
@@ -119,7 +118,8 @@ def _configure():
     _deploy_mgmtworker_config()
     systemd.configure(MGMTWORKER)
     _prepare_snapshot_permissions()
-    _start_and_verify_mgmtworker()
+    systemd.restart(MGMTWORKER)
+    _verify_mgmtworker_alive()
 
 
 def install():
@@ -141,3 +141,16 @@ def remove():
     yum_remove('cloudify-management-worker')
     common.remove('/opt/mgmtworker')
     logger.notice('Management Worker successfully removed')
+
+
+def start():
+    logger.notice('Starting Management Worker...')
+    systemd.start(MGMTWORKER)
+    _verify_mgmtworker_alive()
+    logger.notice('Management Worker successfully started')
+
+
+def stop():
+    logger.notice('Stopping Management Worker...')
+    systemd.stop(MGMTWORKER)
+    logger.notice('Management Worker successfully stopped')

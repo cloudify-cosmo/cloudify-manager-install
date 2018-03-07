@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .composer import install, configure, remove  # NOQA
+from .composer import install, configure, remove, start, stop  # NOQA

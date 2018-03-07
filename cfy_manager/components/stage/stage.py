@@ -152,6 +152,11 @@ def _run_db_migrate():
     )
 
 
+def _verify_stage_alive():
+    systemd.verify_alive(STAGE)
+    wait_for_port(8088)
+
+
 def _start_and_validate_stage():
     _set_community_mode()
     # Used in the service template
@@ -161,7 +166,7 @@ def _start_and_validate_stage():
 
     logger.info('Starting Stage service...')
     systemd.restart(STAGE)
-    wait_for_port(8088)
+    _verify_stage_alive()
 
 
 def _configure():
@@ -205,3 +210,16 @@ def remove():
         STAGE_RESOURCES
     ])
     logger.notice('Stage successfully removed')
+
+
+def start():
+    logger.notice('Starting Stage...')
+    systemd.start(STAGE)
+    _verify_stage_alive()
+    logger.notice('Stage successfully started')
+
+
+def stop():
+    logger.notice('Stopping Stage...')
+    systemd.stop(STAGE)
+    logger.notice('Stage successfully stopped')
