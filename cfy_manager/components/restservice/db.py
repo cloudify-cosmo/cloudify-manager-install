@@ -99,7 +99,20 @@ def _create_args_dict(full_config=False):
     return args_dict
 
 
-def _run_script(script_name, args_dict):
+def _create_process_env(rest_config=None, authorization_config=None,
+                        security_config=None):
+    env = {}
+    for value, envvar in [
+            (rest_config, 'MANAGER_REST_CONFIG_PATH'),
+            (security_config, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
+            (authorization_config, 'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
+    ]:
+        if value is not None:
+            env[envvar] = value
+    return env
+
+
+def _run_script(script_name, args_dict, env_dict):
     script_path = join(SCRIPTS_PATH, script_name)
 
     # The script won't have access to the config, so we dump the relevant args
@@ -109,22 +122,29 @@ def _run_script(script_name, args_dict):
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    result = common.sudo([python_path, script_path, args_json_path])
+    result = common.sudo([python_path, script_path, args_json_path],
+                         env=env_dict)
 
     _log_results(result)
 
 
-def populate_db():
+def populate_db(configs):
+    if configs is None:
+        configs = {}
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict(full_config=True)
-    _run_script('create_tables_and_add_defaults.py', args_dict)
+    env_dict = _create_process_env(**configs)
+    _run_script('create_tables_and_add_defaults.py', args_dict, env_dict)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
-def create_amqp_resources():
+def create_amqp_resources(configs):
+    if configs is None:
+        configs = {}
     logger.notice('Creating AMQP resources...')
     args_dict = _create_args_dict()
-    _run_script('create_amqp_resources.py', args_dict)
+    env_dict = _create_process_env(**configs)
+    _run_script('create_amqp_resources.py', args_dict, env_dict)
     logger.notice('AMQP resources successfully created')
 
 
