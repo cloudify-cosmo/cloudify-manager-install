@@ -58,7 +58,7 @@ def _get_amqp_manager():
         host=config.instance.amqp_management_host,
         username=config.instance.amqp_username,
         password=config.instance.amqp_password,
-        verify=config.instance.amqp_ca_cert
+        verify=config.instance.amqp_ca_path
     )
 
 
