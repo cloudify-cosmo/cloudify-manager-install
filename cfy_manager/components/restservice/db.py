@@ -95,7 +95,11 @@ def _create_process_env(rest_config=None, authorization_config=None,
     return env
 
 
-def _run_script(script_name, args_dict=None, env_dict=None):
+def _run_script(script_name, args_dict=None, configs=None):
+    env_dict = None
+    if configs is not None:
+        env_dict = _create_process_env(**configs)
+
     script_path = join(SCRIPTS_PATH, script_name)
 
     # Directly calling with this python bin, in order to make sure it's run
@@ -115,12 +119,9 @@ def _run_script(script_name, args_dict=None, env_dict=None):
 
 
 def populate_db(configs):
-    if configs is None:
-        configs = {}
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict()
-    env_dict = _create_process_env(**configs)
-    _run_script('create_tables_and_add_defaults.py', args_dict, env_dict)
+    _run_script('create_tables_and_add_defaults.py', args_dict, configs)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
@@ -128,8 +129,7 @@ def create_amqp_resources(configs):
     if configs is None:
         configs = {}
     logger.notice('Creating AMQP resources...')
-    env_dict = _create_process_env(**configs)
-    _run_script('create_amqp_resources.py', env_dict=env_dict)
+    _run_script('create_amqp_resources.py', configs=configs)
     logger.notice('AMQP resources successfully created')
 
 
