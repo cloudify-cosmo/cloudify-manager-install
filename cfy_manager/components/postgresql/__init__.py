@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .postgresql import install, configure, remove  # NOQA
+from .postgresql import install, configure, remove, start, stop  # NOQA

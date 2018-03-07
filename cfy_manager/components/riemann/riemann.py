@@ -74,3 +74,16 @@ def remove():
     yum_remove(RIEMANN)
     common.remove('/etc/riemann')
     logger.notice('Riemann successfully removed')
+
+
+def start():
+    logger.notice('Starting Riemann...')
+    systemd.start(RIEMANN)
+    systemd.verify_alive(RIEMANN)
+    logger.notice('Riemann successfully started')
+
+
+def stop():
+    logger.notice('Stopping Riemann...')
+    systemd.stop(RIEMANN)
+    logger.notice('Riemann successfully stopped')

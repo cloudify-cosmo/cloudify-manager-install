@@ -56,6 +56,19 @@ def configure():
     logger.notice('AMQP-Influx successfully configured')
 
 
+def start():
+    logger.notice('Starting AMQP-Influx...')
+    systemd.start(AMQPINFLUX)
+    systemd.verify_alive(AMQPINFLUX)
+    logger.notice('AMQP-Influx successfully started')
+
+
+def stop():
+    logger.notice('Stopping AMQP-Influx...')
+    systemd.stop(AMQPINFLUX)
+    logger.notice('AMQP-Influx successfully stopped')
+
+
 def remove():
     logger.notice('Removing AMQP-Influx...')
     systemd.remove(AMQPINFLUX, service_file=False)

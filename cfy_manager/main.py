@@ -140,7 +140,7 @@ def _load_config_and_logger(verbose=False,
                             public_ip=None,
                             admin_password=None,
                             clean_db=False,
-                            config_write_required=True):
+                            config_write_required=False):
     setup_console_logger(verbose)
     config.validate_access(config_write_required)
     config.load_config()
@@ -201,6 +201,25 @@ def _finish_configuration():
     _create_initial_install_file()
 
 
+def _validate_force(force, cmd):
+    if not force:
+        raise BootstrapError(
+            'The --force flag must be passed to `cfy_manager {0}`'.format(cmd)
+        )
+
+
+def _validate_manager_installed(cmd):
+    if not _is_manager_installed():
+        raise BootstrapError(
+            'Could not find {touched_file}.\nThis most likely means '
+            'that you need to run `cfy_manager install` before '
+            'running `cfy_manager {cmd}`'.format(
+                touched_file=INITIAL_INSTALL_FILE,
+                cmd=cmd
+            )
+        )
+
+
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 @argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
@@ -217,7 +236,8 @@ def install(verbose=False,
         private_ip,
         public_ip,
         admin_password,
-        clean_db
+        clean_db,
+        config_write_required=True
     )
 
     logger.notice('Installing Cloudify Manager...')
@@ -247,18 +267,12 @@ def configure(verbose=False,
         private_ip,
         public_ip,
         admin_password,
-        clean_db
+        clean_db,
+        config_write_required=True
     )
 
     logger.notice('Configuring Cloudify Manager...')
-    if not _is_manager_installed():
-        raise BootstrapError(
-            'Could not find {touched_file}.\nThis most likely means '
-            'that you need to run `cfy_manager install` before '
-            'running `cfy_manager configure`'.format(
-                touched_file=INITIAL_INSTALL_FILE
-            )
-        )
+    _validate_manager_installed('configure')
     validate(skip_validations=True)
     set_globals()
 
@@ -272,12 +286,8 @@ def configure(verbose=False,
 def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
-    _load_config_and_logger(verbose, config_write_required=False)
-    if not force:
-        raise BootstrapError(
-            'The --force flag must be passed to `cfy_manager remove`'
-        )
-
+    _load_config_and_logger(verbose)
+    _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
     for component in COMPONENTS:
@@ -290,12 +300,55 @@ def remove(verbose=False, force=False):
     _print_time()
 
 
+def start(verbose=False):
+    """ Start Cloudify Manager services """
+
+    _load_config_and_logger(verbose)
+    _validate_manager_installed('start')
+    logger.notice('Starting Cloudify Manager services...')
+    for component in COMPONENTS:
+        if hasattr(component, 'start'):
+            component.start()
+    logger.notice('Cloudify Manager services successfully started!')
+    _print_time()
+
+
+def stop(verbose=False, force=False):
+    """ Stop Cloudify Manager services """
+
+    _load_config_and_logger(verbose)
+    _validate_manager_installed('stop')
+    _validate_force(force, 'stop')
+
+    logger.notice('Stopping Cloudify Manager services...')
+    for component in reversed(COMPONENTS):
+        if hasattr(component, 'stop'):
+            component.stop()
+    logger.notice('Cloudify Manager services successfully stopped!')
+    _print_time()
+
+
+def restart(verbose=False, force=False):
+    """ Restart Cloudify Manager services """
+
+    _load_config_and_logger(verbose)
+    _validate_manager_installed('restart')
+    _validate_force(force, 'restart')
+
+    stop(verbose, force)
+    start(verbose)
+    _print_time()
+
+
 def main():
     """Main entry point"""
     argh.dispatch_commands([
         install,
         configure,
         remove,
+        start,
+        stop,
+        restart,
         create_internal_certs,
         create_external_certs,
         create_pkcs12,
