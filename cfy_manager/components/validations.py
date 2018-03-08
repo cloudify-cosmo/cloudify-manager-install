@@ -17,6 +17,7 @@ import sys
 import platform
 import subprocess
 import netifaces
+import os
 from getpass import getuser
 from collections import namedtuple
 from distutils.version import LooseVersion
@@ -264,6 +265,23 @@ def _validate_dependencies():
             'Possible solution is to run - sudo yum install {packages}'
             .format(error_msg=error_msg, packages=packages)
         )
+
+
+def validate_config_access(write_required):
+    # It's OK if file doesn't exist.
+    if os.path.isfile(USER_CONFIG_PATH):
+        if write_required:
+            mode = os.R_OK | os.W_OK
+            label = 'readable and writable'
+        else:
+            mode = os.R_OK
+            label = 'readable'
+
+        if not os.access(USER_CONFIG_PATH, mode):
+            raise ValidationError(
+                'Configuration file ({0}) must be {1} '
+                'by the current user'.format(
+                    USER_CONFIG_PATH, label))
 
 
 def validate(skip_validations=False):
