@@ -60,9 +60,9 @@ def _create_sudoers_file_and_disable_sudo_requiretty():
 
 def _get_selinux_state():
     try:
-        return subprocess.check_output('getenforce').rstrip('\n\r')
-    except OSError:
-        logger.warning('SELinux is not installed')
+        return subprocess.check_output(['/usr/sbin/getenforce']).rstrip('\n\r')
+    except OSError as e:
+        logger.warning('SELinux is not installed ({0})'.format(e))
         return None
 
 

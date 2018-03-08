@@ -51,7 +51,9 @@ LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
-
+REST_CONFIG_PATH = join(HOME_DIR, 'cloudify-rest.conf')
+REST_AUTHORIZATION_CONFIG_PATH = join(HOME_DIR, 'authorization.conf')
+REST_SECURITY_CONFIG_PATH = join(HOME_DIR, 'rest-security.conf')
 logger = get_logger(RESTSERVICE)
 
 
@@ -64,16 +66,17 @@ def _make_paths():
 
 def _deploy_rest_configuration():
     logger.info('Deploying REST Service Configuration file...')
-    conf_path = join(HOME_DIR, 'cloudify-rest.conf')
-    deploy(join(CONFIG_PATH, 'cloudify-rest.conf'), conf_path)
-    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, conf_path)
+    deploy(join(CONFIG_PATH, 'cloudify-rest.conf'), REST_CONFIG_PATH)
+    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                 REST_CONFIG_PATH)
 
 
 def _deploy_authorization_configuration():
     logger.info('Deploying REST authorization configuration file...')
-    conf_path = join(HOME_DIR, 'authorization.conf')
-    deploy(join(CONFIG_PATH, 'authorization.conf'), conf_path)
-    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, conf_path)
+    deploy(join(CONFIG_PATH, 'authorization.conf'),
+           REST_AUTHORIZATION_CONFIG_PATH)
+    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                 REST_AUTHORIZATION_CONFIG_PATH)
 
 
 def _pre_create_snapshot_paths():
@@ -99,14 +102,14 @@ def _deploy_security_configuration():
 
     logger.info('Deploying REST Security configuration file...')
 
-    rest_security_path = join(HOME_DIR, 'rest-security.conf')
-    write_to_file(config[FLASK_SECURITY], rest_security_path, json_dump=True)
+    write_to_file(config[FLASK_SECURITY], REST_SECURITY_CONFIG_PATH,
+                  json_dump=True)
     common.chown(
         constants.CLOUDIFY_USER,
         constants.CLOUDIFY_GROUP,
-        rest_security_path
+        REST_SECURITY_CONFIG_PATH
     )
-    common.chmod('g+r', rest_security_path)
+    common.chmod('g+r', REST_SECURITY_CONFIG_PATH)
 
 
 def _calculate_worker_count():
@@ -171,8 +174,7 @@ def _verify_restservice():
             'REST service returned malformed JSON: {0}'.format(e))
 
 
-def _start_restservice():
-    systemd.restart(RESTSERVICE)
+def _verify_restservice_alive():
     systemd.verify_alive(RESTSERVICE)
 
     logger.info('Verifying Rest service is working as expected...')
@@ -180,11 +182,16 @@ def _start_restservice():
 
 
 def _configure_db():
+    configs = {
+        'rest_config': REST_CONFIG_PATH,
+        'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
+        'security_config': REST_SECURITY_CONFIG_PATH
+    }
     if config[CLEAN_DB]:
         db.prepare_db()
-        db.populate_db()
+        db.populate_db(configs)
     else:
-        db.create_amqp_resources()
+        db.create_amqp_resources(configs)
 
 
 def _configure():
@@ -192,7 +199,8 @@ def _configure():
     _configure_restservice()
     _configure_db()
     systemd.configure(RESTSERVICE)
-    _start_restservice()
+    systemd.restart(RESTSERVICE)
+    _verify_restservice_alive()
 
 
 def _remove_files():
@@ -235,3 +243,16 @@ def remove():
     systemd.remove(RESTSERVICE, service_file=False)
     _remove_files()
     logger.notice('Rest Service successfully removed')
+
+
+def start():
+    logger.notice('Starting Restservice...')
+    systemd.start(RESTSERVICE)
+    _verify_restservice_alive()
+    logger.notice('Restservice successfully started')
+
+
+def stop():
+    logger.notice('Stopping Restservice...')
+    systemd.stop(RESTSERVICE)
+    logger.notice('Restservice successfully stopped')

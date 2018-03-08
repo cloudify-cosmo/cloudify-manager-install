@@ -193,3 +193,16 @@ def remove():
     yum_remove('erlang')
     systemd.remove(RABBITMQ, service_file=False)
     logger.notice('RabbitMQ successfully removed')
+
+
+def start():
+    logger.notice('Starting RabbitMQ...')
+    systemd.start(RABBITMQ)
+    _validate_rabbitmq_running()
+    logger.notice('RabbitMQ successfully started')
+
+
+def stop():
+    logger.notice('Stopping RabbitMQ...')
+    systemd.stop(RABBITMQ)
+    logger.notice('RabbitMQ successfully stopped')

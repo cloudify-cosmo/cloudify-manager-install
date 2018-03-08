@@ -89,3 +89,16 @@ def remove():
     yum_remove('postgresql94-jdbc')
     common.remove('/etc/logstash')
     logger.notice('Logstash successfully removed')
+
+
+def start():
+    logger.notice('Starting Logstash...')
+    systemd.start(LOGSTASH, append_prefix=False)
+    systemd.verify_alive(LOGSTASH, append_prefix=False)
+    logger.notice('Logstash successfully started')
+
+
+def stop():
+    logger.notice('Stopping Logstash...')
+    systemd.stop(LOGSTASH, append_prefix=False)
+    logger.notice('Logstash successfully stopped')

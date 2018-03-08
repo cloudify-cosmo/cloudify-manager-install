@@ -166,3 +166,16 @@ def remove():
     yum_remove('postgresql95')
     yum_remove('postgresql95-libs')
     logger.notice('PostgreSQL successfully removed')
+
+
+def start():
+    logger.notice('Starting PostgreSQL...')
+    systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
+    systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
+    logger.notice('PostgreSQL successfully started')
+
+
+def stop():
+    logger.notice('Stopping PostgreSQL...')
+    systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
+    logger.notice('PostgreSQL successfully stopped')

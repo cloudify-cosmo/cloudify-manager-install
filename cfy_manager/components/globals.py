@@ -119,8 +119,7 @@ def _set_influx_db_endpoint():
                 influxdb_endpoint_ip))
     else:
         config[INFLUXDB]['is_internal'] = True
-        influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
-        config[INFLUXDB][ENDPOINT_IP] = influxdb_endpoint_ip
+        config[INFLUXDB][ENDPOINT_IP] = "localhost"
 
 
 def _random_alphanumeric(result_len=31):

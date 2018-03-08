@@ -5,7 +5,7 @@
 # that can be resolved here.
 # hostname = ""
 
-bind-address = "0.0.0.0"
+bind-address = "localhost"
 
 # Once every 24 hours InfluxDB will report anonymous data to m.influxdb.com
 # The data includes raft name (random 8 bytes), os, arch and version

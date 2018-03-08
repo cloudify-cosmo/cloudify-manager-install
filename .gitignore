@@ -67,3 +67,4 @@ openstack-docker/.cloudify
 .cloudify
 
 .idea/
+packaging/get-pip.py

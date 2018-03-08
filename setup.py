@@ -37,7 +37,7 @@ extra_files.append(join('..', 'config.yaml'))
 
 setup(
     name='cloudify-manager-install',
-    version='4.3',
+    version='4.4.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
@@ -53,6 +53,7 @@ setup(
     install_requires=[
         'ruamel.yaml==0.15.35',
         'Jinja2==2.7.2',
-        'argh==0.26.2'
+        'argh==0.26.2',
+        'netifaces==0.10.6'
     ]
 )
