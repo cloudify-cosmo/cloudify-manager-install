@@ -40,7 +40,7 @@ from .components import usage_collector
 from .components import manager_ip_setter
 
 from .components.globals import set_globals
-from .components.validations import validate
+from .components.validations import validate, validate_config_access
 
 from .components.service_names import MANAGER
 from .components import (
@@ -142,7 +142,7 @@ def _load_config_and_logger(verbose=False,
                             clean_db=False,
                             config_write_required=False):
     setup_console_logger(verbose)
-    config.validate_access(config_write_required)
+    validate_config_access(config_write_required)
     config.load_config()
     manager_config = config[MANAGER]
 
