@@ -48,7 +48,6 @@ from .components import (
     PRIVATE_IP,
     PUBLIC_IP,
     ADMIN_PASSWORD,
-    SSL_ENABLED,
     CLEAN_DB
 )
 
@@ -112,10 +111,6 @@ PUBLIC_IP_HELP_MSG = (
     'If your environment does not require a public IP, you can enter the '
     'private IP here.'
 )
-NO_SSL_HELP_MSG = (
-    'Disable SSL enforcement of REST API calls. NOT RECOMMENDED for '
-    'production environments.'
-)
 
 
 def _print_time():
@@ -144,7 +139,6 @@ def _load_config_and_logger(verbose=False,
                             private_ip=None,
                             public_ip=None,
                             admin_password=None,
-                            no_ssl=False,
                             clean_db=False):
     setup_console_logger(verbose)
     config.load_config()
@@ -165,8 +159,6 @@ def _load_config_and_logger(verbose=False,
                 'The --admin-password argument can only be used in '
                 'conjunction with the --clean-db flag.'
             )
-
-    manager_config[SECURITY][SSL_ENABLED] = not no_ssl
 
 
 def _print_finish_message():
@@ -206,12 +198,10 @@ def _finish_configuration():
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 @argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
 @argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
-@argh.arg('--no-ssl', action='store_true', help=NO_SSL_HELP_MSG)
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
             admin_password=None,
-            no_ssl=False,
             clean_db=False):
     """ Install Cloudify Manager """
 
@@ -220,7 +210,6 @@ def install(verbose=False,
         private_ip,
         public_ip,
         admin_password,
-        no_ssl,
         clean_db
     )
 
@@ -239,12 +228,10 @@ def install(verbose=False,
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 @argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
 @argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
-@argh.arg('--no-ssl', help=NO_SSL_HELP_MSG)
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
-              no_ssl=False,
               clean_db=False):
     """ Configure Cloudify Manager """
 
@@ -253,7 +240,6 @@ def configure(verbose=False,
         private_ip,
         public_ip,
         admin_password,
-        no_ssl,
         clean_db
     )
 
