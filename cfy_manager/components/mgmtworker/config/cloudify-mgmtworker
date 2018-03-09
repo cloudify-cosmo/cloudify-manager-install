@@ -15,9 +15,9 @@ CELERY_TASK_SERIALIZER="json"
 CELERY_RESULT_SERIALIZER="json"
 CELERY_RESULT_BACKEND="amqp"
 C_FORCE_ROOT=true
-MAX_WORKERS="{{ mgmtworker.max_workers}}"
-MIN_WORKERS="{{ mgmtworker.min_workers}}"
-AGENT_MAX_WORKERS="{{ agent.max_workers}}"
+MAX_WORKERS="{{ mgmtworker.max_workers }}"
+MIN_WORKERS="{{ mgmtworker.min_workers }}"
+GATEKEEPER_BUCKET_SIZE="{{ mgmtworker.gatekeeper_bucket_size }}"
 {% for key, value in mgmtworker.extra_env.iteritems() %}
 {{ key }}="{{ value }}"
 {% endfor %}

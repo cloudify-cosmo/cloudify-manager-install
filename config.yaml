@@ -253,6 +253,11 @@ mgmtworker:
   # Maximum number of worker processes started by the management worker.
   max_workers: 100
 
+  # Maximum number of manager-side tasks that can be performed concurrently.
+  # This is a performance measure to avoid deployments' starvation, in case
+  # a rogue deployment takes over all management workers.
+  gatekeeper_bucket_size: 25
+
   # Additional environment variables to add to the management worker's service
   # file.
   extra_env: {}
