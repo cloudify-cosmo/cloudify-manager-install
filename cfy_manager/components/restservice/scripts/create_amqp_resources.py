@@ -49,10 +49,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create AMQP vhost/user for the default tenant'
     )
-    parser.add_argument(
-        'config_path',
-        help='Path to a config file containing info needed by this script'
-    )
 
     args = parser.parse_args()
     config.instance.load_configuration()
