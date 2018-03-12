@@ -14,8 +14,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import argparse
-
 from manager_rest import config
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.constants import DEFAULT_TENANT_ID
@@ -46,11 +44,6 @@ def _get_default_tenant():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Create AMQP vhost/user for the default tenant'
-    )
-
-    args = parser.parse_args()
     config.instance.load_configuration()
     _setup_flask_app()
     amqp_manager = _get_amqp_manager()
