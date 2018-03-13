@@ -13,6 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import json
+import urlparse
+
 from os.path import join
 
 from .. import (
@@ -23,7 +27,7 @@ from .. import (
     VENV
 )
 
-from ..service_names import STAGE, MANAGER, RESTSERVICE
+from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL
 
 from ...config import config
 from ...logger import get_logger
@@ -152,6 +156,24 @@ def _run_db_migrate():
     )
 
 
+def _set_db_url():
+    config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
+    with open(config_path, 'r+') as f:
+        stage_config = json.load(f)
+        db_url = urlparse.urlparse(stage_config['db']['url'])
+        stage_credentials, _, stage_db_addr = db_url.netloc.partition('@')
+        new_credentials = '{0}:{1}'.format(
+            config[POSTGRESQL]['username'], config[POSTGRESQL]['password'])
+
+        stage_config['db']['url'] = urlparse.urlunparse(
+            db_url._replace(netloc='{0}@{1}'.format(new_credentials,
+                                                    stage_db_addr)))
+
+        f.seek(0)
+        f.truncate()
+        json.dump(stage_config, f, sort_keys=True, indent=4)
+
+
 def _verify_stage_alive():
     systemd.verify_alive(STAGE)
     wait_for_port(8088)
@@ -175,6 +197,7 @@ def _configure():
     _create_user_and_set_permissions()
     _install_nodejs()
     _deploy_scripts()
+    _set_db_url()
     rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
     _allow_snapshot_restore_to_restore_token(rest_service_python)
     _create_auth_token(rest_service_python)
