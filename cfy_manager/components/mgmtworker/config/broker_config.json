@@ -1,5 +1,5 @@
 {
-  "broker_ssl_enabled": "true",
+  "broker_ssl_enabled": true,
   "broker_cert_path": "{{ rabbitmq.broker_cert_path }}",
   "broker_username": "{{ rabbitmq.username }}",
   "broker_password": "{{ rabbitmq.password }}",
