@@ -213,13 +213,15 @@ def remove():
 
 
 def start():
-    logger.notice('Starting Stage...')
-    systemd.start(STAGE)
-    _verify_stage_alive()
-    logger.notice('Stage successfully started')
+    if not config[STAGE]['skip_installation']:
+        logger.notice('Starting Stage...')
+        systemd.start(STAGE)
+        _verify_stage_alive()
+        logger.notice('Stage successfully started')
 
 
 def stop():
-    logger.notice('Stopping Stage...')
-    systemd.stop(STAGE)
-    logger.notice('Stage successfully stopped')
+    if not config[STAGE]['skip_installation']:
+        logger.notice('Stopping Stage...')
+        systemd.stop(STAGE)
+        logger.notice('Stage successfully stopped')
