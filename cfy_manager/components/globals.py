@@ -139,7 +139,8 @@ def _generate_flask_security_config():
         'secret_key': base64.b64encode(os.urandom(32)),
         'encoding_alphabet': _random_alphanumeric(),
         'encoding_block_size': 24,
-        'encoding_min_length': 5
+        'encoding_min_length': 5,
+        'encryption_key': base64.urlsafe_b64encode(os.urandom(32))
     }
 
 
