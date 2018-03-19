@@ -13,6 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import json
+
 from os.path import join
 
 from .. import (
@@ -23,7 +26,7 @@ from .. import (
     VENV
 )
 
-from ..service_names import STAGE, MANAGER, RESTSERVICE
+from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL
 
 from ...config import config
 from ...logger import get_logger
@@ -191,6 +194,7 @@ def _configure():
     _create_user_and_set_permissions()
     _install_nodejs()
     _deploy_scripts()
+    _set_db_url()
     rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
     _allow_snapshot_restore_to_restore_token(rest_service_python)
     _create_auth_token(rest_service_python)
