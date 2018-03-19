@@ -15,7 +15,6 @@
 
 import os
 import json
-import urlparse
 
 from os.path import join
 
@@ -158,20 +157,15 @@ def _run_db_migrate():
 
 def _set_db_url():
     config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
-    with open(config_path, 'r+') as f:
+    with open(config_path) as f:
         stage_config = json.load(f)
-        db_url = urlparse.urlparse(stage_config['db']['url'])
-        stage_credentials, _, stage_db_addr = db_url.netloc.partition('@')
-        new_credentials = '{0}:{1}'.format(
+
+    stage_config['db']['url'] = \
+        'postgres://{0}:{1}@127.0.0.1:5432/stage'.format(
             config[POSTGRESQL]['username'], config[POSTGRESQL]['password'])
 
-        stage_config['db']['url'] = urlparse.urlunparse(
-            db_url._replace(netloc='{0}@{1}'.format(new_credentials,
-                                                    stage_db_addr)))
-
-        f.seek(0)
-        f.truncate()
-        json.dump(stage_config, f, sort_keys=True, indent=4)
+    with open(config_path, 'wb') as f:
+        json.dump(stage_config, f, indent=4, sort_keys=True)
 
 
 def _verify_stage_alive():
