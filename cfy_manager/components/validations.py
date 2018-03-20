@@ -294,12 +294,37 @@ def _check_ssl_file(input_name, kind='Key', password=None):
 def _check_key_and_cert(prefix):
     cert_input = '{0}_cert_path'.format(prefix)
     key_input = '{0}_key_path'.format(prefix)
-    if [
-        not config[SSL_INPUTS][cert_input],
-        not config[SSL_INPUTS][key_input]
-    ].count(True) == 1:
+    cert_filename = config[SSL_INPUTS][cert_input]
+    key_filename = config[SSL_INPUTS][key_input]
+    password_input = '{0}_key_password'.format(prefix)
+    password = config[SSL_INPUTS].get(password_input)
+
+    provided = [not cert_filename, not key_filename].count(True)
+    if provided == 0:
+        if password:
+            raise ValidationError('If {0} was provided, both {1} and {2} '
+                                  'must be provided'
+                                  .format(password_input, key_input,
+                                          cert_input))
+    elif provided == 1:
         raise ValidationError('Either both {0} and {1} must be provided, '
                               'or neither.'.format(cert_input, key_input))
+    else:
+        _check_ssl_file(key_input, kind='Key', password=password)
+        _check_ssl_file(cert_input, kind='Cert')
+        key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
+                               '-in', key_filename]
+        if password:
+            key_filename += ['-passin', 'pass:{0}'.format(password)]
+        cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
+                                '-in', cert_filename]
+        key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
+        cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
+        if cert_modulus != key_modulus:
+            raise ValidationError('Key {0} ({1}) does not match the '
+                                  'cert {2} ({3})'
+                                  .format(key_filename, key_input,
+                                          cert_filename, cert_input))
 
 
 def _validate_cert_inputs():
@@ -319,7 +344,7 @@ def _validate_cert_inputs():
                                   'must be provided.')
     elif ssl_inputs['ca_key_password']:
         raise ValidationError('If ca_key_password was provided, both '
-                              ' ca_cert_path and ca_key_path must be '
+                              'ca_cert_path and ca_key_path must be '
                               'provided.')
 
     _check_key_and_cert('internal')
