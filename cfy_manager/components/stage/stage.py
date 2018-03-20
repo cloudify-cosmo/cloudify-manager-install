@@ -152,6 +152,27 @@ def _run_db_migrate():
     )
 
 
+def _set_db_url():
+    config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
+    with open(config_path) as f:
+        stage_config = json.load(f)
+
+    stage_config['db']['url'] = \
+        'postgres://{0}:{1}@127.0.0.1:5432/stage'.format(
+            config[POSTGRESQL]['username'], config[POSTGRESQL]['password'])
+
+    content = json.dumps(stage_config, indent=4, sort_keys=True)
+
+    # Using `write_to_file` because the path belongs to the stage user, so
+    # we need to move with sudo
+    files.write_to_file(contents=content, destination=config_path)
+
+
+def _verify_stage_alive():
+    systemd.verify_alive(STAGE)
+    wait_for_port(8088)
+
+
 def _start_and_validate_stage():
     _set_community_mode()
     # Used in the service template
