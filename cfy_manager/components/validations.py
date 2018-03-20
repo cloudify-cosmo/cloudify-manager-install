@@ -268,6 +268,7 @@ def _validate_dependencies():
 
 
 def _check_ssl_file(input_name, kind='Key', password=None):
+    """Does the cert/key file exist and is it valid?"""
     filename = config[SSL_INPUTS][input_name]
     if not os.path.isfile(filename):
         raise ValidationError(
@@ -292,6 +293,7 @@ def _check_ssl_file(input_name, kind='Key', password=None):
 
 
 def _check_key_and_cert(prefix):
+    """Check that the provided cert and key actally match"""
     cert_input = '{0}_cert_path'.format(prefix)
     key_input = '{0}_key_path'.format(prefix)
     cert_filename = config[SSL_INPUTS][cert_input]
@@ -326,7 +328,7 @@ def _check_key_and_cert(prefix):
                               'or neither.'.format(cert_input, key_input))
 
 
-def _validate_cert_inputs():
+def _check_internal_ca_cert():
     ssl_inputs = config[SSL_INPUTS]
     if ssl_inputs['ca_key_path'] and ssl_inputs['ca_cert_path']:
         _check_ssl_file('ca_key_path', password=ssl_inputs['ca_key_password'])
@@ -346,6 +348,9 @@ def _validate_cert_inputs():
                               'ca_cert_path and ca_key_path must be '
                               'provided.')
 
+
+def _validate_cert_inputs():
+    _check_internal_ca_cert()
     _check_key_and_cert('internal')
     _check_key_and_cert('external')
     _check_key_and_cert('external_ca')
