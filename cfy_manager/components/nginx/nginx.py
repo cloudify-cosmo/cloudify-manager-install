@@ -39,10 +39,10 @@ UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 logger = get_logger(NGINX)
 
 
-def _deploy_cert_and_key(cert, key, cert_dst_path, key_dst_path):
-    cert_path = config[SSL_INPUTS][cert]
-    key_path = config[SSL_INPUTS][key]
-    key_password = config[SSL_INPUTS]['ca_key_password']
+def _deploy_cert_and_key(prefix, cert_dst_path, key_dst_path):
+    cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
+    key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
+    key_password = config[SSL_INPUTS]['{0}_key_password'.format(prefix)]
 
     cert_deployed = False
     key_deployed = False
@@ -116,8 +116,7 @@ def _handle_ca_cert():
     """
     logger.info('Handling CA certificate...')
     cert_deployed, key_deployed = _deploy_cert_and_key(
-        cert='ca_cert_path',
-        key='ca_key_path',
+        prefix='ca',
         cert_dst_path=constants.CA_CERT_PATH,
         key_dst_path=constants.CA_KEY_PATH
     )
@@ -146,8 +145,7 @@ def _handle_internal_cert(has_ca_key):
     """
     logger.info('Handling internal certificate...')
     cert_deployed, key_deployed = _deploy_cert_and_key(
-        cert='internal_cert_path',
-        key='internal_key_path',
+        prefix='internal',
         cert_dst_path=constants.INTERNAL_CERT_PATH,
         key_dst_path=constants.INTERNAL_KEY_PATH
     )
@@ -162,8 +160,7 @@ def _handle_internal_cert(has_ca_key):
 def _handle_external_cert():
     logger.info('Handling external certificate...')
     cert_deployed, key_deployed = _deploy_cert_and_key(
-        cert='external_cert_path',
-        key='external_key_path',
+        prefix='external',
         cert_dst_path=constants.EXTERNAL_CERT_PATH,
         key_dst_path=constants.EXTERNAL_KEY_PATH
     )
