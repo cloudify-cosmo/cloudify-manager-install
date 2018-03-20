@@ -299,17 +299,13 @@ def _check_key_and_cert(prefix):
     password_input = '{0}_key_password'.format(prefix)
     password = config[SSL_INPUTS].get(password_input)
 
-    provided = [not cert_filename, not key_filename].count(True)
-    if provided == 0:
+    if not cert_filename and not key_filename:
         if password:
             raise ValidationError('If {0} was provided, both {1} and {2} '
                                   'must be provided'
                                   .format(password_input, key_input,
                                           cert_input))
-    elif provided == 1:
-        raise ValidationError('Either both {0} and {1} must be provided, '
-                              'or neither.'.format(cert_input, key_input))
-    else:
+    elif cert_filename and key_filename:
         _check_ssl_file(key_input, kind='Key', password=password)
         _check_ssl_file(cert_input, kind='Cert')
         key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
@@ -325,6 +321,9 @@ def _check_key_and_cert(prefix):
                                   'cert {2} ({3})'
                                   .format(key_filename, key_input,
                                           cert_filename, cert_input))
+    else:
+        raise ValidationError('Either both {0} and {1} must be provided, '
+                              'or neither.'.format(cert_input, key_input))
 
 
 def _validate_cert_inputs():
