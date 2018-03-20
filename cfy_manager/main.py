@@ -246,7 +246,7 @@ def validate_command(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=True
+        config_write_required=False
     )
     validate()
 
