@@ -201,12 +201,16 @@ def generate_internal_ssl_cert(ips, cn):
     return cert_path, key_path
 
 
-def generate_external_ssl_cert(ips, cn):
+def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
+                               sign_key_password=None):
     return _generate_ssl_certificate(
         ips,
         cn,
         const.EXTERNAL_CERT_PATH,
-        const.EXTERNAL_KEY_PATH
+        const.EXTERNAL_KEY_PATH,
+        sign_cert=sign_cert,
+        sign_key=sign_key,
+        sign_key_password=sign_key_password
     )
 
 

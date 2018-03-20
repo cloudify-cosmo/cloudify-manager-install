@@ -97,7 +97,10 @@ def _generate_external_certs():
 
     certificates.generate_external_ssl_cert(
         ips=[external_rest_host, internal_rest_host],
-        cn=external_rest_host
+        cn=external_rest_host,
+        sign_cert=config[SSL_INPUTS]['external_ca_cert_path'],
+        sign_key=config[SSL_INPUTS]['external_ca_key_path'],
+        sign_key_password=config[SSL_INPUTS]['external_ca_key_password'],
     )
 
 
