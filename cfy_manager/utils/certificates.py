@@ -117,7 +117,8 @@ def _generate_ssl_certificate(ips,
                               cert_path,
                               key_path,
                               sign_cert=None,
-                              sign_key=None):
+                              sign_key=None,
+                              sign_key_password=None):
     """Generate a public SSL certificate and a private SSL key
 
     :param ips: the ips (or names) to be used for subjectAltNames
@@ -170,6 +171,10 @@ def _generate_ssl_certificate(ips,
                 '-CAkey', sign_key,
                 '-CAcreateserial'
             ]
+            if sign_key_password:
+                x509_command += [
+                    '-passin', 'pass:{0}'.format(sign_key_password)
+                ]
         else:
             x509_command += [
                 '-signkey', key_path
@@ -287,10 +292,13 @@ def create_internal_certs(manager_ip=None,
                               "(self-signed by default)")
 @argh.arg('--sign-key', help="Path to the signing cert's key "
                              "(self-signed by default)")
+@argh.arg('--sign-key-password', help="Password for the signing key "
+                                      "(if provided")
 def create_external_certs(private_ip=None,
                           public_ip=None,
                           sign_cert=None,
-                          sign_key=None):
+                          sign_key=None,
+                          sign_key_password=None):
     """
     Recreate Cloudify Manager's external certificates, based on the public
     and private IPs
@@ -304,5 +312,6 @@ def create_external_certs(private_ip=None,
         cert_path=const.EXTERNAL_CERT_PATH,
         key_path=const.EXTERNAL_KEY_PATH,
         sign_cert=sign_cert,
-        sign_key=sign_key
+        sign_key=sign_key,
+        sign_key_password=sign_key_password
     )
