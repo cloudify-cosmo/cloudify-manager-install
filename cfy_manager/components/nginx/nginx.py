@@ -102,6 +102,9 @@ def _generate_external_certs():
         sign_key=config[SSL_INPUTS]['external_ca_key_path'],
         sign_key_password=config[SSL_INPUTS]['external_ca_key_password'],
     )
+    # don't store the password in the config file
+    if config[SSL_INPUTS]['external_ca_key_password']:
+        config[SSL_INPUTS]['external_ca_key_password'] = '<removed>'
 
 
 def _handle_ca_cert():
