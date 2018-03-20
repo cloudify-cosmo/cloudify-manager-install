@@ -42,7 +42,7 @@ logger = get_logger(NGINX)
 def _deploy_cert_and_key(prefix, cert_dst_path, key_dst_path):
     cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
     key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
-    key_password = config[SSL_INPUTS]['{0}_key_password'.format(prefix)]
+    key_password = config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
 
     cert_deployed = False
     key_deployed = False
