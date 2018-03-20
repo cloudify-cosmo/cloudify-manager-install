@@ -22,7 +22,7 @@ from getpass import getuser
 from collections import namedtuple
 from distutils.version import LooseVersion
 
-from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS
+from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
 
 from .service_names import MANAGER
 
@@ -31,7 +31,7 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run
+from ..utils.common import run, sudo
 from ..utils.install import RpmPackageHandler
 
 logger = get_logger(VALIDATIONS)
@@ -267,6 +267,66 @@ def _validate_dependencies():
         )
 
 
+def _check_ssl_file(input_name, kind='Key', password=None):
+    filename = config[SSL_INPUTS][input_name]
+    if not os.path.isfile(filename):
+        raise ValidationError(
+            '{0} file {1} (input name: {2}) does not exist'
+            .format(kind, filename, input_name))
+    if kind == 'Key':
+        check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
+        if password:
+            check_command += ['-passin', 'pass:{0}'.format(password)]
+    elif kind == 'Cert':
+        check_command = ['openssl', 'x509', '-in', filename, '-noout']
+    else:
+        raise ValueError('Unknown kind: {0}'.format(kind))
+    proc = sudo(check_command, ignore_failures=True)
+    if proc.returncode != 0:
+        password_err = ''
+        if password:
+            password_err = '(or the provided password is incorrect)'
+        raise ValidationError('{0} file {1} (input name: {2}) is invalid {3}'
+                              .format(kind, filename, input_name,
+                                      password_err))
+
+
+def _check_key_and_cert(prefix):
+    cert_input = '{0}_cert_path'.format(prefix)
+    key_input = '{0}_key_path'.format(prefix)
+    if [
+        not config[SSL_INPUTS][cert_input],
+        not config[SSL_INPUTS][key_input]
+    ].count(True) == 1:
+        raise ValidationError('Either both {0} and {1} must be provided, '
+                              'or neither.'.format(cert_input, key_input))
+
+
+def _validate_cert_inputs():
+    ssl_inputs = config[SSL_INPUTS]
+    if ssl_inputs['ca_key_path'] and ssl_inputs['ca_cert_path']:
+        _check_ssl_file('ca_key_path', password=ssl_inputs['ca_key_password'])
+        _check_ssl_file('ca_cert_path', kind='Cert')
+    elif ssl_inputs['ca_key_path'] and not ssl_inputs['ca_cert_path']:
+        raise ValidationError('Internal CA key provided, but the internal '
+                              'CA cert was not')
+    elif ssl_inputs['ca_cert_path'] and not ssl_inputs['ca_key_path']:
+        if not ssl_inputs['internal_cert_path'] \
+                or not ssl_inputs['internal_key_path']:
+            raise ValidationError('If ca_cert_path was provided, but '
+                                  'ca_key_path was not provided, both '
+                                  'internal_cert_path and internal_key_path '
+                                  'must be provided.')
+    elif ssl_inputs['ca_key_password']:
+        raise ValidationError('If ca_key_password was provided, both '
+                              ' ca_cert_path and ca_key_path must be '
+                              'provided.')
+
+    _check_key_and_cert('internal')
+    _check_key_and_cert('external')
+    _check_key_and_cert('external_ca')
+
+
 def validate_config_access(write_required):
     # It's OK if file doesn't exist.
     if os.path.isfile(USER_CONFIG_PATH):
@@ -303,6 +363,7 @@ def validate(skip_validations=False):
     _validate_sufficient_disk_space()
     _validate_openssl_version()
     _validate_user_has_sudo_permissions()
+    _validate_cert_inputs()
 
     if _errors:
         printable_error = 'Validation error(s):\n' \

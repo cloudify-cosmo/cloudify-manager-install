@@ -23,7 +23,7 @@ from ..service_names import NGINX, MANAGER
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import ValidationError, InputError
+from ...exceptions import ValidationError
 
 from ...utils import common
 from ...utils import certificates
@@ -127,10 +127,6 @@ def _handle_ca_cert():
     if cert_deployed:
         logger.info('Deployed user provided CA cert')
     else:
-        if key_deployed:
-            raise InputError('Internal CA key provided, but the internal '
-                             'CA cert was not')
-
         logger.info('Generating CA certificate...')
         certificates.generate_ca_cert()
         has_ca_key = True
@@ -159,22 +155,8 @@ def _handle_internal_cert(has_ca_key):
     if cert_deployed and key_deployed:
         logger.info('Deployed user provided internal cert and key')
         certificates.create_pkcs12()
-    elif not cert_deployed and not key_deployed:
-        if has_ca_key:
-            _generate_internal_certs()
-        else:
-            raise InputError(
-                'The CA key was not provided, and neither were the internal '
-                'certificate and key. Either provide the CA key as input, '
-                'or provide the internal certificate and key as inputs'
-            )
     else:
-        what_deployed = 'cert' if cert_deployed else 'key'
-        raise InputError(
-            'Either both the internal cert and the internal '
-            'key must be provided, or neither. Only the {0} '
-            'was provided'.format(what_deployed)
-        )
+        _generate_internal_certs()
 
 
 def _handle_external_cert():
@@ -188,15 +170,8 @@ def _handle_external_cert():
 
     if cert_deployed and key_deployed:
         logger.info('Deployed user provided external cert and key')
-    elif not cert_deployed and not key_deployed:
-        _generate_external_certs()
     else:
-        what_deployed = 'cert' if cert_deployed else 'key'
-        raise InputError(
-            'Either both the external cert and the internal '
-            'key must be provided, or neither. Only the {0} '
-            'was provided'.format(what_deployed)
-        )
+        _generate_external_certs()
 
 
 def _handle_certs():
