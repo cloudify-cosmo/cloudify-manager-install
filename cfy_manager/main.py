@@ -220,6 +220,27 @@ def _validate_manager_installed(cmd):
         )
 
 
+@argh.decorators.named('validate')
+@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
+@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
+def validate_command(verbose=False,
+                     private_ip=None,
+                     public_ip=None,
+                     admin_password=None,
+                     clean_db=False):
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db,
+        config_write_required=True
+    )
+    validate()
+
+
 @argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 @argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
@@ -343,6 +364,7 @@ def restart(verbose=False, force=False):
 def main():
     """Main entry point"""
     argh.dispatch_commands([
+        validate_command,
         install,
         configure,
         remove,
