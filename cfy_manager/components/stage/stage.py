@@ -164,8 +164,11 @@ def _set_db_url():
         'postgres://{0}:{1}@127.0.0.1:5432/stage'.format(
             config[POSTGRESQL]['username'], config[POSTGRESQL]['password'])
 
-    with open(config_path, 'wb') as f:
-        json.dump(stage_config, f, indent=4, sort_keys=True)
+    content = json.dumps(stage_config, indent=4, sort_keys=True)
+
+    # Using `write_to_file` because the path belongs to the stage user, so
+    # we need to move with sudo
+    files.write_to_file(contents=content, destination=config_path)
 
 
 def _verify_stage_alive():
