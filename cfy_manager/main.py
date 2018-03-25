@@ -220,10 +220,38 @@ def _validate_manager_installed(cmd):
         )
 
 
-@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
-@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
-@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
-@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
+def install_args(f):
+    """Aply all the args that are used by `cfy_manager install`"""
+    args = [
+        argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
+        argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
+        argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
+        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
+    ]
+    for arg in args:
+        f = arg(f)
+    return f
+
+
+@argh.decorators.named('validate')
+@install_args
+def validate_command(verbose=False,
+                     private_ip=None,
+                     public_ip=None,
+                     admin_password=None,
+                     clean_db=False):
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db,
+        config_write_required=False
+    )
+    validate()
+
+
+@install_args
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
@@ -251,10 +279,7 @@ def install(verbose=False,
     _finish_configuration()
 
 
-@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
-@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
-@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
-@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
+@install_args
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
@@ -343,6 +368,7 @@ def restart(verbose=False, force=False):
 def main():
     """Main entry point"""
     argh.dispatch_commands([
+        validate_command,
         install,
         configure,
         remove,

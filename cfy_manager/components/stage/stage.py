@@ -13,6 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import json
+
 from os.path import join
 
 from .. import (
@@ -23,7 +26,7 @@ from .. import (
     VENV
 )
 
-from ..service_names import STAGE, MANAGER, RESTSERVICE
+from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL
 
 from ...config import config
 from ...logger import get_logger
@@ -152,6 +155,22 @@ def _run_db_migrate():
     )
 
 
+def _set_db_url():
+    config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
+    with open(config_path) as f:
+        stage_config = json.load(f)
+
+    stage_config['db']['url'] = \
+        'postgres://{0}:{1}@127.0.0.1:5432/stage'.format(
+            config[POSTGRESQL]['username'], config[POSTGRESQL]['password'])
+
+    content = json.dumps(stage_config, indent=4, sort_keys=True)
+
+    # Using `write_to_file` because the path belongs to the stage user, so
+    # we need to move with sudo
+    files.write_to_file(contents=content, destination=config_path)
+
+
 def _verify_stage_alive():
     systemd.verify_alive(STAGE)
     wait_for_port(8088)
@@ -175,6 +194,7 @@ def _configure():
     _create_user_and_set_permissions()
     _install_nodejs()
     _deploy_scripts()
+    _set_db_url()
     rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
     _allow_snapshot_restore_to_restore_token(rest_service_python)
     _create_auth_token(rest_service_python)
