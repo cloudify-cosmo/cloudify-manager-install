@@ -33,7 +33,7 @@ def _setup_flask_app():
 
 def _get_amqp_manager():
     return AMQPManager(
-        host=config.instance.amqp_management_host,
+        host=config.instance.amqp_host,
         username=config.instance.amqp_username,
         password=config.instance.amqp_password,
         verify=config.instance.amqp_ca_path
