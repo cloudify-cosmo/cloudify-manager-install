@@ -17,6 +17,7 @@
 import os
 import argparse
 from distutils.dir_util import copy_tree
+from distutils.errors import DistutilsFileError
 
 HOME_DIR = "{{ stage.home_dir }}"
 
@@ -29,7 +30,7 @@ def _restore(snapshot_root, override=False):
         # in old snapshots, userData might not exist
         try:
             copy_tree(os.path.join(snapshot_root, folder), destination)
-        except OSError:
+        except DistutilsFileError:
             pass
 
 
