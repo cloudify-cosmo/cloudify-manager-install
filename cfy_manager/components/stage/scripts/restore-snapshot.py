@@ -14,25 +14,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 import argparse
+from os import path
 from distutils.dir_util import copy_tree
-from distutils.errors import DistutilsFileError
 
 HOME_DIR = "{{ stage.home_dir }}"
 
 
 def _restore(snapshot_root, override=False):
-    for folder in ['conf', 'dist/userData']:
-        destination = os.path.join(HOME_DIR, folder)
-        if not override:
-            destination = os.path.join(destination, 'from_snapshot')
-        # in old snapshots, userData might not exist
-        try:
-            copy_tree(os.path.join(snapshot_root, folder), destination)
-        except DistutilsFileError:
-            pass
-
+    folder = 'dist/userData'
+    destination = path.join(HOME_DIR, folder)
+    source = path.join(snapshot_root, folder)
+    if not override:
+        destination = path.join(destination, 'from_snapshot')
+    if path.exists(source):
+        copy_tree(source, destination)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
