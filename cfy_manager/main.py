@@ -316,6 +316,8 @@ def remove(verbose=False, force=False):
     logger.notice('Removing Cloudify Manager...')
 
     for component in COMPONENTS:
+        if hasattr(component, 'stop'):
+            component.stop()
         component.remove()
 
     if _is_manager_installed():
