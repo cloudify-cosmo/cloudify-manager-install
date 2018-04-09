@@ -109,7 +109,7 @@ def _collect_cloudify_config(data):
     app = server.CloudifyFlaskApp()
     try:
         with app.app_context():
-            ldap = bool(app.ldap)
+            ldap = bool(app.external_auth and app.external_auth.ldap)
         data['cloudify_config'] = {
             'ldap_enabled': ldap,
             'ha_enabled': _is_clustered()
