@@ -66,24 +66,24 @@ from .utils.certificates import (
 logger = get_logger('Main')
 
 COMPONENTS = {
-    "manager":manager,
-    "manager_ip_setter":manager_ip_setter,
-    "nginx":nginx,
-    "python":python,
-    "postgresql":postgresql,
-    "rabbitmq":rabbitmq,
-    "restservice":restservice,
-    "influxdb":influxdb,
-    "amqpinflux":amqpinflux,
-    "java":java,
-    "logstash":logstash,
-    "stage":stage,
-    "composer":composer,
-    "mgmtworker":mgmtworker,
-    "riemann":riemann,
-    "cli":cli,
-    "usage_collector":usage_collector,
-    "sanity":sanity
+    "manager": manager,
+    "manager_ip_setter": manager_ip_setter,
+    "nginx": nginx,
+    "python": python,
+    "postgresql": postgresql,
+    "rabbitmq": rabbitmq,
+    "restservice": restservice,
+    "influxdb": influxdb,
+    "amqpinflux": amqpinflux,
+    "java": java,
+    "logstash": logstash,
+    "stage": stage,
+    "composer": composer,
+    "mgmtworker": mgmtworker,
+    "riemann": riemann,
+    "cli": cli,
+    "usage_collector": usage_collector,
+    "sanity": sanity
 }
 
 START_TIME = time()
