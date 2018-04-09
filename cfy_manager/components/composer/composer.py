@@ -134,15 +134,13 @@ def remove():
 
 
 def start():
-    if not config[COMPOSER]['skip_installation']:
-        logger.notice('Starting Cloudify Composer...')
-        systemd.start(COMPOSER)
-        _verify_composer_alive()
-        logger.notice('Cloudify Composer successfully started')
+    logger.notice('Starting Cloudify Composer...')
+    systemd.start(COMPOSER)
+    _verify_composer_alive()
+    logger.notice('Cloudify Composer successfully started')
 
 
 def stop():
-    if not config[COMPOSER]['skip_installation']:
-        logger.notice('Stopping Cloudify Composer...')
-        systemd.stop(COMPOSER)
-        logger.notice('Cloudify Composer successfully stopped')
+    logger.notice('Stopping Cloudify Composer...')
+    systemd.stop(COMPOSER)
+    logger.notice('Cloudify Composer successfully stopped')

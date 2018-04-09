@@ -332,7 +332,9 @@ def start(verbose=False):
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in COMPONENTS:
-        if hasattr(component, 'start'):
+        if hasattr(component, 'start') and config[component.__name__] \
+                and 'skip_installation' in config[component.__name__] \
+                and not config[component.__name__]['skip_installation']:
             component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
@@ -347,7 +349,9 @@ def stop(verbose=False, force=False):
 
     logger.notice('Stopping Cloudify Manager services...')
     for component in reversed(COMPONENTS):
-        if hasattr(component, 'stop'):
+        if hasattr(component, 'stop') and config[component.__name__] \
+                and 'skip_installation' in config[component.__name__] \
+                and not config[component.__name__]['skip_installation']:
             component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
@@ -383,3 +387,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
