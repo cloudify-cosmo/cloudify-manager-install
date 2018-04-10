@@ -65,26 +65,26 @@ from .utils.certificates import (
 
 logger = get_logger('Main')
 
-COMPONENTS = {
-    "manager": manager,
-    "manager_ip_setter": manager_ip_setter,
-    "nginx": nginx,
-    "python": python,
-    "postgresql": postgresql,
-    "rabbitmq": rabbitmq,
-    "restservice": restservice,
-    "influxdb": influxdb,
-    "amqpinflux": amqpinflux,
-    "java": java,
-    "logstash": logstash,
-    "stage": stage,
-    "composer": composer,
-    "mgmtworker": mgmtworker,
-    "riemann": riemann,
-    "cli": cli,
-    "usage_collector": usage_collector,
-    "sanity": sanity
-}
+COMPONENTS = [
+    ("manager", manager),
+    ("manager_ip_setter", manager_ip_setter),
+    ("nginx", nginx),
+    ("python", python),
+    ("postgresql", postgresql),
+    ("rabbitmq", rabbitmq),
+    ("restservice", restservice),
+    ("influxdb", influxdb),
+    ("amqpinflux", amqpinflux),
+    ("java", java),
+    ("logstash", logstash),
+    ("stage", stage),
+    ("composer", composer),
+    ("mgmtworker", mgmtworker),
+    ("riemann", riemann),
+    ("cli", cli),
+    ("usage_collector", usage_collector),
+    ("sanity", sanity)
+]
 
 START_TIME = time()
 
@@ -272,7 +272,7 @@ def install(verbose=False,
     validate()
     set_globals()
 
-    for component in COMPONENTS.values():
+    for _, component in COMPONENTS:
         component.install()
 
     logger.notice('Cloudify Manager successfully installed!')
@@ -301,7 +301,7 @@ def configure(verbose=False,
     validate(skip_validations=True)
     set_globals()
 
-    for component in COMPONENTS.values():
+    for _, component in COMPONENTS:
         component.configure()
 
     logger.notice('Cloudify Manager successfully configured!')
@@ -315,7 +315,7 @@ def remove(verbose=False, force=False):
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
-    for component in COMPONENTS.values():
+    for _, component in COMPONENTS:
         component.remove()
 
     if _is_manager_installed():
@@ -331,7 +331,7 @@ def start(verbose=False):
     _load_config_and_logger(verbose)
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
-    for component_name, component in COMPONENTS.iteritems():
+    for component_name, component in COMPONENTS:
         component_config = config.get(component_name, {})
         skip = component_config.get('skip_installation')
         if hasattr(component, 'start') and not skip:
@@ -348,7 +348,7 @@ def stop(verbose=False, force=False):
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component_name, component in COMPONENTS.iteritems():
+    for component_name, component in COMPONENTS:
         component_config = config.get(component_name, {})
         skip = component_config.get('skip_installation')
         if hasattr(component, 'stop') and not skip:
