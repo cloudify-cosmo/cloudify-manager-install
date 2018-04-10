@@ -317,7 +317,7 @@ def remove(verbose=False, force=False):
 
     should_stop = _is_manager_installed()
 
-    for _, component in COMPONENTS:
+    for _, component in reversed(COMPONENTS):
         if should_stop and hasattr(component, 'stop'):
             component.stop()
         component.remove()
