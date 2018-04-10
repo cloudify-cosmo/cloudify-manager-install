@@ -315,15 +315,11 @@ def remove(verbose=False, force=False):
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
-<<<<<<< HEAD
-    for _, component in COMPONENTS:
-=======
     should_stop = _is_manager_installed()
 
-    for component in COMPONENTS.values():
+    for _, component in COMPONENTS:
         if should_stop and hasattr(component, 'stop'):
             component.stop()
->>>>>>> b5ff7609c13aefc55cb37c3c57f1f4f3895cb8e6
         component.remove()
 
     if _is_manager_installed():
