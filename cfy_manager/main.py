@@ -352,7 +352,7 @@ def stop(verbose=False, force=False):
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component_name, component in COMPONENTS:
+    for component_name, component in reversed(COMPONENTS):
         component_config = config.get(component_name, {})
         skip = component_config.get('skip_installation')
         if hasattr(component, 'stop') and not skip:
