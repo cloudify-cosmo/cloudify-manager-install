@@ -191,6 +191,8 @@ def configure():
 def remove():
     logger.notice('Removing RabbitMQ...')
     yum_remove('erlang')
+    logger.info('Stopping the Erlang Port Mapper Daemon...')
+    sudo(['epmd', '-kill'], ignore_failures=True)
     systemd.remove(RABBITMQ, service_file=False)
     logger.notice('RabbitMQ successfully removed')
 
