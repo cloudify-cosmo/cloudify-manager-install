@@ -61,8 +61,8 @@ def _get_host_total_memory():
 
 
 def _get_available_host_disk_space():
-    """Available space in GB on the filesystem containing /etc/issue"""
-    result = os.statvfs('/etc/issue')
+    """Available space in GB on the filesystem containing /opt"""
+    result = os.statvfs('/opt')
     bytes_available = result.f_bavail * result.f_bsize
     return bytes_available // (1024 * 1024 * 1024)
 
