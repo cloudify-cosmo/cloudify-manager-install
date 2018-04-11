@@ -13,11 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import sys
 import platform
-import subprocess
 import netifaces
-import os
 from getpass import getuser
 from collections import namedtuple
 from distutils.version import LooseVersion
@@ -62,14 +61,10 @@ def _get_host_total_memory():
 
 
 def _get_available_host_disk_space():
-    """
-    Filesystem                 Type 1G-blocks  Used Available Use% Mounted on
-    /dev/mapper/my_file_system ext4      213G   63G      139G  32% /
-    """
-    df = subprocess.Popen(["df", "-BG", "/etc/issue"], stdout=subprocess.PIPE)
-    output = df.communicate()[0]
-    available_disk_space_in_gb = output.split("\n")[1].split()[3].rstrip('G')
-    return int(available_disk_space_in_gb)
+    """Available space in GB on the filesystem containing /opt"""
+    result = os.statvfs('/opt')
+    bytes_available = result.f_bavail * result.f_bsize
+    return bytes_available // (1024 * 1024 * 1024)
 
 
 def _validate_supported_distros():
