@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 import urlparse
+import zipfile
+import shutil
 
 from Queue import Empty, Queue
 from threading import Thread, Lock, Event
@@ -26,6 +28,7 @@ EDITIONS = {
         'requires_auth': True,
     },
 }
+
 
 RPM_BUILDER_BASE = '/tmp/tmp-install-rpm'
 MANAGER_RESOURCES_BASE = os.path.join(
@@ -52,6 +55,14 @@ INSTALLER_REPO_ARCHIVE = (
 
 RPM_PREFIX = re.compile('[^0-9]+')
 # regex to extract a package name from a full RPM filename
+
+ZIP_URL = "https://github.com/cloudify-cosmo/{0}/archive/{1}.zip"
+CLI_INFO = {'name':'cloudify-cli', 'patterns': ['/cloudify-cli']}
+AGENT_INFO = {'name': 'cloudify-agent', 'patterns': ['/cloudify-agents']}
+MANAGER_INFO = {'name': 'cloudify-manager', 'patterns': ['/cloudify-amqp', '/cloudify-logstash',
+                                                         '/cloudify-rest-service', '/cloudify-premium',
+                                                         '/cloudify-rabbitmq', '/cloudify-management-worker',
+                                                         '/cloudify-manager-ip-setter', '/cloudify-riemann']}
 
 
 def print_in_color(message, color, stream=None):
@@ -214,6 +225,57 @@ def get_package_urls_file(edition, branch, repo_destination_path):
                                 'packages-urls/manager-packages.yaml'),
     }
 
+def is_branch_exists(module_name, dev_branch):
+    subprocess.check_call([
+        'curl', '-sLO', ZIP_URL.format(module_name, dev_branch),
+    ])
+    try:
+        zip_file = zipfile.ZipFile('{}.zip'.format(dev_branch))
+        ret = zip_file.testzip()
+        exit_helpfully_on_failure(
+            command=['rm', '-f', '{}.zip'.format(dev_branch)],
+            error='Could not delete zip file.',
+        )
+        if ret is not None:
+            print ("Dev branch: {0} exists on '{1}' repo, but zip file is corrupted, error: {2}"
+                   .format(dev_branch, module_name, ret))
+            sys.exit(1)
+        else:
+            print("Dev branch: {0} exists on '{1}' repo"
+                  .format(dev_branch, module_name))
+            return True
+    except zipfile.BadZipfile:
+        return False
+
+
+def replace_manager_resources_loacation(manager_resources_file, modules_info, dev_branch):
+    # In case of dev_branch manager resources packages should be downloaded from dev_branch location
+    with open(manager_resources_file) as f:
+        content = f.read()
+    for module_info in modules_info:
+        for pattern in module_info['patterns']:
+            release_dir = '{0}{1}'.format('.dev1-release', pattern)
+            build_dir = '{0}{1}'.format('.dev1-build', pattern)
+            string_to_replace = '/{0}{1}'.format(dev_branch, pattern)
+            print("Replacing '{0}' with '{1}' in '{2}'.".format(release_dir, build_dir, manager_resources_file))
+            content = content.replace(release_dir, build_dir)
+            print("Replacing '{0}' with '{1}' in '{2}'.".format(pattern, string_to_replace, manager_resources_file))
+            content = content.replace(pattern, string_to_replace)
+    with open(manager_resources_file, "w") as f:
+        f.write(content)
+
+
+def update_resources_url_on_dev_branch(dev_branch, manager_resources_file):
+    modules_info = []
+    if is_branch_exists(MANAGER_INFO['name'], dev_branch):
+        modules_info.append(MANAGER_INFO)
+    if is_branch_exists(CLI_INFO['name'], dev_branch):
+        modules_info.append(CLI_INFO)
+    if is_branch_exists(AGENT_INFO['name'], dev_branch):
+        modules_info.append(AGENT_INFO)
+
+    replace_manager_resources_loacation(manager_resources_file, modules_info, dev_branch)
+
 
 def file_downloader(download_queue, log_lock, has_errors):
     while True:
@@ -287,7 +349,7 @@ def download_listed_resources(resource_file, destination_path, concurrency=5):
                            'See the log above for details')
 
 
-def retrieve_resources(edition, branch):
+def retrieve_resources(edition, branch, dev_branch):
     """
         Retrieve all of the required resources for the installer.
     """
@@ -297,7 +359,8 @@ def retrieve_resources(edition, branch):
         branch,
         package_urls_destination,
     )
-
+    if dev_branch:
+        update_resources_url_on_dev_branch(dev_branch, package_url_files['manager'])
     print_status_update('Downloading resources...')
     download_listed_resources(
         package_url_files['manager'],
@@ -569,7 +632,7 @@ def run_build_command(edition, package_output_dir):
     return determine_rpm_location(rpmbuild_output)
 
 
-def build_package(edition, branch, installer_branch, installer_path,
+def build_package(edition, branch, dev_branch, installer_branch, installer_path,
                   should_install_pip,
                   should_install_dependencies, local_packages_dir,
                   package_output_dir,
@@ -604,6 +667,7 @@ def build_package(edition, branch, installer_branch, installer_path,
     retrieve_resources(
         edition=edition,
         branch=branch,
+        dev_branch=dev_branch
     )
 
     rpm_location = run_build_command(
@@ -674,6 +738,14 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--dev-branch',
+        help=(
+            'Dev branch to get package resources from.'
+        ),
+        default='',
+    )
+
+    parser.add_argument(
         '--local_packages_dir',
         help='Local directory to fetch RPMs from (will fall back to the'
              'locations in the manager-packages.yaml file',
@@ -698,6 +770,7 @@ if __name__ == '__main__':
     build_package(
         edition=args.edition,
         branch=args.branch,
+        dev_branch=args.dev_branch,
         installer_branch=args.installer_branch,
         installer_path=args.local_installer_path,
         should_install_pip=args.install_pip,
