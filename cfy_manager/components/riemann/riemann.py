@@ -56,6 +56,8 @@ def _configure():
 
 
 def install():
+    if common.should_skip_installation('install', RIEMANN):
+        return
     logger.notice('Installing Riemann...')
     _install()
     _configure()
@@ -63,12 +65,16 @@ def install():
 
 
 def configure():
+    if common.should_skip_installation('configure', RIEMANN):
+        return
     logger.notice('Configuring Riemann...')
     _configure()
     logger.notice('Riemann successfully configured')
 
 
 def remove():
+    if common.should_skip_installation('remove', RIEMANN):
+        return
     logger.notice('Removing Riemann...')
     systemd.remove(RIEMANN, service_file=False)
     yum_remove(RIEMANN)
@@ -77,6 +83,8 @@ def remove():
 
 
 def start():
+    if common.should_skip_installation('start', RIEMANN):
+        return
     logger.notice('Starting Riemann...')
     systemd.start(RIEMANN)
     systemd.verify_alive(RIEMANN)
@@ -84,6 +92,8 @@ def start():
 
 
 def stop():
+    if common.should_skip_installation('stop', RIEMANN):
+        return
     logger.notice('Stopping Riemann...')
     systemd.stop(RIEMANN)
     logger.notice('Riemann successfully stopped')

@@ -130,3 +130,19 @@ def move(source, destination, rename_only=False):
     else:
         copy(source, destination)
         remove(source)
+
+
+def should_skip_installation(step, component):
+    if config[component]['skip_installation']:
+        logger.info(
+            'Installation of {component} is configured to be skipped.'.format(
+                component=component,
+            )
+        )
+        logger.notice('Install process will not {step} {component} .'.format(
+            step=step,
+            component=component,
+        ))
+        return True
+    else:
+        return False

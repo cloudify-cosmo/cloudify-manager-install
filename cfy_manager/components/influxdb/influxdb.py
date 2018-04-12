@@ -187,6 +187,8 @@ def _configure():
 
 
 def install():
+    if common.should_skip_installation('install', INFLUXDB):
+        return
     logger.notice('Installing InfluxDB...')
     _install()
     _configure()
@@ -194,12 +196,16 @@ def install():
 
 
 def configure():
+    if common.should_skip_installation('configure', INFLUXDB):
+        return
     logger.notice('Configuring InfluxDB...')
     _configure()
     logger.notice('InfluxDB successfully configured')
 
 
 def remove():
+    if common.should_skip_installation('remove', INFLUXDB):
+        return
     logger.notice('Removing Influxdb...')
     remove_notice(INFLUXDB)
     systemd.remove(INFLUXDB)
@@ -209,6 +215,8 @@ def remove():
 
 
 def start():
+    if common.should_skip_installation('start', INFLUXDB):
+        return
     is_internal = config[INFLUXDB]['is_internal']
     if is_internal:
         logger.notice('Starting Influxdb...')
@@ -218,6 +226,8 @@ def start():
 
 
 def stop():
+    if common.should_skip_installation('stop', INFLUXDB):
+        return
     is_internal = config[INFLUXDB]['is_internal']
     if is_internal:
         logger.notice('Stopping Influxdb...')

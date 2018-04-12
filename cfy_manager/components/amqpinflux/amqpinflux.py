@@ -22,6 +22,7 @@ from ..service_names import AMQPINFLUX
 from ...config import config
 from ...logger import get_logger
 
+from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
@@ -44,6 +45,8 @@ def _configure():
 
 
 def install():
+    if common.should_skip_installation('install', AMQPINFLUX):
+        return
     logger.notice('Installing AMQP-Influx...')
     _install()
     _configure()
@@ -51,12 +54,16 @@ def install():
 
 
 def configure():
+    if common.should_skip_installation('configure', AMQPINFLUX):
+        return
     logger.notice('Configuring AMQP-Influx...')
     _configure()
     logger.notice('AMQP-Influx successfully configured')
 
 
 def start():
+    if common.should_skip_installation('start', AMQPINFLUX):
+        return
     logger.notice('Starting AMQP-Influx...')
     systemd.start(AMQPINFLUX)
     systemd.verify_alive(AMQPINFLUX)
@@ -64,12 +71,16 @@ def start():
 
 
 def stop():
+    if common.should_skip_installation('stop', AMQPINFLUX):
+        return
     logger.notice('Stopping AMQP-Influx...')
     systemd.stop(AMQPINFLUX)
     logger.notice('AMQP-Influx successfully stopped')
 
 
 def remove():
+    if common.should_skip_installation('remove', AMQPINFLUX):
+        return
     logger.notice('Removing AMQP-Influx...')
     systemd.remove(AMQPINFLUX, service_file=False)
     yum_remove('cloudify-amqp-influx')

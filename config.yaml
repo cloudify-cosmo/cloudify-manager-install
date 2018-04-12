@@ -32,6 +32,10 @@ manager:
     # to you at the end of the install process.
     admin_password: ''
 
+  monitoring_install: &monitoring_install
+    # This will cause the monitoring components not to be installed if set to true
+    skip_installation: true
+
 manager-ip-setter:
   sources:
     manager_ip_setter_rpm: cloudify-manager-ip-setter-*.rpm
@@ -68,16 +72,6 @@ agent:
   min_workers: 2
   max_workers: 5
 
-amqpinflux:
-  sources:
-    amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
-
-influxdb:
-  # An IP Endpoint of your InfluxDB Cluster.
-  endpoint_ip: ''
-  sources:
-    influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
-
 rabbitmq:
   # Sets the username/password to use for clients such as celery to connect to
   # the rabbitmq broker. It is recommended that you set both the username and
@@ -97,6 +91,9 @@ rabbitmq:
   # IP of the management API, should be localhost unless an external rabbitmq
   # is used
   management_endpoint_ip: 'localhost'
+
+  # Define whether to skip configuring monitoring policies
+  monitoring_policies: *monitoring_install
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
@@ -127,6 +124,25 @@ rabbitmq:
     # from. Note this is NOT the message byte length! Not used if an external
     # endpoint is used.
     metrics_queue_length_limit: 1000000
+
+riemann:
+  <<: *monitoring_install
+  sources:
+    daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
+    riemann_source_url: riemann-0.2.6-1.noarch.rpm
+    cloudify_riemann_url: cloudify-riemann-*.rpm
+
+amqpinflux:
+  <<: *monitoring_install
+  sources:
+    amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
+
+influxdb:
+  <<: *monitoring_install
+  # An IP Endpoint of your InfluxDB Cluster.
+  endpoint_ip: ''
+  sources:
+    influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
 
 postgresql:
   sources:
@@ -174,12 +190,6 @@ python:
   # uninstalling the Cloudify Manager. NOTE: only set to true if those
   # dependencies weren't available before Cloudify Manager installation
   remove_on_teardown: false
-
-riemann:
-  sources:
-    daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
-    riemann_source_url: riemann-0.2.6-1.noarch.rpm
-    cloudify_riemann_url: cloudify-riemann-*.rpm
 
 restservice:
   log:
