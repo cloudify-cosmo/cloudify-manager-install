@@ -261,7 +261,7 @@ mgmtworker:
   gatekeeper_bucket_size: 25
 
   # Additional environment variables to add to the management worker's service
-  # file.
+  # file. (a dict of string environment variable name to string value)
   extra_env: {}
 
 cli:
