@@ -31,11 +31,11 @@ export MANAGER_INSTALL_BRANCH=${CORE_BRANCH}
 export DEV_BRANCH_PARAM=""
 if [[ ! -z $DEV_BRANCH ]] && [[ "$DEV_BRANCH" != "master" ]];then
     export DEV_BRANCH_PARAM=" --dev-branch $DEV_BRANCH"
+    AWS_S3_PATH="$AWS_S3_PATH/$DEV_BRANCH"
     pushd /tmp
         curl -sLO https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${DEV_BRANCH}.zip
         if zip -T $DEV_BRANCH.zip > /dev/null; then
             export MANAGER_INSTALL_BRANCH="$DEV_BRANCH"
-            AWS_S3_PATH="$AWS_S3_PATH/$DEV_BRANCH"
         fi
         rm -f ${DEV_BRANCH}.zip
     popd
