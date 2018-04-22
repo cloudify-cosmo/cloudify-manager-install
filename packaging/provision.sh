@@ -3,8 +3,8 @@
 function create_install_rpm() {
     curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${MANAGER_INSTALL_BRANCH}/packaging/create_rpm -o /tmp/create_rpm
     chmod +x /tmp/create_rpm
-    echo "/tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH} --installer-branch ${MANAGER_INSTALL_BRANCH} ${MANAGER_INSTALL_DEV_BRANCH}"
-    /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH} --installer-branch ${MANAGER_INSTALL_BRANCH} ${MANAGER_INSTALL_DEV_BRANCH}
+    echo "/tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH} --installer-branch ${MANAGER_INSTALL_BRANCH} ${DEV_BRANCH_PARAM}"
+    /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH} --installer-branch ${MANAGER_INSTALL_BRANCH} ${DEV_BRANCH_PARAM}
 }
 
 export CORE_TAG_NAME="4.4.dev1"
@@ -28,13 +28,13 @@ curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_B
 source common-provision.sh
 
 export MANAGER_INSTALL_BRANCH=${CORE_BRANCH}
-export MANAGER_INSTALL_DEV_BRANCH=""
+export DEV_BRANCH_PARAM=""
 if [[ ! -z $DEV_BRANCH ]] && [[ "$DEV_BRANCH" != "master" ]];then
+    export DEV_BRANCH_PARAM=" --dev-branch $DEV_BRANCH"
     pushd /tmp
         curl -sLO https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${DEV_BRANCH}.zip
         if zip -T $DEV_BRANCH.zip > /dev/null; then
             export MANAGER_INSTALL_BRANCH="$DEV_BRANCH"
-            export MANAGER_INSTALL_DEV_BRANCH=" --dev-branch $DEV_BRANCH"
             AWS_S3_PATH="$AWS_S3_PATH/$DEV_BRANCH"
         fi
         rm -f ${DEV_BRANCH}.zip
