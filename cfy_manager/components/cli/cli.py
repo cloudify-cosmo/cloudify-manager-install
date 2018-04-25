@@ -57,6 +57,7 @@ def _configure():
                config[MANAGER]['cli_local_profile_host_name'],
                '--skip-credentials-validation']
 
+
     ssl_enabled = 'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
 
     # TODO: Don't skip validation after CFY-7689 is done
