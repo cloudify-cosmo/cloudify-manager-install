@@ -7,6 +7,10 @@ manager:
   # or external clients. If not applicable, provide the same value as "private_ip".
   public_ip: ''
 
+  # Provide an IP or hostname to be used in the local CLI profile on the manager.
+  # This might be useful when providing an external certificate.
+  cli_local_profile_host_name: 'localhost'
+
   ######################################################################################
   #
   # As long as you have set the config entries above, you can install the manager with:
