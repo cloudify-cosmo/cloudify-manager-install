@@ -67,7 +67,6 @@ def _configure():
         '--skip-credentials-validation'
     ]
 
-
     current_user = getuser()
 
     logger.info('Setting CLI for the current user ({0})...'.format(
