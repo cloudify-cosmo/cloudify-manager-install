@@ -218,6 +218,9 @@ def _validate_manager_installed(cmd):
                 cmd=cmd
             )
         )
+    if os.path.exists('/etc/cloudify/cluster'):
+        raise BootstrapError(
+            "Operation '{0}' is not allowed on a cluster node".format(cmd))
 
 
 def _get_components(with_attribute=None):
