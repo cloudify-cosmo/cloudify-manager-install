@@ -44,10 +44,6 @@ def set_logrotate(service_name):
 
 
 def setup_logrotate():
-    if not isfile('/etc/cron.hourly/logrotate'):
-        logger.info('Deploying logrotate hourly cron job...')
-        move('/etc/cron.daily/logrotate', '/etc/cron.hourly/logrotate')
-
     if not isdir(LOGROTATED_PATH):
         mkdir(LOGROTATED_PATH)
         chown('root', 'root', LOGROTATED_PATH)
