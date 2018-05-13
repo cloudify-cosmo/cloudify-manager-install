@@ -13,10 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, isfile, isdir
+from os.path import join, isdir
 
 from .files import deploy
-from .common import chown, mkdir, chmod, remove, move
+from .common import chown, mkdir, chmod, remove
 
 from ..logger import get_logger
 from ..constants import COMPONENTS_DIR
