@@ -61,8 +61,8 @@ def _deploy_mgmtworker_config():
     config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
     config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
 
-    celery_work_dir = join(HOME_DIR, 'work')
-    broker_config_dst = join(celery_work_dir, 'broker_config.json')
+    work_dir = join(HOME_DIR, 'work')
+    broker_config_dst = join(work_dir, 'broker_config.json')
     deploy(
         src=join(CONFIG_PATH, 'broker_config.json'),
         dst=broker_config_dst
