@@ -7,6 +7,10 @@ manager:
   # or external clients. If not applicable, provide the same value as "private_ip".
   public_ip: ''
 
+  # Provide an IP or hostname to be used in the local CLI profile on the manager.
+  # This might be useful when providing an external certificate.
+  cli_local_profile_host_name: 'localhost'
+
   ######################################################################################
   #
   # As long as you have set the config entries above, you can install the manager with:
@@ -31,6 +35,10 @@ manager:
     # If admin_password is left blank, a password will be generated for you and provided
     # to you at the end of the install process.
     admin_password: ''
+
+  monitoring_install: &monitoring_install
+    # This will cause the monitoring components not to be installed if set to true
+    skip_installation: true
 
 manager-ip-setter:
   sources:
@@ -67,16 +75,6 @@ agent:
   broker_port: 5671
   min_workers: 2
   max_workers: 5
-
-amqpinflux:
-  sources:
-    amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
-
-influxdb:
-  # An IP Endpoint of your InfluxDB Cluster.
-  endpoint_ip: ''
-  sources:
-    influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
 
 rabbitmq:
   # Sets the username/password to use for clients such as celery to connect to
@@ -128,6 +126,25 @@ rabbitmq:
     # endpoint is used.
     metrics_queue_length_limit: 1000000
 
+riemann:
+  <<: *monitoring_install
+  sources:
+    daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
+    riemann_source_url: riemann-0.2.6-1.noarch.rpm
+    cloudify_riemann_url: cloudify-riemann-*.rpm
+
+amqpinflux:
+  <<: *monitoring_install
+  sources:
+    amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
+
+influxdb:
+  <<: *monitoring_install
+  # An IP Endpoint of your InfluxDB Cluster.
+  endpoint_ip: ''
+  sources:
+    influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
+
 postgresql:
   sources:
     libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
@@ -158,6 +175,7 @@ stage:
   sources:
     nodejs_source_url: node-v8.9.1-linux-x64.tar.xz
     stage_source_url: cloudify-stage-*.tgz
+  internal_manager_ip: ''
 
 composer:
   # If set to true, Cloudify Composer will not be installed
@@ -174,12 +192,6 @@ python:
   # uninstalling the Cloudify Manager. NOTE: only set to true if those
   # dependencies weren't available before Cloudify Manager installation
   remove_on_teardown: false
-
-riemann:
-  sources:
-    daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
-    riemann_source_url: riemann-0.2.6-1.noarch.rpm
-    cloudify_riemann_url: cloudify-riemann-*.rpm
 
 restservice:
   log:

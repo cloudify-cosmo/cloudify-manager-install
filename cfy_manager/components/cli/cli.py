@@ -53,7 +53,8 @@ def _configure():
     username = config[MANAGER][SECURITY]['admin_username']
     password = config[MANAGER][SECURITY]['admin_password']
 
-    use_cmd = ['cfy', 'profiles', 'use', 'localhost',
+    use_cmd = ['cfy', 'profiles', 'use',
+               config[MANAGER]['cli_local_profile_host_name'],
                '--skip-credentials-validation']
 
     ssl_enabled = 'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'

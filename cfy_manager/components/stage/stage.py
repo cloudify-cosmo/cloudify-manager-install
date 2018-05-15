@@ -171,6 +171,19 @@ def _set_db_url():
     files.write_to_file(contents=content, destination=config_path)
 
 
+def _set_internal_manager_ip():
+    config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
+    with open(config_path) as f:
+        stage_config = json.load(f)
+
+    if config[STAGE]['internal_manager_ip']:
+        stage_config['ip'] = config[STAGE]['internal_manager_ip']
+        content = json.dumps(stage_config, indent=4, sort_keys=True)
+        # Using `write_to_file` because the path belongs to the stage user, so
+        # we need to move with sudo
+        files.write_to_file(contents=content, destination=config_path)
+
+
 def _verify_stage_alive():
     systemd.verify_alive(STAGE)
     wait_for_port(8088)
@@ -195,6 +208,7 @@ def _configure():
     _install_nodejs()
     _deploy_scripts()
     _set_db_url()
+    _set_internal_manager_ip()
     rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
     _allow_snapshot_restore_to_restore_token(rest_service_python)
     _create_auth_token(rest_service_python)
