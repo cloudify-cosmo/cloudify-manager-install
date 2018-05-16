@@ -270,6 +270,7 @@ def validate_command(verbose=False,
 
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 def sanity_check(verbose=False, private_ip=None):
+    """Run the Cloudify Manager sanity check"""
     _load_config_and_logger(verbose=verbose, private_ip=private_ip)
     sanity.run_sanity_check()
 
