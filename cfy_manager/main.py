@@ -268,6 +268,13 @@ def validate_command(verbose=False,
     validate()
 
 
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+def sanity_check(verbose=False, private_ip=None):
+    """Run the Cloudify Manager sanity check"""
+    _load_config_and_logger(verbose=verbose, private_ip=private_ip)
+    sanity.run_sanity_check()
+
+
 @install_args
 def install(verbose=False,
             private_ip=None,
@@ -397,6 +404,7 @@ def main():
         create_internal_certs,
         create_external_certs,
         create_pkcs12,
+        sanity_check
     ])
 
 
