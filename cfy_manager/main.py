@@ -218,6 +218,23 @@ def _validate_manager_installed(cmd):
                 cmd=cmd
             )
         )
+    if os.path.exists('/etc/cloudify/cluster'):
+        raise BootstrapError(
+            "Operation '{0}' is not allowed on a cluster node".format(cmd))
+
+
+def _get_components(with_attribute=None):
+    target_components = []
+    for component_name, component in COMPONENTS:
+        component_config = config.get(component_name, {})
+        if component_config.get('skip_installation'):
+            # This component is not installed, skip it
+            continue
+        if with_attribute and not hasattr(component, with_attribute):
+            # Desired attribute was not on this component
+            continue
+        target_components.append(component)
+    return target_components
 
 
 def install_args(f):
@@ -251,6 +268,13 @@ def validate_command(verbose=False,
     validate()
 
 
+@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+def sanity_check(verbose=False, private_ip=None):
+    """Run the Cloudify Manager sanity check"""
+    _load_config_and_logger(verbose=verbose, private_ip=private_ip)
+    sanity.run_sanity_check()
+
+
 @install_args
 def install(verbose=False,
             private_ip=None,
@@ -272,7 +296,7 @@ def install(verbose=False,
     validate()
     set_globals()
 
-    for _, component in COMPONENTS:
+    for component in _get_components():
         component.install()
 
     logger.notice('Cloudify Manager successfully installed!')
@@ -301,7 +325,7 @@ def configure(verbose=False,
     validate(skip_validations=True)
     set_globals()
 
-    for _, component in COMPONENTS:
+    for component in _get_components():
         component.configure()
 
     logger.notice('Cloudify Manager successfully configured!')
@@ -317,7 +341,7 @@ def remove(verbose=False, force=False):
 
     should_stop = _is_manager_installed()
 
-    for _, component in reversed(COMPONENTS):
+    for component in reversed(_get_components()):
         if should_stop and hasattr(component, 'stop'):
             component.stop()
         component.remove()
@@ -335,11 +359,8 @@ def start(verbose=False):
     _load_config_and_logger(verbose)
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
-    for component_name, component in COMPONENTS:
-        component_config = config.get(component_name, {})
-        skip = component_config.get('skip_installation')
-        if hasattr(component, 'start') and not skip:
-            component.start()
+    for component in _get_components(with_attribute='start'):
+        component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -352,11 +373,8 @@ def stop(verbose=False, force=False):
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component_name, component in reversed(COMPONENTS):
-        component_config = config.get(component_name, {})
-        skip = component_config.get('skip_installation')
-        if hasattr(component, 'stop') and not skip:
-            component.stop()
+    for component in _get_components(with_attribute='stop'):
+        component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 
@@ -386,6 +404,7 @@ def main():
         create_internal_certs,
         create_external_certs,
         create_pkcs12,
+        sanity_check
     ])
 
 

@@ -124,11 +124,7 @@ def _clean_sanity():
                stdout=sys.stdout)
 
 
-def install():
-    if config[SANITY]['skip_sanity']:
-        logger.info('Skipping sanity check...')
-        return
-
+def run_sanity_check():
     logger.notice('Running Sanity...')
     ssh_key_path = _create_ssh_key()
     _run_sanity(ssh_key_path)
@@ -136,6 +132,13 @@ def install():
     _clean_sanity()
     _remove_sanity_ssh()
     logger.notice('Sanity completed successfully')
+
+
+def install():
+    if config[SANITY]['skip_sanity']:
+        logger.info('Skipping sanity check...')
+        return
+    run_sanity_check()
 
 
 def configure():

@@ -13,10 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, isfile, isdir
+from os.path import join, isdir
 
 from .files import deploy
-from .common import chown, mkdir, chmod, remove, move
+from .common import chown, mkdir, chmod, remove
 
 from ..logger import get_logger
 from ..constants import COMPONENTS_DIR
@@ -44,10 +44,6 @@ def set_logrotate(service_name):
 
 
 def setup_logrotate():
-    if not isfile('/etc/cron.hourly/logrotate'):
-        logger.info('Deploying logrotate hourly cron job...')
-        move('/etc/cron.daily/logrotate', '/etc/cron.hourly/logrotate')
-
     if not isdir(LOGROTATED_PATH):
         mkdir(LOGROTATED_PATH)
         chown('root', 'root', LOGROTATED_PATH)

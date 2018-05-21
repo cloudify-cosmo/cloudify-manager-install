@@ -16,6 +16,7 @@
 import argh
 import json
 import socket
+import tempfile
 from os.path import join
 from contextlib import contextmanager
 
@@ -238,13 +239,22 @@ def create_pkcs12():
         const.SSL_CERTS_TARGET_DIR,
         const.INTERNAL_PKCS12_FILENAME
     )
+    # extract the cert from the file: in case internal cert is a bundle,
+    # we must only get the first cert from it (the server cert)
+    fh, temp_cert_file = tempfile.mkstemp()
+    sudo([
+        'openssl', 'x509',
+        '-in', const.INTERNAL_CERT_PATH,
+        '-out', temp_cert_file
+    ])
     sudo([
         'openssl', 'pkcs12', '-export',
         '-out', pkcs12_path,
-        '-in', const.INTERNAL_CERT_PATH,
+        '-in', temp_cert_file,
         '-inkey', const.INTERNAL_KEY_PATH,
         '-password', 'pass:cloudify',
     ])
+    remove(temp_cert_file)
     logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
                  'and key: {2}'
                  .format(pkcs12_path, const.INTERNAL_CERT_PATH,
