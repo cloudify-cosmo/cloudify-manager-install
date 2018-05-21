@@ -1,6 +1,5 @@
 location / {
     root              {{ manager.file_server_root }};
-    autoindex on;
     auth_request /auth;
     allow             all;
     deny              all;
