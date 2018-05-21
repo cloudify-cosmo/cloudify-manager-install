@@ -462,7 +462,7 @@ def _install_ruby():
     )
 
     exit_helpfully_on_failure(
-        command=['source /etc/profile.d/rvm.sh && rvm install 2.3.0'],
+        command=['source $HOME/.rvm/scripts/rvm  && rvm install 2.3.0'],
         error='Failed to install Ruby using RVM',
         shell=True
     )
