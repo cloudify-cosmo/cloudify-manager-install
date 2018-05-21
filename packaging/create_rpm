@@ -437,20 +437,40 @@ def _install_ruby():
     """
     print_status_update('Installing ruby.')
 
+    print('Installing GPG...')
+    exit_helpfully_on_failure(
+        command=['sudo', 'yum', 'install', '-y', 'gpg'],
+        error='Failed to install GPG'
+    )
+
     print('Installing RVM (ruby version manager)...')
     exit_helpfully_on_failure(
-        command='gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB',  # NOQA
+        command=[
+            'gpg', '--keyserver', 'hkp://keys.gnupg.net', '--recv-keys',
+            '409B6B1796C275462A1703113804BB82D39DC0E3',
+            '7D2BAF1CF37B13E2069D6956105BD0E739499BDB'
+        ],
         error='Failed to add gpg keys required by RVM'
     )
 
     exit_helpfully_on_failure(
-        command='\curl -sSL https://get.rvm.io | bash -s stable',
+        command=['curl', '-sSL', 'https://get.rvm.io', '-o', 'install_rvm'],
+        error='Failed to download RVM'
+    )
+
+    exit_helpfully_on_failure(
+        command=['chmod', '+x', 'install_rvm'],
+        error='Failed to set execute permissions on `install_rvm`'
+    )
+
+    exit_helpfully_on_failure(
+        command=['./install_rvm', 'stable'],
         error='Failed to install RVM'
     )
 
     print('Installing ruby...')
     exit_helpfully_on_failure(
-        command='rvm install 2.3.0',
+        command=['rvm', 'install', '2.3.0'],
         error='Failed to install ruby version 2.3.0'
     )
 
