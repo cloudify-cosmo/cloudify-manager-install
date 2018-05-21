@@ -246,6 +246,10 @@ restservice:
   # Port to be used by the REST service
   port: 8100
 
+  # Additional environment variables to add to the REST Service's service
+  # file.
+  extra_env: {}
+
 nginx:
   sources:
     nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm

@@ -12,3 +12,6 @@ MAX_WORKER_COUNT={{ restservice.gunicorn.max_worker_count }}
 
 GUNICORN_WORKER_COUNT={{ restservice.gunicorn.worker_count }}
 GUNICORN_MAX_REQUESTS={{ restservice.gunicorn.max_requests }}
+{% for key, value in restservice.extra_env.iteritems() %}
+{{ key }}="{{ value }}"
+{% endfor %}
