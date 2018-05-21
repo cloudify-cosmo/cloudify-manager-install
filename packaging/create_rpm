@@ -461,6 +461,12 @@ def _install_ruby():
         shell=True
     )
 
+    exit_helpfully_on_failure(
+        command=['source /usr/local/rvm/scripts/rvm'],
+        error='Failed to source RVM script',
+        shell=True
+    )
+
 
 def install_dependencies():
     """
