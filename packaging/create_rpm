@@ -487,6 +487,8 @@ def install_dependencies():
     print('Installing required rpms...')
     install_rpms = [
         'sudo', 'yum', 'install', '-y', '-q',
+        # Requirement for fpm
+        'rpm-build',
         # Requirements for this script
         'git',
         # Requirements for building the python package
