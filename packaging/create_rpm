@@ -462,6 +462,20 @@ def _install_ruby():
     )
 
 
+def _run_with_rvm(command, error, return_output=False):
+    """
+    Execute command while sourcing the RVM script
+    """
+    return exit_helpfully_on_failure(
+        command=['/bin/bash -c "source /etc/profile.d/rvm.sh && {0}"'.format(
+            ' '.join(command)
+        )],
+        error=error,
+        return_output=return_output,
+        shell=True
+    )
+
+
 def install_dependencies():
     """
         Install the dependencies for the package builder.
@@ -484,12 +498,9 @@ def install_dependencies():
     )
 
     print('Installing fpm...')
-    exit_helpfully_on_failure(
-        command=['/bin/bash -c "source /etc/profile.d/rvm.sh && '
-                 'gem install fpm"'],
-        error='Failed to gem install fpm.',
-        shell=True
-    )
+    _run_with_rvm(
+        command=['gem', 'install', 'fpm'],
+        error='Failed to gem install fpm.')
 
     print('Installing pex...')
     exit_helpfully_on_failure(
@@ -645,7 +656,7 @@ def run_build_command(edition, package_output_dir):
         ),
     ])
 
-    rpmbuild_output = exit_helpfully_on_failure(
+    rpmbuild_output = _run_with_rvm(
         command=rpm_builder_command,
         error='Could not build RPM!',
         return_output=True,
