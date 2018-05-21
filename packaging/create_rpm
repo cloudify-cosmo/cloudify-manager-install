@@ -436,12 +436,6 @@ def _install_ruby():
     """
     print_status_update('Installing ruby.')
 
-    print('Installing GPG...')
-    exit_helpfully_on_failure(
-        command=['sudo', 'yum', 'install', '-y', 'gpg'],
-        error='Failed to install GPG'
-    )
-
     print('Installing RVM (ruby version manager)...')
     exit_helpfully_on_failure(
         command=[
@@ -465,6 +459,11 @@ def _install_ruby():
     exit_helpfully_on_failure(
         command=['./install_rvm', 'stable'],
         error='Failed to install RVM'
+    )
+
+    exit_helpfully_on_failure(
+        command=['source', '/etc/profile.d/rvm.sh'],
+        error='Failed to source RVM script'
     )
 
     print('Installing ruby...')
