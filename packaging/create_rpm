@@ -8,7 +8,6 @@ import subprocess
 import sys
 import urlparse
 import zipfile
-import shutil
 
 from Queue import Empty, Queue
 from threading import Thread, Lock, Event
@@ -132,7 +131,8 @@ def exit_with_sadness(message):
     sys.exit(1)
 
 
-def exit_helpfully_on_failure(command, error, return_output=False):
+def exit_helpfully_on_failure(command, error,
+                              return_output=False, shell=False):
     """
         Try to run a command, but exit with a useful error message on failure.
         If return_output is set to True then the stderr and stdout will be out
@@ -143,7 +143,7 @@ def exit_helpfully_on_failure(command, error, return_output=False):
     else:
         func = subprocess.check_call
     try:
-        result = func(command)
+        result = func(command, shell=shell)
         if return_output:
             # This will put stdout out of order with stderr, but allows us to
             # parse the resulting output if we need to
@@ -159,6 +159,14 @@ def exit_helpfully_on_failure(command, error, return_output=False):
         if return_output:
             print(e.output)
         exit_with_sadness(error)
+    except OSError as e:
+        if e.errno != 2:
+            raise
+        message = 'No such file: {0}'.format(command[0])
+        print_in_color(message, 'red', stream=sys.stderr)
+        if return_output:
+            print(str(e))
+        exit_with_sadness(message)
 
 
 def get_package_urls_file(edition, branch, repo_destination_path):
@@ -431,22 +439,56 @@ def retrieve_required_files(edition, installer_path, installer_branch):
         config_handle.write(config)
 
 
+def _install_ruby():
+    """
+    ruby-xz 1.0.0 which is a prerequisite of fpm requires ruby version 2.3.0
+    """
+    print_status_update('Installing ruby.')
+
+    print('Installing RVM (ruby version manager)...')
+    exit_helpfully_on_failure(
+        command=[
+            'sudo', 'gpg', '--keyserver', 'hkp://keys.gnupg.net',
+            '--recv-keys', '409B6B1796C275462A1703113804BB82D39DC0E3',
+            '7D2BAF1CF37B13E2069D6956105BD0E739499BDB'
+        ],
+        error='Failed to add gpg keys required by RVM'
+    )
+
+    exit_helpfully_on_failure(
+        command=['curl -sSL https://get.rvm.io | bash -s stable --ruby'],
+        error='Failed to install RVM and/or Ruby',
+        shell=True
+    )
+
+
+def _run_with_rvm(command, error, return_output=False):
+    """
+    Execute command while sourcing the RVM script
+    """
+    return exit_helpfully_on_failure(
+        command=['/bin/bash -c "source /etc/profile.d/rvm.sh && {0}"'.format(
+            ' '.join(command)
+        )],
+        error=error,
+        return_output=return_output,
+        shell=True
+    )
+
+
 def install_dependencies():
     """
         Install the dependencies for the package builder.
     """
     print_status_update('Installing dependencies.')
 
+    _install_ruby()
+
     print('Installing required rpms...')
     install_rpms = [
         'sudo', 'yum', 'install', '-y', '-q',
-        # fpm requirements
-        'ruby-devel',
-        'gcc',
-        'make',
+        # Requirement for fpm
         'rpm-build',
-        'rubygems',
-        'libffi-devel',
         # Requirements for this script
         'git',
         # Requirements for building the python package
@@ -458,14 +500,13 @@ def install_dependencies():
     )
 
     print('Installing fpm...')
-    exit_helpfully_on_failure(
-        command=['gem', 'install', '--no-ri', '--no-rdoc', 'fpm'],
-        error='Failed to gem install fpm.',
-    )
+    _run_with_rvm(
+        command=['gem', 'install', 'fpm'],
+        error='Failed to gem install fpm.')
 
     print('Installing pex...')
     exit_helpfully_on_failure(
-        command=['sudo', 'pip', 'install', 'pex'],
+        command=['sudo', 'pip', 'install', 'pex==1.3.2'],
         error='Failed to pip install pex.',
     )
 
@@ -569,7 +610,7 @@ def run_build_command(edition, package_output_dir):
         # Which files are considered config files (path as it will be when the
         # RPM has been installed)
         '--rpm-attr',
-        '660,root,wheel) %config(noreplace:/etc/cloudify/config.yaml',
+        "'660,root,wheel) %config(noreplace:/etc/cloudify/config.yaml'",
         # This is a hack to work around the lack of support in fpm for applying
         # %config and %attr to the same path
     ]
@@ -617,7 +658,7 @@ def run_build_command(edition, package_output_dir):
         ),
     ])
 
-    rpmbuild_output = exit_helpfully_on_failure(
+    rpmbuild_output = _run_with_rvm(
         command=rpm_builder_command,
         error='Could not build RPM!',
         return_output=True,
