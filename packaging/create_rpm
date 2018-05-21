@@ -506,7 +506,7 @@ def install_dependencies():
 
     print('Installing pex...')
     exit_helpfully_on_failure(
-        command=['sudo', 'pip', 'install', 'pex'],
+        command=['sudo', 'pip', 'install', 'pex==1.3.2'],
         error='Failed to pip install pex.',
     )
 
