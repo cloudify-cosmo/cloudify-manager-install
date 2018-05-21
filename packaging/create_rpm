@@ -456,14 +456,8 @@ def _install_ruby():
     )
 
     exit_helpfully_on_failure(
-        command=['curl -sSL https://get.rvm.io | bash -s stable'],
-        error='Failed to download RVM',
-        shell=True
-    )
-
-    exit_helpfully_on_failure(
-        command=['source $HOME/.rvm/scripts/rvm  && rvm install 2.3.0'],
-        error='Failed to install Ruby using RVM',
+        command=['curl -sSL https://get.rvm.io | bash -s stable --ruby'],
+        error='Failed to install RVM and/or Ruby',
         shell=True
     )
 
