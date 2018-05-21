@@ -13,15 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import sys
 import platform
-import subprocess
 import netifaces
 from getpass import getuser
 from collections import namedtuple
 from distutils.version import LooseVersion
 
-from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS
+from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
 
 from .service_names import MANAGER
 
@@ -30,7 +30,7 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run
+from ..utils.common import run, sudo
 from ..utils.install import RpmPackageHandler
 
 logger = get_logger(VALIDATIONS)
@@ -61,14 +61,10 @@ def _get_host_total_memory():
 
 
 def _get_available_host_disk_space():
-    """
-    Filesystem                 Type 1G-blocks  Used Available Use% Mounted on
-    /dev/mapper/my_file_system ext4      213G   63G      139G  32% /
-    """
-    df = subprocess.Popen(["df", "-BG", "/etc/issue"], stdout=subprocess.PIPE)
-    output = df.communicate()[0]
-    available_disk_space_in_gb = output.split("\n")[1].split()[3].rstrip('G')
-    return int(available_disk_space_in_gb)
+    """Available space in GB on the filesystem containing /opt"""
+    result = os.statvfs('/opt')
+    bytes_available = result.f_bavail * result.f_bsize
+    return bytes_available // (1024 * 1024 * 1024)
 
 
 def _validate_supported_distros():
@@ -266,6 +262,112 @@ def _validate_dependencies():
         )
 
 
+def _check_ssl_file(input_name, kind='Key', password=None):
+    """Does the cert/key file exist and is it valid?"""
+    filename = config[SSL_INPUTS][input_name]
+    if not os.path.isfile(filename):
+        raise ValidationError(
+            '{0} file {1} (input name: {2}) does not exist'
+            .format(kind, filename, input_name))
+    if kind == 'Key':
+        check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
+        if password:
+            check_command += ['-passin', 'pass:{0}'.format(password)]
+    elif kind == 'Cert':
+        check_command = ['openssl', 'x509', '-in', filename, '-noout']
+    else:
+        raise ValueError('Unknown kind: {0}'.format(kind))
+    proc = sudo(check_command, ignore_failures=True)
+    if proc.returncode != 0:
+        password_err = ''
+        if password:
+            password_err = '(or the provided password is incorrect)'
+        raise ValidationError('{0} file {1} (input name: {2}) is invalid {3}'
+                              .format(kind, filename, input_name,
+                                      password_err))
+
+
+def _check_key_and_cert(prefix):
+    """Check that the provided cert and key actally match"""
+    cert_input = '{0}_cert_path'.format(prefix)
+    key_input = '{0}_key_path'.format(prefix)
+    cert_filename = config[SSL_INPUTS][cert_input]
+    key_filename = config[SSL_INPUTS][key_input]
+    password_input = '{0}_key_password'.format(prefix)
+    password = config[SSL_INPUTS].get(password_input)
+
+    if not cert_filename and not key_filename:
+        if password:
+            raise ValidationError('If {0} was provided, both {1} and {2} '
+                                  'must be provided'
+                                  .format(password_input, key_input,
+                                          cert_input))
+    elif cert_filename and key_filename:
+        _check_ssl_file(key_input, kind='Key', password=password)
+        _check_ssl_file(cert_input, kind='Cert')
+        key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
+                               '-in', key_filename]
+        if password:
+            key_filename += ['-passin', 'pass:{0}'.format(password)]
+        cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
+                                '-in', cert_filename]
+        key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
+        cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
+        if cert_modulus != key_modulus:
+            raise ValidationError('Key {0} ({1}) does not match the '
+                                  'cert {2} ({3})'
+                                  .format(key_filename, key_input,
+                                          cert_filename, cert_input))
+    else:
+        raise ValidationError('Either both {0} and {1} must be provided, '
+                              'or neither.'.format(cert_input, key_input))
+
+
+def _check_internal_ca_cert():
+    ssl_inputs = config[SSL_INPUTS]
+    if ssl_inputs['ca_key_path'] and ssl_inputs['ca_cert_path']:
+        _check_ssl_file('ca_key_path', password=ssl_inputs['ca_key_password'])
+        _check_ssl_file('ca_cert_path', kind='Cert')
+    elif ssl_inputs['ca_key_path'] and not ssl_inputs['ca_cert_path']:
+        raise ValidationError('Internal CA key provided, but the internal '
+                              'CA cert was not')
+    elif ssl_inputs['ca_cert_path'] and not ssl_inputs['ca_key_path']:
+        if not ssl_inputs['internal_cert_path'] \
+                or not ssl_inputs['internal_key_path']:
+            raise ValidationError('If ca_cert_path was provided, but '
+                                  'ca_key_path was not provided, both '
+                                  'internal_cert_path and internal_key_path '
+                                  'must be provided.')
+    elif ssl_inputs['ca_key_password']:
+        raise ValidationError('If ca_key_password was provided, both '
+                              'ca_cert_path and ca_key_path must be '
+                              'provided.')
+
+
+def _validate_cert_inputs():
+    _check_internal_ca_cert()
+    _check_key_and_cert('internal')
+    _check_key_and_cert('external')
+    _check_key_and_cert('external_ca')
+
+
+def validate_config_access(write_required):
+    # It's OK if file doesn't exist.
+    if os.path.isfile(USER_CONFIG_PATH):
+        if write_required:
+            mode = os.R_OK | os.W_OK
+            label = 'readable and writable'
+        else:
+            mode = os.R_OK
+            label = 'readable'
+
+        if not os.access(USER_CONFIG_PATH, mode):
+            raise ValidationError(
+                'Configuration file ({0}) must be {1} '
+                'by the current user'.format(
+                    USER_CONFIG_PATH, label))
+
+
 def validate(skip_validations=False):
     # Inputs always need to be validated, otherwise the install won't work
     _validate_inputs()
@@ -285,6 +387,7 @@ def validate(skip_validations=False):
     _validate_sufficient_disk_space()
     _validate_openssl_version()
     _validate_user_has_sudo_permissions()
+    _validate_cert_inputs()
 
     if _errors:
         printable_error = 'Validation error(s):\n' \

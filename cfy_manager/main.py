@@ -40,7 +40,7 @@ from .components import usage_collector
 from .components import manager_ip_setter
 
 from .components.globals import set_globals
-from .components.validations import validate
+from .components.validations import validate, validate_config_access
 
 from .components.service_names import MANAGER
 from .components import (
@@ -66,24 +66,24 @@ from .utils.certificates import (
 logger = get_logger('Main')
 
 COMPONENTS = [
-    manager,
-    manager_ip_setter,
-    nginx,
-    python,
-    postgresql,
-    rabbitmq,
-    restservice,
-    influxdb,
-    amqpinflux,
-    java,
-    logstash,
-    stage,
-    composer,
-    mgmtworker,
-    riemann,
-    cli,
-    usage_collector,
-    sanity
+    ("manager", manager),
+    ("manager_ip_setter", manager_ip_setter),
+    ("nginx", nginx),
+    ("python", python),
+    ("postgresql", postgresql),
+    ("rabbitmq", rabbitmq),
+    ("restservice", restservice),
+    ("influxdb", influxdb),
+    ("amqpinflux", amqpinflux),
+    ("java", java),
+    ("logstash", logstash),
+    ("stage", stage),
+    ("composer", composer),
+    ("mgmtworker", mgmtworker),
+    ("riemann", riemann),
+    ("cli", cli),
+    ("usage_collector", usage_collector),
+    ("sanity", sanity)
 ]
 
 START_TIME = time()
@@ -142,7 +142,7 @@ def _load_config_and_logger(verbose=False,
                             clean_db=False,
                             config_write_required=False):
     setup_console_logger(verbose)
-    config.validate_access(config_write_required)
+    validate_config_access(config_write_required)
     config.load_config()
     manager_config = config[MANAGER]
 
@@ -218,12 +218,64 @@ def _validate_manager_installed(cmd):
                 cmd=cmd
             )
         )
+    if os.path.exists('/etc/cloudify/cluster'):
+        raise BootstrapError(
+            "Operation '{0}' is not allowed on a cluster node".format(cmd))
 
 
-@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
+def _get_components(with_attribute=None):
+    target_components = []
+    for component_name, component in COMPONENTS:
+        component_config = config.get(component_name, {})
+        if component_config.get('skip_installation'):
+            # This component is not installed, skip it
+            continue
+        if with_attribute and not hasattr(component, with_attribute):
+            # Desired attribute was not on this component
+            continue
+        target_components.append(component)
+    return target_components
+
+
+def install_args(f):
+    """Aply all the args that are used by `cfy_manager install`"""
+    args = [
+        argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
+        argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
+        argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
+        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
+    ]
+    for arg in args:
+        f = arg(f)
+    return f
+
+
+@argh.decorators.named('validate')
+@install_args
+def validate_command(verbose=False,
+                     private_ip=None,
+                     public_ip=None,
+                     admin_password=None,
+                     clean_db=False):
+    _load_config_and_logger(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db,
+        config_write_required=False
+    )
+    validate()
+
+
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
-@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
-@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
+def sanity_check(verbose=False, private_ip=None):
+    """Run the Cloudify Manager sanity check"""
+    _load_config_and_logger(verbose=verbose, private_ip=private_ip)
+    sanity.run_sanity_check()
+
+
+@install_args
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
@@ -244,17 +296,14 @@ def install(verbose=False,
     validate()
     set_globals()
 
-    for component in COMPONENTS:
+    for component in _get_components():
         component.install()
 
     logger.notice('Cloudify Manager successfully installed!')
     _finish_configuration()
 
 
-@argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG)
-@argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
-@argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
-@argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
+@install_args
 def configure(verbose=False,
               private_ip=None,
               public_ip=None,
@@ -276,7 +325,7 @@ def configure(verbose=False,
     validate(skip_validations=True)
     set_globals()
 
-    for component in COMPONENTS:
+    for component in _get_components():
         component.configure()
 
     logger.notice('Cloudify Manager successfully configured!')
@@ -290,7 +339,11 @@ def remove(verbose=False, force=False):
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
-    for component in COMPONENTS:
+    should_stop = _is_manager_installed()
+
+    for component in reversed(_get_components()):
+        if should_stop and hasattr(component, 'stop'):
+            component.stop()
         component.remove()
 
     if _is_manager_installed():
@@ -306,9 +359,8 @@ def start(verbose=False):
     _load_config_and_logger(verbose)
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
-    for component in COMPONENTS:
-        if hasattr(component, 'start'):
-            component.start()
+    for component in _get_components(with_attribute='start'):
+        component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -321,9 +373,8 @@ def stop(verbose=False, force=False):
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component in reversed(COMPONENTS):
-        if hasattr(component, 'stop'):
-            component.stop()
+    for component in _get_components(with_attribute='stop'):
+        component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 
@@ -343,6 +394,7 @@ def restart(verbose=False, force=False):
 def main():
     """Main entry point"""
     argh.dispatch_commands([
+        validate_command,
         install,
         configure,
         remove,
@@ -352,6 +404,7 @@ def main():
         create_internal_certs,
         create_external_certs,
         create_pkcs12,
+        sanity_check
     ])
 
 

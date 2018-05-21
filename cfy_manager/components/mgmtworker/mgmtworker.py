@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from time import sleep
 from os.path import join, dirname
 
 from .. import (
@@ -30,7 +29,6 @@ from ..service_names import MGMTWORKER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
-from ...exceptions import ValidationError
 
 from ...utils import common
 from ...utils.files import deploy
@@ -63,8 +61,8 @@ def _deploy_mgmtworker_config():
     config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
     config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
 
-    celery_work_dir = join(HOME_DIR, 'work')
-    broker_config_dst = join(celery_work_dir, 'broker_config.json')
+    work_dir = join(HOME_DIR, 'work')
+    broker_config_dst = join(work_dir, 'broker_config.json')
     deploy(
         src=join(CONFIG_PATH, 'broker_config.json'),
         dst=broker_config_dst
@@ -89,29 +87,8 @@ def _prepare_snapshot_permissions():
     common.sudo(['chmod', 'g+rw', dirname(const.SSL_CERTS_TARGET_DIR)])
 
 
-def _check_worker_running():
-    """Use `celery status` to check if the worker is running."""
-    work_dir = join(HOME_DIR, 'work')
-    celery_path = join(HOME_DIR, 'env', 'bin', 'celery')
-    celery_status_cmd = [
-        'CELERY_WORK_DIR={0}'.format(work_dir),
-        celery_path,
-        '--config=cloudify.broker_config',
-        'status'
-    ]
-    logger.info('Verifying celery is operational...')
-    for _ in range(3):
-        result = common.sudo(celery_status_cmd, ignore_failures=True)
-        if result.returncode == 0:
-            logger.info('Celery is up')
-            return
-        sleep(1)
-    raise ValidationError('Could not validate that celery is running')
-
-
 def _verify_mgmtworker_alive():
     systemd.verify_alive(MGMTWORKER)
-    _check_worker_running()
 
 
 def _configure():

@@ -15,8 +15,9 @@
 #  * limitations under the License.
 
 import os
-import shutil
 import argparse
+from distutils.dir_util import copy_tree
+from distutils.errors import DistutilsFileError
 
 HOME_DIR = "{{ stage.home_dir }}"
 
@@ -26,12 +27,10 @@ def _restore(snapshot_root, override=False):
         destination = os.path.join(HOME_DIR, folder)
         if not override:
             destination = os.path.join(destination, 'from_snapshot')
-        if os.path.exists(destination):
-            shutil.rmtree(destination)
         # in old snapshots, userData might not exist
         try:
-            shutil.copytree(os.path.join(snapshot_root, folder), destination)
-        except OSError:
+            copy_tree(os.path.join(snapshot_root, folder), destination)
+        except DistutilsFileError:
             pass
 
 

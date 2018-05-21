@@ -23,6 +23,7 @@ PACKAGER_BRANCH = ENV['PACKAGER_BRANCH']
 REPO = ENV['REPO']
 GITHUB_USERNAME = ENV['GITHUB_USERNAME']
 GITHUB_PASSWORD = ENV['GITHUB_PASSWORD']
+DEV_BRANCH = ENV['DEV_BRANCH']
 
 Vagrant.configure('2') do |config|
   config.vm.define "install_rpm" do |rpm|
@@ -31,11 +32,11 @@ Vagrant.configure('2') do |config|
     rpm.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-6ebc3d17"
+      aws.ami = "ami-e476b49d"
       aws.region = "eu-west-1"
       aws.instance_type = "m3.medium"
       aws.keypair_name = "vagrant_build"
-      override.ssh.username = "ec2-user"
+      override.ssh.username = "centos"
       override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
       override.nfs.functional = false
       aws.tags = { "Name" => "vagrant install RPM build" }
@@ -43,7 +44,7 @@ Vagrant.configure('2') do |config|
     end
     rpm.vm.provision "shell" do |s|
       s.path = "provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD} #{DEV_BRANCH}"
       s.privileged = false
     end
   end
