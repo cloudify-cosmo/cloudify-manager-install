@@ -131,7 +131,8 @@ def exit_with_sadness(message):
     sys.exit(1)
 
 
-def exit_helpfully_on_failure(command, error, return_output=False):
+def exit_helpfully_on_failure(command, error,
+                              return_output=False, shell=False):
     """
         Try to run a command, but exit with a useful error message on failure.
         If return_output is set to True then the stderr and stdout will be out
@@ -142,7 +143,7 @@ def exit_helpfully_on_failure(command, error, return_output=False):
     else:
         func = subprocess.check_call
     try:
-        result = func(command)
+        result = func(command, shell=shell)
         if return_output:
             # This will put stdout out of order with stderr, but allows us to
             # parse the resulting output if we need to
@@ -158,6 +159,14 @@ def exit_helpfully_on_failure(command, error, return_output=False):
         if return_output:
             print(e.output)
         exit_with_sadness(error)
+    except OSError as e:
+        if e.errno != 2:
+            raise
+        message = 'No such file: {0}'.format(command[0])
+        print_in_color(message, 'red', stream=sys.stderr)
+        if return_output:
+            print(str(e))
+        exit_with_sadness(message)
 
 
 def get_package_urls_file(edition, branch, repo_destination_path):
@@ -462,14 +471,9 @@ def _install_ruby():
     )
 
     exit_helpfully_on_failure(
-        command=['source', '/etc/profile.d/rvm.sh'],
-        error='Failed to source RVM script'
-    )
-
-    print('Installing ruby...')
-    exit_helpfully_on_failure(
-        command=['rvm', 'install', '2.3.0'],
-        error='Failed to install ruby version 2.3.0'
+        command=['/etc/profile.d/rvm.sh && rvm install 2.3.0'],
+        error='Failed to install Ruby using RVM',
+        shell=True
     )
 
 
