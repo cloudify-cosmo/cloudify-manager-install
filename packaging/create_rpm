@@ -456,18 +456,9 @@ def _install_ruby():
     )
 
     exit_helpfully_on_failure(
-        command=['curl', '-sSL', 'https://get.rvm.io', '-o', 'install_rvm'],
-        error='Failed to download RVM'
-    )
-
-    exit_helpfully_on_failure(
-        command=['chmod', '+x', 'install_rvm'],
-        error='Failed to set execute permissions on `install_rvm`'
-    )
-
-    exit_helpfully_on_failure(
-        command=['./install_rvm', 'stable'],
-        error='Failed to install RVM'
+        command=['curl -sSL https://get.rvm.io | bash -s stable'],
+        error='Failed to download RVM',
+        shell=True
     )
 
     exit_helpfully_on_failure(
