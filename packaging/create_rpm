@@ -473,13 +473,6 @@ def install_dependencies():
     print('Installing required rpms...')
     install_rpms = [
         'sudo', 'yum', 'install', '-y', '-q',
-        # fpm requirements
-        'ruby-devel',
-        'gcc',
-        'make',
-        'rpm-build',
-        'rubygems',
-        'libffi-devel',
         # Requirements for this script
         'git',
         # Requirements for building the python package
@@ -492,8 +485,8 @@ def install_dependencies():
 
     print('Installing fpm...')
     exit_helpfully_on_failure(
-        command=['source /usr/local/rvm/scripts/rvm && gem install fpm'],
-        # command=['gem', 'install', '--no-ri', '--no-rdoc', 'fpm'],
+        command=['/bin/bash -c "source /etc/profile.d/rvm.sh && '
+                 'gem install fpm"'],
         error='Failed to gem install fpm.',
         shell=True
     )
