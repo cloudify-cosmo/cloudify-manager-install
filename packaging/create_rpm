@@ -431,11 +431,37 @@ def retrieve_required_files(edition, installer_path, installer_branch):
         config_handle.write(config)
 
 
+def _install_ruby():
+    """
+    ruby-xz 1.0.0 which is a prerequisite of fpm requires ruby version 2.3.0
+    """
+    print_status_update('Installing ruby.')
+
+    print('Installing RVM (ruby version manager)...')
+    exit_helpfully_on_failure(
+        command='gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB',  # NOQA
+        error='Failed to add gpg keys required by RVM'
+    )
+
+    exit_helpfully_on_failure(
+        command='\curl -sSL https://get.rvm.io | bash -s stable',
+        error='Failed to install RVM'
+    )
+
+    print('Installing ruby...')
+    exit_helpfully_on_failure(
+        command='rvm install 2.3.0',
+        error='Failed to install ruby version 2.3.0'
+    )
+
+
 def install_dependencies():
     """
         Install the dependencies for the package builder.
     """
     print_status_update('Installing dependencies.')
+
+    _install_ruby()
 
     print('Installing required rpms...')
     install_rpms = [
