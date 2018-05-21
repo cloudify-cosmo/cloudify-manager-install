@@ -608,7 +608,7 @@ def run_build_command(edition, package_output_dir):
         # Which files are considered config files (path as it will be when the
         # RPM has been installed)
         '--rpm-attr',
-        '660,root,wheel) %config(noreplace:/etc/cloudify/config.yaml',
+        "'660,root,wheel) %config(noreplace:/etc/cloudify/config.yaml'",
         # This is a hack to work around the lack of support in fpm for applying
         # %config and %attr to the same path
     ]
