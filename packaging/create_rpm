@@ -466,23 +466,8 @@ def _run_with_rvm(command, error, return_output=False):
     """
     Execute command while sourcing the RVM script
     """
-    profile_d_path = '/etc/profile.d/rvm.sh'
-    script_path = os.path.expanduser('~/.rvm/scripts/rvm')
-    if os.path.exists(profile_d_path):
-        source = profile_d_path
-    elif os.path.exists(script_path):
-        source = script_path
-    else:
-        exit_with_sadness(
-            'Could not locate rvm source script in both: {0} and {1}'.format(
-                profile_d_path, script_path
-            )
-        )
     return exit_helpfully_on_failure(
-        command=['/bin/bash -c "source {source} && {command}"'.format(
-            source=source,
-            command=' '.join(command)
-        )],
+        command='/bin/bash -lc "{command}"'.format(command=' '.join(command)),
         error=error,
         return_output=return_output,
         shell=True
