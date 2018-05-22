@@ -445,16 +445,16 @@ def _install_ruby():
     """
     print_status_update('Installing ruby.')
 
-    print('Installing RVM (ruby version manager)...')
+    print('Adding GPG2 keys for RVM...')
     exit_helpfully_on_failure(
         command=[
-            'sudo', 'gpg', '--keyserver', 'hkp://keys.gnupg.net',
-            '--recv-keys', '409B6B1796C275462A1703113804BB82D39DC0E3',
-            '7D2BAF1CF37B13E2069D6956105BD0E739499BDB'
+            'command curl -sSL https://rvm.io/mpapis.asc | gpg2 --import -'
         ],
-        error='Failed to add gpg keys required by RVM'
+        error='Failed to add gpg keys required by RVM',
+        shell=True
     )
 
+    print('Installing RVM (ruby version manager)...')
     exit_helpfully_on_failure(
         command=['curl -sSL https://get.rvm.io | bash -s stable --ruby'],
         error='Failed to install RVM and/or Ruby',
@@ -466,9 +466,22 @@ def _run_with_rvm(command, error, return_output=False):
     """
     Execute command while sourcing the RVM script
     """
+    profile_d_path = '/etc/profile.d/rvm.sh'
+    script_path = os.path.expanduser('~/.rvm/scripts/rvm')
+    if os.path.exists(profile_d_path):
+        source = profile_d_path
+    elif os.path.exists(script_path):
+        source = script_path
+    else:
+        exit_with_sadness(
+            'Could not locate rvm source script in both: {0} and {1}'.format(
+                profile_d_path, script_path
+            )
+        )
     return exit_helpfully_on_failure(
-        command=['/bin/bash -c "source /etc/profile.d/rvm.sh && {0}"'.format(
-            ' '.join(command)
+        command=['/bin/bash -c "source {source} && {command}"'.format(
+            source=source,
+            command=' '.join(command)
         )],
         error=error,
         return_output=return_output,
