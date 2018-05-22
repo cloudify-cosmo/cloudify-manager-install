@@ -454,6 +454,12 @@ def _install_ruby():
         ],
         error='Failed to add gpg keys required by RVM'
     )
+    exit_helpfully_on_failure(
+        command=[
+            'gpg2', '--recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3'
+        ],
+        error='Failed to add gpg2 keys required by RVM'
+    )
 
     exit_helpfully_on_failure(
         command=['curl -sSL https://get.rvm.io | bash -s stable --ruby'],
