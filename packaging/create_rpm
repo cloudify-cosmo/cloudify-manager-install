@@ -467,7 +467,8 @@ def _run_with_rvm(command, error, return_output=False):
     Execute command while sourcing the RVM script
     """
     return exit_helpfully_on_failure(
-        command='/bin/bash -lc "{command}"'.format(command=' '.join(command)),
+        command=['/bin/bash',  '-lc',
+                 '"{command}"'.format(command=' '.join(command)),
         error=error,
         return_output=return_output,
         shell=True
