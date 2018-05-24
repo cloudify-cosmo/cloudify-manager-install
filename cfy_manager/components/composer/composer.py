@@ -13,9 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import json
+
 from os.path import join, dirname
 
-from .. import SOURCES, SERVICE_USER, SERVICE_GROUP
+from .. import SOURCES, SERVICE_USER, SERVICE_GROUP, SSL_INPUTS
 
 from ..service_names import COMPOSER
 
@@ -101,11 +104,25 @@ def _create_user_and_set_permissions():
     common.chmod('g+w', dirname(CONF_DIR))
 
 
+def _set_internal_manager_ip():
+    config_path = os.path.join(CONF_DIR, 'prod.json')
+    with open(config_path) as f:
+        composer_config = json.load(f)
+
+    if config[SSL_INPUTS]['internal_manager_host']:
+        composer_config['managerConfig']['ip'] = config[SSL_INPUTS]['internal_manager_host']
+        content = json.dumps(composer_config, indent=4, sort_keys=True)
+        # Using `write_to_file` because the path belongs to the composer user, so
+        # we need to move with sudo
+        files.write_to_file(contents=content, destination=config_path)
+
+
 def _configure():
     files.copy_notice(COMPOSER)
     set_logrotate(COMPOSER)
     _create_user_and_set_permissions()
     _run_db_migrate()
+    _set_internal_manager_ip()
     _start_and_validate_composer()
 
 

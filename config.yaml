@@ -175,7 +175,6 @@ stage:
   sources:
     nodejs_source_url: node-v8.9.1-linux-x64.tar.xz
     stage_source_url: cloudify-stage-*.tgz
-  internal_manager_ip: ''
 
 composer:
   # If set to true, Cloudify Composer will not be installed
@@ -344,6 +343,7 @@ ssl_inputs:
   external_ca_cert_path: ''
   external_ca_key_path: ''
   external_ca_key_password: ''
+  internal_manager_host: ''
 
 usage_collector:
   collect_cloudify_uptime:
