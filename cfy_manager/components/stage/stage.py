@@ -26,6 +26,8 @@ from .. import (
     VENV
 )
 
+from .. import SSL_INPUTS
+
 from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL
 
 from ...config import config
@@ -176,8 +178,8 @@ def _set_internal_manager_ip():
     with open(config_path) as f:
         stage_config = json.load(f)
 
-    if config[STAGE]['internal_manager_ip']:
-        stage_config['ip'] = config[STAGE]['internal_manager_ip']
+    if config[SSL_INPUTS]['internal_manager_host']:
+        stage_config['ip'] = config[SSL_INPUTS]['internal_manager_host']
         content = json.dumps(stage_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the stage user, so
         # we need to move with sudo
