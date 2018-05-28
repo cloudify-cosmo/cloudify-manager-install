@@ -54,7 +54,8 @@ from .components import (
 from .config import config
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
-from .logger import get_logger, setup_console_logger, set_file_handlers_level
+from .logger import get_logger, setup_console_logger,\
+    MSG_LEVEL_COLORS, RESET_SEQ
 
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
@@ -174,11 +175,13 @@ def _print_finish_message():
             ip=manager_config[PUBLIC_IP])
     )
     logger.notice('#' * 50)
-    set_file_handlers_level(logging.ERROR)
-    logger.notice('Manager password is {0}'.format(
-        manager_config[SECURITY][ADMIN_PASSWORD]))
-    logger.notice('#' * 50)
-    set_file_handlers_level(logging.INFO)
+
+    print(' ' * 44 + '{0}Manager password is {1}{2}'.format(
+        MSG_LEVEL_COLORS['NOTICE'],
+        manager_config[SECURITY][ADMIN_PASSWORD],
+        RESET_SEQ))
+
+    print(' ' * 44 + MSG_LEVEL_COLORS['NOTICE'] + '#' * 50 + RESET_SEQ)
     logger.notice("To install the default plugins bundle run:")
     logger.notice("'cfy plugins bundle-upload'")
     logger.notice('#' * 50)
