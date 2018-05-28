@@ -20,7 +20,7 @@ import random
 
 from .. import constants
 from ..config import config
-from ..logger import get_logger
+from ..logger import get_logger, set_file_handlers_level
 from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXDB
@@ -35,6 +35,8 @@ from . import (
     CLEAN_DB,
     FLASK_SECURITY
 )
+
+import logging
 
 BROKER_IP = 'broker_ip'
 BROKER_USERNAME = 'broker_user'
@@ -103,7 +105,10 @@ def _set_admin_password():
 def _generate_password(length=12):
     chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
     password = ''.join(random.choice(chars) for _ in range(length))
+    # print to screen and not to file
+    set_file_handlers_level(logging.ERROR)
     logger.info('Generated password: {0}'.format(password))
+    set_file_handlers_level(logging.INFO)
     return password
 
 
