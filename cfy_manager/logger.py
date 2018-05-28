@@ -97,6 +97,13 @@ def setup_console_logger(verbose=False):
     logger.addHandler(sh)
 
 
+def set_file_handlers_level(level):
+    handlers = logging.getLogger().handlers[:]
+    for handler in handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.setLevel(level)
+
+
 def _create_log_dir():
     log_dir = join(BASE_LOG_DIR, 'manager')
     if not isdir(log_dir):
