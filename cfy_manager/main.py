@@ -173,12 +173,10 @@ def _print_finish_message():
             ip=manager_config[PUBLIC_IP])
     )
     logger.notice('#' * 50)
-
     print(' ' * 44 + '{0}Manager password is {1}{2}'.format(
         MSG_LEVEL_COLORS['NOTICE'],
         manager_config[SECURITY][ADMIN_PASSWORD],
         RESET_SEQ))
-
     print(' ' * 44 + MSG_LEVEL_COLORS['NOTICE'] + '#' * 50 + RESET_SEQ)
     logger.notice("To install the default plugins bundle run:")
     logger.notice("'cfy plugins bundle-upload'")
