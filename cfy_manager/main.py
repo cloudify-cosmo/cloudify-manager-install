@@ -54,8 +54,7 @@ from .components import (
 from .config import config
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
-from .logger import get_logger, setup_console_logger,\
-    MSG_LEVEL_COLORS, RESET_SEQ
+from .logger import get_logger, setup_console_logger
 
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
