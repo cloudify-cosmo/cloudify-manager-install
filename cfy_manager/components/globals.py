@@ -107,6 +107,7 @@ def _generate_password(length=12):
     password = ''.join(random.choice(chars) for _ in range(length))
     # print to screen and not to file
     set_file_handlers_level(logging.ERROR)
+
     logger.warning('Generated password: {0}'.format(password))
     set_file_handlers_level(logging.DEBUG)
     return password
