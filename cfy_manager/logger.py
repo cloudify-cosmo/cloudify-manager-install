@@ -88,6 +88,13 @@ def _setup_logger():
     _setup_file_logger(logger)
 
 
+def set_file_handlers_level(level):
+    handlers = logging.getLogger().handlers[:]
+    for handler in handlers:
+        if handler.__class__.__name__ == 'FileHandler':
+            handler.setLevel(level)
+
+
 def setup_console_logger(verbose=False):
     logger = logging.getLogger()
     log_level = logging.DEBUG if verbose else logging.INFO
