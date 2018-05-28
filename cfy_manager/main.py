@@ -64,8 +64,6 @@ from .utils.certificates import (
     create_pkcs12,
 )
 
-import logging
-
 logger = get_logger('Main')
 
 COMPONENTS = [
