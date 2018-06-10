@@ -246,11 +246,11 @@ restservice:
   port: 8100
 
   # Number of failed logins (bad password) before account lockout
-  failed_logins_before_user_lock: 4
+  failed_logins_before_account_lock: 4
 
   # Account lockout time in minutes. `-1` means no account lockout,
-  #  even when `failed_logins_before_user_lock` has a value.
-  user_lock_period: -1
+  #  even when `failed_logins_before_account_lock` has a value.
+  account_lock_period: -1
 
   # Additional environment variables to add to the REST Service's service
   # file.
