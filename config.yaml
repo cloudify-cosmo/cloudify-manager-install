@@ -166,9 +166,9 @@ java:
   sources:
     java_source_url: jre-8u162-linux-x64.rpm
 
-logstash:
+amqp-postgres:
   sources:
-    cloudify_logstash_source_url: cloudify-logstash-*.rpm
+    amqp_postgres_source_url: cloudify-amqp-postgres-*.rpm
 
 stage:
   # If set to true, Cloudify UI will not be installed
