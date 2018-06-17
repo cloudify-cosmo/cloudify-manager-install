@@ -166,10 +166,6 @@ java:
   sources:
     java_source_url: jre-8u162-linux-x64.rpm
 
-amqp-postgres:
-  sources:
-    amqp_postgres_source_url: cloudify-amqp-postgres-*.rpm
-
 stage:
   # If set to true, Cloudify UI will not be installed
   skip_installation: false
