@@ -13,27 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
-
-from .. import SOURCES
-
 from ..service_names import AMQP_POSTGRES
 
-from ...config import config
 from ...logger import get_logger
-
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 
 
 logger = get_logger(AMQP_POSTGRES)
-
-HOME_DIR = join('/opt', AMQP_POSTGRES)
-
-
-def _install():
-    source_url = config[AMQP_POSTGRES][SOURCES]['amqp_postgres_source_url']
-    yum_install(source_url)
 
 
 def _configure():
@@ -44,10 +30,7 @@ def _configure():
 
 
 def install():
-    logger.notice('Installing AMQP-Postgres...')
-    _install()
-    _configure()
-    logger.notice('AMQP-Postgres successfully installed')
+    pass
 
 
 def configure():
@@ -72,5 +55,4 @@ def stop():
 def remove():
     logger.notice('Removing AMQP-Postgres...')
     systemd.remove(AMQP_POSTGRES, service_file=False)
-    yum_remove('cloudify-amqp-postgres')
     logger.notice('AMQP-Postgres successfully removed')
