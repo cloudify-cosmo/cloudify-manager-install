@@ -30,7 +30,7 @@ def _configure():
 
 
 def install():
-    pass
+    configure()
 
 
 def configure():
