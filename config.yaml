@@ -163,6 +163,7 @@ postgresql:
   password: cloudify
 
 java:
+  <<: *monitoring_install
   sources:
     java_source_url: jre-8u162-linux-x64.rpm
 
