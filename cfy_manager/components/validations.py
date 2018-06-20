@@ -235,7 +235,6 @@ def _validate_dependencies():
         'logrotate': 'used in Cloudify logs',
         'systemd-sysv': 'required by the PostgreSQL DB',
         'initscripts': 'required by the RabbitMQ server',
-        'which': 'used when installing Logstash plugins',
         'python-setuptools': 'required by python',
         'python-backports': 'required by python',
         'python-backports-ssl_match_hostname': 'required by python',
