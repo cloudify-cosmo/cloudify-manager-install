@@ -264,9 +264,12 @@ def replace_manager_resources_loacation(manager_resources_file, modules_info, de
         for pattern in module_info['patterns']:
             release_dir = '{0}{1}'.format('.dev1-release', pattern)
             build_dir = '{0}{1}'.format('.dev1-build', pattern)
+            ga_release_dir = '{0}{1}'.format('ga-release', pattern)
+            ga_build_dir = '{0}{1}'.format('ga-build', pattern)
             string_to_replace = '/{0}{1}'.format(dev_branch, pattern)
-            print("Replacing '{0}' with '{1}' in '{2}'.".format(release_dir, build_dir, manager_resources_file))
-            content = content.replace(release_dir, build_dir)
+            print("Replacing '{0}' with '{1}' or '{2}' with '{3}' in '{4}'.".
+                  format(release_dir, build_dir, ga_release_dir, ga_build_dir, manager_resources_file))
+            content = content.replace(release_dir, build_dir).replace(ga_release_dir, ga_build_dir)
             print("Replacing '{0}' with '{1}' in '{2}'.".format(pattern, string_to_replace, manager_resources_file))
             content = content.replace(pattern, string_to_replace)
     with open(manager_resources_file, "w") as f:

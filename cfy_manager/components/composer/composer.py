@@ -110,10 +110,11 @@ def _set_internal_manager_ip():
         composer_config = json.load(f)
 
     if config[SSL_INPUTS]['internal_manager_host']:
-        composer_config['managerConfig']['ip'] = config[SSL_INPUTS]['internal_manager_host']
+        composer_config['managerConfig']['ip'] = \
+            config[SSL_INPUTS]['internal_manager_host']
         content = json.dumps(composer_config, indent=4, sort_keys=True)
-        # Using `write_to_file` because the path belongs to the composer user, so
-        # we need to move with sudo
+        # Using `write_to_file` because the path belongs to the composer
+        # user, so we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
 
 
