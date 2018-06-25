@@ -23,6 +23,7 @@ MANAGER_ID_PATH = '/etc/cloudify/.id'
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
 CLOUDIFY_ENDPOINT_USAGE_DATA_URL = 'https://api.cloudify.co/cloudifyUsage'
+CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
 
 
 @contextmanager
@@ -59,10 +60,16 @@ def _collect_metadata(data):
     manager_version = pkg_distribution.version
     with open(MANAGER_ID_PATH) as id_file:
         manager_id = id_file.read().strip()
+    if path.exists(CLOUDIFY_IMAGE_INFO):
+        with open(CLOUDIFY_IMAGE_INFO) as image_file:
+            image_info = image_file.read().strip()
+    else:
+        image_info = ''
     data['metadata'] = {
         'manager_id': manager_id,
         'premium_edition': premium_enabled,
-        'version': manager_version
+        'version': manager_version,
+        'image_info': image_info
     }
 
 
