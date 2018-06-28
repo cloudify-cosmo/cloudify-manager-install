@@ -54,6 +54,6 @@ setup(
         'ruamel.yaml==0.15.35',
         'Jinja2==2.7.2',
         'argh==0.26.2',
-        'netifaces==0.10.6'
+        'netifaces==0.10.6',
     ]
 )
