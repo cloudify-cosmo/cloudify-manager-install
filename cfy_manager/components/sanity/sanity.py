@@ -15,6 +15,7 @@
 
 import sys
 import getpass
+import time
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
@@ -114,12 +115,14 @@ def _run_sanity(ssh_key_path):
     _install_sanity()
 
 
+# @retrying.retry(stop_max_attempt_number=3, wait_fixed=1000)
 def _clean_sanity():
     logger.info('Removing sanity...')
     common.run(['cfy', 'executions', 'start', 'uninstall', '-d', SANITY],
                stdout=sys.stdout)
     common.run(['cfy', 'deployments', 'delete', SANITY],
                stdout=sys.stdout)
+    time.sleep(3)
     common.run(['cfy', 'blueprints', 'delete', SANITY],
                stdout=sys.stdout)
 
