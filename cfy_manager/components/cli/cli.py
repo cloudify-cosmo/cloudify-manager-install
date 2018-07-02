@@ -97,6 +97,11 @@ def configure():
 
 
 def remove():
+    profile_name = config[MANAGER]['cli_local_profile_host_name']
+    logger.notice('Removing CLI profile {0}...'.format(profile_name))
+    common.run(['cfy', 'profiles', 'delete', profile_name])
+    logger.notice('CLI profile removed')
+
     logger.notice('Removing Cloudify CLI...')
     yum_remove('cloudify')
     logger.notice('Cloudify CLI successfully removed')
