@@ -32,7 +32,7 @@ def install():
 def remove():
     try:
         common.sudo([CLUSTER_REMOVE_SCRIPT])
-    except (OSError, BootstrapError):
+    except BootstrapError:
         logger.notice('Cluster remove script does not exist - skipping')
     else:
         logger.notice('Cluster components removed')
