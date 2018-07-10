@@ -15,6 +15,7 @@
 
 from ..utils import common
 from ..logger import get_logger
+from ..exceptions import BootstrapError
 
 CLUSTER_REMOVE_SCRIPT = '/opt/manager/env/bin/teardown_cluster'
 logger = get_logger('cluster')
@@ -31,7 +32,7 @@ def install():
 def remove():
     try:
         common.sudo([CLUSTER_REMOVE_SCRIPT])
-    except OSError:
+    except (OSError, BootstrapError):
         logger.notice('Cluster remove script does not exist - skipping')
     else:
         logger.notice('Cluster components removed')
