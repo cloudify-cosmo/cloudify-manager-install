@@ -8,7 +8,7 @@ function create_install_rpm() {
 }
 
 export CORE_TAG_NAME="4.4"
-export CORE_BRANCH="master"
+export CORE_BRANCH="4.4-build"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
