@@ -95,7 +95,12 @@ def _setup_logger():
     _setup_file_logger(logger)
 
 
-def setup_console_logger(verbose=False):
+def setup_console_logger(verbose=False, init=[]):
+    if not init:
+        init.append(True)
+    else:
+        # it is enough to init the logger only once for cfy_manager execution
+        return
     logger = logging.getLogger()
     log_level = logging.DEBUG if verbose else logging.INFO
     sh = logging.StreamHandler(sys.stdout)
