@@ -164,7 +164,7 @@ postgresql:
 
 java:
   sources:
-    java_source_url: jre1.8.0_45-1.8.0_45-fcs.x86_64.rpm
+    java_source_url: jre-8u162-linux-x64.rpm
 
 logstash:
   sources:
