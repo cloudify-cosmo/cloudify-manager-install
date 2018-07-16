@@ -23,6 +23,7 @@ MANAGER_ID_PATH = '/etc/cloudify/.id'
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
 CLOUDIFY_ENDPOINT_USAGE_DATA_URL = 'https://api.cloudify.co/cloudifyUsage'
+CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
 
 
 @contextmanager
@@ -59,10 +60,16 @@ def _collect_metadata(data):
     manager_version = pkg_distribution.version
     with open(MANAGER_ID_PATH) as id_file:
         manager_id = id_file.read().strip()
+    if path.exists(CLOUDIFY_IMAGE_INFO):
+        with open(CLOUDIFY_IMAGE_INFO) as image_file:
+            image_info = image_file.read().strip()
+    else:
+        image_info = ''
     data['metadata'] = {
         'manager_id': manager_id,
         'premium_edition': premium_enabled,
-        'version': manager_version
+        'version': manager_version,
+        'image_info': image_info
     }
 
 
@@ -80,21 +87,20 @@ def _collect_system_data(data):
 def _collect_cloudify_data(data):
     with _get_storage_manager() as sm:
         plugins_list = [plugin.package_name.lower()
-                        for plugin in sm.list(models.Plugin, all_tenants=True)]
+                        for plugin in sm.list(models.Plugin,
+                                              all_tenants=True,
+                                              get_all_results=True)]
+
         data['cloudify_usage'] = {
-            'tenants_count': len(sm.list(models.Tenant)),
-            'users_count': len(sm.list(models.User)),
-            'usergroups_count': len(sm.list(models.Group)),
-            'blueprints_count': len(sm.list(models.Blueprint,
-                                            all_tenants=True)),
-            'deployments_count': len(sm.list(models.Deployment,
-                                             all_tenants=True)),
-            'executions_count': len(sm.list(models.Execution,
-                                            all_tenants=True)),
-            'secrets_count': len(sm.list(models.Secret, all_tenants=True)),
-            'nodes_count': len(sm.list(models.Node, all_tenants=True)),
-            'node_instances_count': len(sm.list(models.NodeInstance,
-                                                all_tenants=True)),
+            'tenants_count': sm.count(models.Tenant),
+            'users_count': sm.count(models.User),
+            'usergroups_count': sm.count(models.Group),
+            'blueprints_count': sm.count(models.Blueprint),
+            'deployments_count': sm.count(models.Deployment),
+            'executions_count': sm.count(models.Execution),
+            'secrets_count': sm.count(models.Secret),
+            'nodes_count': sm.count(models.Node),
+            'node_instances_count': sm.count(models.NodeInstance),
             'plugins_count': len(plugins_list),
             'aws_plugin': _find_substring_in_list(plugins_list, 'aws'),
             'azure_plugin': _find_substring_in_list(plugins_list, 'azure'),

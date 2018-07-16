@@ -15,6 +15,7 @@
 
 import sys
 import getpass
+import time
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
@@ -66,9 +67,10 @@ def _add_ssh_key_to_authorized(ssh_key_path):
     common.remove(dirname(ssh_key_path))
 
 
-def _remove_sanity_ssh():
+def _remove_sanity_ssh(ssh_key_path):
     # This removes the last line from the file
     common.run(["sed -i '$ d' {0}".format(AUTHORIZED_KEYS_PATH)], shell=True)
+    common.remove(ssh_key_path)
 
 
 def _upload_blueprint():
@@ -114,12 +116,14 @@ def _run_sanity(ssh_key_path):
     _install_sanity()
 
 
+# @retrying.retry(stop_max_attempt_number=3, wait_fixed=1000)
 def _clean_sanity():
     logger.info('Removing sanity...')
     common.run(['cfy', 'executions', 'start', 'uninstall', '-d', SANITY],
                stdout=sys.stdout)
     common.run(['cfy', 'deployments', 'delete', SANITY],
                stdout=sys.stdout)
+    time.sleep(3)
     common.run(['cfy', 'blueprints', 'delete', SANITY],
                stdout=sys.stdout)
 
@@ -130,7 +134,7 @@ def run_sanity_check():
     _run_sanity(ssh_key_path)
     _verify_sanity()
     _clean_sanity()
-    _remove_sanity_ssh()
+    _remove_sanity_ssh(ssh_key_path)
     logger.notice('Sanity completed successfully')
 
 

@@ -26,6 +26,7 @@ from .components import nginx
 from .components import stage
 from .components import sanity
 from .components import python
+from .components import cluster
 from .components import manager
 from .components import riemann
 from .components import composer
@@ -81,6 +82,7 @@ COMPONENTS = [
     ("composer", composer),
     ("mgmtworker", mgmtworker),
     ("riemann", riemann),
+    ("cluster", cluster),
     ("cli", cli),
     ("usage_collector", usage_collector),
     ("sanity", sanity)
@@ -171,9 +173,6 @@ def _print_finish_message():
             protocol=protocol,
             ip=manager_config[PUBLIC_IP])
     )
-    logger.notice('#' * 50)
-    logger.notice('Manager password is {0}'.format(
-        manager_config[SECURITY][ADMIN_PASSWORD]))
     logger.notice('#' * 50)
     logger.notice("To install the default plugins bundle run:")
     logger.notice("'cfy plugins bundle-upload'")

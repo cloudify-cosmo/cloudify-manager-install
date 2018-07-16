@@ -81,6 +81,13 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
+def set_file_handlers_level(level):
+    handlers = logging.getLogger().handlers[:]
+    for handler in handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.setLevel(level)
+
+
 def _setup_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)

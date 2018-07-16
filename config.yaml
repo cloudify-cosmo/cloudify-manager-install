@@ -88,8 +88,9 @@ rabbitmq:
   fd_limit: 102400
   nodename: cloudify-manager@localhost
   sources:
-    erlang_rpm_source_url: erlang-17.4-1.el6.x86_64.rpm
-    rabbitmq_rpm_source_url: rabbitmq-server-3.5.3-1.noarch.rpm
+    erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
+    socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm
+    rabbitmq_rpm_source_url: rabbitmq-server-3.7.7-1.el7.noarch.rpm
     cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
   # IP of the management API, should be localhost unless an external rabbitmq
@@ -175,7 +176,6 @@ stage:
   sources:
     nodejs_source_url: node-v8.9.1-linux-x64.tar.xz
     stage_source_url: cloudify-stage-*.tgz
-  internal_manager_ip: ''
 
 composer:
   # If set to true, Cloudify Composer will not be installed
@@ -245,6 +245,13 @@ restservice:
 
   # Port to be used by the REST service
   port: 8100
+
+  # Number of failed logins (bad password) before account lockout
+  failed_logins_before_account_lock: 4
+
+  # Account lockout time in minutes. `-1` means no account lockout,
+  #  even when `failed_logins_before_account_lock` has a value.
+  account_lock_period: -1
 
   # Additional environment variables to add to the REST Service's service
   # file.
@@ -344,6 +351,7 @@ ssl_inputs:
   external_ca_cert_path: ''
   external_ca_key_path: ''
   external_ca_key_password: ''
+  internal_manager_host: ''
 
 usage_collector:
   collect_cloudify_uptime:

@@ -7,7 +7,7 @@ function create_install_rpm() {
     /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH} --installer-branch ${MANAGER_INSTALL_BRANCH} ${DEV_BRANCH_PARAM}
 }
 
-export CORE_TAG_NAME="4.4.dev1"
+export CORE_TAG_NAME="4.5.dev1"
 export CORE_BRANCH="master"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
@@ -24,7 +24,7 @@ fi
 
 curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${CORE_BRANCH}/packages-urls/common_build_env.sh -o ./common_build_env.sh &&
 source common_build_env.sh &&
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_BRANCH}/common/provision.sh -o ./common-provision.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-common/${CORE_BRANCH}/packaging/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
 export MANAGER_INSTALL_BRANCH=${CORE_BRANCH}
