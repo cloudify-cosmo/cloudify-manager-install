@@ -43,6 +43,7 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import deploy, get_local_source_path, write_to_file
+from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
 HOME_DIR = '/opt/manager'
@@ -198,6 +199,7 @@ def _configure():
     _make_paths()
     _configure_restservice()
     _configure_db()
+    set_logrotate(RESTSERVICE)
     systemd.configure(RESTSERVICE)
     systemd.restart(RESTSERVICE)
     _verify_restservice_alive()
@@ -241,6 +243,7 @@ def configure():
 def remove():
     logger.notice('Removing Restservice...')
     systemd.remove(RESTSERVICE, service_file=False)
+    remove_logrotate(RESTSERVICE)
     _remove_files()
     logger.notice('Rest Service successfully removed')
 
