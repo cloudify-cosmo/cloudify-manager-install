@@ -261,9 +261,6 @@ nginx:
   # Number of nginx worker processes to have.
   worker_processes: 1
 
-  # Total number of open file descriptors to allow per nginx worker.
-  max_open_fds: 10240
-
   # Number of connections that any nginx worker is allowed to carry simultaneously.
   worker_connections: 4096
 
