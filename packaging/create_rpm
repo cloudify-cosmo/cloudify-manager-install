@@ -169,9 +169,20 @@ def exit_helpfully_on_failure(command, error,
         exit_with_sadness(message)
 
 
+def git_clone_and_checkout(branch, repo, repo_destination_path):
+    subprocess.check_call([
+        'git', 'clone',
+        '--branch=' + branch,
+        '--depth=1',
+        repo,
+        repo_destination_path,
+    ])
+
+
 def get_package_urls_file(edition, branch, repo_destination_path):
     """
-        Get the package urls list, returning the paths to the file (in a dict)
+        Get the package urls list, returning the paths to the file (in a dict).
+        If the given branch does not exists, will default to repo's master.
     """
     edition_details = EDITIONS[edition]
     repo_path = edition_details['repo']
@@ -216,18 +227,11 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     # We can't use the normal utility function for this or we will spit
     # passwords onto the screen.
     try:
-        subprocess.check_call([
-            'git', 'clone',
-            '--branch=' + branch,
-            '--depth=1',
-            repo,
-            repo_destination_path,
-        ])
+        git_clone_and_checkout(branch, repo, repo_destination_path)
     except subprocess.CalledProcessError:
-        # Don't spit out the password, please.
-        exit_with_sadness(
-            'Could not git clone: {repo}'.format(repo=output_repo),
-        )
+        print('Could not git clone: {repo}, defaults to master'.format(repo=output_repo))
+        git_clone_and_checkout('master', repo, repo_destination_path)
+
     return {
         'manager': os.path.join(repo_destination_path,
                                 'packages-urls/manager-packages.yaml'),
