@@ -7,7 +7,7 @@ REMOTE_LOCATION=${REMOTE_PATH:-/root/cloudify-manager-install}
 
 echo "Creating install RPM..."
 chmod +x ${REMOTE_LOCATION}/packaging/create_rpm
-${REMOTE_LOCATION}/packaging/create_rpm --edition community --local-installer-path ${REMOTE_LOCATION}
+${REMOTE_LOCATION}/packaging/create_rpm --edition community --local-installer-path ${REMOTE_LOCATION} -b $1
 rpm -i /tmp/cloudify-manager-install*.rpm
 rm -f /tmp/cloudify-manager-install*.rpm
 rm -rf ${REMOTE_LOCATION}
