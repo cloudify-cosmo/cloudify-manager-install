@@ -194,6 +194,7 @@ def remove():
     logger.info('Stopping the Erlang Port Mapper Daemon...')
     sudo(['epmd', '-kill'], ignore_failures=True)
     systemd.remove(RABBITMQ, service_file=False)
+    yum_remove('socat')
     logger.notice('RabbitMQ successfully removed')
 
 
