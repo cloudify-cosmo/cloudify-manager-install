@@ -47,6 +47,14 @@ def _create_cloudify_user():
     common.mkdir(constants.CLOUDIFY_HOME_DIR)
 
 
+def _create_run_dirs():
+    for d in [constants.COMMON_RUN_DIR, constants.COMMON_LOCK_DIR]:
+        common.mkdir(d)
+        common.chown(constants.CLOUDIFY_USER,
+                     constants.CLOUDIFY_GROUP,
+                     d)
+
+
 def _create_sudoers_file_and_disable_sudo_requiretty():
     common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
     touch(constants.CLOUDIFY_SUDOERS_FILE)
@@ -93,6 +101,7 @@ def _create_manager_resources_dirs():
 
 def _configure():
     _create_cloudify_user()
+    _create_run_dirs()
     _create_sudoers_file_and_disable_sudo_requiretty()
     _set_selinux_permissive()
     setup_logrotate()
@@ -114,6 +123,8 @@ def configure():
 def remove():
     logger.notice('Removing Cloudify Manager resources...')
     remove_files([
-        join(_get_exec_tempdir(), 'cloudify-ctx')
+        join(_get_exec_tempdir(), 'cloudify-ctx'),
+        constants.COMMON_RUN_DIR,
+        constants.COMMON_LOCK_DIR
     ])
     logger.notice('Cloudify Manager resources successfully removed')
