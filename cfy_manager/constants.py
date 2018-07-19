@@ -25,6 +25,9 @@ SUDOERS_INCLUDE_DIR = '/etc/sudoers.d'
 CLOUDIFY_SUDOERS_FILE = join(SUDOERS_INCLUDE_DIR, CLOUDIFY_USER)
 INITIAL_INSTALL_FILE = join(CLOUDIFY_HOME_DIR, '.install')
 
+COMMON_RUN_DIR = '/var/run/cloudify'
+# Must be identical to COMMON_LOCK_DIR in cloudify-premium/ha/utils.py
+COMMON_LOCK_DIR = '/var/lock/cloudify'
 BASE_RESOURCES_PATH = '/opt/cloudify'
 CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
 MANAGER_RESOURCES_HOME = '/opt/manager/resources'
