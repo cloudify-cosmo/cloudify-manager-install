@@ -15,6 +15,7 @@
 
 from os.path import join, expanduser
 from getpass import getuser
+import errno
 
 from .. import SOURCES, SECURITY
 
@@ -98,9 +99,33 @@ def configure():
 
 def remove():
     profile_name = config[MANAGER]['cli_local_profile_host_name']
-    logger.notice('Removing CLI profile {0}...'.format(profile_name))
-    common.run(['cfy', 'profiles', 'delete', profile_name])
-    logger.notice('CLI profile removed')
+
+    def _remove_profile_and_check(cli_cmd):
+        proc = common.run(cli_cmd, ignore_failures=True)
+        if proc.returncode == 0:
+            logger.notice('CLI profile removed')
+        else:
+            logger.warning('Failed removing CLI profile (rc={})'.format(
+                proc.returncode))
+
+    try:
+        logger.notice('Removing CLI profile...')
+
+        cmd = ['cfy', 'profiles', 'delete', profile_name]
+        _remove_profile_and_check(cmd)
+
+        current_user = getuser()
+        if current_user != 'root':
+            logger.notice('Removing CLI profile for root user...')
+            root_cmd = ['sudo', '-u', 'root'] + cmd
+            _remove_profile_and_check(root_cmd)
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            logger.warning('Could not find the `cfy` executable; it has '
+                           'most likely been removed already or never '
+                           'installed due to an error; skipping')
+        else:
+            raise
 
     logger.notice('Removing Cloudify CLI...')
     yum_remove('cloudify')
