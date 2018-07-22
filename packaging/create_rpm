@@ -21,10 +21,12 @@ EDITIONS = {
     'community': {
         'repo': 'cloudify-cosmo/cloudify-versions.git',
         'requires_auth': False,
+        'module_name': 'cloudify-versions'
     },
     'premium': {
         'repo': 'cloudify-cosmo/cloudify-premium.git',
         'requires_auth': True,
+        'module_name': 'cloudify-premium'
     },
 }
 
@@ -224,11 +226,11 @@ def get_package_urls_file(edition, branch, repo_destination_path):
         branch=branch,
     ))
 
-    # We can't use the normal utility function for this or we will spit
+    # We can't use the normal git utility function for this or we will spit
     # passwords onto the screen.
-    try:
+    if is_branch_exists(edition_details['module_name'], branch):
         git_clone_and_checkout(branch, repo, repo_destination_path)
-    except subprocess.CalledProcessError:
+    else:
         print('Could not git clone: {repo}, defaults to master'.format(repo=output_repo))
         git_clone_and_checkout('master', repo, repo_destination_path)
 
