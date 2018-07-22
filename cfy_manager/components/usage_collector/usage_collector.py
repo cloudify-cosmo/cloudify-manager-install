@@ -46,8 +46,8 @@ def install():
 
 def configure():
     logger.notice('Configuring Usage Collector...')
-    _configure()
-    logger.notice('Usage Collector successfully configured')
+    if _configure():
+        logger.notice('Usage Collector successfully configured')
 
 
 def remove():
@@ -61,9 +61,10 @@ def remove():
 
 def _configure():
     if not _validate_cronie_installed():
-        return
+        return False
     _remove_cron_jobs()
     _create_cron_jobs()
+    return True
 
 
 def _validate_cronie_installed():
