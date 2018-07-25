@@ -64,7 +64,7 @@ def _collect_metadata(data):
         with open(CLOUDIFY_IMAGE_INFO) as image_file:
             image_info = image_file.read().strip()
     else:
-        image_info = ''
+        image_info = 'rpm'
     data['metadata'] = {
         'manager_id': manager_id,
         'premium_edition': premium_enabled,
