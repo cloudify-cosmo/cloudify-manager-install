@@ -138,4 +138,6 @@ stop_cloudify_manager
 echo "Successfully configured cloudify persistent storage"
 echo "You can start cloudify manager container with the proper volumes"
 
-
+# Once the docker environment is ready, make sure to delete the cloudify manager container and rerun it with the following command:
+# <Docker command to start container…> -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/pgsql/9.5/data:/var/lib/pgsql/9.5/data:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/manager/resources:/opt/manager/resources:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/env/plugins:/opt/mgmtworker/env/plugins:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/work/deployments:/opt/mgmtworker/work/deployments:rw
+# You can use the container as you would any regular Cloudify Manager, kill and delete the container, rerun the container on the same host and everything will remain intact  
