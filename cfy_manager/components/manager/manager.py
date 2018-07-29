@@ -60,11 +60,11 @@ def _create_run_dir():
 
 
 def _delete_run_dir():
+    common.run(['sudo', 'systemd-tmpfiles', '--remove', '--prefix={}'.format(
+        constants.COMMON_LOCK_DIR)])
     remove_files([
         TMPFILES_FILE_PATH
     ])
-    common.run(['sudo', 'systemd-tmpfiles', '--remove', '--prefix={}'.format(
-        constants.COMMON_LOCK_DIR)])
 
 
 def _create_sudoers_file_and_disable_sudo_requiretty():
