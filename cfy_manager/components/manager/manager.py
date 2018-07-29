@@ -63,7 +63,7 @@ def _delete_run_dir():
     remove_files([
         TMPFILES_FILE_PATH
     ])
-    common.run(['sudo', 'systemd-tmpfiles', '--delete', '--prefix={}'.format(
+    common.run(['sudo', 'systemd-tmpfiles', '--remove', '--prefix={}'.format(
         constants.COMMON_LOCK_DIR)])
 
 
