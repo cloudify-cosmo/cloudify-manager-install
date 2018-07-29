@@ -121,6 +121,12 @@ function stop_cloudify_manager() {
 	echo -e "\e[93mContainer has not been deleted for extra precautions, make sure you delete it!!!"
 }
 
+if [ $# -ne 2 ]
+then
+  echo "2 Arguments required: [ Container name, presistent volumes path ]"
+  exit 1
+fi
+
 validate_docker
 start_cloudify_manager
 validate_users postgres 26
