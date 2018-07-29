@@ -55,14 +55,16 @@ def _create_cloudify_user():
 
 def _create_run_dir():
     deploy(src=join(CONFIG_PATH, TMPFILES_FILE_NAME), dst=TMPFILES_FILE_PATH)
-    common.run(['sudo', 'systemd-tmpfiles', '--create', '--prefix={}'.format(constants.COMMON_LOCK_DIR)])
+    common.run(['sudo', 'systemd-tmpfiles', '--create', '--prefix={}'.format(
+        constants.COMMON_LOCK_DIR)])
 
 
 def _delete_run_dir():
     remove_files([
         TMPFILES_FILE_PATH
     ])
-    common.run(['sudo', 'systemd-tmpfiles', '--delete', '--prefix={}'.format(constants.COMMON_LOCK_DIR)])
+    common.run(['sudo', 'systemd-tmpfiles', '--delete', '--prefix={}'.format(
+        constants.COMMON_LOCK_DIR)])
 
 
 def _create_sudoers_file_and_disable_sudo_requiretty():

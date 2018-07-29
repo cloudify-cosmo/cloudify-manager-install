@@ -264,6 +264,10 @@ nginx:
   # Number of connections that any nginx worker is allowed to carry simultaneously.
   worker_connections: 4096
 
+  # Maximum number of open file descriptors that any nginx process
+  # is allowed to have.
+  max_open_fds: 102400
+
   sources:
     nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm
 
