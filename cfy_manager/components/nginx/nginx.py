@@ -72,8 +72,8 @@ def _deploy_unit_override():
     unit_override_path = '/etc/systemd/system/nginx.service.d'
     common.mkdir(unit_override_path)
     deploy(
-        src=join(CONFIG_PATH, 'restart.conf'),
-        dst=join(unit_override_path, 'restart.conf')
+        src=join(CONFIG_PATH, 'overrides.conf'),
+        dst=join(unit_override_path, 'overrides.conf')
     )
 
 
