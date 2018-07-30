@@ -240,9 +240,6 @@ restservice:
   # Disables insecure REST endpoints
   insecure_endpoints_disabled: true
 
-  # Port to be used by the REST service
-  port: 8100
-
   # Number of failed logins (bad password) before account lockout
   failed_logins_before_account_lock: 4
 

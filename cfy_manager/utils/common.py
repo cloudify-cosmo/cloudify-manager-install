@@ -18,6 +18,7 @@ import glob
 import shlex
 import tempfile
 import subprocess
+import time
 
 from ..config import config
 from ..logger import get_logger
@@ -27,7 +28,8 @@ logger = get_logger('utils')
 
 
 def run(command, retries=0, stdin=b'', ignore_failures=False,
-        globx=False, shell=False, env=None, stdout=None):
+        globx=False, shell=False, env=None, stdout=None, retry_interval=0,
+        log_command=True):
     # TODO: add ability to *log* output, instead of just printing to stdout
     if isinstance(command, str) and not shell:
         command = shlex.split(command)
@@ -38,16 +40,17 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         for arg in command:
             glob_command.append(glob.glob(arg))
         command = glob_command
-    logger.debug('Running: {0}'.format(command))
+    logger.debug('Running: {0}'.format(command if log_command else '<hidden>'))
     proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
                             stderr=stderr, shell=shell, env=env)
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
     if proc.returncode != 0:
-        command_str = ' '.join(command)
+        command_str = ' '.join(command) if log_command else '<hidden>'
         if retries:
             logger.warn('Failed running command: {0}. Retrying. '
                         '({1} left)'.format(command_str, retries))
-            proc = run(command, retries - 1)
+            time.sleep(retry_interval)
+            proc = run(command, retries - 1, retry_interval=retry_interval)
         elif not ignore_failures:
             msg = 'Failed running command: {0} ({1}).'.format(
                 command_str, proc.aggr_stderr)

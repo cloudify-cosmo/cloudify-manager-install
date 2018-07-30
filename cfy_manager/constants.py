@@ -26,6 +26,7 @@ SUDOERS_INCLUDE_DIR = '/etc/sudoers.d'
 CLOUDIFY_SUDOERS_FILE = join(SUDOERS_INCLUDE_DIR, CLOUDIFY_USER)
 INITIAL_INSTALL_FILE = join(CLOUDIFY_HOME_DIR, '.install')
 
+REST_SERVICE_SOCKET_PATH = '/run/cloudify-restservice/gunicorn.socket'
 BASE_RESOURCES_PATH = '/opt/cloudify'
 CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
 MANAGER_RESOURCES_HOME = '/opt/manager/resources'

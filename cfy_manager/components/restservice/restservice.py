@@ -142,34 +142,18 @@ def _verify_restservice():
     that also requires the storage backend to be up, so if it works, there's
     a good chance everything is configured correctly.
     """
-    rest_port = config[RESTSERVICE]['port']
-    url = 'http://{0}:{1}/api/v2.1/blueprints'.format('127.0.0.1', rest_port)
+    auth_headers = get_auth_headers()
+    validation_cmd = ['curl', '--unix-socket',
+                      constants.REST_SERVICE_SOCKET_PATH, '-f',
+                      '-k',  # TODO: replace with REST service's cert
+                      'http://localhost/api/v2.1/blueprints']
+    for name, value in auth_headers.items():
+        validation_cmd.extend(['-H', '{}: {}'.format(name, value)])
 
-    wait_for_port(rest_port)
-    req = urllib2.Request(url, headers=get_auth_headers())
-
-    try:
-        response = urllib2.urlopen(req)
-    # keep an erroneous HTTP response to examine its status code, but still
-    # abort on fatal errors like being unable to connect at all
-    except urllib2.HTTPError as e:
-        response = e
-    except urllib2.URLError as e:
-        raise NetworkError(
-            'REST service returned an invalid response: {0}'.format(e))
-    if response.code == 401:
-        raise NetworkError(
-            'Could not connect to the REST service: '
-            '401 unauthorized. Possible access control misconfiguration'
-        )
-    if response.code != 200:
-        raise NetworkError(
-            'REST service returned an unexpected response: '
-            '{0}'.format(response.code)
-        )
+    proc = common.run(validation_cmd, retries=24, retry_interval=3)
 
     try:
-        json.load(response)
+        json.loads(proc.aggr_stdout)
     except ValueError as e:
         raise BootstrapError(
             'REST service returned malformed JSON: {0}'.format(e))
