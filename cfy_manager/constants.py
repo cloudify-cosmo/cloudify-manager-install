@@ -17,6 +17,7 @@ from os.path import join, dirname
 
 BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
+NETWORKS_DIR = join(BASE_DIR, 'networks')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'

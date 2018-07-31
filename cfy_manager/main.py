@@ -53,6 +53,7 @@ from .components import (
 )
 
 from .config import config
+from .networks.networks import add_networks
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
@@ -403,7 +404,8 @@ def main():
         create_internal_certs,
         create_external_certs,
         create_pkcs12,
-        sanity_check
+        sanity_check,
+        add_networks
     ])
 
 
