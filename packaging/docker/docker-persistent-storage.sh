@@ -14,11 +14,11 @@ function validate_docker() {
 		docker image ls | grep docker-cfy-manager 1> /dev/null
 		if [ $? -eq 1 ]
 		then
-			echo "docker-cfy-manager image could not be found." >&2
+			echo -e "\033[31mdocker-cfy-manager image could not be found.\e[0m"
 			exit 2
 		fi
 	else
-		echo "Docker not installed!" >&2
+		echo -e "\033[31mDocker not installed!\e[0m"
 		exit 1
 	fi
 }
@@ -27,14 +27,14 @@ function validate_users() {
 	user_name=$1
 	user_id=$2
 	echo "Attemting to create user $user_name with id $user_id"
-	USER_OUTPUT=$(id -u $user_name 2> /dev/null)
+	USER_OUTPUT=$(id -u $user_name) 1> /dev/null
 	if [ $? -eq 0 ]
 	then
 		if [ $USER_OUTPUT -eq $user_id ]
 		then
 			echo "User $user_name already exists with correct id"
 		else
-			echo "User $user_name doesn't have id $user_id >&2"
+			echo -e "\033[31mUser $user_name doesn't have id $user_id\e[0m"
 			exit 4
 		fi
 	else
@@ -46,63 +46,36 @@ function validate_users() {
 			useradd -u $user_id $user_name 1> /dev/null
 			echo "User $user_name created with id $user_id"
 		else
-			echo "User id $user_id is used by a different user"
+			echo -e "\033[31mUser id $user_id is used by a different user\e[0m"
 			exit 4
 		fi
 	fi
-}
-
-function change_ownership_and_permissions() {
-	echo "Copying cloudify manager data to given persistent storage - '${PERSISTENT_VOLUMES_PATH}'"
-	err = 0
-	trap 'err=1' ERR
-	chown -R postgres:226 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
-	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources/ 1> /dev/null
-	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins/ 1> /dev/null
-	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments/ 1> /dev/null
-	if [ $err -ne 0 ]
-	then
-		echo "Couldn't change ownership" 
-		exit $err
-	fi
-	err = 0
-	trap 'err=1' ERR
-	chmod -R 700 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
-	chmod -R 755 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources/ 1> /dev/null
-	chmod -R 750 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins/ 1> /dev/null
-	chmod -R 755 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments/ 1> /dev/null
-	if [ $err -ne 0 ]
-	then
-		echo "Couldn't change permissions" 
-		exit $err
-	fi
-	echo "Finished copying cloudify manager data to given persistent storage - '${PERSISTENT_VOLUMES_PATH}' successfully"
 }
 
 function start_cloudify_manager() {
 	$CLOUDIFY_MANAGER_RUN_CMD
 	if [ $? -ne 0 ]
 	then
-		echo "Unable to start docker-cfy-manager, check docker logs" >&2
+		echo -e "\033[31mUnable to start docker-cfy-manager, check docker logs\e[0m"
 		exit 3
 	fi
 	docker exec -d ${CONTAINER_ID} systemctl stop postgresql-9.5 1> /dev/null
 }
 
 function create_and_copy_directories() {
-	err = 0
+	err=0
 	trap 'err=1' ERR
-	echo
+	echo "Copying cloudify manager data to given persistent storage - '${PERSISTENT_VOLUMES_PATH}'"
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources 1> /dev/null
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins 1> /dev/null
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments 1> /dev/null
 	if [ $err -ne 0 ]
 	then
-		echo "Couldn't create directories in ${PERSISTENT_VOLUMES_PATH}"
+		echo -e "\033[31mCouldn't create directories in ${PERSISTENT_VOLUMES_PATH}\e[0m"
 		exit $err
 	fi
-	err = 0
+	err=0
 	trap 'err=1' ERR
 	docker cp ${CONTAINER_ID}:/var/lib/pgsql/9.5/data/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
 	docker cp ${CONTAINER_ID}:/opt/manager/resources/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources 1> /dev/null
@@ -110,20 +83,47 @@ function create_and_copy_directories() {
 	docker cp ${CONTAINER_ID}:/opt/mgmtworker/work/deployments/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments 1> /dev/null
 	if [ $err -ne 0 ]
 	then
-		echo "Couldn't copy directories from ${CONTAINER_ID} to ${PERSISTENT_VOLUMES_PATH}"
+		echo -e "\033[31mCouldn't copy directories from ${CONTAINER_ID} to ${PERSISTENT_VOLUMES_PATH}\e[0m"
 		exit $err
 	fi
+}
+
+function change_ownership_and_permissions() {
+	echo "Changing ownership and permissions on '${PERSISTENT_VOLUMES_PATH}'/cloudify-external-directories"
+	err=0
+	trap 'err=1' ERR
+	chown -R postgres:226 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
+	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources/ 1> /dev/null
+	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins/ 1> /dev/null
+	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments/ 1> /dev/null
+	if [ $err -ne 0 ]
+	then
+		echo -e "\033[31mCouldn't change ownership\e[0m"
+		exit $err
+	fi
+	err=0
+	trap 'err=1' ERR
+	chmod -R 700 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
+	chmod -R 755 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources/ 1> /dev/null
+	chmod -R 750 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins/ 1> /dev/null
+	chmod -R 755 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments/ 1> /dev/null
+	if [ $err -ne 0 ]
+	then
+		echo -e "\033[31mCouldn't change permissions\e[0m"
+		exit $err
+	fi
+	echo "Finished copying cloudify manager data to given persistent storage - '${PERSISTENT_VOLUMES_PATH}' successfully"
 }
 
 function stop_cloudify_manager() {
 	docker stop ${CONTAINER_ID} 1> /dev/null
 	echo "Container ${CONTAINER_ID} stopped"
-	echo -e "\e[93mContainer has not been deleted for extra precautions, make sure you delete it!!!"
+	echo -e "\e[93mContainer ${CONTAINER_ID} has not been deleted for extra precautions, make sure you delete it!!!\e[0m"
 }
 
 if [ $# -ne 2 ]
 then
-  echo "2 Arguments required: [ Container name, presistent volumes path ]"
+  echo -e "\033[31m2 Arguments required: [ Container name, presistent volumes path ]\e[0m"
   exit 1
 fi
 
@@ -135,9 +135,9 @@ create_and_copy_directories
 change_ownership_and_permissions
 stop_cloudify_manager
 
-echo "Successfully configured cloudify persistent storage"
-echo "You can start cloudify manager container with the proper volumes"
+echo -e "\e[92mSuccessfully configured cloudify persistent storage\e[0m"
+echo -e "\e[92mYou can start cloudify manager container with the proper volumes\e[0m"
 
 # Once the docker environment is ready, make sure to delete the cloudify manager container and rerun it with the following command:
 # <Docker command to start container…> -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/pgsql/9.5/data:/var/lib/pgsql/9.5/data:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/manager/resources:/opt/manager/resources:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/env/plugins:/opt/mgmtworker/env/plugins:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/work/deployments:/opt/mgmtworker/work/deployments:rw
-# You can use the container as you would any regular Cloudify Manager, kill and delete the container, rerun the container on the same host and everything will remain intact  
+# You can use the container as you would any regular Cloudify Manager, kill and delete the container, rerun the container on the same host and everything will remain intact
