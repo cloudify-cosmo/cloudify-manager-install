@@ -56,19 +56,10 @@ def _update_metadata_file(networks):
     """
     metadata = load_cert_metadata()
     old_networks = metadata.get('networks', {})
-    new_networks = _merge_dicts(networks['networks'], old_networks)
-    metadata['networks'] = new_networks
+    networks['networks'].update(old_networks)
+    metadata['networks'] = networks['networks']
     write_to_file(metadata, CERT_METADATA_FILE_PATH, json_dump=True)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CERT_METADATA_FILE_PATH)
-
-
-def _merge_dicts(d1, d2):
-    merged_dict = {}
-    for key in d1:
-        merged_dict[key] = d1[key]
-    for key in d2:
-        merged_dict[key] = d2[key]
-    return merged_dict
 
 
 @argh.arg('--networks',
