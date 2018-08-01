@@ -19,6 +19,7 @@ import platform
 import netifaces
 from getpass import getuser
 from collections import namedtuple
+from ipaddress import ip_address
 from distutils.version import LooseVersion
 
 from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
@@ -90,6 +91,17 @@ def _validate_supported_distros():
 def _validate_private_ip():
     logger.info('Validating private IP address...')
     private_ip = config[MANAGER][PRIVATE_IP]
+
+    try:
+        # ip_address() requires a unicode string
+        ip_address(unicode(private_ip, 'utf-8'))
+    except ValueError:
+        logger.debug('Failed creating an IP address from "{}"'.format(
+            private_ip), exc_info=True)
+        logger.info('Provided value ({}) is not an IP address; '
+                    'skipping'.format(private_ip))
+        return
+
     all_addresses = set()
     found = False
     for interface in netifaces.interfaces():

@@ -55,6 +55,7 @@ setup(
         'Jinja2==2.7.2',
         'argh==0.26.2',
         'netifaces==0.10.6',
+        'ipaddress==1.0.19',
         'PyYAML==3.10'
     ]
 )
