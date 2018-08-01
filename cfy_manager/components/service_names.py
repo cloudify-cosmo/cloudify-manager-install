@@ -14,12 +14,12 @@
 #  * limitations under the License.
 
 AMQPINFLUX = 'amqpinflux'
+AMQP_POSTGRES = 'amqp-postgres'
 CLI = 'cli'
 COMPOSER = 'composer'
 DEV = 'dev'
 INFLUXDB = 'influxdb'
 JAVA = 'java'
-LOGSTASH = 'logstash'
 MANAGER = 'manager'
 MANAGER_IP_SETTER = 'manager-ip-setter'
 MGMTWORKER = 'mgmtworker'

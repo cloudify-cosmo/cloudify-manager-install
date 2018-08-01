@@ -58,7 +58,7 @@ RPM_PREFIX = re.compile('[^0-9]+')
 ZIP_URL = "https://github.com/cloudify-cosmo/{0}/archive/{1}.zip"
 CLI_INFO = {'name':'cloudify-cli', 'patterns': ['/cloudify-cli']}
 AGENT_INFO = {'name': 'cloudify-agent', 'patterns': ['/cloudify-agents']}
-MANAGER_INFO = {'name': 'cloudify-manager', 'patterns': ['/cloudify-amqp', '/cloudify-logstash',
+MANAGER_INFO = {'name': 'cloudify-manager', 'patterns': ['/cloudify-amqp', '/cloudify-amqp-postgres',
                                                          '/cloudify-rest-service', '/cloudify-premium',
                                                          '/cloudify-rabbitmq', '/cloudify-management-worker',
                                                          '/cloudify-manager-ip-setter', '/cloudify-riemann']}
