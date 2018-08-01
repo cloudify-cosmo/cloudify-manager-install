@@ -30,13 +30,13 @@ from .components import cluster
 from .components import manager
 from .components import riemann
 from .components import composer
-from .components import logstash
 from .components import rabbitmq
 from .components import influxdb
 from .components import amqpinflux
 from .components import mgmtworker
 from .components import postgresql
 from .components import restservice
+from .components import amqp_postgres
 from .components import usage_collector
 from .components import manager_ip_setter
 
@@ -78,7 +78,7 @@ COMPONENTS = [
     ("influxdb", influxdb),
     ("amqpinflux", amqpinflux),
     ("java", java),
-    ("logstash", logstash),
+    ("amqp-postgres", amqp_postgres),
     ("stage", stage),
     ("composer", composer),
     ("mgmtworker", mgmtworker),
