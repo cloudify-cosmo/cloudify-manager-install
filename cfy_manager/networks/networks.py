@@ -70,16 +70,20 @@ def add_networks(networks=None):
     """
     Add new networks to a running Cloudify Manager
     """
-    networks = yaml.load(networks)
+    try:
+        networks = yaml.load(networks)
 
-    logger.info('Trying to add new networks to Manager...')
+        print('Trying to add new networks to Manager...')
 
-    _run_update_provider_context_script(networks)
+        _run_update_provider_context_script(networks)
 
-    _update_metadata_file(networks)
+        _update_metadata_file(networks)
 
-    create_internal_certs()
+        create_internal_certs()
 
-    logger.info('New networks were added successfully. Please restart the'
-                ' following services: `nginx`, `cloudify-mgmtworker`,'
-                ' `cloudify-rabbitmq`')
+        print('New networks were added successfully. Please restart the'
+              ' following services: `nginx`, `cloudify-mgmtworker`,'
+              '`cloudify-rabbitmq`')
+    except Exception as e:
+        print(e)
+        raise e
