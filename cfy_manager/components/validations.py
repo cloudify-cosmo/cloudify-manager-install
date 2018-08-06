@@ -22,7 +22,7 @@ from collections import namedtuple
 from ipaddress import ip_address
 from distutils.version import LooseVersion
 
-from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
+from .components_constants import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
 
 from .service_names import MANAGER
 
@@ -239,38 +239,11 @@ def _validate_user_has_sudo_permissions():
         )
 
 
-def _validate_dependencies():
-    logger.info('Validating Cloudify Manager dependencies...')
-    dependencies = {
-        'sudo': 'necessary to run commands with root privileges',
-        'openssl-1.0.2k': 'necessary for creating certificates',
-        'logrotate': 'used in Cloudify logs',
-        'systemd-sysv': 'required by the PostgreSQL DB',
-        'initscripts': 'required by the RabbitMQ server',
-        'python-setuptools': 'required by python',
-        'python-backports': 'required by python',
-        'python-backports-ssl_match_hostname': 'required by python',
-        'openssh-server': 'required by the sanity check'
-    }
-
-    missing_packages = {}
-    for dep, reason in dependencies.items():
-        logger.debug('Validating that `{dep}` is installed'.format(dep=dep))
-        if not RpmPackageHandler.is_package_installed(dep):
-            missing_packages[dep] = reason
-
-    if missing_packages:
-        error_msg = '\n'.join(
-            '`{package}` - {reason}'.format(package=package, reason=reason)
-            for package, reason in missing_packages.items()
-        )
-        packages = ' '.join(missing_packages.keys())
-        raise ValidationError(
-            'Prerequisite packages missing: \n{error_msg}.\n'
-            'Please ensure these packages are installed and try again.\n'
-            'Possible solution is to run - sudo yum install {packages}'
-            .format(error_msg=error_msg, packages=packages)
-        )
+def _validate_dependencies(components):
+    logger.info('Validating dependencies for {components}...'
+                .format(components=components))
+    for component in components:
+        component.validate_dependencies()
 
 
 def _check_ssl_file(input_name, kind='Key', password=None):
@@ -379,12 +352,12 @@ def validate_config_access(write_required):
                     USER_CONFIG_PATH, label))
 
 
-def validate(skip_validations=False):
+def validate(components, skip_validations=False):
     # Inputs always need to be validated, otherwise the install won't work
     _validate_inputs()
 
     # These dependencies also need to always be validated
-    _validate_dependencies()
+    _validate_dependencies(components)
 
     if config[VALIDATIONS][SKIP_VALIDATIONS] or skip_validations:
         logger.info('Skipping validations')
