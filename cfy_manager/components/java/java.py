@@ -28,54 +28,55 @@ from ...utils.common import move, mkdir, sudo
 from ...utils.install import yum_install, yum_remove
 from ...utils.files import remove_files, copy_notice, remove_notice
 
+from ..base_component import BaseComponent
+
+
 logger = get_logger(JAVA)
 HOME_DIR = join('/opt', JAVA)
 LOG_DIR = join(constants.BASE_LOG_DIR, JAVA)
 
 
-def _install():
-    java_source_url = config[JAVA][SOURCES]['java_source_url']
-    yum_install(java_source_url)
+class JavaComponent(BaseComponent):
+    def __init__(self):
+        BaseComponent.__init__(self)
 
+    def _install(self):
+        java_source_url = config[JAVA][SOURCES]['java_source_url']
+        yum_install(java_source_url)
 
-def _move_java_log():
-    mkdir(LOG_DIR)
+    def _move_java_log(self):
+        mkdir(LOG_DIR)
 
-    # Java install log is dropped in /var/log.
-    # Move it to live with the rest of the cloudify logs
-    java_install_log = '/var/log/java_install.log'
-    if isfile(java_install_log):
-        move(java_install_log, LOG_DIR)
+        # Java install log is dropped in /var/log.
+        # Move it to live with the rest of the cloudify logs
+        java_install_log = '/var/log/java_install.log'
+        if isfile(java_install_log):
+            move(java_install_log, LOG_DIR)
 
+    def _validate_java_installed(self):
+        java_result = sudo(['java', '-version'], ignore_failures=True)
+        if java_result.returncode != 0:
+            raise ValidationError('Java runtime error: java was not installed')
 
-def _validate_java_installed():
-    java_result = sudo(['java', '-version'], ignore_failures=True)
-    if java_result.returncode != 0:
-        raise ValidationError('Java runtime error: java was not installed')
+    def _configure(self):
+        copy_notice(JAVA)
+        self._move_java_log()
+        self._validate_java_installed()
 
+    def install(self):
+        logger.notice('Installing Java...')
+        self._install()
+        self._configure()
+        logger.notice('Java successfully installed')
 
-def _configure():
-    copy_notice(JAVA)
-    _move_java_log()
-    _validate_java_installed()
+    def configure(self):
+        logger.info('Configuring Java...')
+        self._configure()
+        logger.info('Java successfully configured')
 
-
-def install():
-    logger.notice('Installing Java...')
-    _install()
-    _configure()
-    logger.notice('Java successfully installed')
-
-
-def configure():
-    logger.info('Configuring Java...')
-    _configure()
-    logger.info('Java successfully configured')
-
-
-def remove():
-    logger.notice('Removing Java...')
-    remove_notice(JAVA)
-    remove_files([LOG_DIR])
-    yum_remove(JAVA)
-    logger.notice('Java successfully removed')
+    def remove(self):
+        logger.notice('Removing Java...')
+        remove_notice(JAVA)
+        remove_files([LOG_DIR])
+        yum_remove(JAVA)
+        logger.notice('Java successfully removed')

@@ -33,6 +33,9 @@ from ...utils.files import (replace_in_file,
                             deploy,
                             touch)
 
+from ..base_component import BaseComponent
+
+
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
 TMPFILES_FILE_NAME = 'cloudify.conf'
 TMPFILES_FILE_PATH = join(constants.TMPFILES_INCLUDE_DIR, TMPFILES_FILE_NAME)
@@ -40,102 +43,94 @@ TMPFILES_FILE_PATH = join(constants.TMPFILES_INCLUDE_DIR, TMPFILES_FILE_NAME)
 logger = get_logger(MANAGER)
 
 
-def _get_exec_tempdir():
-    return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or gettempdir()
+class ManagerComponent(BaseComponent):
+    def __init__(self):
+        BaseComponent.__init__(self)
 
+    def _get_exec_tempdir(self):
+        return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or gettempdir()
 
-def _create_cloudify_user():
-    create_service_user(
-        user=constants.CLOUDIFY_USER,
-        group=constants.CLOUDIFY_GROUP,
-        home=constants.CLOUDIFY_HOME_DIR
-    )
-    common.mkdir(constants.CLOUDIFY_HOME_DIR)
+    def _create_cloudify_user(self):
+        create_service_user(
+            user=constants.CLOUDIFY_USER,
+            group=constants.CLOUDIFY_GROUP,
+            home=constants.CLOUDIFY_HOME_DIR
+        )
+        common.mkdir(constants.CLOUDIFY_HOME_DIR)
 
+    def _create_run_dir(self):
+        deploy(src=join(CONFIG_PATH, TMPFILES_FILE_NAME), dst=TMPFILES_FILE_PATH)
+        common.run(['sudo', 'systemd-tmpfiles', '--create', '--prefix={}'.format(
+            constants.COMMON_LOCK_DIR)])
 
-def _create_run_dir():
-    deploy(src=join(CONFIG_PATH, TMPFILES_FILE_NAME), dst=TMPFILES_FILE_PATH)
-    common.run(['sudo', 'systemd-tmpfiles', '--create', '--prefix={}'.format(
-        constants.COMMON_LOCK_DIR)])
+    def _delete_run_dir(self):
 
+        common.run(['sudo', 'systemd-tmpfiles', '--remove', '--prefix={}'.format(
+            constants.COMMON_LOCK_DIR)])
+        remove_files([TMPFILES_FILE_PATH])
 
-def _delete_run_dir():
-    common.run(['sudo', 'systemd-tmpfiles', '--remove', '--prefix={}'.format(
-        constants.COMMON_LOCK_DIR)])
-    remove_files([
-        TMPFILES_FILE_PATH
-    ])
+    def _create_sudoers_file_and_disable_sudo_requiretty(self):
+        common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
+        touch(constants.CLOUDIFY_SUDOERS_FILE)
+        common.chmod('440', constants.CLOUDIFY_SUDOERS_FILE)
+        entry = 'Defaults:{user} !requiretty'.format(user=constants.CLOUDIFY_USER)
+        description = 'Disable sudo requiretty for {0}'.format(
+            constants.CLOUDIFY_USER
+        )
+        add_entry_to_sudoers(entry, description)
 
+    def _get_selinux_state(self):
+        try:
+            return subprocess.check_output(['/usr/sbin/getenforce']).rstrip('\n\r')
+        except OSError as e:
+            logger.warning('SELinux is not installed ({0})'.format(e))
+            return None
 
-def _create_sudoers_file_and_disable_sudo_requiretty():
-    common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
-    touch(constants.CLOUDIFY_SUDOERS_FILE)
-    common.chmod('440', constants.CLOUDIFY_SUDOERS_FILE)
-    entry = 'Defaults:{user} !requiretty'.format(user=constants.CLOUDIFY_USER)
-    description = 'Disable sudo requiretty for {0}'.format(
-        constants.CLOUDIFY_USER
-    )
-    add_entry_to_sudoers(entry, description)
+    def _set_selinux_permissive(self):
+        """This sets SELinux to permissive mode both for the current session
+        and systemwide.
+        """
+        selinux_state = self._get_selinux_state()
+        logger.debug('Checking whether SELinux in enforced...')
+        if selinux_state == 'Enforcing':
+            logger.info('SELinux is enforcing, setting permissive state...')
+            common.sudo(['setenforce', 'permissive'])
+            replace_in_file(
+                'SELINUX=enforcing',
+                'SELINUX=permissive',
+                '/etc/selinux/config')
+        else:
+            logger.debug('SELinux is not enforced.')
 
+    def _create_manager_resources_dirs(self):
+        resources_root = constants.MANAGER_RESOURCES_HOME
+        common.mkdir(resources_root)
+        common.mkdir(join(resources_root, 'cloudify_agent'))
+        common.mkdir(join(resources_root, 'packages', 'scripts'))
+        common.mkdir(join(resources_root, 'packages', 'templates'))
 
-def _get_selinux_state():
-    try:
-        return subprocess.check_output(['/usr/sbin/getenforce']).rstrip('\n\r')
-    except OSError as e:
-        logger.warning('SELinux is not installed ({0})'.format(e))
-        return None
+    def _configure(self):
+        self._create_cloudify_user()
+        self._create_run_dir()
+        self._create_sudoers_file_and_disable_sudo_requiretty()
+        self._set_selinux_permissive()
+        setup_logrotate()
+        self._create_manager_resources_dirs()
 
+    def install(self):
+        logger.notice('Installing Cloudify Manager resources...')
+        self._configure()
+        logger.notice('Cloudify Manager resources successfully installed')
 
-def _set_selinux_permissive():
-    """This sets SELinux to permissive mode both for the current session
-    and systemwide.
-    """
-    selinux_state = _get_selinux_state()
-    logger.debug('Checking whether SELinux in enforced...')
-    if selinux_state == 'Enforcing':
-        logger.info('SELinux is enforcing, setting permissive state...')
-        common.sudo(['setenforce', 'permissive'])
-        replace_in_file(
-            'SELINUX=enforcing',
-            'SELINUX=permissive',
-            '/etc/selinux/config')
-    else:
-        logger.debug('SELinux is not enforced.')
+    def configure(self):
+        logger.notice('Configuring Cloudify Manager resources...')
+        self._configure()
+        logger.notice('Cloudify Manager resources successfully configured...')
 
-
-def _create_manager_resources_dirs():
-    resources_root = constants.MANAGER_RESOURCES_HOME
-    common.mkdir(resources_root)
-    common.mkdir(join(resources_root, 'cloudify_agent'))
-    common.mkdir(join(resources_root, 'packages', 'scripts'))
-    common.mkdir(join(resources_root, 'packages', 'templates'))
-
-
-def _configure():
-    _create_cloudify_user()
-    _create_run_dir()
-    _create_sudoers_file_and_disable_sudo_requiretty()
-    _set_selinux_permissive()
-    setup_logrotate()
-    _create_manager_resources_dirs()
-
-
-def install():
-    logger.notice('Installing Cloudify Manager resources...')
-    _configure()
-    logger.notice('Cloudify Manager resources successfully installed')
-
-
-def configure():
-    logger.notice('Configuring Cloudify Manager resources...')
-    _configure()
-    logger.notice('Cloudify Manager resources successfully configured...')
-
-
-def remove():
-    logger.notice('Removing Cloudify Manager resources...')
-    _delete_run_dir()
-    remove_files([
-        join(_get_exec_tempdir(), 'cloudify-ctx'),
-    ])
-    logger.notice('Cloudify Manager resources successfully removed')
+    def remove(self):
+        logger.notice('Removing Cloudify Manager resources...')
+        self._delete_run_dir()
+        remove_files([
+            join(self._get_exec_tempdir(), 'cloudify-ctx'),
+        ])
+        logger.notice('Cloudify Manager resources successfully removed')

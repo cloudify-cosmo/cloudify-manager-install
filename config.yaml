@@ -40,6 +40,11 @@ manager:
     # This will cause the monitoring components not to be installed if set to true
     skip_installation: true
 
+  # Used for external postgres installations
+  # True - Will install only the database package
+  # False - Will install Cloudify Manager with Postgres all-in-one
+  database_only: False
+
 manager-ip-setter:
   sources:
     manager_ip_setter_rpm: cloudify-manager-ip-setter-*.rpm

@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..amqpinflux.amqpinflux import AmqpInfluxComponent  # NOQA
+from ..base_component.base_component import BaseComponent

@@ -35,6 +35,9 @@ from ...utils.files import deploy
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
+from ..base_component import BaseComponent
+
+
 HOME_DIR = '/opt/mgmtworker'
 MGMTWORKER_VENV = join(HOME_DIR, 'env')
 LOG_DIR = join(const.BASE_LOG_DIR, MGMTWORKER)
@@ -43,91 +46,86 @@ CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
 logger = get_logger(MGMTWORKER)
 
 
-def _install():
-    source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
-    yum_install(source_url)
+class MgmtWorker(BaseComponent):
+    def __init__(self):
+        BaseComponent.__init__(self)
 
-    # TODO: Take care of this
-    # Prepare riemann dir. We will change the owner to riemann later, but the
-    # management worker will still need access to it
-    # common.mkdir('/opt/riemann')
-    # utils.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, riemann_dir)
-    # utils.chmod('770', riemann_dir)
+    def _install(self):
+        source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
+        yum_install(source_url)
 
+        # TODO: Take care of this
+        # Prepare riemann dir. We will change the owner to riemann later, but the
+        # management worker will still need access to it
+        # common.mkdir('/opt/riemann')
+        # utils.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, riemann_dir)
+        # utils.chmod('770', riemann_dir)
 
-def _deploy_mgmtworker_config():
-    config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
-    config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
-    config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
-    config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
+    def _deploy_mgmtworker_config(self):
+        config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
+        config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
+        config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
+        config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
 
-    work_dir = join(HOME_DIR, 'work')
-    broker_config_dst = join(work_dir, 'broker_config.json')
-    deploy(
-        src=join(CONFIG_PATH, 'broker_config.json'),
-        dst=broker_config_dst
-    )
+        work_dir = join(HOME_DIR, 'work')
+        broker_config_dst = join(work_dir, 'broker_config.json')
+        deploy(
+            src=join(CONFIG_PATH, 'broker_config.json'),
+            dst=broker_config_dst
+        )
 
-    # The config contains credentials, do not let the world read it
-    common.chmod('440', broker_config_dst)
-    common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, broker_config_dst)
+        # The config contains credentials, do not let the world read it
+        common.chmod('440', broker_config_dst)
+        common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, broker_config_dst)
 
+    def _prepare_snapshot_permissions(self):
+        # TODO: See if all of this is necessary
+        common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
+        common.sudo(['chmod', 'g+rw', '/opt/manager'])
+        common.sudo(
+            ['chgrp', '-R', const.CLOUDIFY_GROUP, const.SSL_CERTS_TARGET_DIR]
+        )
+        common.sudo(
+            ['chgrp', const.CLOUDIFY_GROUP, dirname(const.SSL_CERTS_TARGET_DIR)]
+        )
+        common.sudo(['chmod', '-R', 'g+rw', const.SSL_CERTS_TARGET_DIR])
+        common.sudo(['chmod', 'g+rw', dirname(const.SSL_CERTS_TARGET_DIR)])
 
-def _prepare_snapshot_permissions():
-    # TODO: See if all of this is necessary
-    common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
-    common.sudo(['chmod', 'g+rw', '/opt/manager'])
-    common.sudo(
-        ['chgrp', '-R', const.CLOUDIFY_GROUP, const.SSL_CERTS_TARGET_DIR]
-    )
-    common.sudo(
-        ['chgrp', const.CLOUDIFY_GROUP, dirname(const.SSL_CERTS_TARGET_DIR)]
-    )
-    common.sudo(['chmod', '-R', 'g+rw', const.SSL_CERTS_TARGET_DIR])
-    common.sudo(['chmod', 'g+rw', dirname(const.SSL_CERTS_TARGET_DIR)])
+    def _verify_mgmtworker_alive(self):
+        systemd.verify_alive(MGMTWORKER)
 
+    def _configure(self):
+        self._deploy_mgmtworker_config()
+        systemd.configure(MGMTWORKER)
+        self._prepare_snapshot_permissions()
+        systemd.restart(MGMTWORKER)
+        self._verify_mgmtworker_alive()
 
-def _verify_mgmtworker_alive():
-    systemd.verify_alive(MGMTWORKER)
+    def install(self):
+        logger.notice('Installing Management Worker...')
+        self._install()
+        self._configure()
+        logger.notice('Management Worker successfully installed')
 
+    def configure(self):
+        logger.notice('Configuring Management Worker...')
+        self._configure()
+        logger.notice('Management Worker successfully configured')
 
-def _configure():
-    _deploy_mgmtworker_config()
-    systemd.configure(MGMTWORKER)
-    _prepare_snapshot_permissions()
-    systemd.restart(MGMTWORKER)
-    _verify_mgmtworker_alive()
+    def remove(self):
+        logger.notice('Removing Management Worker...')
+        systemd.remove(MGMTWORKER, service_file=False)
+        yum_remove('cloudify-management-worker')
+        common.remove('/opt/mgmtworker')
+        logger.notice('Management Worker successfully removed')
 
+    def start(self):
+        logger.notice('Starting Management Worker...')
+        systemd.start(MGMTWORKER)
+        self._verify_mgmtworker_alive()
+        logger.notice('Management Worker successfully started')
 
-def install():
-    logger.notice('Installing Management Worker...')
-    _install()
-    _configure()
-    logger.notice('Management Worker successfully installed')
-
-
-def configure():
-    logger.notice('Configuring Management Worker...')
-    _configure()
-    logger.notice('Management Worker successfully configured')
-
-
-def remove():
-    logger.notice('Removing Management Worker...')
-    systemd.remove(MGMTWORKER, service_file=False)
-    yum_remove('cloudify-management-worker')
-    common.remove('/opt/mgmtworker')
-    logger.notice('Management Worker successfully removed')
-
-
-def start():
-    logger.notice('Starting Management Worker...')
-    systemd.start(MGMTWORKER)
-    _verify_mgmtworker_alive()
-    logger.notice('Management Worker successfully started')
-
-
-def stop():
-    logger.notice('Stopping Management Worker...')
-    systemd.stop(MGMTWORKER)
-    logger.notice('Management Worker successfully stopped')
+    def stop(self):
+        logger.notice('Stopping Management Worker...')
+        systemd.stop(MGMTWORKER)
+        logger.notice('Management Worker successfully stopped')

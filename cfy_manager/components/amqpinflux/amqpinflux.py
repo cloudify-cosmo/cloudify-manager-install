@@ -25,52 +25,52 @@ from ...logger import get_logger
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
+from ..base_component import BaseComponent
 
 logger = get_logger(AMQPINFLUX)
 
 HOME_DIR = join('/opt', AMQPINFLUX)
 
 
-def _install():
-    source_url = config[AMQPINFLUX][SOURCES]['amqpinflux_source_url']
-    yum_install(source_url)
+class AmqpInfluxComponent(BaseComponent):
 
+    def __init__(self):
+        BaseComponent.__init__(self)
 
-def _configure():
-    logger.info('Starting AMQP-Influx Broker Service...')
-    systemd.configure(AMQPINFLUX)
-    systemd.restart(AMQPINFLUX)
-    systemd.verify_alive(AMQPINFLUX)
+    def _install(self):
+        source_url = config[AMQPINFLUX][SOURCES]['amqpinflux_source_url']
+        yum_install(source_url)
 
+    def _configure(self):
+        logger.info('Starting AMQP-Influx Broker Service...')
+        systemd.configure(AMQPINFLUX)
+        systemd.restart(AMQPINFLUX)
+        systemd.verify_alive(AMQPINFLUX)
 
-def install():
-    logger.notice('Installing AMQP-Influx...')
-    _install()
-    _configure()
-    logger.notice('AMQP-Influx successfully installed')
+    def install(self):
+        logger.notice('Installing AMQP-Influx...')
+        self._install()
+        self._configure()
+        logger.notice('AMQP-Influx successfully installed')
 
+    def configure(self):
+        logger.notice('Configuring AMQP-Influx...')
+        self._configure()
+        logger.notice('AMQP-Influx successfully configured')
 
-def configure():
-    logger.notice('Configuring AMQP-Influx...')
-    _configure()
-    logger.notice('AMQP-Influx successfully configured')
+    def start(self):
+        logger.notice('Starting AMQP-Influx...')
+        systemd.start(AMQPINFLUX)
+        systemd.verify_alive(AMQPINFLUX)
+        logger.notice('AMQP-Influx successfully started')
 
+    def stop(self):
+        logger.notice('Stopping AMQP-Influx...')
+        systemd.stop(AMQPINFLUX)
+        logger.notice('AMQP-Influx successfully stopped')
 
-def start():
-    logger.notice('Starting AMQP-Influx...')
-    systemd.start(AMQPINFLUX)
-    systemd.verify_alive(AMQPINFLUX)
-    logger.notice('AMQP-Influx successfully started')
-
-
-def stop():
-    logger.notice('Stopping AMQP-Influx...')
-    systemd.stop(AMQPINFLUX)
-    logger.notice('AMQP-Influx successfully stopped')
-
-
-def remove():
-    logger.notice('Removing AMQP-Influx...')
-    systemd.remove(AMQPINFLUX, service_file=False)
-    yum_remove('cloudify-amqp-influx')
-    logger.notice('AMQP-Influx successfully removed')
+    def remove(self):
+        logger.notice('Removing AMQP-Influx...')
+        systemd.remove(AMQPINFLUX, service_file=False)
+        yum_remove('cloudify-amqp-influx')
+        logger.notice('AMQP-Influx successfully removed')
