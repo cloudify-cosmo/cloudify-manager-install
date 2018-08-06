@@ -27,7 +27,7 @@ from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXDB
 
-from . import (
+from .components_constants import (
     PRIVATE_IP,
     ENDPOINT_IP,
     SECURITY,

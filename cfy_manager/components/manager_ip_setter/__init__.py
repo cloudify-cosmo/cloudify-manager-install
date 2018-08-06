@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .manager_ip_setter import install, configure, remove  # NOQA
+from ..manager_ip_setter.manager_ip_setter import ManagerIpSetterComponent  # NOQA

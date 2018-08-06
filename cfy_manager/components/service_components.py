@@ -13,4 +13,34 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..usage_collector.usage_collector import UsageCollectorComponent  # NOQA
+# region Service components
+
+SERVICE_COMPONENTS = {
+    "manager_service": [
+        "manager",
+        "manager_ip_setter",
+        "nginx",
+        "python",
+        "rabbitmq",
+        "restservice",
+        "influxdb",
+        "amqpinflux",
+        "java",
+        "amqp_postgres",
+        "stage",
+        "composer",
+        "mgmtworker",
+        "riemann",
+        "cluster",
+        "cli",
+        "usage_collector",
+        "sanity"
+    ],
+    "database_service": [
+        "postgresql"
+    ],
+    "queue_service": [],
+    "composer_service": []
+}
+
+# endregion

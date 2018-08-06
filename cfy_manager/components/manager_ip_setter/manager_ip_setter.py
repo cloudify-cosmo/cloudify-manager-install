@@ -15,11 +15,11 @@
 
 from os.path import join
 
+from ..components_constants import SOURCES
+from ..base_component import BaseComponent
 from ..service_names import MANAGER, MANAGER_IP_SETTER
-
 from ...config import config
 from ...logger import get_logger
-
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -30,33 +30,35 @@ MANAGER_IP_SETTER_DIR = join('/opt/cloudify', MANAGER_IP_SETTER)
 logger = get_logger(MANAGER_IP_SETTER)
 
 
-def _install():
-    yum_install(config[MANAGER_IP_SETTER]['sources']['manager_ip_setter_rpm'])
+class ManagerIpSetterComponent(BaseComponent):
+    def __init__(self):
+        super(ManagerIpSetterComponent, self).__init__()
 
+    def _install(self):
+        sources = config[MANAGER_IP_SETTER][SOURCES]
+        for source in sources.values():
+            yum_install(source)
 
-def _configure():
-    if config[MANAGER]['set_manager_ip_on_boot']:
-        systemd.configure(MANAGER_IP_SETTER)
-    else:
-        logger.info('Set manager ip on boot is disabled.')
+    def _configure(self):
+        if config[MANAGER]['set_manager_ip_on_boot']:
+            systemd.configure(MANAGER_IP_SETTER)
+        else:
+            logger.info('Set manager ip on boot is disabled.')
 
+    def install(self):
+        logger.notice('Installing Manager IP Setter...')
+        self._install()
+        self._configure()
+        logger.notice('Manager IP Setter successfully installed')
 
-def install():
-    logger.notice('Installing Manager IP Setter...')
-    _install()
-    _configure()
-    logger.notice('Manager IP Setter successfully installed')
+    def configure(self):
+        logger.notice('Configuring Manager IP Setter...')
+        self._configure()
+        logger.notice('Manager IP Setter successfully configured')
 
-
-def configure():
-    logger.notice('Configuring Manager IP Setter...')
-    _configure()
-    logger.notice('Manager IP Setter successfully configured')
-
-
-def remove():
-    logger.notice('Removing Manager IP Setter...')
-    systemd.remove(MANAGER_IP_SETTER, service_file=False)
-    yum_remove('cloudify-manager-ip-setter')
-    common.remove('/opt/cloudify/manager-ip-setter')
-    logger.notice('Manager IP Setter successfully removed')
+    def remove(self):
+        logger.notice('Removing Manager IP Setter...')
+        systemd.remove(MANAGER_IP_SETTER, service_file=False)
+        yum_remove('cloudify-manager-ip-setter')
+        common.remove('/opt/cloudify/manager-ip-setter')
+        logger.notice('Manager IP Setter successfully removed')
