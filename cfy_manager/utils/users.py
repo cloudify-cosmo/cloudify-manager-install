@@ -53,7 +53,7 @@ def create_group(group):
         sudo(['groupadd', '--force', group])
 
 
-def add_user_to_group(user, groups):
+def add_user_to_groups(user, groups):
     logger.info('Adding user {0} to groups {1}'.format(user, groups))
     cmd = ['usermod', '-a', '-G']
     cmd.extend(','.join(groups))

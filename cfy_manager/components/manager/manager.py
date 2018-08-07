@@ -27,7 +27,7 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils.users import (create_service_user,
                             create_group,
-                            add_user_to_group)
+                            add_user_to_groups)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
@@ -54,8 +54,8 @@ def _create_cloudify_user():
         home=constants.CLOUDIFY_HOME_DIR
     )
     common.mkdir(constants.CLOUDIFY_HOME_DIR)
-    add_user_to_group(constants.CLOUDIFY_USER,
-                      constants.CLOUDIFY_COMMON_GROUP)
+    add_user_to_groups(constants.CLOUDIFY_USER,
+                       [constants.CLOUDIFY_COMMON_GROUP])
 
 
 def _create_sudoers_file_and_disable_sudo_requiretty():
