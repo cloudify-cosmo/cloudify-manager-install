@@ -17,7 +17,6 @@ from pwd import getpwnam
 from grp import getgrnam
 
 from .common import sudo
-from ..exceptions import BootstrapError
 from ..logger import get_logger
 
 logger = get_logger('Users')

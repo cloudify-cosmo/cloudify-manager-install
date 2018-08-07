@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import json
-import urllib2
 import subprocess
 from os.path import join
 
@@ -36,12 +35,12 @@ from ..service_names import RESTSERVICE
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import BootstrapError, FileError, NetworkError
+from ...exceptions import BootstrapError, FileError
 
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-from ...utils.network import get_auth_headers, wait_for_port
+from ...utils.network import get_auth_headers
 from ...utils.files import deploy, get_local_source_path, write_to_file
 from ...utils.logrotate import set_logrotate, remove_logrotate
 

@@ -44,7 +44,8 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
     max_iterations = retries + 1
 
     for i in range(max_iterations):
-        logger.debug('Running: {0}'.format(command if log_command else '<hidden>'))
+        logger.debug('Running: {0}'.format(
+            command if log_command else '<hidden>'))
         proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
                                 stderr=stderr, shell=shell, env=env)
         proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
@@ -52,7 +53,8 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
             command_str = ' '.join(command) if log_command else '<hidden>'
             if i < max_iterations-1:
                 logger.warn('Failed running command: {0}. Retrying. '
-                            '({1} left)'.format(command_str, max_iterations-i-1))
+                            '({1} left)'.format(command_str,
+                                                max_iterations-i-1))
                 time.sleep(retry_interval)
                 # Command failed, retries left; re-iterate.
                 continue
@@ -70,7 +72,7 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
             # retries anymore.
             break
 
-        return proc
+    return proc
 
 
 def sudo(command, *args, **kwargs):
