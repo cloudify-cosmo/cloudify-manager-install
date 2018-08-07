@@ -17,22 +17,26 @@ from ..utils import common
 from ..logger import get_logger
 from ..exceptions import BootstrapError
 
+from base_component import BaseComponent
+
 CLUSTER_REMOVE_SCRIPT = '/opt/manager/env/bin/teardown_cluster'
 logger = get_logger('cluster')
 
 
-def configure():
-    pass
+class ClusterComponent(BaseComponent):
+    def __init__(self):
+        BaseComponent.__init__(self)
 
+    def configure(self):
+        pass
 
-def install():
-    pass
+    def install(self):
+        pass
 
-
-def remove():
-    try:
-        common.sudo([CLUSTER_REMOVE_SCRIPT])
-    except BootstrapError:
-        logger.notice('Cluster remove script does not exist - skipping')
-    else:
-        logger.notice('Cluster components removed')
+    def remove(self):
+        try:
+            common.sudo([CLUSTER_REMOVE_SCRIPT])
+        except BootstrapError:
+            logger.notice('Cluster remove script does not exist - skipping')
+        else:
+            logger.notice('Cluster components removed')

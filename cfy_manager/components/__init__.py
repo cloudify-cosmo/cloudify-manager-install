@@ -13,7 +13,28 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from ..components.amqpinflux import AmqpInfluxComponent
+from ..components.cli import CliComponent
+from ..components.composer import ComposerComponent
+from ..components.influxdb import InfluxDBComponent
+from ..components.java import JavaComponent
+from ..components.amqp_postgres import AmqpPostgresComponent
+from ..components.manager import ManagerComponent
+from ..components.manager_ip_setter import ManagerIpSetterComponent
+from ..components.mgmtworker import MgmtWorker
+from ..components.nginx import NginxComponent
+from ..components.postgresql import PostgresqlComponent
+from ..components.python import PythonComponent
+from ..components.rabbitmq import RabbitMQComponent
+from ..components.restservice import RestServiceComponent
+from ..components.riemann import RiemannComponent
+from ..components.sanity import SanityComponent
+from ..components.stage import StageComponent
+from ..components.usage_collector import UsageCollectorComponent
+from ..components.cluster import ClusterComponent
+
 # region Common Strings
+DATABASE_ONLY = 'database_only'
 
 SOURCES = 'sources'
 
