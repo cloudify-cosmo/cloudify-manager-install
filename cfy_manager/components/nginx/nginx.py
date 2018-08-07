@@ -28,6 +28,7 @@ from ...exceptions import ValidationError
 from ...utils import common
 from ...utils import certificates
 from ...utils.systemd import systemd
+from ...utils.users import add_user_to_groups
 from ...utils.install import yum_install, yum_remove
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
@@ -35,6 +36,7 @@ from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
+NGINX_USER = 'nginx'
 
 logger = get_logger(NGINX)
 
@@ -245,6 +247,10 @@ def _deploy_nginx_config_files():
     common.remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
 
 
+def _add_cloudify_group():
+    add_user_to_groups(NGINX_USER, [constants.CLOUDIFY_COMMON_GROUP])
+
+
 def _verify_nginx():
     # TODO: This code requires the restservice to be installed, but
     # restservice depends on rabbitmq, which in turn requires the certificates
@@ -279,6 +285,7 @@ def _configure():
     set_logrotate(NGINX)
     _handle_certs()
     _deploy_nginx_config_files()
+    _add_cloudify_group()
     _start_and_verify_service()
 
 
