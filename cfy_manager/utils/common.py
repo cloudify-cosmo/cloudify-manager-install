@@ -40,22 +40,37 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         for arg in command:
             glob_command.append(glob.glob(arg))
         command = glob_command
-    logger.debug('Running: {0}'.format(command if log_command else '<hidden>'))
-    proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
-                            stderr=stderr, shell=shell, env=env)
-    proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
-    if proc.returncode != 0:
-        command_str = ' '.join(command) if log_command else '<hidden>'
-        if retries:
-            logger.warn('Failed running command: {0}. Retrying. '
-                        '({1} left)'.format(command_str, retries))
-            time.sleep(retry_interval)
-            proc = run(command, retries - 1, retry_interval=retry_interval)
-        elif not ignore_failures:
-            msg = 'Failed running command: {0} ({1}).'.format(
-                command_str, proc.aggr_stderr)
-            raise BootstrapError(msg)
-    return proc
+
+    max_iterations = retries + 1
+
+    for i in range(max_iterations):
+        logger.debug('Running: {0}'.format(command if log_command else '<hidden>'))
+        proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
+                                stderr=stderr, shell=shell, env=env)
+        proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
+        if proc.returncode != 0:
+            command_str = ' '.join(command) if log_command else '<hidden>'
+            if i < max_iterations-1:
+                logger.warn('Failed running command: {0}. Retrying. '
+                            '({1} left)'.format(command_str, max_iterations-i-1))
+                time.sleep(retry_interval)
+                # Command failed, retries left; re-iterate.
+                continue
+
+            if not ignore_failures:
+                # Command failed and no retries left; raise an exception.
+                msg = 'Failed running command: {0} ({1}).'.format(
+                    command_str, proc.aggr_stderr)
+                raise BootstrapError(msg)
+
+            # Command failed all attempts, but ignore_failures is True.
+            # Don't do anything - the loop will end.
+        else:
+            # Successful run. Break out of the loop, no need to consider
+            # retries anymore.
+            break
+
+        return proc
 
 
 def sudo(command, *args, **kwargs):
