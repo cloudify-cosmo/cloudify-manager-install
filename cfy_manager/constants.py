@@ -21,6 +21,8 @@ NETWORKS_DIR = join(BASE_DIR, 'networks')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
+CLOUDIFY_COMMON_GROUP = 'cloudify'
+
 CLOUDIFY_HOME_DIR = '/etc/cloudify'
 SUDOERS_INCLUDE_DIR = '/etc/sudoers.d'
 CLOUDIFY_SUDOERS_FILE = join(SUDOERS_INCLUDE_DIR, CLOUDIFY_USER)

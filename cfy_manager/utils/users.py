@@ -17,6 +17,7 @@ from pwd import getpwnam
 from grp import getgrnam
 
 from .common import sudo
+from ..exceptions import BootstrapError
 from ..logger import get_logger
 
 logger = get_logger('Users')
@@ -44,6 +45,22 @@ def _group_exists(group):
         return False
 
 
+def create_group(group):
+    if not _group_exists(group):
+        logger.info('Creating group {group}'.format(group=group))
+        # --force in groupadd causes it to return true if the group exists.
+        # Other behaviour changes don't affect this basic use of the command.
+        sudo(['groupadd', '--force', group])
+
+
+def add_user_to_group(user, groups):
+    logger.info('Adding user {0} to groups {1}'.format(user, groups))
+    cmd = ['usermod', '-a', '-G']
+    cmd.extend(','.join(groups))
+    cmd.append(user)
+    sudo(cmd)
+
+
 def create_service_user(user, group, home):
     """Creates a user.
 
@@ -51,11 +68,7 @@ def create_service_user(user, group, home):
     This user will only be created if it didn't already exist.
     """
 
-    if not _group_exists(group):
-        logger.info('Creating group {group}'.format(group=group))
-        # --force in groupadd causes it to return true if the group exists.
-        # Other behaviour changes don't affect this basic use of the command.
-        sudo(['groupadd', '--force', group])
+    create_group(group)
 
     if not _user_exists(user):
         logger.info('Creating user {0}, home: {1}...'.format(user, home))

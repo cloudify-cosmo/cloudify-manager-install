@@ -25,7 +25,9 @@ from ... import constants
 from ...logger import get_logger
 
 from ...utils import common
-from ...utils.users import create_service_user
+from ...utils.users import (create_service_user,
+                            create_group,
+                            add_user_to_group)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
@@ -41,6 +43,10 @@ def _get_exec_tempdir():
     return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or gettempdir()
 
 
+def _create_common_group():
+    create_group(constants.CLOUDIFY_COMMON_GROUP)
+
+
 def _create_cloudify_user():
     create_service_user(
         user=constants.CLOUDIFY_USER,
@@ -48,6 +54,8 @@ def _create_cloudify_user():
         home=constants.CLOUDIFY_HOME_DIR
     )
     common.mkdir(constants.CLOUDIFY_HOME_DIR)
+    add_user_to_group(constants.CLOUDIFY_USER,
+                      constants.CLOUDIFY_COMMON_GROUP)
 
 
 def _create_sudoers_file_and_disable_sudo_requiretty():
@@ -95,6 +103,7 @@ def _create_manager_resources_dirs():
 
 
 def _configure():
+    _create_common_group()
     _create_cloudify_user()
     _create_sudoers_file_and_disable_sudo_requiretty()
     _set_selinux_permissive()
