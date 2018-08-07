@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 # region Common Strings
+
 INSTALL_DATABASE_ONLY = 'install_database_only'
 
 SOURCES = 'sources'

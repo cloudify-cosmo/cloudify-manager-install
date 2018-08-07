@@ -57,7 +57,7 @@ COMPONENTS = [
     "influxdb",
     "amqpinflux",
     "java",
-    "amqp-postgres",
+    "amqp_postgres",
     "stage",
     "composer",
     "mgmtworker",
