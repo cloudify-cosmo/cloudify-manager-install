@@ -56,7 +56,7 @@ def create_group(group):
 def add_user_to_groups(user, groups):
     logger.info('Adding user {0} to groups {1}'.format(user, groups))
     cmd = ['usermod', '-a', '-G']
-    cmd.extend(','.join(groups))
+    cmd.append(','.join(groups))
     cmd.append(user)
     sudo(cmd)
 
