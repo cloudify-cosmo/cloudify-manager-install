@@ -145,14 +145,14 @@ def _verify_restservice():
     auth_headers = get_auth_headers()
     # 'curl' must be run with 'sudo' because the socket is most likely
     # not readable by the current user.
-    validation_cmd = ['sudo', 'curl', '--unix-socket',
+    validation_cmd = ['curl', '--unix-socket',
                       constants.REST_SERVICE_SOCKET_PATH, '-f',
                       '-k',  # TODO: replace with REST service's cert
                       'http://localhost/api/v2.1/blueprints']
     for name, value in auth_headers.items():
         validation_cmd.extend(['-H', '{}: {}'.format(name, value)])
 
-    proc = common.run(validation_cmd, retries=24, retry_interval=3)
+    proc = common.sudo(validation_cmd, retries=24, retry_interval=3)
 
     try:
         json.loads(proc.aggr_stdout)
