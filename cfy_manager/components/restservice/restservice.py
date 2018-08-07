@@ -143,7 +143,9 @@ def _verify_restservice():
     a good chance everything is configured correctly.
     """
     auth_headers = get_auth_headers()
-    validation_cmd = ['curl', '--unix-socket',
+    # 'curl' must be run with 'sudo' because the socket is most likely
+    # not readable by the current user.
+    validation_cmd = ['sudo', 'curl', '--unix-socket',
                       constants.REST_SERVICE_SOCKET_PATH, '-f',
                       '-k',  # TODO: replace with REST service's cert
                       'http://localhost/api/v2.1/blueprints']
