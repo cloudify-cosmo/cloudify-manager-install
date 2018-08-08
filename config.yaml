@@ -366,7 +366,7 @@ usage_collector:
     active: true
 
     # Sets the interval between running the uptime collector in hours
-    interval_in_hours: 2
+    interval_in_hours: 4
 
   collect_cloudify_usage:
     # True if the usage collector will be installed
