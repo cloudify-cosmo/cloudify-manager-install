@@ -381,8 +381,8 @@ def main():
         create_internal_certs,
         create_external_certs,
         create_pkcs12,
-        sanity_check,
-        add_networks
+        add_networks,
+        sanity_check
     ])
 
 
