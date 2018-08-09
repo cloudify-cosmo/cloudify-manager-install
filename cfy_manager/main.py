@@ -20,6 +20,10 @@ import argh
 from time import time
 from traceback import format_exception
 
+from .components import (
+    ComponentsFactory,
+    SERVICE_COMPONENTS
+)
 from .components.globals import set_globals
 from .components.validations import validate, validate_config_access
 from .components.service_names import MANAGER
@@ -36,10 +40,6 @@ from .networks.networks import add_networks
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
-from utils import (
-    ComponentsFactory,
-    SERVICE_COMPONENTS
-)
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,

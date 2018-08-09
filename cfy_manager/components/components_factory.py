@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 
-from ..components import (
+from . import (
     AmqpPostgresComponent,
     AmqpInfluxComponent,
     ManagerComponent,
