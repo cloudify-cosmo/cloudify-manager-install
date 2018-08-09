@@ -176,3 +176,11 @@ class PostgresqlComponent(BaseComponent):
         logger.notice('Stopping PostgreSQL...')
         systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL successfully stopped')
+
+    def validate_dependencies(self):
+        host = config[POSTGRESQL][HOST]
+        if host != 'localhost':
+            logger.notice('Using external PostgreSQL, no dependencies '
+                          'required for client')
+        else:
+            super(PostgresqlComponent, self).validate_dependencies()
