@@ -13,5 +13,34 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from service_components import SERVICE_COMPONENTS
-from components_factory import ComponentsFactory
+# region Service components
+
+SERVICE_COMPONENTS = {
+    "manager_service": [
+        "amqp_postgres",
+        "manager",
+        "manager_ip_setter",
+        "nginx",
+        "python",
+        "rabbitmq",
+        "restservice",
+        "influxdb",
+        "amqpinflux",
+        "java",
+        "stage",
+        "composer",
+        "mgmtworker",
+        "riemann",
+        "cluster",
+        "cli",
+        "usage_collector",
+        "sanity"
+    ],
+    "database_service": [
+        "postgresql"
+    ],
+    "queue_service": [],
+    "composer_service": []
+}
+
+# endregion

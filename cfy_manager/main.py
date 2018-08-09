@@ -24,7 +24,7 @@ from .components.globals import set_globals
 from .components.validations import validate, validate_config_access
 from .components.service_names import MANAGER
 from .components.components_constants import (
-    INSTALL_DATABASE_ONLY,
+    SERVICES_TO_INSTALL,
     SECURITY,
     PRIVATE_IP,
     PUBLIC_IP,
@@ -36,7 +36,10 @@ from .networks.networks import add_networks
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
-from utils.components_factory import ComponentsFactory
+from utils import (
+    ComponentsFactory,
+    SERVICE_COMPONENTS
+)
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
@@ -94,7 +97,7 @@ PUBLIC_IP_HELP_MSG = (
     'private IP here.'
 )
 
-components_objects = []
+components = []
 
 
 def _print_time():
@@ -204,9 +207,22 @@ def _validate_manager_installed(cmd):
             "Operation '{0}' is not allowed on a cluster node".format(cmd))
 
 
+def _get_services_to_install():
+    services_to_install = config[SERVICES_TO_INSTALL]
+    services_components_to_install = []
+    if '*' in services_to_install:
+        for service in SERVICE_COMPONENTS:
+            services_components_to_install += SERVICE_COMPONENTS[service]
+    else:
+        for service in services_to_install:
+            services_components_to_install += SERVICE_COMPONENTS[service]
+    return services_components_to_install
+
+
 def _create_components_objects():
-    for component_name in COMPONENTS:
-        components_objects.append(
+    components_to_install = _get_services_to_install()
+    for component_name in components_to_install:
+        components.append(
             ComponentsFactory.create_component(component_name))
 
 
@@ -238,14 +254,14 @@ def validate_command(verbose=False,
         clean_db,
         config_write_required=False
     )
-    validate(components=components_objects)
+    validate(components=components)
 
 
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _load_config_and_logger(verbose=verbose, private_ip=private_ip)
-    for component in components_objects:
+    for component in components:
         component.run_sanity_check()
 
 
@@ -266,16 +282,18 @@ def install(verbose=False,
         config_write_required=True
     )
 
-    manager_config = config[MANAGER]
-    if not manager_config[INSTALL_DATABASE_ONLY]:
-        logger.notice('Installing Cloudify Manager...')
-        validate(components=components_objects)
-        set_globals()
+    # manager_config = config[MANAGER]
+    # if not manager_config[INSTALL_DATABASE_ONLY]:
+    # logger.notice('Installing Cloudify Manager...')
+    logger.notice('Installing desired components...')
+    validate(components=components)
+    set_globals()
 
-    for component in components_objects:
+    for component in components:
         component.install()
 
-    logger.notice('Cloudify Manager successfully installed!')
+    # logger.notice('Cloudify Manager successfully installed!')
+    logger.notice('Installation finished successfully!')
     _finish_configuration()
 
 
@@ -296,28 +314,31 @@ def configure(verbose=False,
         config_write_required=True
     )
 
-    logger.notice('Configuring Cloudify Manager...')
+    # logger.notice('Configuring Cloudify Manager...')
+    logger.notice('Configuring desired components...')
     _validate_manager_installed('configure')
-    validate(skip_validations=True, components=components_objects)
+    validate(skip_validations=True, components=components)
     set_globals()
 
-    for component in components_objects:
+    for component in components:
         component.configure()
 
-    logger.notice('Cloudify Manager successfully configured!')
+    # logger.notice('Cloudify Manager successfully configured!')
+    logger.notice('Configuration finished successfully!')
     _finish_configuration()
 
 
 def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
+    # TODO: check if config.yaml exists, if so, remove only installed components, if not, remove all
     _load_config_and_logger(verbose)
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
     should_stop = _is_manager_installed()
 
-    for component in reversed(components_objects):
+    for component in reversed(components):
         if should_stop:
             component.stop()
         component.remove()
@@ -335,7 +356,7 @@ def start(verbose=False):
     _load_config_and_logger(verbose)
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
-    for component in components_objects:
+    for component in components:
         component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
@@ -349,7 +370,7 @@ def stop(verbose=False, force=False):
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component in components_objects:
+    for component in components:
         component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()

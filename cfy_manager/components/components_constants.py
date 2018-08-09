@@ -15,7 +15,7 @@
 
 # region Common Strings
 
-INSTALL_DATABASE_ONLY = 'install_database_only'
+SERVICES_TO_INSTALL = 'services_to_install'
 
 SOURCES = 'sources'
 
