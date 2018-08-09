@@ -241,7 +241,7 @@ def _validate_user_has_sudo_permissions():
 
 def _validate_dependencies(components):
     logger.info('Validating dependencies for {components}...'
-                .format(components=components))
+                .format(components=','.join([component.__class__.__name__ for component in components])))
     for component in components:
         component.validate_dependencies()
 
