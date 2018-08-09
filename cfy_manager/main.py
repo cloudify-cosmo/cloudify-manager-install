@@ -208,6 +208,7 @@ def _validate_manager_installed(cmd):
 
 
 def _get_services_to_install():
+    _load_config_and_logger()
     services_to_install = config[SERVICES_TO_INSTALL]
     services_components_to_install = []
     if '*' in services_to_install:
