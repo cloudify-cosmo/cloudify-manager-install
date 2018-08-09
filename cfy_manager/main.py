@@ -129,9 +129,6 @@ def _load_config_and_logger(verbose=False,
     validate_config_access(config_write_required)
     config.load_config()
     manager_config = config[MANAGER]
-    logger.notice(str(config))
-    logger.notice(MANAGER)
-    logger.notice(str(manager_config))
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
     config[CLEAN_DB] = clean_db or not _is_manager_installed()
@@ -269,11 +266,8 @@ def install(verbose=False,
         config_write_required=True
     )
 
-    logger.notice(str(config))
-    logger.notice(MANAGER)
     manager_config = config[MANAGER]
-    logger.notice(str(manager_config))
-    if not manager_config[MANAGER][INSTALL_DATABASE_ONLY]:
+    if not manager_config[INSTALL_DATABASE_ONLY]:
         logger.notice('Installing Cloudify Manager...')
         validate(components=components_objects)
         set_globals()
