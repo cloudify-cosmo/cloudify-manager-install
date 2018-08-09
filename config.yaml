@@ -157,6 +157,7 @@ postgresql:
     psycopg2_rpm_url: python-psycopg2-2.5.1-3.el7.x86_64.rpm
 
   # Default values for the Postgres DB name, host, username and password
+  # For external postgres installation, update accordingly
   db_name: cloudify_db
   host: localhost
   username: cloudify
@@ -376,3 +377,19 @@ usage_collector:
     interval_in_days: 1
 
 flask_security: {}
+
+# * - Install Cloudify all-in-one
+# list of services - manager_service, queue_service, database_service, composer_service
+#                    will install only these services on this machine
+# I.E - all-in-one installation
+# services_to_install:
+#   - *
+#
+# I.E - will install only the manager service, DB is external and will have a
+#       separate config.yaml with database_service only
+# services_to_install:
+#   - manager_service
+#   - queue_service
+#   - composer_service
+services_to_install:
+  - '*'

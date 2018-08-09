@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .. import (
+from ..components_constants import (
     SCRIPTS,
     PROVIDER_CONTEXT,
     AGENT,

@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .amqpinflux import install, configure, remove, start, stop  # NOQA
+from .amqpinflux import AmqpInfluxComponent  # NOQA
