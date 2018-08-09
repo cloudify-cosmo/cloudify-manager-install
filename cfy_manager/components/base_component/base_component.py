@@ -56,7 +56,7 @@ class BaseComponent(object):
 
     def validate_dependencies(self):
         missing_packages = {}
-        for dep, reason in self._get_dependencies():
+        for dep, reason in self._get_dependencies().iteritems():
             self.logger.debug(
                 'Validating that `{dep}` is installed for '
                 '{class_name}'.format(dep=dep,
