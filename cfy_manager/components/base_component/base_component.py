@@ -47,11 +47,9 @@ class BaseComponent(object):
         dependencies_dict = {}
         dependencies_list = COMPONENTS_DEPENDENCIES['default'] + \
                             COMPONENTS_DEPENDENCIES[self.__class__.__name__]
-        self.logger.notice(str(dependencies_list))
         for dependency in dependencies_list:
             dependencies_dict.update({
                 dependency: DEPENDENCIES_ERROR_MESSAGES[dependency]})
-            self.logger.notice(str(dependencies_dict))
         return dependencies_dict
 
     def validate_dependencies(self):

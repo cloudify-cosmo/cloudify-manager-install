@@ -43,8 +43,9 @@ class ComponentsFactory:
 
     @staticmethod
     def create_component(component_name):
+        # The ordering here is critical!
+        # Please do not change the order of
         return {
-            "amqp_postgres": AmqpPostgresComponent(),
             "manager": ManagerComponent(),
             "manager_ip_setter": ManagerIpSetterComponent(),
             "nginx": NginxComponent(),
@@ -55,6 +56,7 @@ class ComponentsFactory:
             "influxdb": InfluxDBComponent(),
             "amqpinflux": AmqpInfluxComponent(),
             "java": JavaComponent(),
+            "amqp_postgres": AmqpPostgresComponent(),
             "stage": StageComponent(),
             "composer": ComposerComponent(),
             "mgmtworker": MgmtWorkerComponent(),

@@ -144,7 +144,8 @@ class PostgresqlComponent(BaseComponent):
     def install(self):
         host = config[POSTGRESQL][HOST]
         if host != 'localhost':
-            logger.notice('Using external PostgreSQL, skipping installation')
+            logger.notice('Using external PostgreSQL, installing client '
+                          'libraries and initializing the database')
             # TODO : add configuration
         else:
             logger.notice('Installing PostgreSQL...')
