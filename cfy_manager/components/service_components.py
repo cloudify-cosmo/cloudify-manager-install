@@ -17,7 +17,6 @@
 
 SERVICE_COMPONENTS = {
     "manager_service": [
-        "amqp_postgres",
         "manager",
         "manager_ip_setter",
         "nginx",
@@ -27,6 +26,7 @@ SERVICE_COMPONENTS = {
         "influxdb",
         "amqpinflux",
         "java",
+        "amqp_postgres",
         "stage",
         "composer",
         "mgmtworker",
