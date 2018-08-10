@@ -30,12 +30,9 @@ from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
                             remove_files,
-                            deploy,
                             touch)
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
-TMPFILES_FILE_NAME = 'cloudify.conf'
-TMPFILES_FILE_PATH = join(constants.TMPFILES_INCLUDE_DIR, TMPFILES_FILE_NAME)
 
 logger = get_logger(MANAGER)
 
@@ -51,20 +48,6 @@ def _create_cloudify_user():
         home=constants.CLOUDIFY_HOME_DIR
     )
     common.mkdir(constants.CLOUDIFY_HOME_DIR)
-
-
-def _create_run_dir():
-    deploy(src=join(CONFIG_PATH, TMPFILES_FILE_NAME), dst=TMPFILES_FILE_PATH)
-    common.run(['sudo', 'systemd-tmpfiles', '--create', '--prefix={}'.format(
-        constants.COMMON_LOCK_DIR)])
-
-
-def _delete_run_dir():
-    common.run(['sudo', 'systemd-tmpfiles', '--remove', '--prefix={}'.format(
-        constants.COMMON_LOCK_DIR)])
-    remove_files([
-        TMPFILES_FILE_PATH
-    ])
 
 
 def _create_sudoers_file_and_disable_sudo_requiretty():
@@ -113,7 +96,6 @@ def _create_manager_resources_dirs():
 
 def _configure():
     _create_cloudify_user()
-    _create_run_dir()
     _create_sudoers_file_and_disable_sudo_requiretty()
     _set_selinux_permissive()
     setup_logrotate()
@@ -134,7 +116,6 @@ def configure():
 
 def remove():
     logger.notice('Removing Cloudify Manager resources...')
-    _delete_run_dir()
     remove_files([
         join(_get_exec_tempdir(), 'cloudify-ctx'),
     ])

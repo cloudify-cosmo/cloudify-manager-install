@@ -23,12 +23,9 @@ CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
 CLOUDIFY_HOME_DIR = '/etc/cloudify'
 SUDOERS_INCLUDE_DIR = '/etc/sudoers.d'
-TMPFILES_INCLUDE_DIR = '/etc/tmpfiles.d'
 CLOUDIFY_SUDOERS_FILE = join(SUDOERS_INCLUDE_DIR, CLOUDIFY_USER)
 INITIAL_INSTALL_FILE = join(CLOUDIFY_HOME_DIR, '.install')
 
-# Must be identical to COMMON_LOCK_DIR in cloudify-premium/ha/utils.py
-COMMON_LOCK_DIR = '/run/cloudify.lock'
 BASE_RESOURCES_PATH = '/opt/cloudify'
 CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
 MANAGER_RESOURCES_HOME = '/opt/manager/resources'
