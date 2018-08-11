@@ -39,8 +39,6 @@ from . import (
 import logging
 
 BROKER_IP = 'broker_ip'
-BROKER_USERNAME = 'broker_user'
-BROKER_PASSWORD = 'broker_pass'
 logger = get_logger('Globals')
 
 
@@ -78,11 +76,6 @@ def _set_ip_config():
     networks = config[AGENT]['networks']
     if not networks or 'default' not in networks:
         networks['default'] = private_ip
-
-
-def _set_agent_broker_credentials():
-    config[AGENT][BROKER_USERNAME] = config[RABBITMQ]['username']
-    config[AGENT][BROKER_PASSWORD] = config[RABBITMQ]['password']
 
 
 def _set_constant_config():
@@ -171,7 +164,6 @@ def _validate_admin_password_and_security_config():
 
 def set_globals():
     _set_ip_config()
-    _set_agent_broker_credentials()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
