@@ -18,6 +18,9 @@
 SERVICE_COMPONENTS = {
     # The ordering here is critical!
     # Please do not change the order in which the components will be installed
+    "database_service": [
+        "postgresql"
+    ],
     "manager_service": [
         "manager",
         "manager_ip_setter",
@@ -38,9 +41,6 @@ SERVICE_COMPONENTS = {
         "cli",
         "usage_collector",
         "sanity"
-    ],
-    "database_service": [
-        "postgresql"
     ],
     "queue_service": [],
     "composer_service": []
