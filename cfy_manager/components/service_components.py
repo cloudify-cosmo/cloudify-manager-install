@@ -16,11 +16,14 @@
 # region Service components
 
 SERVICE_COMPONENTS = {
+    # The ordering here is critical!
+    # Please do not change the order in which the components will be installed
     "manager_service": [
         "manager",
         "manager_ip_setter",
         "nginx",
         "python",
+        "postgresql_client",
         "rabbitmq",
         "restservice",
         "influxdb",

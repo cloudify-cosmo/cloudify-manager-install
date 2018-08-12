@@ -22,6 +22,7 @@ from . import (
     NginxComponent,
     PythonComponent,
     PostgresqlComponent,
+    PostgresqlClientComponent,
     RabbitMQComponent,
     RestServiceComponent,
     InfluxDBComponent,
@@ -43,14 +44,13 @@ class ComponentsFactory:
 
     @staticmethod
     def create_component(component_name):
-        # The ordering here is critical!
-        # Please do not change the order of
         return {
             "manager": ManagerComponent(),
             "manager_ip_setter": ManagerIpSetterComponent(),
             "nginx": NginxComponent(),
             "python": PythonComponent(),
             "postgresql": PostgresqlComponent(),
+            "postgresql_client": PostgresqlClientComponent(),
             "rabbitmq": RabbitMQComponent(),
             "restservice": RestServiceComponent(),
             "influxdb": InfluxDBComponent(),
