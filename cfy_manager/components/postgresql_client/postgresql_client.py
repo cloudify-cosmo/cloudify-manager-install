@@ -19,7 +19,7 @@ from os.path import join, isdir, islink
 
 from ..components_constants import SOURCES
 from ..base_component import BaseComponent
-from ..service_names import POSTGRESQL
+from ..service_names import POSTGRESQL_CLIENT
 from ... import constants
 from ...config import config
 from ...logger import get_logger
@@ -29,7 +29,7 @@ from ...utils.install import yum_install, yum_remove
 
 POSTGRES_USER = 'postgres'
 HOST = 'host'
-LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
+LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_CLIENT)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
@@ -38,7 +38,7 @@ PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
 
-logger = get_logger(POSTGRESQL)
+logger = get_logger(POSTGRESQL_CLIENT)
 
 
 class PostgresqlClientComponent(BaseComponent):
@@ -46,7 +46,7 @@ class PostgresqlClientComponent(BaseComponent):
         super(PostgresqlClientComponent, self).__init__()
 
     def _install(self):
-        sources = config[POSTGRESQL][SOURCES]
+        sources = config[POSTGRESQL_CLIENT][SOURCES]
 
         # logger.debug('Installing PostgreSQL dependencies...')
         # yum_install(sources['libxslt_rpm_url'])
@@ -112,7 +112,7 @@ class PostgresqlClientComponent(BaseComponent):
 
     def _create_postgres_pass_file(self):
         logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
-        pg_config = config[POSTGRESQL]
+        pg_config = config[POSTGRESQL_CLIENT]
         pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
             host=pg_config['host'],
             port=PG_PORT,
@@ -131,7 +131,7 @@ class PostgresqlClientComponent(BaseComponent):
         logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
 
     def _configure(self):
-        files.copy_notice(POSTGRESQL)
+        files.copy_notice(POSTGRESQL_CLIENT)
         # self._init_postgresql()
         # self._update_configuration()
         self._create_postgres_pass_file()
@@ -152,7 +152,7 @@ class PostgresqlClientComponent(BaseComponent):
 
     def remove(self):
         logger.notice('Removing PostgreSQL...')
-        files.remove_notice(POSTGRESQL)
+        files.remove_notice(POSTGRESQL_CLIENT)
         # systemd.remove(SYSTEMD_SERVICE_NAME)
         # files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
         # yum_remove('postgresql95')
