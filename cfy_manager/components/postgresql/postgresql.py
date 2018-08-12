@@ -113,45 +113,46 @@ class PostgresqlComponent(BaseComponent):
         common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
 
     def _create_postgres_pass_file(self):
-        logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
-        pg_config = config[POSTGRESQL]
-        pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
-            host=pg_config['host'],
-            port=PG_PORT,
-            db_name='*',  # Allowing for the multiple DBs we have
-            user=pg_config['username'],
-            password=pg_config['password']
-        )
-        files.write_to_file(pgpass_content, PGPASS_PATH)
-        common.chmod('400', PGPASS_PATH)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            PGPASS_PATH
-        )
+        # logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
+        # pg_config = config[POSTGRESQL]
+        # pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
+        #     host=pg_config['host'],
+        #     port=PG_PORT,
+        #     db_name='*',  # Allowing for the multiple DBs we have
+        #     user=pg_config['username'],
+        #     password=pg_config['password']
+        # )
+        # files.write_to_file(pgpass_content, PGPASS_PATH)
+        # common.chmod('400', PGPASS_PATH)
+        # common.chown(
+        #     constants.CLOUDIFY_USER,
+        #     constants.CLOUDIFY_GROUP,
+        #     PGPASS_PATH
+        # )
 
-        logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
+        # logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
+        pass
 
     def _configure(self):
         files.copy_notice(POSTGRESQL)
         self._init_postgresql()
         self._update_configuration()
-        self._create_postgres_pass_file()
+        # self._create_postgres_pass_file()
 
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def install(self):
-        host = config[POSTGRESQL][HOST]
-        if host != 'localhost':
-            logger.notice('Using external PostgreSQL, installing client '
-                          'libraries and initializing the database')
-            # TODO : add configuration
-        else:
-            logger.notice('Installing PostgreSQL...')
-            self._install()
-            self._configure()
-            logger.notice('PostgreSQL successfully installed')
+        # host = config[POSTGRESQL][HOST]
+        # if host != 'localhost':
+        #     logger.notice('Using external PostgreSQL, installing client '
+        #                   'libraries and initializing the database')
+        #     # TODO : add configuration
+        # else:
+        logger.notice('Installing PostgreSQL...')
+        self._install()
+        self._configure()
+        logger.notice('PostgreSQL successfully installed')
 
     def configure(self):
         logger.notice('Configuring PostgreSQL...')
@@ -179,9 +180,9 @@ class PostgresqlComponent(BaseComponent):
         logger.notice('PostgreSQL successfully stopped')
 
     def validate_dependencies(self):
-        host = config[POSTGRESQL][HOST]
-        if host != 'localhost':
-            logger.notice('Using external PostgreSQL, no dependencies '
-                          'required for client')
-        else:
-            super(PostgresqlComponent, self).validate_dependencies()
+        # host = config[POSTGRESQL][HOST]
+        # if host != 'localhost':
+        #     logger.notice('Using external PostgreSQL, no dependencies '
+        #                   'required for client')
+        # else:
+        super(PostgresqlComponent, self).validate_dependencies()

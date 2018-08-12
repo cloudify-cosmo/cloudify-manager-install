@@ -25,7 +25,7 @@ from ..components_constants import (
 )
 
 from ..service_names import (
-    POSTGRESQL,
+    POSTGRESQL_CLIENT,
     MANAGER,
     RESTSERVICE
 )
@@ -45,7 +45,7 @@ REST_HOME_DIR = '/opt/manager'
 
 def prepare_db():
     logger.notice('Configuring SQL DB...')
-    pg_config = config[POSTGRESQL]
+    pg_config = config[POSTGRESQL_CLIENT]
 
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)

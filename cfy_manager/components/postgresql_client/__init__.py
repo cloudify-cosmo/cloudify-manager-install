@@ -13,23 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-AMQPINFLUX = 'amqpinflux'
-AMQP_POSTGRES = 'amqp-postgres'
-CLI = 'cli'
-COMPOSER = 'composer'
-DEV = 'dev'
-INFLUXDB = 'influxdb'
-JAVA = 'java'
-MANAGER = 'manager'
-MANAGER_IP_SETTER = 'manager-ip-setter'
-MGMTWORKER = 'mgmtworker'
-NGINX = 'nginx'
-POSTGRESQL = 'postgresql'
-POSTGRESQL_CLIENT = 'postgresql_client'
-PYTHON = 'python'
-RABBITMQ = 'rabbitmq'
-RESTSERVICE = 'restservice'
-RIEMANN = 'riemann'
-SANITY = 'sanity'
-STAGE = 'stage'
-USAGE_COLLECTOR = 'usage_collector'
+from .postgresql_client import PostgresqlClientComponent  # NOQA
