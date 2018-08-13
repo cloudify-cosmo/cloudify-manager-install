@@ -16,13 +16,13 @@
 from os.path import join, expanduser
 from getpass import getuser
 import errno
-
+import logging
 from .. import SOURCES, SECURITY
 
 from ..service_names import CLI, MANAGER
 
 from ...config import config
-from ...logger import get_logger
+from ...logger import get_logger, set_file_handlers_level, get_file_handlers_level
 
 from ...utils import common
 from ...constants import EXTERNAL_CERT_PATH
@@ -70,6 +70,11 @@ def _configure():
 
     logger.info('Setting CLI for the current user ({0})...'.format(
         current_user))
+
+    # we don't want the commands with the password to be printed to log file
+    current_level = get_file_handlers_level()
+    set_file_handlers_level(logging.ERROR)
+
     common.run(use_cmd)
     common.run(set_cmd)
     _set_colors(is_root=False)
@@ -80,6 +85,7 @@ def _configure():
             root_cmd = ['sudo', '-u', 'root'] + cmd
             common.run(root_cmd)
         _set_colors(is_root=True)
+    set_file_handlers_level(current_level)
 
 
 def install():
