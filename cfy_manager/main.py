@@ -211,9 +211,14 @@ def _get_services_to_install():
     _load_config_and_logger()
     services_to_install = config[SERVICES_TO_INSTALL]
     services_components_to_install = []
-    if '*' in services_to_install:
+    # This is to ensure that database is installed first
+    # in an all-in-one installation
+    if any(s in ['*', 'database_service'] for s in services_to_install):
+        services_components_to_install += \
+            SERVICE_COMPONENTS['database_service']
         for service in SERVICE_COMPONENTS:
-            services_components_to_install += SERVICE_COMPONENTS[service]
+            if service != 'database_service':
+                services_components_to_install += SERVICE_COMPONENTS[service]
     else:
         for service in services_to_install:
             services_components_to_install += SERVICE_COMPONENTS[service]
