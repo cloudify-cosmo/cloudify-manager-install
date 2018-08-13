@@ -36,3 +36,4 @@ from .cluster import ClusterComponent  # NOQA
 
 from components_factory import ComponentsFactory  # NOQA
 from service_components import SERVICE_COMPONENTS  # NOQA
+from service_components import SERVICE_INSTALLATION_ORDER  # NOQA

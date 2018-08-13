@@ -32,8 +32,8 @@ LOG_DIR = join(constants.BASE_LOG_DIR, JAVA)
 
 
 class JavaComponent(BaseComponent):
-    def __init__(self):
-        super(JavaComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(JavaComponent, self).__init__(skip_installation)
 
     def _install(self):
         java_source_url = config[JAVA][SOURCES]['java_source_url']

@@ -27,7 +27,9 @@ from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
-POSTGRES_USER = 'postgres'
+POSTGRES_USER = POSTGRES_GROUP = 'postgres'
+POSTGRES_USER_ID = POSTGRES_GROUP_ID = '26'
+POSTGRES_USER_COMMENT = 'PostgreSQL Server'
 HOST = 'host'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_CLIENT)
 
@@ -42,8 +44,8 @@ logger = get_logger(POSTGRESQL_CLIENT)
 
 
 class PostgresqlClientComponent(BaseComponent):
-    def __init__(self):
-        super(PostgresqlClientComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(PostgresqlClientComponent, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[POSTGRESQL_CLIENT][SOURCES]
@@ -53,7 +55,7 @@ class PostgresqlClientComponent(BaseComponent):
 
         logger.debug('Installing PostgreSQL Client libraries...')
         yum_install(sources['ps_libs_rpm_url'])
-        # yum_install(sources['ps_rpm_url'])
+        yum_install(sources['ps_rpm_url'])
         # yum_install(sources['ps_contrib_rpm_url'])
         # yum_install(sources['ps_server_rpm_url'])
         # yum_install(sources['ps_devel_rpm_url'])
@@ -85,7 +87,7 @@ class PostgresqlClientComponent(BaseComponent):
 
     # def _read_hba_lines(self):
     #     temp_hba_path = files.write_to_tempfile('')
-    #     common.copy(PS_HBA_CONF, temp_hba_path)
+    #     common.copy(PG_HBA_CONF, temp_hba_path)
     #     common.chmod('777', temp_hba_path)
     #     with open(temp_hba_path, 'r') as f:
     #         lines = f.readlines()
@@ -103,15 +105,47 @@ class PostgresqlClientComponent(BaseComponent):
 
     # def _update_configuration(self):
     #     logger.info('Updating PostgreSQL configuration...')
-    #     logger.debug('Modifying {0}'.format(PS_HBA_CONF))
-    #     common.copy(PS_HBA_CONF, '{0}.backup'.format(PS_HBA_CONF))
+    #     logger.debug('Modifying {0}'.format(PG_HBA_CONF))
+    #     common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
     #     lines = self._read_hba_lines()
     #     temp_hba_path = self._write_new_hba_file(lines)
-    #     common.move(temp_hba_path, PS_HBA_CONF)
-    #     common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
+    #     common.move(temp_hba_path, PG_HBA_CONF)
+    #     common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
+
+    def _create_postgres_group(self):
+        logger.notice('Creating postgres group')
+        try:
+            common.sudo(['groupadd',
+                         '-g', POSTGRES_GROUP_ID,
+                         '-o', '-r',
+                         POSTGRES_GROUP])
+        except Exception as ex:
+            if 'already exists' not in ex.message:
+                raise ex
+            else:
+                logger.notice('Group postgres already exists')
+
+    def _create_postgres_user(self):
+        logger.notice('Creating postgres user')
+        try:
+            # In case All-in-one, the user already exists so the home dir
+            # won't be created.
+            common.sudo(['useradd', '-m', '-N',
+                         '-g', POSTGRES_GROUP_ID,
+                         '-o', '-r',
+                         '-d', '/var/lib/pgsql',
+                         '-s', '/bin/bash',
+                         '-c', POSTGRES_USER_COMMENT,
+                         '-u', POSTGRES_USER_ID, POSTGRES_USER])
+        except Exception as ex:
+            if 'already exists' not in ex.message:
+                raise ex
+            else:
+                logger.notice('User postgres already exists')
 
     def _create_postgres_pass_file(self):
-        logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
+        logger.debug('Creating postgresql pgpass file: {0}'
+                     .format(PGPASS_PATH))
         pg_config = config[POSTGRESQL_CLIENT]
         pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
             host=pg_config['host'],
@@ -142,6 +176,8 @@ class PostgresqlClientComponent(BaseComponent):
     def install(self):
         logger.notice('Installing PostgreSQL Client...')
         self._install()
+        self._create_postgres_group()
+        self._create_postgres_user()
         # self._configure()
         logger.notice('PostgreSQL successfully installed')
 

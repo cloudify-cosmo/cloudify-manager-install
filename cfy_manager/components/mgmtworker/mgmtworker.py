@@ -43,8 +43,8 @@ logger = get_logger(MGMTWORKER)
 
 
 class MgmtWorkerComponent(BaseComponent):
-    def __init__(self):
-        super(MgmtWorkerComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(MgmtWorkerComponent, self).__init__(skip_installation)
 
     def _install(self):
         source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
@@ -63,18 +63,8 @@ class MgmtWorkerComponent(BaseComponent):
         config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
         config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
 
-        work_dir = join(HOME_DIR, 'work')
-        broker_config_dst = join(work_dir, 'broker_config.json')
-        deploy(
-            src=join(CONFIG_PATH, 'broker_config.json'),
-            dst=broker_config_dst
-        )
         self._deploy_broker_config()
         self._deploy_hooks_config()
-
-        # The config contains credentials, do not let the world read it
-        common.chmod('440', broker_config_dst)
-        common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, broker_config_dst)
 
     def _deploy_broker_config(self):
         file_name = 'broker_config.json'
@@ -83,7 +73,11 @@ class MgmtWorkerComponent(BaseComponent):
         deploy(
             src=join(CONFIG_PATH, file_name),
             dst=broker_config_dst
-    )
+        )
+
+        # The config contains credentials, do not let the world read it
+        common.chmod('440', broker_config_dst)
+        common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, broker_config_dst)
 
     def _deploy_hooks_config(self):
         file_name = 'hooks.conf'

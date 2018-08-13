@@ -23,8 +23,8 @@ logger = get_logger('cluster')
 
 
 class ClusterComponent(BaseComponent):
-    def __init__(self):
-        super(ClusterComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(ClusterComponent, self).__init__(skip_installation)
 
     def configure(self):
         pass

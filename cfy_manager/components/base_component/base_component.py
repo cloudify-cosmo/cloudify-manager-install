@@ -22,8 +22,9 @@ from ...logger import get_logger
 
 class BaseComponent(object):
 
-    def __init__(self):
+    def __init__(self, skip_installation=False):
         self.logger = get_logger(self.__class__.__name__)
+        self.skip_installation = skip_installation
 
     def install(self):
         pass
@@ -38,9 +39,6 @@ class BaseComponent(object):
         pass
 
     def remove(self):
-        pass
-
-    def run_sanity_check(self):
         pass
 
     def _get_dependencies(self):
@@ -83,7 +81,3 @@ class BaseComponent(object):
             self.logger.debug(
                 'All prerequisites for {class_name} are met'.format(
                     class_name=self.__class__.__name__))
-
-    def get_service_name(self):
-        # TODO: implement in every subclass
-        pass

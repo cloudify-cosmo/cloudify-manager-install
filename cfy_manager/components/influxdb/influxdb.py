@@ -48,8 +48,8 @@ CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXDB, CONFIG)
 
 class InfluxDBComponent(BaseComponent):
 
-    def __init__(self):
-        super(InfluxDBComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(InfluxDBComponent, self).__init__(skip_installation)
 
     def _configure_database(self, host, port):
         db_user = "root"

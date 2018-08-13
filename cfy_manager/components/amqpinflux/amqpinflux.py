@@ -30,8 +30,8 @@ HOME_DIR = join('/opt', AMQPINFLUX)
 
 class AmqpInfluxComponent(BaseComponent):
 
-    def __init__(self):
-        super(AmqpInfluxComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(AmqpInfluxComponent, self).__init__(skip_installation)
 
     def _install(self):
         source_url = config[AMQPINFLUX][SOURCES]['amqpinflux_source_url']

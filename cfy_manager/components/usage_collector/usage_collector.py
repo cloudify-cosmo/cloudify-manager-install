@@ -39,8 +39,8 @@ logger = get_logger(USAGE_COLLECTOR)
 
 
 class UsageCollectorComponent(BaseComponent):
-    def __init__(self):
-        super(UsageCollectorComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(UsageCollectorComponent, self).__init__(skip_installation)
 
     def install(self):
         logger.notice('Installing Usage Collector...')

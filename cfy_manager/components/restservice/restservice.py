@@ -56,8 +56,8 @@ logger = get_logger(RESTSERVICE)
 
 
 class RestServiceComponent(BaseComponent):
-    def __init__(self):
-        super(RestServiceComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(RestServiceComponent, self).__init__(skip_installation)
 
     def _make_paths(self):
         # Used in the service templates

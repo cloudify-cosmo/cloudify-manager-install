@@ -39,8 +39,8 @@ logger = get_logger(RABBITMQ)
 
 
 class RabbitMQComponent(BaseComponent):
-    def __init__(self):
-        super(RabbitMQComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(RabbitMQComponent, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[RABBITMQ][SOURCES]

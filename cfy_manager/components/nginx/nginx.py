@@ -39,8 +39,8 @@ logger = get_logger(NGINX)
 
 
 class NginxComponent(BaseComponent):
-    def __init__(self):
-        super(NginxComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(NginxComponent, self).__init__(skip_installation)
 
     def _deploy_cert_and_key(self, prefix, cert_dst_path, key_dst_path):
         cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]

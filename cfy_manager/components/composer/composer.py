@@ -45,8 +45,8 @@ COMPOSER_PORT = 3000
 
 class ComposerComponent(BaseComponent):
 
-    def __init__(self):
-        super(ComposerComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(ComposerComponent, self).__init__(skip_installation)
 
     def _create_paths(self):
         common.mkdir(NODEJS_DIR)

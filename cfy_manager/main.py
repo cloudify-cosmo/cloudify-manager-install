@@ -22,7 +22,8 @@ from traceback import format_exception
 
 from .components import (
     ComponentsFactory,
-    SERVICE_COMPONENTS
+    SERVICE_COMPONENTS,
+    SERVICE_INSTALLATION_ORDER
 )
 from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
@@ -48,28 +49,6 @@ from .utils.certificates import (
 )
 
 logger = get_logger('Main')
-
-COMPONENTS = [
-    "manager",
-    "manager_ip_setter",
-    "nginx",
-    "python",
-    "postgresql",
-    "rabbitmq",
-    "restservice",
-    "influxdb",
-    "amqpinflux",
-    "java",
-    "amqp_postgres",
-    "stage",
-    "composer",
-    "mgmtworker",
-    "riemann",
-    "cluster",
-    "cli",
-    "usage_collector",
-    "sanity"
-]
 
 START_TIME = time()
 
@@ -209,24 +188,36 @@ def _validate_manager_installed(cmd):
 
 
 def _get_services_to_install():
+    """
+    Match all available services to install with all desired ones and
+    return only a unique list
+    """
     _load_config_and_logger()
     services_to_install = config[SERVICES_TO_INSTALL]
     services_components_to_install = []
-    if '*' in services_to_install:
-        for service in SERVICE_COMPONENTS:
-            services_components_to_install += SERVICE_COMPONENTS[service]
-    else:
-        for service in services_to_install:
-            services_components_to_install += SERVICE_COMPONENTS[service]
-    logger('MAIN-temp').notice('')
-    return services_components_to_install
+    for service in SERVICE_INSTALLATION_ORDER:
+        for service_to_install in services_to_install:
+            if service == service_to_install:
+                services_components_to_install += SERVICE_COMPONENTS[service]
+    # Required to ensure list has only distinct elements
+    seen = set()
+    return [service for service in services_components_to_install
+            if not (service in seen or seen.add(service))]
 
 
 def _create_components_objects():
     components_to_install = _get_services_to_install()
+    logger.notice('Components to install: {0}'
+                  .format(str(components_to_install)))
     for component_name in components_to_install:
+        try:
+            skip_installation = config[component_name]['skip_installation']
+        except KeyError:
+            skip_installation = False
         components.append(
-            ComponentsFactory.create_component(component_name))
+            ComponentsFactory.create_component(
+                component_name,
+                skip_installation))
 
 
 def install_args(f):
@@ -264,8 +255,8 @@ def validate_command(verbose=False,
 def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _load_config_and_logger(verbose=verbose, private_ip=private_ip)
-    for component in components:
-        component.run_sanity_check()
+    sanity = ComponentsFactory.create_component('sanity')
+    sanity.run_sanity_check()
 
 
 @install_args
@@ -284,18 +275,14 @@ def install(verbose=False,
         clean_db,
         config_write_required=True
     )
-
-    # manager_config = config[MANAGER]
-    # if not manager_config[INSTALL_DATABASE_ONLY]:
-    # logger.notice('Installing Cloudify Manager...')
     logger.notice('Installing desired components...')
     validate(components=components)
     set_globals()
 
     for component in components:
-        component.install()
+        if not component.skip_installation:
+            component.install()
 
-    # logger.notice('Cloudify Manager successfully installed!')
     logger.notice('Installation finished successfully!')
     _finish_configuration()
 
@@ -317,16 +304,15 @@ def configure(verbose=False,
         config_write_required=True
     )
 
-    # logger.notice('Configuring Cloudify Manager...')
     logger.notice('Configuring desired components...')
     _validate_manager_installed('configure')
     validate(skip_validations=True, components=components)
     set_globals()
 
     for component in components:
-        component.configure()
+        if not component.skip_installation:
+            component.configure()
 
-    # logger.notice('Cloudify Manager successfully configured!')
     logger.notice('Configuration finished successfully!')
     _finish_configuration()
 
@@ -334,7 +320,6 @@ def configure(verbose=False,
 def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
-    # TODO: check if config.yaml exists, if so, remove only installed components, if not, remove all
     _load_config_and_logger(verbose)
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
@@ -342,7 +327,7 @@ def remove(verbose=False, force=False):
     should_stop = _is_manager_installed()
 
     for component in reversed(components):
-        if should_stop:
+        if should_stop and not component.skip_installation:
             component.stop()
         component.remove()
 
@@ -360,7 +345,8 @@ def start(verbose=False):
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in components:
-        component.start()
+        if not component.skip_installation:
+            component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -374,7 +360,8 @@ def stop(verbose=False, force=False):
 
     logger.notice('Stopping Cloudify Manager services...')
     for component in components:
-        component.stop()
+        if not component.skip_installation:
+            component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 

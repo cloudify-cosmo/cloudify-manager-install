@@ -35,8 +35,8 @@ LOG_DIR = join(constants.BASE_LOG_DIR, RIEMANN)
 
 
 class RiemannComponent(BaseComponent):
-    def __init__(self):
-        super(RiemannComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(RiemannComponent, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[RIEMANN][SOURCES]

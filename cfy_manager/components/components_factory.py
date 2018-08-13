@@ -43,26 +43,26 @@ class ComponentsFactory:
         pass
 
     @staticmethod
-    def create_component(component_name):
+    def create_component(component_name, skip_installation=False):
         return {
-            "manager": ManagerComponent(),
-            "manager_ip_setter": ManagerIpSetterComponent(),
-            "nginx": NginxComponent(),
-            "python": PythonComponent(),
-            "postgresql": PostgresqlComponent(),
-            "postgresql_client": PostgresqlClientComponent(),
-            "rabbitmq": RabbitMQComponent(),
-            "restservice": RestServiceComponent(),
-            "influxdb": InfluxDBComponent(),
-            "amqpinflux": AmqpInfluxComponent(),
-            "java": JavaComponent(),
-            "amqp_postgres": AmqpPostgresComponent(),
-            "stage": StageComponent(),
-            "composer": ComposerComponent(),
-            "mgmtworker": MgmtWorkerComponent(),
-            "riemann": RiemannComponent(),
-            "cluster": ClusterComponent(),
-            "cli": CliComponent(),
-            "usage_collector": UsageCollectorComponent(),
-            "sanity": SanityComponent()
+            "manager": ManagerComponent(skip_installation),
+            "manager_ip_setter": ManagerIpSetterComponent(skip_installation),
+            "nginx": NginxComponent(skip_installation),
+            "python": PythonComponent(skip_installation),
+            "postgresql": PostgresqlComponent(skip_installation),
+            "postgresql_client": PostgresqlClientComponent(skip_installation),
+            "rabbitmq": RabbitMQComponent(skip_installation),
+            "restservice": RestServiceComponent(skip_installation),
+            "influxdb": InfluxDBComponent(skip_installation),
+            "amqpinflux": AmqpInfluxComponent(skip_installation),
+            "java": JavaComponent(skip_installation),
+            "amqp_postgres": AmqpPostgresComponent(skip_installation),
+            "stage": StageComponent(skip_installation),
+            "composer": ComposerComponent(skip_installation),
+            "mgmtworker": MgmtWorkerComponent(skip_installation),
+            "riemann": RiemannComponent(skip_installation),
+            "cluster": ClusterComponent(skip_installation),
+            "cli": CliComponent(skip_installation),
+            "usage_collector": UsageCollectorComponent(skip_installation),
+            "sanity": SanityComponent(skip_installation)
         }[component_name]

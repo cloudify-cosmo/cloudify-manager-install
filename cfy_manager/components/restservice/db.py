@@ -51,11 +51,12 @@ def prepare_db():
     tmp_script_path = temp_copy(script_path)
     common.chmod('+x', tmp_script_path)
     common.sudo(
-        'su - postgres -c "{cmd} {db} {user} {password}"'.format(
+        'su - postgres -c "{cmd} {db} {user} {password} {host}"'.format(
             cmd=tmp_script_path,
             db=pg_config['db_name'],
             user=pg_config['username'],
-            password=pg_config['password'])
+            password=pg_config['password'],
+            host=pg_config['host'])
     )
     logger.notice('SQL DB successfully configured')
 

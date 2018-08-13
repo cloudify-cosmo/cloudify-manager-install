@@ -37,8 +37,8 @@ SANITY_WEB_SERVER_PORT = 12774
 
 
 class SanityComponent(BaseComponent):
-    def __init__(self):
-        super(SanityComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(SanityComponent, self).__init__(skip_installation)
 
     def _create_ssh_key(self):
         logger.info('Creating SSH key for sanity...')

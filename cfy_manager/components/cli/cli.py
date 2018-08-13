@@ -14,21 +14,17 @@
 #  * limitations under the License.
 
 import errno
-
+import logging
 from os.path import join, expanduser
 from getpass import getuser
 
 from ..components_constants import SOURCES, SECURITY
 from ..base_component import BaseComponent
-import logging
-from .. import SOURCES, SECURITY
-
 from ..service_names import CLI, MANAGER
 from ...config import config
 from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
-
 from ...utils import common
 from ...constants import EXTERNAL_CERT_PATH
 from ...utils.install import yum_install, yum_remove
@@ -38,8 +34,8 @@ logger = get_logger(CLI)
 
 class CliComponent(BaseComponent):
 
-    def __init__(self):
-        super(CliComponent, self).__init__()
+    def __init__(self, skip_installation):
+        super(CliComponent, self).__init__(skip_installation)
 
     def _install(self):
         source_url = config[CLI][SOURCES]['cli_source_url']
@@ -67,12 +63,10 @@ class CliComponent(BaseComponent):
 
         ssl_enabled = 'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
 
-
         set_cmd = [
             'cfy', 'profiles', 'set', '-u', username,
             '-p', password, '-t', 'default_tenant',
             '-c', EXTERNAL_CERT_PATH, '--ssl', ssl_enabled
-
         ]
 
         current_user = getuser()
@@ -81,7 +75,8 @@ class CliComponent(BaseComponent):
             current_user))
         # we don't want the commands with the password to be printed to log file
         current_level = get_file_handlers_level()
-        set_file_handlers_level(logging.ERROR)    common.run(use_cmd)
+        set_file_handlers_level(logging.ERROR)
+        common.run(use_cmd)
         common.run(set_cmd)
         self._set_colors(is_root=False)
 
