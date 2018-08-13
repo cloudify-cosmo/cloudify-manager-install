@@ -217,7 +217,7 @@ def _get_services_to_install():
     else:
         for service in services_to_install:
             services_components_to_install += SERVICE_COMPONENTS[service]
-    logger('MAIN-temp').notice('')
+    logger.notice('Main-Temp')
     return services_components_to_install
 
 
