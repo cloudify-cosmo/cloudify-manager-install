@@ -114,10 +114,10 @@ class PostgresqlClientComponent(BaseComponent):
 
     def _create_postgres_user_and_group(self):
         logger.notice('Creating postgres user and group')
-        common.sudo(['groupadd', '-or',
+        common.sudo(['groupadd', '-o', '-r',
                      '-g', POSTGRES_GROUP_ID, POSTGRES_GROUP,
                      '> /dev/null 2>&1'])
-        common.sudo(['useradd', '-Mnor',
+        common.sudo(['useradd', '-M', '-n', '-o', '-r',
                      '-g', POSTGRES_GROUP_ID,
                      '-d', '/var/lib/pgsql',
                      '-s', '/bin/bash',
