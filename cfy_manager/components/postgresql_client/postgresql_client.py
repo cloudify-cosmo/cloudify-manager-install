@@ -27,7 +27,9 @@ from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
-POSTGRES_USER = 'postgres'
+POSTGRES_USER = POSTGRES_GROUP = 'postgres'
+POSTGRES_USER_ID = POSTGRES_GROUP_ID = '26'
+POSTGRES_USER_COMMENT = 'PostgreSQL Server'
 HOST = 'host'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_CLIENT)
 
@@ -110,8 +112,22 @@ class PostgresqlClientComponent(BaseComponent):
     #     common.move(temp_hba_path, PS_HBA_CONF)
     #     common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
 
+    def _create_postgres_user_and_group(self):
+        logger.notice('Creating postgres user and group')
+        common.sudo(['groupadd', '-or',
+                     '-g', POSTGRES_GROUP_ID, POSTGRES_GROUP,
+                     '> /dev/null 2>&1'])
+        common.sudo(['useradd', '-Mnor',
+                     '-g', POSTGRES_GROUP_ID,
+                     '-d', '/var/lib/pgsql',
+                     '-s', '/bin/bash',
+                     '-c', POSTGRES_USER_COMMENT,
+                     '-u', POSTGRES_USER_ID, POSTGRES_USER,
+                     '> /dev/null 2>&1'])
+
     def _create_postgres_pass_file(self):
-        logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
+        logger.debug('Creating postgresql pgpass file: {0}'
+                     .format(PGPASS_PATH))
         pg_config = config[POSTGRESQL_CLIENT]
         pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
             host=pg_config['host'],
@@ -142,6 +158,7 @@ class PostgresqlClientComponent(BaseComponent):
     def install(self):
         logger.notice('Installing PostgreSQL Client...')
         self._install()
+        self._create_postgres_user_and_group()
         # self._configure()
         logger.notice('PostgreSQL successfully installed')
 
