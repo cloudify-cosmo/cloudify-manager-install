@@ -112,19 +112,34 @@ class PostgresqlClientComponent(BaseComponent):
     #     common.move(temp_hba_path, PS_HBA_CONF)
     #     common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
 
-    def _create_postgres_user_and_group(self):
-        logger.notice('Creating postgres user and group')
-        common.sudo(['groupadd',
-                     '-g', POSTGRES_GROUP_ID,
-                     '-o', '-r',
-                     POSTGRES_GROUP])
-        common.sudo(['useradd', '-M', '-n',
+    def _create_postgres_group(self):
+        logger.notice('Creating postgres group')
+        try:
+            common.sudo(['groupadd',
+                         '-g', POSTGRES_GROUP_ID,
+                         '-o', '-r',
+                         POSTGRES_GROUP])
+        except Exception as ex:
+            if 'already exists' not in ex.message:
+                raise ex
+            else:
+                logger.notice('Group postgres already exists')
+
+    def _create_postgres_user(self):
+        logger.notice('Creating postgres group')
+        try:
+            common.sudo(['useradd', '-M', '-n',
                      '-g', POSTGRES_GROUP_ID,
                      '-o', '-r',
                      '-d', '/var/lib/pgsql',
                      '-s', '/bin/bash',
                      '-c', POSTGRES_USER_COMMENT,
                      '-u', POSTGRES_USER_ID, POSTGRES_USER])
+        except Exception as ex:
+            if 'already exists' not in ex.message:
+                raise ex
+            else:
+                logger.notice('User postgres already exists')
 
     def _create_postgres_pass_file(self):
         logger.debug('Creating postgresql pgpass file: {0}'
@@ -159,7 +174,8 @@ class PostgresqlClientComponent(BaseComponent):
     def install(self):
         logger.notice('Installing PostgreSQL Client...')
         self._install()
-        self._create_postgres_user_and_group()
+        self._create_postgres_group()
+        self._create_postgres_user()
         # self._configure()
         logger.notice('PostgreSQL successfully installed')
 
