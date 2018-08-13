@@ -20,7 +20,7 @@ import random
 
 from .. import constants
 from ..config import config
-from ..logger import get_logger, set_file_handlers_level
+from ..logger import get_logger, set_file_handlers_level, get_file_handlers_level
 from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXDB
@@ -93,14 +93,20 @@ def _set_constant_config():
 def _set_admin_password():
     if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
         config[MANAGER][SECURITY][ADMIN_PASSWORD] = _generate_password()
+    print_password_to_screen()
+
+
+def print_password_to_screen():
+    password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    current_level = get_file_handlers_level()
+    set_file_handlers_level(logging.ERROR)
+    logger.warning('Admin password: {0}'.format(password))
+    set_file_handlers_level(current_level)
 
 
 def _generate_password(length=12):
     chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
     password = ''.join(random.choice(chars) for _ in range(length))
-    set_file_handlers_level(logging.ERROR)
-    logger.warning('Generated password: {0}'.format(password))
-    set_file_handlers_level(logging.DEBUG)
     return password
 
 

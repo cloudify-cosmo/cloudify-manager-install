@@ -40,7 +40,7 @@ from .components import amqp_postgres
 from .components import usage_collector
 from .components import manager_ip_setter
 
-from .components.globals import set_globals
+from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
 
 from .components.service_names import MANAGER
@@ -174,6 +174,7 @@ def _print_finish_message():
             protocol=protocol,
             ip=manager_config[PUBLIC_IP])
     )
+    print_password_to_screen()
     logger.notice('#' * 50)
     logger.notice("To install the default plugins bundle run:")
     logger.notice("'cfy plugins bundle-upload'")
