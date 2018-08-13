@@ -26,9 +26,16 @@ from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
 
+from cfy_manager.logger import get_logger
+
+logger = get_logger('create_tables_and_add_defaults')
 
 def _init_db_tables(db_migrate_dir):
     print 'Setting up a Flask app'
+    logger.notice(config.instance.postgresql_host)
+    logger.notice(config.instance.security_hash_salt)
+    logger.notice(config.instance.security_secret_key)
+    logger.notice(str(config.instance))
     setup_flask_app(
         manager_ip=config.instance.postgresql_host,
         hash_salt=config.instance.security_hash_salt,
