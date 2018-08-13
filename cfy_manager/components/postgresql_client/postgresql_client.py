@@ -117,16 +117,14 @@ class PostgresqlClientComponent(BaseComponent):
         common.sudo(['groupadd',
                      '-g', POSTGRES_GROUP_ID,
                      '-o', '-r',
-                     POSTGRES_GROUP,
-                     '> /dev/null 2>&1'])
+                     POSTGRES_GROUP])
         common.sudo(['useradd', '-M', '-n',
                      '-g', POSTGRES_GROUP_ID,
                      '-o', '-r',
                      '-d', '/var/lib/pgsql',
                      '-s', '/bin/bash',
                      '-c', POSTGRES_USER_COMMENT,
-                     '-u', POSTGRES_USER_ID, POSTGRES_USER,
-                     '> /dev/null 2>&1'])
+                     '-u', POSTGRES_USER_ID, POSTGRES_USER])
 
     def _create_postgres_pass_file(self):
         logger.debug('Creating postgresql pgpass file: {0}'
