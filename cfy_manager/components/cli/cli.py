@@ -21,12 +21,13 @@ from .. import SOURCES, SECURITY
 
 from ..service_names import CLI, MANAGER
 
-from ...config import config
-from ...logger import get_logger, set_file_handlers_level, get_file_handlers_level
-
 from ...utils import common
+from ...config import config
 from ...constants import EXTERNAL_CERT_PATH
 from ...utils.install import yum_install, yum_remove
+from ...logger import (get_logger,
+                       set_file_handlers_level,
+                       get_file_handlers_level)
 
 
 logger = get_logger(CLI)
