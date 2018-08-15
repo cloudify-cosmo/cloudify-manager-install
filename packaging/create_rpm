@@ -285,8 +285,8 @@ def update_resources_url_on_dev_branch(dev_branch, manager_resources_file):
     modules_info = []
     if is_branch_exists(MANAGER_INFO['name'], dev_branch):
         modules_info.append(MANAGER_INFO)
-    if is_branch_exists(CLI_INFO['name'], dev_branch):
-        modules_info.append(CLI_INFO)
+    # if is_branch_exists(CLI_INFO['name'], dev_branch):
+    #     modules_info.append(CLI_INFO)
     if is_branch_exists(AGENT_INFO['name'], dev_branch):
         modules_info.append(AGENT_INFO)
 
