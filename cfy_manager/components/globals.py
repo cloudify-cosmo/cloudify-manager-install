@@ -20,7 +20,9 @@ import random
 
 from .. import constants
 from ..config import config
-from ..logger import get_logger, set_file_handlers_level, get_file_handlers_level
+from ..logger import (get_logger,
+                      set_file_handlers_level,
+                      get_file_handlers_level)
 from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXDB
