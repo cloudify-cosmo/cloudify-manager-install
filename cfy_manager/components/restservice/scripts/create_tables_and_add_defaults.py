@@ -32,10 +32,6 @@ logger = logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper
 
 def _init_db_tables(db_migrate_dir):
     print 'Setting up a Flask app'
-    logger.debug(config.instance.postgresql_host)
-    logger.debug(config.instance.security_hash_salt)
-    logger.debug(config.instance.security_secret_key)
-    logger.debug(str(config.instance))
     setup_flask_app(
         manager_ip=config.instance.postgresql_host,
         hash_salt=config.instance.security_hash_salt,

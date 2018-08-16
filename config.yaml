@@ -158,6 +158,10 @@ postgresql:
 
   # For external postgres installation, set to true
   enable_remote_connections: false
+  host: localhost
+  db_name: cloudify_db
+  username: cloudify
+  password: cloudify
 
 postgresql_client:
   sources:
