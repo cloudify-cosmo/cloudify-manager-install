@@ -55,7 +55,7 @@ class PostgresqlClientComponent(BaseComponent):
 
         logger.debug('Installing PostgreSQL Client libraries...')
         yum_install(sources['ps_libs_rpm_url'])
-        # yum_install(sources['ps_rpm_url'])
+        yum_install(sources['ps_rpm_url'])
         # yum_install(sources['ps_contrib_rpm_url'])
         # yum_install(sources['ps_server_rpm_url'])
         # yum_install(sources['ps_devel_rpm_url'])
@@ -87,7 +87,7 @@ class PostgresqlClientComponent(BaseComponent):
 
     # def _read_hba_lines(self):
     #     temp_hba_path = files.write_to_tempfile('')
-    #     common.copy(PS_HBA_CONF, temp_hba_path)
+    #     common.copy(PG_HBA_CONF, temp_hba_path)
     #     common.chmod('777', temp_hba_path)
     #     with open(temp_hba_path, 'r') as f:
     #         lines = f.readlines()
@@ -105,12 +105,12 @@ class PostgresqlClientComponent(BaseComponent):
 
     # def _update_configuration(self):
     #     logger.info('Updating PostgreSQL configuration...')
-    #     logger.debug('Modifying {0}'.format(PS_HBA_CONF))
-    #     common.copy(PS_HBA_CONF, '{0}.backup'.format(PS_HBA_CONF))
+    #     logger.debug('Modifying {0}'.format(PG_HBA_CONF))
+    #     common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
     #     lines = self._read_hba_lines()
     #     temp_hba_path = self._write_new_hba_file(lines)
-    #     common.move(temp_hba_path, PS_HBA_CONF)
-    #     common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
+    #     common.move(temp_hba_path, PG_HBA_CONF)
+    #     common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
     def _create_postgres_group(self):
         logger.notice('Creating postgres group')
@@ -126,15 +126,17 @@ class PostgresqlClientComponent(BaseComponent):
                 logger.notice('Group postgres already exists')
 
     def _create_postgres_user(self):
-        logger.notice('Creating postgres group')
+        logger.notice('Creating postgres user')
         try:
-            common.sudo(['useradd', '-M', '-n',
-                     '-g', POSTGRES_GROUP_ID,
-                     '-o', '-r',
-                     '-d', '/var/lib/pgsql',
-                     '-s', '/bin/bash',
-                     '-c', POSTGRES_USER_COMMENT,
-                     '-u', POSTGRES_USER_ID, POSTGRES_USER])
+            # In case All-in-one, the user already exists so the home dir
+            # won't be created.
+            common.sudo(['useradd', '-m', '-N',
+                         '-g', POSTGRES_GROUP_ID,
+                         '-o', '-r',
+                         '-d', '/var/lib/pgsql',
+                         '-s', '/bin/bash',
+                         '-c', POSTGRES_USER_COMMENT,
+                         '-u', POSTGRES_USER_ID, POSTGRES_USER])
         except Exception as ex:
             if 'already exists' not in ex.message:
                 raise ex

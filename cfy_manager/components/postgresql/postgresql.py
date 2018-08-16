@@ -31,11 +31,13 @@ from ...utils.install import yum_install, yum_remove
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = 'postgres'
 HOST = 'host'
+ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
-PS_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
+PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
+PG_CONF_PATH = '/var/lib/pgsql/9.5/data/postgres.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
@@ -85,59 +87,57 @@ class PostgresqlComponent(BaseComponent):
         logger.info('Starting PostgreSQL service...')
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
-    def _read_hba_lines(self):
-        temp_hba_path = files.write_to_tempfile('')
-        common.copy(PS_HBA_CONF, temp_hba_path)
-        common.chmod('777', temp_hba_path)
-        with open(temp_hba_path, 'r') as f:
+    def _read_old_file_lines(self, file_path):
+        temp_file_path = files.write_to_tempfile('')
+        common.copy(file_path, temp_file_path)
+        common.chmod('777', temp_file_path)
+        with open(temp_file_path, 'r') as f:
             lines = f.readlines()
         return lines
 
-    def _write_new_hba_file(self, lines):
+    def _write_new_pgconfig_file(self, lines):
+        fd, temp_pgconfig_path = mkstemp()
+        os.close(fd)
+        with open(temp_pgconfig_path, 'a') as f:
+            for line in lines:
+                if line.startswith('#listen_addresses = \'localhost\''):
+                    line = line.replace('listen_addresses = \'localhost\'',
+                                        'listen_addresses = \'*\'')
+                f.write(line)
+        return temp_pgconfig_path
+
+    def _write_new_hba_file(self, lines, enable_remote_connections):
         fd, temp_hba_path = mkstemp()
         os.close(fd)
-        with open(temp_hba_path, 'w') as f:
+        with open(temp_hba_path, 'a') as f:
             for line in lines:
                 if line.startswith(('host', 'local')):
                     line = line.replace('ident', 'md5')
                 f.write(line)
+            if enable_remote_connections:
+                f.write('host all all 0.0.0.0/0 trust')
         return temp_hba_path
 
-    def _update_configuration(self):
+    def _update_configuration(self, enable_remote_connections):
         logger.info('Updating PostgreSQL configuration...')
-        logger.debug('Modifying {0}'.format(PS_HBA_CONF))
-        common.copy(PS_HBA_CONF, '{0}.backup'.format(PS_HBA_CONF))
-        lines = self._read_hba_lines()
-        temp_hba_path = self._write_new_hba_file(lines)
-        common.move(temp_hba_path, PS_HBA_CONF)
-        common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
-
-    def _create_postgres_pass_file(self):
-        # logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
-        # pg_config = config[POSTGRESQL]
-        # pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
-        #     host=pg_config['host'],
-        #     port=PG_PORT,
-        #     db_name='*',  # Allowing for the multiple DBs we have
-        #     user=pg_config['username'],
-        #     password=pg_config['password']
-        # )
-        # files.write_to_file(pgpass_content, PGPASS_PATH)
-        # common.chmod('400', PGPASS_PATH)
-        # common.chown(
-        #     constants.CLOUDIFY_USER,
-        #     constants.CLOUDIFY_GROUP,
-        #     PGPASS_PATH
-        # )
-
-        # logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
-        pass
+        logger.debug('Modifying {0}'.format(PG_HBA_CONF))
+        common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
+        lines = self._read_old_file_lines(PG_HBA_CONF)
+        temp_hba_path = self._write_new_hba_file(lines, enable_remote_connections)
+        common.move(temp_hba_path, PG_HBA_CONF)
+        common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
+        if enable_remote_connections:
+            lines = self._read_old_file_lines(PG_CONF_PATH)
+            temp_pg_conf_path = self._write_new_pgconfig_file(lines)
+            common.move(temp_pg_conf_path, PG_CONF_PATH)
+            common.chown(POSTGRES_USER, POSTGRES_USER, PG_CONF_PATH)
 
     def _configure(self):
         files.copy_notice(POSTGRESQL)
         self._init_postgresql()
-        self._update_configuration()
-        # self._create_postgres_pass_file()
+        enable_remote_connections = \
+            config[POSTGRESQL][ENABLE_REMOTE_CONNECTIONS]
+        self._update_configuration(enable_remote_connections)
 
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)

@@ -51,11 +51,12 @@ def prepare_db():
     tmp_script_path = temp_copy(script_path)
     common.chmod('+x', tmp_script_path)
     common.sudo(
-        'su - postgres -c "{cmd} {db} {user} {password}"'.format(
+        'su - postgres -c "{cmd} {db} {user} {password} {host}"'.format(
             cmd=tmp_script_path,
             db=pg_config['db_name'],
             user=pg_config['username'],
-            password=pg_config['password'])
+            password=pg_config['password'],
+            host=pg_config['host'])
     )
     logger.notice('SQL DB successfully configured')
 
@@ -121,9 +122,7 @@ def _run_script(script_name, args_dict=None, configs=None):
 def populate_db(configs=None):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict()
-    logger.notice('AAAAHHHHAHAHAHAHAHAHAH')
     _run_script('create_tables_and_add_defaults.py', args_dict, configs)
-    logger.notice('AAAAHHHHAHAHAHAHAHAHAH')
     logger.notice('DB populated and AMQP resources successfully created')
 
 
