@@ -61,16 +61,36 @@ def _deploy_mgmtworker_config():
     config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
     config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
 
+    _deploy_broker_config()
+    _deploy_hooks_config()
+
+
+def _deploy_broker_config():
+    file_name = 'broker_config.json'
     work_dir = join(HOME_DIR, 'work')
-    broker_config_dst = join(work_dir, 'broker_config.json')
+    broker_config_dst = join(work_dir, file_name)
     deploy(
-        src=join(CONFIG_PATH, 'broker_config.json'),
+        src=join(CONFIG_PATH, file_name),
         dst=broker_config_dst
     )
 
     # The config contains credentials, do not let the world read it
     common.chmod('440', broker_config_dst)
     common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, broker_config_dst)
+
+
+def _deploy_hooks_config():
+    file_name = 'hooks.conf'
+    config_dir = join(HOME_DIR, 'config')
+    hooks_config_dst = join(config_dir, file_name)
+    deploy(
+        src=join(CONFIG_PATH, file_name),
+        dst=hooks_config_dst
+    )
+
+    # The user should use root to edit the hooks config file
+    common.chmod('440', hooks_config_dst)
+    common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, hooks_config_dst)
 
 
 def _prepare_snapshot_permissions():
