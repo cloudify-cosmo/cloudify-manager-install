@@ -26,7 +26,7 @@ from ..components_constants import (
 )
 from ..components_constants import SSL_INPUTS
 from ..base_component import BaseComponent
-from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL
+from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -155,7 +155,8 @@ class StageComponent(BaseComponent):
 
         stage_config['db']['url'] = \
             'postgres://{0}:{1}@127.0.0.1:5432/stage'.format(
-                config[POSTGRESQL]['username'], config[POSTGRESQL]['password'])
+                config[POSTGRESQL_CLIENT]['username'],
+                config[POSTGRESQL_CLIENT]['password'])
 
         content = json.dumps(stage_config, indent=4, sort_keys=True)
 
