@@ -121,7 +121,9 @@ def _run_script(script_name, args_dict=None, configs=None):
 def populate_db(configs=None):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict()
+    logger.notice('AAAAHHHHAHAHAHAHAHAHAH')
     _run_script('create_tables_and_add_defaults.py', args_dict, configs)
+    logger.notice('AAAAHHHHAHAHAHAHAHAHAH')
     logger.notice('DB populated and AMQP resources successfully created')
 
 
