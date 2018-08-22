@@ -15,7 +15,6 @@
 #  * limitations under the License.
 
 import sys
-import yaml
 from sqlalchemy.orm.attributes import flag_modified
 
 from manager_rest.flask_utils import setup_flask_app
@@ -55,8 +54,7 @@ if __name__ == '__main__':
                            ' exactly one argument, it received {0} arguments'
                            .format(len(sys.argv)-1))
     networks = sys.argv[1]
-
-    networks = yaml.load(networks)['networks']
+    networks = eval(networks)
 
     _assert_uniqe_network_names(networks)
 

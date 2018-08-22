@@ -14,8 +14,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
-import yaml
+import json
 import argh
 from os.path import join
 from cfy_manager.logger import get_logger
@@ -56,24 +55,24 @@ def _update_metadata_file(networks):
     """
     metadata = load_cert_metadata()
     old_networks = metadata.get('networks', {})
-    networks['networks'].update(old_networks)
-    metadata['networks'] = networks['networks']
+    networks.update(old_networks)
+    metadata['networks'] = networks
     write_to_file(metadata, CERT_METADATA_FILE_PATH, json_dump=True)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CERT_METADATA_FILE_PATH)
 
 
 @argh.arg('--networks',
           help='A JSON string containing the new networks to be added to the'
-               ' Manager. Example: "{networks: {`<network-name>`: `<ip>`}}"',
+               ' Manager. Example: `{"<network-name>": "<ip>"}`',
           required=True)
 def add_networks(networks=None):
     """
     Add new networks to a running Cloudify Manager
     """
     try:
-        networks = yaml.load(networks)
-
         print('Trying to add new networks to Manager...')
+
+        networks = json.loads(networks)
 
         _run_update_provider_context_script(networks)
 
