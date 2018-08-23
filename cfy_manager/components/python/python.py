@@ -13,48 +13,48 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from ..base_component import BaseComponent
 from ..service_names import PYTHON
-
 from ...config import config
 from ...logger import get_logger
-
 from ...utils.install import yum_install, yum_remove
 from ...utils.files import copy_notice, remove_notice
+
 
 logger = get_logger(PYTHON)
 
 
-def _install():
-    if config[PYTHON]['install_python_compilers']:
-        logger.info('Installing Compilers...')
-        yum_install('python-devel', disable_all_repos=False)
-        yum_install('gcc', disable_all_repos=False)
-        yum_install('gcc-c++', disable_all_repos=False)
+class PythonComponent(BaseComponent):
+    def __init__(self, skip_installation):
+        super(PythonComponent, self).__init__(skip_installation)
 
-
-def _configure():
-    copy_notice(PYTHON)
-
-
-def install():
-    logger.notice('Installing Python dependencies...')
-    _install()
-    _configure()
-    logger.notice('Python dependencies successfully installed')
-
-
-def configure():
-    logger.notice('Configuring Python dependencies...')
-    _configure()
-    logger.notice('Python dependencies successfully configured')
-
-
-def remove():
-    remove_notice(PYTHON)
-    if config[PYTHON]['remove_on_teardown']:
-        logger.notice('Removing Python dependencies...')
+    def _install(self):
         if config[PYTHON]['install_python_compilers']:
-            yum_remove('python-devel')
-            yum_remove('gcc')
-            yum_remove('gcc-c++')
-        logger.notice('Python dependencies successfully removed')
+            logger.info('Installing Compilers...')
+            yum_install('python-devel', disable_all_repos=False)
+            yum_install('gcc', disable_all_repos=False)
+            yum_install('gcc-c++', disable_all_repos=False)
+
+    def _configure(self):
+        copy_notice(PYTHON)
+
+    def install(self):
+        logger.notice('Installing Python dependencies...')
+        self._install()
+        self._configure()
+        logger.notice('Python dependencies successfully installed')
+
+    def configure(self):
+        logger.notice('Configuring Python dependencies...')
+        self._configure()
+        logger.notice('Python dependencies successfully configured')
+
+    def remove(self):
+        remove_notice(PYTHON)
+        if config[PYTHON]['remove_on_teardown']:
+            logger.notice('Removing Python dependencies...')
+            if config[PYTHON]['install_python_compilers']:
+                yum_remove('python-devel')
+                yum_remove('gcc')
+                yum_remove('gcc-c++')
+            logger.notice('Python dependencies successfully removed')

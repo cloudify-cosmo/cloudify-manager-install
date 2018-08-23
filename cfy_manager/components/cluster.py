@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from base_component import BaseComponent
 from ..utils import common
 from ..logger import get_logger
 from ..exceptions import BootstrapError
@@ -21,18 +22,20 @@ CLUSTER_REMOVE_SCRIPT = '/opt/manager/env/bin/teardown_cluster'
 logger = get_logger('cluster')
 
 
-def configure():
-    pass
+class ClusterComponent(BaseComponent):
+    def __init__(self, skip_installation):
+        super(ClusterComponent, self).__init__(skip_installation)
 
+    def configure(self):
+        pass
 
-def install():
-    pass
+    def install(self):
+        pass
 
-
-def remove():
-    try:
-        common.sudo([CLUSTER_REMOVE_SCRIPT])
-    except BootstrapError:
-        logger.notice('Cluster remove script does not exist - skipping')
-    else:
-        logger.notice('Cluster components removed')
+    def remove(self):
+        try:
+            common.sudo([CLUSTER_REMOVE_SCRIPT])
+        except BootstrapError:
+            logger.notice('Cluster remove script does not exist - skipping')
+        else:
+            logger.notice('Cluster components removed')

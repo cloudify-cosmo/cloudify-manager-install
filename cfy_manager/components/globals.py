@@ -27,7 +27,7 @@ from ..exceptions import InputError
 
 from .service_names import RABBITMQ, MANAGER, INFLUXDB
 
-from . import (
+from .components_constants import (
     PRIVATE_IP,
     ENDPOINT_IP,
     SECURITY,
@@ -35,8 +35,10 @@ from . import (
     CONSTANTS,
     ADMIN_PASSWORD,
     CLEAN_DB,
-    FLASK_SECURITY
+    FLASK_SECURITY,
+    SERVICES_TO_INSTALL
 )
+from .service_components import MANAGER_SERVICE
 
 import logging
 
@@ -99,6 +101,8 @@ def _set_admin_password():
 
 
 def print_password_to_screen():
+    if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
+        return
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
@@ -176,8 +180,9 @@ def set_globals():
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_influx_db_endpoint()
-    if config[CLEAN_DB]:
-        _set_admin_password()
-        _generate_flask_security_config()
-    else:
-        _validate_admin_password_and_security_config()
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        if config[CLEAN_DB]:
+            _set_admin_password()
+            _generate_flask_security_config()
+        else:
+            _validate_admin_password_and_security_config()

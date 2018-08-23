@@ -20,44 +20,27 @@ import argh
 from time import time
 from traceback import format_exception
 
-from .components import cli
-from .components import java
-from .components import nginx
-from .components import stage
-from .components import sanity
-from .components import python
-from .components import cluster
-from .components import manager
-from .components import riemann
-from .components import composer
-from .components import rabbitmq
-from .components import influxdb
-from .components import amqpinflux
-from .components import mgmtworker
-from .components import postgresql
-from .components import restservice
-from .components import amqp_postgres
-from .components import usage_collector
-from .components import manager_ip_setter
-
+from .components import (
+    ComponentsFactory,
+    SERVICE_COMPONENTS,
+    SERVICE_INSTALLATION_ORDER
+)
 from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
-
 from .components.service_names import MANAGER
-from .components import (
+from .components.components_constants import (
+    SERVICES_TO_INSTALL,
     SECURITY,
     PRIVATE_IP,
     PUBLIC_IP,
     ADMIN_PASSWORD,
     CLEAN_DB
 )
-
 from .config import config
 from .networks.networks import add_networks
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
-
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
@@ -66,28 +49,6 @@ from .utils.certificates import (
 )
 
 logger = get_logger('Main')
-
-COMPONENTS = [
-    ("manager", manager),
-    ("manager_ip_setter", manager_ip_setter),
-    ("nginx", nginx),
-    ("python", python),
-    ("postgresql", postgresql),
-    ("rabbitmq", rabbitmq),
-    ("restservice", restservice),
-    ("influxdb", influxdb),
-    ("amqpinflux", amqpinflux),
-    ("java", java),
-    ("amqp-postgres", amqp_postgres),
-    ("stage", stage),
-    ("composer", composer),
-    ("mgmtworker", mgmtworker),
-    ("riemann", riemann),
-    ("cluster", cluster),
-    ("cli", cli),
-    ("usage_collector", usage_collector),
-    ("sanity", sanity)
-]
 
 START_TIME = time()
 
@@ -114,6 +75,8 @@ PUBLIC_IP_HELP_MSG = (
     'If your environment does not require a public IP, you can enter the '
     'private IP here.'
 )
+
+components = []
 
 
 def _print_time():
@@ -224,18 +187,37 @@ def _validate_manager_installed(cmd):
             "Operation '{0}' is not allowed on a cluster node".format(cmd))
 
 
-def _get_components(with_attribute=None):
-    target_components = []
-    for component_name, component in COMPONENTS:
-        component_config = config.get(component_name, {})
-        if component_config.get('skip_installation'):
-            # This component is not installed, skip it
-            continue
-        if with_attribute and not hasattr(component, with_attribute):
-            # Desired attribute was not on this component
-            continue
-        target_components.append(component)
-    return target_components
+def _get_services_to_install():
+    """
+    Match all available services to install with all desired ones and
+    return only a unique list
+    """
+    _load_config_and_logger()
+    services_to_install = config[SERVICES_TO_INSTALL]
+    services_components_to_install = []
+    for service in SERVICE_INSTALLATION_ORDER:
+        for service_to_install in services_to_install:
+            if service == service_to_install:
+                services_components_to_install += SERVICE_COMPONENTS[service]
+    # Required to ensure list has only distinct elements
+    seen = set()
+    return [service for service in services_components_to_install
+            if not (service in seen or seen.add(service))]
+
+
+def _create_components_objects():
+    components_to_install = _get_services_to_install()
+    logger.notice('Components to install: {0}'
+                  .format(str(components_to_install)))
+    for component_name in components_to_install:
+        try:
+            skip_installation = config[component_name]['skip_installation']
+        except KeyError:
+            skip_installation = False
+        components.append(
+            ComponentsFactory.create_component(
+                component_name,
+                skip_installation))
 
 
 def install_args(f):
@@ -266,13 +248,14 @@ def validate_command(verbose=False,
         clean_db,
         config_write_required=False
     )
-    validate()
+    validate(components=components)
 
 
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _load_config_and_logger(verbose=verbose, private_ip=private_ip)
+    sanity = ComponentsFactory.create_component('sanity')
     sanity.run_sanity_check()
 
 
@@ -292,15 +275,15 @@ def install(verbose=False,
         clean_db,
         config_write_required=True
     )
-
-    logger.notice('Installing Cloudify Manager...')
-    validate()
+    logger.notice('Installing desired components...')
+    validate(components=components)
     set_globals()
 
-    for component in _get_components():
-        component.install()
+    for component in components:
+        if not component.skip_installation:
+            component.install()
 
-    logger.notice('Cloudify Manager successfully installed!')
+    logger.notice('Installation finished successfully!')
     _finish_configuration()
 
 
@@ -321,15 +304,16 @@ def configure(verbose=False,
         config_write_required=True
     )
 
-    logger.notice('Configuring Cloudify Manager...')
+    logger.notice('Configuring desired components...')
     _validate_manager_installed('configure')
-    validate(skip_validations=True)
+    validate(skip_validations=True, components=components)
     set_globals()
 
-    for component in _get_components():
-        component.configure()
+    for component in components:
+        if not component.skip_installation:
+            component.configure()
 
-    logger.notice('Cloudify Manager successfully configured!')
+    logger.notice('Configuration finished successfully!')
     _finish_configuration()
 
 
@@ -342,8 +326,8 @@ def remove(verbose=False, force=False):
 
     should_stop = _is_manager_installed()
 
-    for component in reversed(_get_components()):
-        if should_stop and hasattr(component, 'stop'):
+    for component in reversed(components):
+        if should_stop and not component.skip_installation:
             component.stop()
         component.remove()
 
@@ -360,8 +344,9 @@ def start(verbose=False):
     _load_config_and_logger(verbose)
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
-    for component in _get_components(with_attribute='start'):
-        component.start()
+    for component in components:
+        if not component.skip_installation:
+            component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -374,8 +359,9 @@ def stop(verbose=False, force=False):
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component in _get_components(with_attribute='stop'):
-        component.stop()
+    for component in components:
+        if not component.skip_installation:
+            component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 
@@ -394,6 +380,7 @@ def restart(verbose=False, force=False):
 
 def main():
     """Main entry point"""
+    _create_components_objects()
     argh.dispatch_commands([
         validate_command,
         install,

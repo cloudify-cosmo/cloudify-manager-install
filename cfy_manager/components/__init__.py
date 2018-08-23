@@ -13,39 +13,27 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-# region Common Strings
+from .amqp_postgres import AmqpPostgresComponent  # NOQA
+from .amqpinflux import AmqpInfluxComponent  # NOQA
+from .cli import CliComponent  # NOQA
+from .composer import ComposerComponent  # NOQA
+from .influxdb import InfluxDBComponent  # NOQA
+from .java import JavaComponent  # NOQA
+from .manager import ManagerComponent  # NOQA
+from .manager_ip_setter import ManagerIpSetterComponent  # NOQA
+from .mgmtworker import MgmtWorkerComponent  # NOQA
+from .nginx import NginxComponent  # NOQA
+from .postgresql import PostgresqlComponent  # NOQA
+from .postgresql_client import PostgresqlClientComponent # NOQA
+from .python import PythonComponent  # NOQA
+from .rabbitmq import RabbitMQComponent  # NOQA
+from .restservice import RestServiceComponent  # NOQA
+from .riemann import RiemannComponent  # NOQA
+from .sanity import SanityComponent  # NOQA
+from .stage import StageComponent  # NOQA
+from .usage_collector import UsageCollectorComponent  # NOQA
+from .cluster import ClusterComponent  # NOQA
 
-SOURCES = 'sources'
-
-SERVICE_USER = 'service_user'
-SERVICE_GROUP = 'service_group'
-
-SCRIPTS = 'scripts'
-CONFIG = 'config'
-
-HOME_DIR_KEY = 'home_dir'
-LOG_DIR_KEY = 'log_dir'
-
-VENV = 'venv'
-
-PRIVATE_IP = 'private_ip'
-PUBLIC_IP = 'public_ip'
-ENDPOINT_IP = 'endpoint_ip'
-SECURITY = 'security'
-ADMIN_PASSWORD = 'admin_password'
-ADMIN_USERNAME = 'admin_username'
-
-# endregion
-
-# region Config Keys
-
-AGENT = 'agent'
-CONSTANTS = 'constants'
-SSL_INPUTS = 'ssl_inputs'
-VALIDATIONS = 'validations'
-SKIP_VALIDATIONS = 'skip_validations'
-PROVIDER_CONTEXT = 'provider_context'
-CLEAN_DB = 'clean_db'
-FLASK_SECURITY = 'flask_security'
-
-# endregion
+from components_factory import ComponentsFactory  # NOQA
+from service_components import SERVICE_COMPONENTS  # NOQA
+from service_components import SERVICE_INSTALLATION_ORDER  # NOQA

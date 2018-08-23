@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .. import (
+from ..components_constants import (
     SCRIPTS,
     PROVIDER_CONTEXT,
     AGENT,
@@ -25,7 +25,7 @@ from .. import (
 )
 
 from ..service_names import (
-    POSTGRESQL,
+    POSTGRESQL_CLIENT,
     MANAGER,
     RESTSERVICE
 )
@@ -45,17 +45,18 @@ REST_HOME_DIR = '/opt/manager'
 
 def prepare_db():
     logger.notice('Configuring SQL DB...')
-    pg_config = config[POSTGRESQL]
+    pg_config = config[POSTGRESQL_CLIENT]
 
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
     common.chmod('+x', tmp_script_path)
     common.sudo(
-        'su - postgres -c "{cmd} {db} {user} {password}"'.format(
+        'su - postgres -c "{cmd} {db} {user} {password} {host}"'.format(
             cmd=tmp_script_path,
             db=pg_config['db_name'],
             user=pg_config['username'],
-            password=pg_config['password'])
+            password=pg_config['password'],
+            host=pg_config['host'])
     )
     logger.notice('SQL DB successfully configured')
 

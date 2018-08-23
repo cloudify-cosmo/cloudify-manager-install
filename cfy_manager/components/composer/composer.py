@@ -18,15 +18,13 @@ import json
 
 from os.path import join, dirname
 
-from .. import SOURCES, SERVICE_USER, SERVICE_GROUP, SSL_INPUTS
-
+from ..components_constants import SOURCES, SERVICE_USER, SERVICE_GROUP, SSL_INPUTS
+from ..base_component import BaseComponent
 from ..service_names import COMPOSER
-
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
 from ...constants import BASE_LOG_DIR, CLOUDIFY_USER
-
 from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
@@ -42,123 +40,117 @@ LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 
 COMPOSER_USER = '{0}_user'.format(COMPOSER)
 COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
+COMPOSER_PORT = 3000
 
 
-def _create_paths():
-    common.mkdir(NODEJS_DIR)
-    common.mkdir(HOME_DIR)
-    common.mkdir(LOG_DIR)
+class ComposerComponent(BaseComponent):
 
+    def __init__(self, skip_installation):
+        super(ComposerComponent, self).__init__(skip_installation)
 
-def _install():
-    composer_source_url = config[COMPOSER][SOURCES]['composer_source_url']
-    try:
-        composer_tar = files.get_local_source_path(composer_source_url)
-    except FileError:
-        logger.info('Composer package not found in manager resources package')
-        logger.notice('Composer will not be installed.')
-        config[COMPOSER]['skip_installation'] = True
-        return
+    def _create_paths(self):
+        common.mkdir(NODEJS_DIR)
+        common.mkdir(HOME_DIR)
+        common.mkdir(LOG_DIR)
 
-    _create_paths()
+    def _install(self):
+        composer_source_url = config[COMPOSER][SOURCES]['composer_source_url']
+        try:
+            composer_tar = files.get_local_source_path(composer_source_url)
+        except FileError:
+            logger.info('Composer package not found in manager resources package')
+            logger.notice('Composer will not be installed.')
+            config[COMPOSER]['skip_installation'] = True
+            return
 
-    logger.info('Installing Cloudify Composer...')
-    common.untar(composer_tar, HOME_DIR)
+        self._create_paths()
 
+        logger.info('Installing Cloudify Composer...')
+        common.untar(composer_tar, HOME_DIR)
 
-def _verify_composer_alive():
-    systemd.verify_alive(COMPOSER)
-    wait_for_port(3000)
+    def _verify_composer_alive(self):
+        systemd.verify_alive(COMPOSER)
+        wait_for_port(COMPOSER_PORT)
 
+    def _start_and_validate_composer(self):
+        # Used in the service template
+        config[COMPOSER][SERVICE_USER] = COMPOSER_USER
+        config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
+        systemd.configure(COMPOSER)
 
-def _start_and_validate_composer():
-    # Used in the service template
-    config[COMPOSER][SERVICE_USER] = COMPOSER_USER
-    config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
-    systemd.configure(COMPOSER)
+        logger.info('Starting Composer service...')
+        systemd.restart(COMPOSER)
+        self._verify_composer_alive()
 
-    logger.info('Starting Composer service...')
-    systemd.restart(COMPOSER)
-    _verify_composer_alive()
+    def _run_db_migrate(self):
+        npm_path = join(NODEJS_DIR, 'bin', 'npm')
+        common.run(
+            'cd {}; {} run db-migrate'.format(HOME_DIR, npm_path),
+            shell=True
+        )
 
+    def _create_user_and_set_permissions(self):
+        create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
+        # adding cfyuser to the composer group so that its files are r/w for
+        # replication and snapshots
+        common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
 
-def _run_db_migrate():
-    npm_path = join(NODEJS_DIR, 'bin', 'npm')
-    common.run(
-        'cd {}; {} run db-migrate'.format(HOME_DIR, npm_path),
-        shell=True
-    )
+        logger.debug('Fixing permissions...')
+        common.chown(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
+        common.chown(COMPOSER_USER, COMPOSER_GROUP, LOG_DIR)
 
+        common.chmod('g+w', CONF_DIR)
+        common.chmod('g+w', dirname(CONF_DIR))
 
-def _create_user_and_set_permissions():
-    create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-    # adding cfyuser to the composer group so that its files are r/w for
-    # replication and snapshots
-    common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
+    def _set_internal_manager_ip(self):
+        config_path = os.path.join(CONF_DIR, 'prod.json')
+        with open(config_path) as f:
+            composer_config = json.load(f)
 
-    logger.debug('Fixing permissions...')
-    common.chown(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-    common.chown(COMPOSER_USER, COMPOSER_GROUP, LOG_DIR)
+        if config[SSL_INPUTS]['internal_manager_host']:
+            composer_config['managerConfig']['ip'] = \
+                config[SSL_INPUTS]['internal_manager_host']
+            content = json.dumps(composer_config, indent=4, sort_keys=True)
+            # Using `write_to_file` because the path belongs to the composer
+            # user, so we need to move with sudo
+            files.write_to_file(contents=content, destination=config_path)
 
-    common.chmod('g+w', CONF_DIR)
-    common.chmod('g+w', dirname(CONF_DIR))
+    def _configure(self):
+        files.copy_notice(COMPOSER)
+        set_logrotate(COMPOSER)
+        self._create_user_and_set_permissions()
+        self._run_db_migrate()
+        self._set_internal_manager_ip()
+        self._start_and_validate_composer()
 
+    def install(self):
+        logger.notice('Installing Cloudify Composer...')
+        self._install()
+        if config[COMPOSER]['skip_installation']:
+            return
+        self._configure()
+        logger.notice('Cloudify Composer successfully installed')
 
-def _set_internal_manager_ip():
-    config_path = os.path.join(CONF_DIR, 'prod.json')
-    with open(config_path) as f:
-        composer_config = json.load(f)
+    def configure(self):
+        logger.notice('Configuring Cloudify Composer...')
+        self._configure()
+        logger.notice('Cloudify Composer successfully configured')
 
-    if config[SSL_INPUTS]['internal_manager_host']:
-        composer_config['managerConfig']['ip'] = \
-            config[SSL_INPUTS]['internal_manager_host']
-        content = json.dumps(composer_config, indent=4, sort_keys=True)
-        # Using `write_to_file` because the path belongs to the composer
-        # user, so we need to move with sudo
-        files.write_to_file(contents=content, destination=config_path)
+    def remove(self):
+        logger.notice('Removing Cloudify Composer...')
+        files.remove_notice(COMPOSER)
+        remove_logrotate(COMPOSER)
+        systemd.remove(COMPOSER)
+        files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
+        logger.notice('Cloudify Composer successfully removed')
 
+    def start(self):
+        logger.notice('Starting Cloudify Composer...')
+        systemd.start(COMPOSER)
+        self._verify_composer_alive()
+        logger.notice('Cloudify Composer successfully started')
 
-def _configure():
-    files.copy_notice(COMPOSER)
-    set_logrotate(COMPOSER)
-    _create_user_and_set_permissions()
-    _run_db_migrate()
-    _set_internal_manager_ip()
-    _start_and_validate_composer()
-
-
-def install():
-    logger.notice('Installing Cloudify Composer...')
-    _install()
-    if config[COMPOSER]['skip_installation']:
-        return
-    _configure()
-    logger.notice('Cloudify Composer successfully installed')
-
-
-def configure():
-    logger.notice('Configuring Cloudify Composer...')
-    _configure()
-    logger.notice('Cloudify Composer successfully configured')
-
-
-def remove():
-    logger.notice('Removing Cloudify Composer...')
-    files.remove_notice(COMPOSER)
-    remove_logrotate(COMPOSER)
-    systemd.remove(COMPOSER)
-    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
-    logger.notice('Cloudify Composer successfully removed')
-
-
-def start():
-    logger.notice('Starting Cloudify Composer...')
-    systemd.start(COMPOSER)
-    _verify_composer_alive()
-    logger.notice('Cloudify Composer successfully started')
-
-
-def stop():
-    logger.notice('Stopping Cloudify Composer...')
-    systemd.stop(COMPOSER)
-    logger.notice('Cloudify Composer successfully stopped')
+    def stop(self):
+        logger.notice('Stopping Cloudify Composer...')
+        systemd.stop(COMPOSER)
+        logger.notice('Cloudify Composer successfully stopped')

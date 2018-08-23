@@ -2,7 +2,7 @@
 
 set -e
 
-if [ $# -lt 3 ]; then
+if [ $# -lt 4 ]; then
     echo "Missing arguments."
     echo "Usage: $0 db_name username password"
     exit
@@ -13,11 +13,16 @@ stage_db_name="stage"
 composer_db_name="composer"
 user=$2
 password=$3
+host=$4
 
 function run_psql() {
     cmd=$1
     echo "Going to run: ${cmd}"
-    psql -c "${cmd}"
+    if [ "$host" = "localhost" ]; then
+        psql -c "${cmd}"
+    else
+        psql -h ${host} -c "${cmd}"
+    fi
 }
 
 function clean_database_and_user() {

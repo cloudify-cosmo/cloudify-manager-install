@@ -156,9 +156,21 @@ postgresql:
     ps_devel_rpm_url: postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
     psycopg2_rpm_url: python-psycopg2-2.5.1-3.el7.x86_64.rpm
 
+  # For external postgres installation, set to true
+  enable_remote_connections: false
+
+postgresql_client:
+  sources:
+    ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
+    ps_rpm_url: postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
+    psycopg2_rpm_url: python-psycopg2-2.5.1-3.el7.x86_64.rpm
+
   # Default values for the Postgres DB name, host, username and password
-  db_name: cloudify_db
+  # For external postgres installation, update accordingly
   host: localhost
+  # DB name, user name and password to be created
+  # default postgres user is used for database initialization
+  db_name: cloudify_db
   username: cloudify
   password: cloudify
 
@@ -382,3 +394,18 @@ usage_collector:
     interval_in_days: 1
 
 flask_security: {}
+
+# list of services - manager_service, queue_service, database_service, composer_service
+#                    will install only these services on this machine
+# I.E - all-in-one installation
+# services_to_install:
+#   - database_service
+#   - queue_service
+#   - composer_service
+#   - manager_service
+
+services_to_install:
+  - 'database_service'
+  - 'queue_service'
+  - 'composer_service'
+  - 'manager_service'

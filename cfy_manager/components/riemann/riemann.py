@@ -15,14 +15,12 @@
 
 from os.path import join
 
-from .. import SCRIPTS, SOURCES
-
+from ..components_constants import SCRIPTS, SOURCES
+from ..base_component import BaseComponent
 from ..service_names import RIEMANN
-
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -36,54 +34,51 @@ SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RIEMANN, SCRIPTS)
 LOG_DIR = join(constants.BASE_LOG_DIR, RIEMANN)
 
 
-def _install():
-    sources = config[RIEMANN][SOURCES]
+class RiemannComponent(BaseComponent):
+    def __init__(self, skip_installation):
+        super(RiemannComponent, self).__init__(skip_installation)
 
-    yum_install(sources['daemonize_source_url'])
-    yum_install(sources['riemann_source_url'])
-    yum_install(sources['cloudify_riemann_url'])
+    def _install(self):
+        sources = config[RIEMANN][SOURCES]
 
+        yum_install(sources['daemonize_source_url'])
+        yum_install(sources['riemann_source_url'])
+        yum_install(sources['cloudify_riemann_url'])
 
-def _start_and_verify_service():
-    logger.info('Starting Riemann service...')
-    systemd.configure(RIEMANN)
-    systemd.restart(RIEMANN)
-    systemd.verify_alive(RIEMANN)
+    def _start_and_verify_service(self):
+        logger.info('Starting Riemann service...')
+        systemd.configure(RIEMANN)
+        systemd.restart(RIEMANN)
+        systemd.verify_alive(RIEMANN)
 
+    def _configure(self):
+        self._start_and_verify_service()
 
-def _configure():
-    _start_and_verify_service()
+    def install(self):
+        logger.notice('Installing Riemann...')
+        self._install()
+        self._configure()
+        logger.notice('Riemann successfully installed')
 
+    def configure(self):
+        logger.notice('Configuring Riemann...')
+        self._configure()
+        logger.notice('Riemann successfully configured')
 
-def install():
-    logger.notice('Installing Riemann...')
-    _install()
-    _configure()
-    logger.notice('Riemann successfully installed')
+    def remove(self):
+        logger.notice('Removing Riemann...')
+        systemd.remove(RIEMANN, service_file=False)
+        yum_remove(RIEMANN)
+        common.remove('/etc/riemann')
+        logger.notice('Riemann successfully removed')
 
+    def start(self):
+        logger.notice('Starting Riemann...')
+        systemd.start(RIEMANN)
+        systemd.verify_alive(RIEMANN)
+        logger.notice('Riemann successfully started')
 
-def configure():
-    logger.notice('Configuring Riemann...')
-    _configure()
-    logger.notice('Riemann successfully configured')
-
-
-def remove():
-    logger.notice('Removing Riemann...')
-    systemd.remove(RIEMANN, service_file=False)
-    yum_remove(RIEMANN)
-    common.remove('/etc/riemann')
-    logger.notice('Riemann successfully removed')
-
-
-def start():
-    logger.notice('Starting Riemann...')
-    systemd.start(RIEMANN)
-    systemd.verify_alive(RIEMANN)
-    logger.notice('Riemann successfully started')
-
-
-def stop():
-    logger.notice('Stopping Riemann...')
-    systemd.stop(RIEMANN)
-    logger.notice('Riemann successfully stopped')
+    def stop(self):
+        logger.notice('Stopping Riemann...')
+        systemd.stop(RIEMANN)
+        logger.notice('Riemann successfully stopped')
