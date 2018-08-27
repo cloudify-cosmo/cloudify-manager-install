@@ -22,7 +22,11 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, files
-from ...utils.install import yum_install, yum_remove
+from ...utils.install import (
+    yum_install,
+    yum_remove,
+    RpmPackageHandler
+)
 
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 POSTGRES_USER_ID = POSTGRES_GROUP_ID = '26'
@@ -115,13 +119,20 @@ class PostgresqlClientComponent(BaseComponent):
         logger.notice('PostgreSQL successfully installed')
 
     def configure(self):
-        logger.notice('Configuring PostgreSQL...')
+        logger.notice('Configuring PostgreSQL Client...')
         self._configure()
         logger.notice('PostgreSQL successfully configured')
 
     def remove(self):
-        logger.notice('Removing PostgreSQL...')
+        logger.notice('Removing PostgreSQL Client...')
         files.remove_notice(POSTGRESQL_CLIENT)
-        yum_remove('postgresql95')
-        yum_remove('postgresql95-libs')
-        logger.notice('PostgreSQL successfully removed')
+        rph = RpmPackageHandler('postgresql95-server')
+        if not rph.is_rpm_installed():
+            yum_remove('postgresql95')
+            yum_remove('postgresql95-libs')
+            logger.notice('PostgreSQL successfully removed')
+        else:
+            logger.notice(
+                'PostgreSQL Server is installed on the machine, cfy_manager '
+                'remove will wait for dependant components to be removed prior'
+                ' to removing PostgreSQL')
