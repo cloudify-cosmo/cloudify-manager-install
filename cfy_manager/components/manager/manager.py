@@ -41,7 +41,8 @@ class ManagerComponent(BaseComponent):
         super(ManagerComponent, self).__init__(skip_installation)
 
     def _get_exec_tempdir(self):
-        return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or gettempdir()
+        return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \
+               gettempdir()
 
     def _create_cloudify_user(self):
         create_service_user(
@@ -55,7 +56,8 @@ class ManagerComponent(BaseComponent):
         common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
         touch(constants.CLOUDIFY_SUDOERS_FILE)
         common.chmod('440', constants.CLOUDIFY_SUDOERS_FILE)
-        entry = 'Defaults:{user} !requiretty'.format(user=constants.CLOUDIFY_USER)
+        entry = 'Defaults:{user} !requiretty'\
+            .format(user=constants.CLOUDIFY_USER)
         description = 'Disable sudo requiretty for {0}'.format(
             constants.CLOUDIFY_USER
         )
@@ -63,7 +65,8 @@ class ManagerComponent(BaseComponent):
 
     def _get_selinux_state(self):
         try:
-            return subprocess.check_output(['/usr/sbin/getenforce']).rstrip('\n\r')
+            return subprocess.check_output(['/usr/sbin/getenforce'])\
+                .rstrip('\n\r')
         except OSError as e:
             logger.warning('SELinux is not installed ({0})'.format(e))
             return None

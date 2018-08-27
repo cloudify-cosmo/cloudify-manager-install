@@ -18,7 +18,12 @@ import json
 
 from os.path import join, dirname
 
-from ..components_constants import SOURCES, SERVICE_USER, SERVICE_GROUP, SSL_INPUTS
+from ..components_constants import (
+    SOURCES,
+    SERVICE_USER,
+    SERVICE_GROUP,
+    SSL_INPUTS
+)
 from ..base_component import BaseComponent
 from ..service_names import COMPOSER
 from ...config import config
@@ -58,7 +63,8 @@ class ComposerComponent(BaseComponent):
         try:
             composer_tar = files.get_local_source_path(composer_source_url)
         except FileError:
-            logger.info('Composer package not found in manager resources package')
+            logger.info(
+                'Composer package not found in manager resources package')
             logger.notice('Composer will not be installed.')
             config[COMPOSER]['skip_installation'] = True
             return

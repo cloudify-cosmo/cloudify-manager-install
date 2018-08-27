@@ -33,7 +33,8 @@ class AmqpPostgresComponent(BaseComponent):
         super(AmqpPostgresComponent, self).__init__(skip_installation)
 
     def _setup_log_dir(self):
-        # Can't use AMQP_POSTGRES here because Jinja doesn't play nice with `-`s
+        # Can't use AMQP_POSTGRES here because Jinja doesn't play nice
+        # with `-`s
         conf = config.setdefault('amqp_postgres', {})
         conf[LOG_DIR_KEY] = join(BASE_LOG_DIR, AMQP_POSTGRES)
 

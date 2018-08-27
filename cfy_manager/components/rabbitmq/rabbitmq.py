@@ -56,15 +56,14 @@ class RabbitMQComponent(BaseComponent):
         remove_file(rabbit_config_path)
         systemd.systemctl('daemon-reload')
 
-        # rabbitmq restart exits with 143 status code that is valid in this case.
+        # rabbitmq restart exits with 143 status code that is valid in
+        # this case.
         systemd.restart(RABBITMQ, ignore_failure=True)
         wait_for_port(SECURE_PORT)
-
 
     def _rabbitmqctl(self, command, **kwargs):
         nodename = config[RABBITMQ]['nodename']
         return sudo([RABBITMQ_CTL, '-n', nodename] + command, **kwargs)
-
 
     def user_exists(self, username):
         output = self._rabbitmqctl(['list_users'], retries=5).aggr_stdout
@@ -83,10 +82,18 @@ class RabbitMQComponent(BaseComponent):
             logger.info('Creating new user and setting permissions...'.format(
                 rabbitmq_username, rabbitmq_password)
             )
-            self._rabbitmqctl(['add_user', rabbitmq_username, rabbitmq_password])
-            self._rabbitmqctl(['set_permissions', rabbitmq_username, '.*', '.*', '.*'],
-                         retries=5)
-            self._rabbitmqctl(['set_user_tags', rabbitmq_username, 'administrator'])
+            self._rabbitmqctl(['add_user',
+                               rabbitmq_username,
+                               rabbitmq_password])
+            self._rabbitmqctl(['set_permissions',
+                               rabbitmq_username,
+                               '.*',
+                               '.*',
+                               '.*'],
+                              retries=5)
+            self._rabbitmqctl(['set_user_tags',
+                               rabbitmq_username,
+                               'administrator'])
 
     def _set_rabbitmq_policy(self, name, expression, policy):
         policy = json.dumps(policy)
@@ -94,8 +101,12 @@ class RabbitMQComponent(BaseComponent):
             name, expression, policy))
         # shlex screws this up because we need to pass json and shlex
         # strips quotes so we explicitly pass it as a list.
-        self._rabbitmqctl(['set_policy', name,
-                      expression, policy, '--apply-to', 'queues'])
+        self._rabbitmqctl(['set_policy',
+                           name,
+                           expression,
+                           policy,
+                           '--apply-to',
+                           'queues'])
 
     def _set_policies(self):
         metrics = config[RABBITMQ]['policy_metrics']
@@ -140,7 +151,8 @@ class RabbitMQComponent(BaseComponent):
 
     def _start_rabbitmq(self):
         logger.info("Starting RabbitMQ Service...")
-        # rabbitmq restart exits with 143 status code that is valid in this case.
+        # rabbitmq restart exits with 143 status code that is valid
+        # in this case.
         systemd.restart(RABBITMQ, ignore_failure=True)
         wait_for_port(SECURE_PORT)
         self._set_policies()

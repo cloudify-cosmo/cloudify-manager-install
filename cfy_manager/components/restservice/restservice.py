@@ -90,7 +90,8 @@ class RestServiceComponent(BaseComponent):
             common.mkdir(path)
 
     def _deploy_security_configuration(self):
-        # Pre-creating paths so permissions fix can work correctly in mgmtworker
+        # Pre-creating paths so permissions fix can
+        # work correctly in mgmtworker
         self._pre_create_snapshot_paths()
         common.chown(
             constants.CLOUDIFY_USER,
@@ -133,11 +134,12 @@ class RestServiceComponent(BaseComponent):
         """To verify that the REST service is working, GET the blueprints list.
 
         There's nothing special about the blueprints endpoint, it's simply one
-        that also requires the storage backend to be up, so if it works, there's
-        a good chance everything is configured correctly.
+        that also requires the storage backend to be up, so if it works,
+        there's a good chance everything is configured correctly.
         """
         rest_port = config[RESTSERVICE]['port']
-        url = 'http://{0}:{1}/api/v2.1/blueprints'.format('127.0.0.1', rest_port)
+        url = 'http://{0}:{1}/api/v2.1/blueprints'.format('127.0.0.1',
+                                                          rest_port)
 
         wait_for_port(rest_port)
         req = urllib2.Request(url, headers=get_auth_headers())
@@ -213,7 +215,8 @@ class RestServiceComponent(BaseComponent):
         try:
             get_local_source_path(premium_source_url)
         except FileError:
-            logger.info('premium package not found in manager resources package')
+            logger.info(
+                'premium package not found in manager resources package')
             logger.notice('premium will not be installed.')
         else:
             logger.notice('Installing Cloudify Premium...')

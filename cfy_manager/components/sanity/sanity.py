@@ -57,7 +57,8 @@ class SanityComponent(BaseComponent):
         if isfile(AUTHORIZED_KEYS_PATH):
             logger.debug('Adding sanity SSH key to current authorized_keys...')
             # Add a newline to the SSH file
-            common.run(['echo >> {0}'.format(AUTHORIZED_KEYS_PATH)], shell=True)
+            common.run(['echo >> {0}'.format(AUTHORIZED_KEYS_PATH)],
+                       shell=True)
             common.run(
                 ['cat {0} >> {1}'.format(public_ssh, AUTHORIZED_KEYS_PATH)],
                 shell=True
@@ -70,7 +71,8 @@ class SanityComponent(BaseComponent):
 
     def _remove_sanity_ssh(self, ssh_key_path):
         # This removes the last line from the file
-        common.run(["sed -i '$ d' {0}".format(AUTHORIZED_KEYS_PATH)], shell=True)
+        common.run(["sed -i '$ d' {0}".format(AUTHORIZED_KEYS_PATH)],
+                   shell=True)
         common.remove(ssh_key_path)
 
     def _upload_blueprint(self):
@@ -101,7 +103,8 @@ class SanityComponent(BaseComponent):
         wait_for_port(SANITY_WEB_SERVER_PORT)
 
     def _clean_old_sanity(self):
-        logger.debug('Removing remnants of old sanity installation if exists...')
+        logger.debug('Removing remnants of old sanity '
+                     'installation if exists...')
         common.remove('/opt/mgmtworker/work/deployments/default_tenant/sanity')
 
     def _run_sanity(self, ssh_key_path):

@@ -51,8 +51,8 @@ class MgmtWorkerComponent(BaseComponent):
         yum_install(source_url)
 
         # TODO: Take care of this
-        # Prepare riemann dir. We will change the owner to riemann later, but the
-        # management worker will still need access to it
+        # Prepare riemann dir. We will change the owner to riemann later,
+        # but the management worker will still need access to it
         # common.mkdir('/opt/riemann')
         # utils.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, riemann_dir)
         # utils.chmod('770', riemann_dir)
@@ -77,7 +77,9 @@ class MgmtWorkerComponent(BaseComponent):
 
         # The config contains credentials, do not let the world read it
         common.chmod('440', broker_config_dst)
-        common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, broker_config_dst)
+        common.chown(const.CLOUDIFY_USER,
+                     const.CLOUDIFY_GROUP,
+                     broker_config_dst)
 
     def _deploy_hooks_config(self):
         file_name = 'hooks.conf'
@@ -90,7 +92,9 @@ class MgmtWorkerComponent(BaseComponent):
 
         # The user should use root to edit the hooks config file
         common.chmod('440', hooks_config_dst)
-        common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, hooks_config_dst)
+        common.chown(const.CLOUDIFY_USER,
+                     const.CLOUDIFY_GROUP,
+                     hooks_config_dst)
 
     def _prepare_snapshot_permissions(self):
         # TODO: See if all of this is necessary
@@ -100,7 +104,9 @@ class MgmtWorkerComponent(BaseComponent):
             ['chgrp', '-R', const.CLOUDIFY_GROUP, const.SSL_CERTS_TARGET_DIR]
         )
         common.sudo(
-            ['chgrp', const.CLOUDIFY_GROUP, dirname(const.SSL_CERTS_TARGET_DIR)]
+            ['chgrp',
+             const.CLOUDIFY_GROUP,
+             dirname(const.SSL_CERTS_TARGET_DIR)]
         )
         common.sudo(['chmod', '-R', 'g+rw', const.SSL_CERTS_TARGET_DIR])
         common.sudo(['chmod', 'g+rw', dirname(const.SSL_CERTS_TARGET_DIR)])

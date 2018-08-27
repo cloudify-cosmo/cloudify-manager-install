@@ -22,7 +22,13 @@ from collections import namedtuple
 from ipaddress import ip_address
 from distutils.version import LooseVersion
 
-from .components_constants import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
+from .components_constants import (
+    PRIVATE_IP,
+    PUBLIC_IP,
+    VALIDATIONS,
+    SKIP_VALIDATIONS,
+    SSL_INPUTS
+)
 
 from .service_names import MANAGER
 
@@ -32,7 +38,6 @@ from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
 from ..utils.common import run, sudo
-from ..utils.install import RpmPackageHandler
 
 logger = get_logger(VALIDATIONS)
 
@@ -241,7 +246,8 @@ def _validate_user_has_sudo_permissions():
 
 def _validate_dependencies(components):
     logger.info('Validating dependencies for {components}...'
-                .format(components=','.join([component.__class__.__name__ for component in components])))
+                .format(components=','.join([component.__class__.__name__
+                                             for component in components])))
     for component in components:
         component.validate_dependencies()
 

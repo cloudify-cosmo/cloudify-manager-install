@@ -131,7 +131,8 @@ class PostgresqlComponent(BaseComponent):
         logger.debug('Modifying {0}'.format(PG_HBA_CONF))
         common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
         lines = self._read_old_file_lines(PG_HBA_CONF)
-        temp_hba_path = self._write_new_hba_file(lines, enable_remote_connections)
+        temp_hba_path = self._write_new_hba_file(lines,
+                                                 enable_remote_connections)
         common.move(temp_hba_path, PG_HBA_CONF)
         common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
         if enable_remote_connections:

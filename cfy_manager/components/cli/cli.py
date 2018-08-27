@@ -42,7 +42,9 @@ class CliComponent(BaseComponent):
         yum_install(source_url)
 
     def _set_colors(self, is_root):
-        """ Makes sure colors are enabled by default in cloudify logs via CLI """
+        """
+        Makes sure colors are enabled by default in cloudify logs via CLI
+        """
 
         home_dir = '/root' if is_root else expanduser('~')
         sed_cmd = 's/colors: false/colors: true/g'
@@ -61,7 +63,8 @@ class CliComponent(BaseComponent):
                    config[MANAGER]['cli_local_profile_host_name'],
                    '--skip-credentials-validation']
 
-        ssl_enabled = 'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
+        ssl_enabled = \
+            'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
 
         set_cmd = [
             'cfy', 'profiles', 'set', '-u', username,
@@ -73,7 +76,8 @@ class CliComponent(BaseComponent):
 
         logger.info('Setting CLI for the current user ({0})...'.format(
             current_user))
-        # we don't want the commands with the password to be printed to log file
+        # we don't want the commands with the password to be printed
+        # to log file
         current_level = get_file_handlers_level()
         set_file_handlers_level(logging.ERROR)
         common.run(use_cmd)
