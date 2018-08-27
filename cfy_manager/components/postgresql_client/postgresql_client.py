@@ -31,11 +31,7 @@ POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 POSTGRES_USER_ID = POSTGRES_GROUP_ID = '26'
 POSTGRES_USER_COMMENT = 'PostgreSQL Server'
 HOST = 'host'
-LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_CLIENT)
 
-PGSQL_LIB_DIR = '/var/lib/pgsql'
-PGSQL_USR_DIR = '/usr/pgsql-9.5'
-PS_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
@@ -50,67 +46,12 @@ class PostgresqlClientComponent(BaseComponent):
     def _install(self):
         sources = config[POSTGRESQL_CLIENT][SOURCES]
 
-        # logger.debug('Installing PostgreSQL dependencies...')
-        # yum_install(sources['libxslt_rpm_url'])
-
         logger.debug('Installing PostgreSQL Client libraries...')
         yum_install(sources['ps_libs_rpm_url'])
         yum_install(sources['ps_rpm_url'])
-        # yum_install(sources['ps_contrib_rpm_url'])
-        # yum_install(sources['ps_server_rpm_url'])
-        # yum_install(sources['ps_devel_rpm_url'])
 
         logger.debug('Installing python libs for PostgreSQL...')
         yum_install(sources['psycopg2_rpm_url'])
-
-    # def _init_postgresql(self):
-    #     logger.debug('Initializing PostreSQL DATA folder...')
-    #     postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
-    #     try:
-    #         common.sudo(command=[postgresql95_setup, 'initdb'])
-    #     except Exception:
-    #         logger.debug('PostreSQL DATA folder already initialized...')
-    #         pass
-    #
-    #     logger.debug('Installing PostgreSQL service...')
-    #     systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
-    #     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
-    #
-    #     logger.debug('Setting PostgreSQL logs path...')
-    #     ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
-    #     common.mkdir(LOG_DIR)
-    #     if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
-    #         files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
-    #
-    #     logger.info('Starting PostgreSQL service...')
-    #     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
-
-    # def _read_hba_lines(self):
-    #     temp_hba_path = files.write_to_tempfile('')
-    #     common.copy(PG_HBA_CONF, temp_hba_path)
-    #     common.chmod('777', temp_hba_path)
-    #     with open(temp_hba_path, 'r') as f:
-    #         lines = f.readlines()
-    #     return lines
-
-    # def _write_new_hba_file(self, lines):
-    #     fd, temp_hba_path = mkstemp()
-    #     os.close(fd)
-    #     with open(temp_hba_path, 'w') as f:
-    #         for line in lines:
-    #             if line.startswith(('host', 'local')):
-    #                 line = line.replace('ident', 'md5')
-    #             f.write(line)
-    #     return temp_hba_path
-
-    # def _update_configuration(self):
-    #     logger.info('Updating PostgreSQL configuration...')
-    #     logger.debug('Modifying {0}'.format(PG_HBA_CONF))
-    #     common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
-    #     lines = self._read_hba_lines()
-    #     temp_hba_path = self._write_new_hba_file(lines)
-    #     common.move(temp_hba_path, PG_HBA_CONF)
-    #     common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
     def _create_postgres_group(self):
         logger.notice('Creating postgres group')
@@ -166,19 +107,14 @@ class PostgresqlClientComponent(BaseComponent):
 
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
-        # self._init_postgresql()
-        # self._update_configuration()
         self._create_postgres_pass_file()
-
-        # systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        # systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def install(self):
         logger.notice('Installing PostgreSQL Client...')
         self._install()
         self._create_postgres_group()
         self._create_postgres_user()
-        # self._configure()
+        self._configure()
         logger.notice('PostgreSQL successfully installed')
 
     def configure(self):
@@ -189,21 +125,6 @@ class PostgresqlClientComponent(BaseComponent):
     def remove(self):
         logger.notice('Removing PostgreSQL...')
         files.remove_notice(POSTGRESQL_CLIENT)
-        # systemd.remove(SYSTEMD_SERVICE_NAME)
-        # files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
-        # yum_remove('postgresql95')
+        yum_remove('postgresql95')
         yum_remove('postgresql95-libs')
         logger.notice('PostgreSQL successfully removed')
-
-    def start(self):
-        pass
-        # logger.notice('Starting PostgreSQL...')
-        # systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        # systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        # logger.notice('PostgreSQL successfully started')
-
-    def stop(self):
-        pass
-        # logger.notice('Stopping PostgreSQL...')
-        # systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        # logger.notice('PostgreSQL successfully stopped')
