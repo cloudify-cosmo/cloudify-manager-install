@@ -17,13 +17,10 @@ jobs:
           command: |
             pip install requests
             pip install tox
-      # Running this step in the background allows us to run it in parallel
       - run:
-          name: Python tests
-          background: true
+          name: Running flake8
           command: |
             tox -e flake8
-            tox -e py27
       - run:
           name: Fetch RPMs built on CircleCI
           command: |
