@@ -178,7 +178,7 @@ class PostgresqlClientComponent(BaseComponent):
         self._install()
         self._create_postgres_group()
         self._create_postgres_user()
-        # self._configure()
+        self._configure()
         logger.notice('PostgreSQL successfully installed')
 
     def configure(self):
