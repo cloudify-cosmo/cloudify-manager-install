@@ -151,12 +151,6 @@ class PostgresqlComponent(BaseComponent):
         systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def install(self):
-        # host = config[POSTGRESQL][HOST]
-        # if host != 'localhost':
-        #     logger.notice('Using external PostgreSQL, installing client '
-        #                   'libraries and initializing the database')
-        #     # TODO : add configuration
-        # else:
         logger.notice('Installing PostgreSQL...')
         self._install()
         self._configure()
@@ -188,9 +182,4 @@ class PostgresqlComponent(BaseComponent):
         logger.notice('PostgreSQL successfully stopped')
 
     def validate_dependencies(self):
-        # host = config[POSTGRESQL][HOST]
-        # if host != 'localhost':
-        #     logger.notice('Using external PostgreSQL, no dependencies '
-        #                   'required for client')
-        # else:
         super(PostgresqlComponent, self).validate_dependencies()
