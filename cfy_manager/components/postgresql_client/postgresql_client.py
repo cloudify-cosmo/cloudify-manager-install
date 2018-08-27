@@ -13,9 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
-from tempfile import mkstemp
-from os.path import join, isdir, islink
+from os.path import join
 
 from ..components_constants import SOURCES
 from ..base_component import BaseComponent
@@ -24,7 +22,6 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, files
-from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'

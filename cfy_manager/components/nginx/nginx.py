@@ -16,7 +16,14 @@
 from os.path import join, isfile
 from collections import namedtuple
 
-from ..components_constants import SOURCES, CONFIG, PRIVATE_IP, PUBLIC_IP, AGENT, SSL_INPUTS
+from ..components_constants import (
+    SOURCES,
+    CONFIG,
+    PRIVATE_IP,
+    PUBLIC_IP,
+    AGENT,
+    SSL_INPUTS
+)
 from ..base_component import BaseComponent
 from ..service_names import NGINX, MANAGER
 from ... import constants
@@ -45,7 +52,8 @@ class NginxComponent(BaseComponent):
     def _deploy_cert_and_key(self, prefix, cert_dst_path, key_dst_path):
         cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
         key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
-        key_password = config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
+        key_password = \
+            config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
 
         cert_deployed = False
         key_deployed = False
@@ -110,7 +118,8 @@ class NginxComponent(BaseComponent):
         The user might provide both the CA key and the CA cert, or just the
         CA cert, or nothing. It is an error to only provide the CA key.
         If the user provided nothing, we must generate a CA cert+key.
-        :return: True if there's a CA key available (either passed or generated)
+        :return: True if there's a CA key available (either passed or
+        generated)
         """
         logger.info('Handling CA certificate...')
         cert_deployed, key_deployed = self._deploy_cert_and_key(
@@ -133,8 +142,8 @@ class NginxComponent(BaseComponent):
     def _handle_internal_cert(self, has_ca_key):
         """
         The user might provide the internal cert and the internal key, or
-        neither. It is an error to only provide one of them. If the user did not
-        provide the internal cert+key, we must generate it, but we can only
+        neither. It is an error to only provide one of them. If the user did
+        not provide the internal cert+key, we must generate it, but we can only
         generate it if we have a CA key (either provided or generated).
         So it is an error to provide only the CA cert, and then not provide
         the internal cert+key.
@@ -240,8 +249,9 @@ class NginxComponent(BaseComponent):
 
     def _verify_nginx(self):
         # TODO: This code requires the restservice to be installed, but
-        # restservice depends on rabbitmq, which in turn requires the certificates
-        # created in nginx (here). So we need to find an other way to validate it
+        # restservice depends on rabbitmq, which in turn requires the
+        # certificates created in nginx (here).
+        # So we need to find an other way to validate it
         logger.info('Verifying NGINX service is up...')
         nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
             config[NGINX]['internal_rest_port']

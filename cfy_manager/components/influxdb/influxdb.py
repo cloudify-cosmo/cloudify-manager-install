@@ -155,8 +155,9 @@ class InfluxDBComponent(BaseComponent):
         )
         response = check_http_response(influxdb_url)
 
-        # InfluxDB normally responds with a 404 on GET to /, but also allow other
-        # non-server-error response codes to allow for that behaviour to change.
+        # InfluxDB normally responds with a 404 on GET to /,
+        # but also allow other non-server-error response codes to allow for
+        # that behaviour to change.
         if response.code >= 500:
             raise ValidationError('Could not validate InfluxDB')
 

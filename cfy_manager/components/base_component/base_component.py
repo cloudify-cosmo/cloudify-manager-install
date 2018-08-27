@@ -43,8 +43,9 @@ class BaseComponent(object):
 
     def _get_dependencies(self):
         dependencies_dict = {}
-        dependencies_list = COMPONENTS_DEPENDENCIES['default'] + \
-                            COMPONENTS_DEPENDENCIES[self.__class__.__name__]
+        dependencies_list = \
+            COMPONENTS_DEPENDENCIES['default'] + \
+            COMPONENTS_DEPENDENCIES[self.__class__.__name__]
         for dependency in dependencies_list:
             dependencies_dict.update({
                 dependency: DEPENDENCIES_ERROR_MESSAGES[dependency]})

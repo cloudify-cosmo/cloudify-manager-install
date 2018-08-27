@@ -70,8 +70,8 @@ class UsageCollectorComponent(BaseComponent):
 
     def _validate_cronie_installed(self):
         if not RpmPackageHandler.is_package_installed('cronie'):
-            logger.warning('Package cronie is not installed, unable to install '
-                           'Usage Collector')
+            logger.warning('Package cronie is not installed,'
+                           'unable to install Usage Collector')
             return False
         return True
 
@@ -107,7 +107,8 @@ class UsageCollectorComponent(BaseComponent):
         logger.info('Usage Collector cron jobs successfully created')
 
     def _add_cron_job(self, script_name, interval_type, interval):
-        script_path = join(SCRIPTS_DESTINATION_PATH, '{}.py'.format(script_name))
+        script_path = join(SCRIPTS_DESTINATION_PATH,
+                           '{}.py'.format(script_name))
         time_string = self._get_cron_time_string(interval_type, interval)
 
         # crontab job command
@@ -116,8 +117,8 @@ class UsageCollectorComponent(BaseComponent):
                                          script_path,
                                          script_name)
 
-        # Adding a new job to crontab.
-        # Adding sudo manually, because common.sudo doesn't support parenthesis.
+        # Adding a new job to crontab
+        # Adding sudo manually, because common.sudo doesn't support parenthesis
         cmd = '(sudo crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
               'sudo crontab -u {0} -'.format(constants.CLOUDIFY_USER, job)
         common.run([cmd], shell=True)
@@ -134,7 +135,9 @@ class UsageCollectorComponent(BaseComponent):
             return '{0} */{1} * * *'.format(random_minute, interval)
         if interval_type == DAYS_INTERVAL:
             random_hour = randint(0, 23)
-            return '{0} {1} */{2} * *'.format(random_minute, random_hour, interval)
+            return '{0} {1} */{2} * *'.format(random_minute,
+                                              random_hour,
+                                              interval)
 
     def _remove_cron_jobs(self):
         logger.info('Removing cron jobs of Usage Collector...')
@@ -143,6 +146,8 @@ class UsageCollectorComponent(BaseComponent):
         logger.info('Usage Collector cron jobs successfully removed')
 
     def _delete_cron_job(self, job_comment):
-        cmd = "sudo crontab -u {0} -l | grep -v '# {1}' | sudo crontab -u {0} -" \
+        cmd = "sudo crontab -u {0} -l | " \
+              "grep -v '# {1}' | " \
+              "sudo crontab -u {0} -" \
               .format(constants.CLOUDIFY_USER, job_comment)
         common.run([cmd], shell=True)
