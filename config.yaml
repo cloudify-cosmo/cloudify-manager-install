@@ -213,7 +213,7 @@ restservice:
     file_size: 100
 
     # Number of historical log files to keep when rotating the REST service logs.
-    files_backup_count: 20
+    files_backup_count: 7
 
   gunicorn:
     # The number of gunicorn worker processes for handling requests. If the
