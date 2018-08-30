@@ -65,7 +65,7 @@ class PostgresqlClientComponent(BaseComponent):
             if 'already exists' not in ex.message:
                 raise ex
             else:
-                logger.notice('Group postgres already exists')
+                logger.info('Group postgres already exists')
 
     def _create_postgres_user(self):
         logger.notice('Creating postgres user')
@@ -83,7 +83,7 @@ class PostgresqlClientComponent(BaseComponent):
             if 'already exists' not in ex.message:
                 raise ex
             else:
-                logger.notice('User postgres already exists')
+                logger.info('User postgres already exists')
 
     def _create_postgres_pass_file(self):
         logger.debug('Creating postgresql pgpass file: {0}'
@@ -126,13 +126,12 @@ class PostgresqlClientComponent(BaseComponent):
     def remove(self):
         logger.notice('Removing PostgreSQL Client...')
         files.remove_notice(POSTGRESQL_CLIENT)
-        rph = RpmPackageHandler('postgresql95-server')
-        if not rph.is_rpm_installed():
+        if not RpmPackageHandler.is_package_installed('postgresql95-server'):
             yum_remove('postgresql95')
             yum_remove('postgresql95-libs')
             logger.notice('PostgreSQL successfully removed')
         else:
-            logger.notice(
+            logger.info(
                 'PostgreSQL Server is installed on the machine, cfy_manager '
                 'remove will wait for dependant components to be removed prior'
                 ' to removing PostgreSQL')
