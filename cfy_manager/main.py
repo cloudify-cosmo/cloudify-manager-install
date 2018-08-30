@@ -207,8 +207,6 @@ def _get_services_to_install():
 
 def _create_components_objects():
     components_to_install = _get_services_to_install()
-    logger.notice('Components to install: {0}'
-                  .format(str(components_to_install)))
     for component_name in components_to_install:
         try:
             skip_installation = config[component_name]['skip_installation']
