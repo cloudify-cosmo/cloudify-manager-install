@@ -35,16 +35,16 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
 
-SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
+SYSTEMD_SERVICE_NAME = 'postgresql-10'
 POSTGRES_USER = 'postgres'
 HOST = 'host'
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
-PGSQL_USR_DIR = '/usr/pgsql-9.5'
-PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
-PG_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
+PGSQL_USR_DIR = '/usr/pgsql-10'
+PG_HBA_CONF = '/var/lib/pgsql/10/data/pg_hba.conf'
+PG_CONF_PATH = '/var/lib/pgsql/10/data/postgresql.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_HBA_LISTEN_ALL_REGEX_PATTERN = 'host\s+all\s+all\s+0\.0\.0\.0\/0\s+trust'
@@ -73,9 +73,9 @@ class PostgresqlServerComponent(BaseComponent):
 
     def _init_postgresql_server(self):
         logger.debug('Initializing PostreSQL Server DATA folder...')
-        postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
+        postgresql_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql-10-setup')
         try:
-            common.sudo(command=[postgresql95_setup, 'initdb'])
+            common.sudo(command=[postgresql_setup, 'initdb'])
         except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
             pass
@@ -85,10 +85,10 @@ class PostgresqlServerComponent(BaseComponent):
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
         logger.debug('Setting PostgreSQL Server logs path...')
-        ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
+        ps_logs_path = join(PGSQL_LIB_DIR, '10', 'data', 'pg_log')
         common.mkdir(LOG_DIR)
-        if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
-            files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
+        if not isdir(ps_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
+            files.ln(source=ps_logs_path, target=LOG_DIR, params='-s')
 
         logger.info('Starting PostgreSQL Server service...')
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
@@ -167,8 +167,8 @@ class PostgresqlServerComponent(BaseComponent):
         files.remove_notice(POSTGRESQL_SERVER)
         systemd.remove(SYSTEMD_SERVICE_NAME)
         files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
-        yum_remove('postgresql95')
-        yum_remove('postgresql95-libs')
+        yum_remove('postgresql10')
+        yum_remove('postgresql10-libs')
         logger.notice('PostgreSQL successfully removed')
 
     def start(self):

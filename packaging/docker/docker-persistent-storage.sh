@@ -59,14 +59,14 @@ function start_cloudify_manager() {
 		echo -e "\033[31mUnable to start docker-cfy-manager, check docker logs\e[0m"
 		exit 3
 	fi
-	docker exec -d ${CONTAINER_ID} systemctl stop postgresql-9.5 1> /dev/null
+	docker exec -d ${CONTAINER_ID} systemctl stop postgresql-10 1> /dev/null
 }
 
 function create_and_copy_directories() {
 	err=0
 	trap 'err=1' ERR
 	echo "Copying cloudify manager data to given persistent storage - '${PERSISTENT_VOLUMES_PATH}'"
-	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
+	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/10/data 1> /dev/null
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources 1> /dev/null
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins 1> /dev/null
 	mkdir -p ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments 1> /dev/null
@@ -77,7 +77,7 @@ function create_and_copy_directories() {
 	fi
 	err=0
 	trap 'err=1' ERR
-	docker cp ${CONTAINER_ID}:/var/lib/pgsql/9.5/data/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
+	docker cp ${CONTAINER_ID}:/var/lib/pgsql/10/data/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/10/data 1> /dev/null
 	docker cp ${CONTAINER_ID}:/opt/manager/resources/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources 1> /dev/null
 	docker cp ${CONTAINER_ID}:/opt/mgmtworker/env/plugins/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins 1> /dev/null
 	docker cp ${CONTAINER_ID}:/opt/mgmtworker/work/deployments/. ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments 1> /dev/null
@@ -92,7 +92,7 @@ function change_ownership_and_permissions() {
 	echo "Changing ownership and permissions on '${PERSISTENT_VOLUMES_PATH}'/cloudify-external-directories"
 	err=0
 	trap 'err=1' ERR
-	chown -R postgres:226 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
+	chown -R postgres:226 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/10/data 1> /dev/null
 	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources/ 1> /dev/null
 	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins/ 1> /dev/null
 	chown -R cfyuser:1000 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments/ 1> /dev/null
@@ -103,7 +103,7 @@ function change_ownership_and_permissions() {
 	fi
 	err=0
 	trap 'err=1' ERR
-	chmod -R 700 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/9.5/data 1> /dev/null
+	chmod -R 700 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/pgsql/10/data 1> /dev/null
 	chmod -R 755 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/manager/resources/ 1> /dev/null
 	chmod -R 750 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/env/plugins/ 1> /dev/null
 	chmod -R 755 ${PERSISTENT_VOLUMES_PATH}/cloudify-external-directories/mgmtworker/work/deployments/ 1> /dev/null
@@ -139,5 +139,5 @@ echo -e "\e[92mSuccessfully configured cloudify persistent storage\e[0m"
 echo -e "\e[92mYou can start cloudify manager container with the proper volumes\e[0m"
 
 # Once the docker environment is ready, make sure to delete the cloudify manager container and rerun it with the following command:
-# <Docker command to start container…> -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/pgsql/9.5/data:/var/lib/pgsql/9.5/data:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/manager/resources:/opt/manager/resources:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/env/plugins:/opt/mgmtworker/env/plugins:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/work/deployments:/opt/mgmtworker/work/deployments:rw
+# <Docker command to start container…> -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/pgsql/10/data:/var/lib/pgsql/10/data:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/manager/resources:/opt/manager/resources:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/env/plugins:/opt/mgmtworker/env/plugins:rw -v <PERSISTENT_VOLUMES_PATH>/cloudify-external-directories/mgmtworker/work/deployments:/opt/mgmtworker/work/deployments:rw
 # You can use the container as you would any regular Cloudify Manager, kill and delete the container, rerun the container on the same host and everything will remain intact

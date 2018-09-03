@@ -126,9 +126,9 @@ class PostgresqlClientComponent(BaseComponent):
     def remove(self):
         logger.notice('Removing PostgreSQL Client...')
         files.remove_notice(POSTGRESQL_CLIENT)
-        if not RpmPackageHandler.is_package_installed('postgresql95-server'):
-            yum_remove('postgresql95')
-            yum_remove('postgresql95-libs')
+        if not RpmPackageHandler.is_package_installed('postgresql10-server'):
+            yum_remove('postgresql10')
+            yum_remove('postgresql10-libs')
             logger.notice('PostgreSQL successfully removed')
         else:
             logger.info(
