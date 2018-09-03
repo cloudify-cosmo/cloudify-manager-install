@@ -65,7 +65,7 @@ def _update_metadata_file(networks):
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: `{"<network-name>": "<ip>"}`',
           required=True)
-@argh.arg('--cluster-node-name',
+@argh.arg('--cluster-node-ip',
           help='Set the networks for the cluster node which uses this IP as '
                'the default network IP. Only available in a cluster.',
           required=True)
