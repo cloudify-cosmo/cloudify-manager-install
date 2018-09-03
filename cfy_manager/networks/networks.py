@@ -73,20 +73,16 @@ def add_networks(networks=None, cluster_node_ip=''):
     """
     Add new networks to a running Cloudify Manager
     """
-    try:
-        print('Trying to add new networks to Manager...')
+    print('Trying to add new networks to Manager...')
 
-        networks = json.loads(networks)
+    networks = json.loads(networks)
 
-        _run_update_provider_context_script(networks, cluster_node_ip)
+    _run_update_provider_context_script(networks, cluster_node_ip)
 
-        _update_metadata_file(networks)
-        if not cluster_node_ip:
-            create_internal_certs()
+    _update_metadata_file(networks)
+    if not cluster_node_ip:
+        create_internal_certs()
 
-        print('New networks were added successfully. Please restart the'
-              ' following services: `nginx`, `cloudify-mgmtworker`,'
-              '`cloudify-rabbitmq`')
-    except Exception as e:
-        print(e)
-        raise e
+    print('New networks were added successfully. Please restart the'
+          ' following services: `nginx`, `cloudify-mgmtworker`,'
+          '`cloudify-rabbitmq`')
