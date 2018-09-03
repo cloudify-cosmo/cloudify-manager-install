@@ -43,7 +43,7 @@ def _run_update_provider_context_script(args, cluster_node_ip):
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    cmd = [python_path, script_path, str(args), cluster_node_ip]
+    cmd = [python_path, script_path, json.dumps(args), cluster_node_ip]
 
     return common.sudo(cmd)
 

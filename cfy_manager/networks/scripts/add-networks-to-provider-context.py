@@ -14,6 +14,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import sys
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     networks = sys.argv[1]
     cluster_node_ip = sys.argv[2]
 
-    networks = eval(networks)
+    networks = json.loads(networks)
 
     _validate_networks(networks)
     if cluster_node_ip:
