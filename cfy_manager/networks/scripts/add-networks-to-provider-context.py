@@ -78,16 +78,21 @@ def _update_provider_context(networks):
         sm.update(ctx)
 
 
-def _validate_networks(new_networks, cluster_node_ip):
+def _validate_networks(new_networks):
     """Check that new networks are valid, otherwise throw an error"""
     with setup_flask_app().app_context():
         sm = get_storage_manager()
         ctx = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID)
         _validate_duplicate_network(ctx, new_networks)
-        if cluster_node_ip:
-            _validate_premium()
-            _validate_cluster_node_ip(ctx, cluster_node_ip)
-            _validate_ca_key(ctx)
+
+
+def _validate_cluster(new_networks, cluster_node_ip):
+    with setup_flask_app().app_context():
+        sm = get_storage_manager()
+        ctx = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID)
+        _validate_premium()
+        _validate_cluster_node_ip(ctx, cluster_node_ip)
+        _validate_ca_key(ctx)
 
 
 def _validate_premium():
@@ -147,6 +152,7 @@ if __name__ == '__main__':
 
     _validate_networks(networks)
     if cluster_node_ip:
+        _validate_cluster(networks, cluster_node_ip)
         _update_cluster_host_ip(networks, cluster_node_ip)
     else:
         _update_provider_context(networks)
