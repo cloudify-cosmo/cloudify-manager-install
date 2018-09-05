@@ -67,8 +67,7 @@ def _update_metadata_file(networks):
           required=True)
 @argh.arg('--cluster-node-ip',
           help='Set the networks for the cluster node which uses this IP as '
-               'the default network IP. Only available in a cluster.',
-          required=True)
+               'the default network IP. Only available in a cluster.')
 def add_networks(networks=None, cluster_node_ip=''):
     """
     Add new networks to a running Cloudify Manager
