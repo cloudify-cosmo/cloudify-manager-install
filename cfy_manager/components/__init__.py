@@ -23,7 +23,7 @@ from .manager import ManagerComponent  # NOQA
 from .manager_ip_setter import ManagerIpSetterComponent  # NOQA
 from .mgmtworker import MgmtWorkerComponent  # NOQA
 from .nginx import NginxComponent  # NOQA
-from .postgresql import PostgresqlComponent  # NOQA
+from .postgresql_server import PostgresqlServerComponent  # NOQA
 from .postgresql_client import PostgresqlClientComponent # NOQA
 from .python import PythonComponent  # NOQA
 from .rabbitmq import RabbitMQComponent  # NOQA

@@ -21,7 +21,7 @@ SERVICE_COMPONENTS = {
     # Please do not change the order in which the components of each service
     # will be installed
     "database_service": [
-        "postgresql"
+        "postgresql_server"
     ],
     "queue_service": [],
     "composer_service": [],

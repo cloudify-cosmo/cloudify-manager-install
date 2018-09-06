@@ -24,7 +24,7 @@ from ..components_constants import (
 )
 from ..base_component import BaseComponent
 from ..service_names import (
-    POSTGRESQL,
+    POSTGRESQL_SERVER,
     MANAGER
 )
 from ... import constants
@@ -39,7 +39,7 @@ SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = 'postgres'
 HOST = 'host'
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
-LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
+LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
@@ -51,46 +51,46 @@ PG_HBA_LISTEN_ALL_REGEX_PATTERN = 'host\s+all\s+all\s+0\.0\.0\.0\/0\s+trust'
 
 PG_PORT = 5432
 
-logger = get_logger(POSTGRESQL)
+logger = get_logger(POSTGRESQL_SERVER)
 
 
-class PostgresqlComponent(BaseComponent):
+class PostgresqlServerComponent(BaseComponent):
     def __init__(self, skip_installation):
-        super(PostgresqlComponent, self).__init__(skip_installation)
+        super(PostgresqlServerComponent, self).__init__(skip_installation)
 
     def _install(self):
-        sources = config[POSTGRESQL][SOURCES]
+        sources = config[POSTGRESQL_SERVER][SOURCES]
 
-        logger.debug('Installing PostgreSQL dependencies...')
+        logger.debug('Installing PostgreSQL Server dependencies...')
         yum_install(sources['libxslt_rpm_url'])
 
-        logger.debug('Installing PostgreSQL...')
+        logger.debug('Installing PostgreSQL Server...')
         yum_install(sources['ps_libs_rpm_url'])
         yum_install(sources['ps_rpm_url'])
         yum_install(sources['ps_contrib_rpm_url'])
         yum_install(sources['ps_server_rpm_url'])
         yum_install(sources['ps_devel_rpm_url'])
 
-    def _init_postgresql(self):
-        logger.debug('Initializing PostreSQL DATA folder...')
+    def _init_postgresql_server(self):
+        logger.debug('Initializing PostreSQL Server DATA folder...')
         postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
         try:
             common.sudo(command=[postgresql95_setup, 'initdb'])
         except Exception:
-            logger.debug('PostreSQL DATA folder already initialized...')
+            logger.debug('PostreSQL Server DATA folder already initialized...')
             pass
 
-        logger.debug('Installing PostgreSQL service...')
+        logger.debug('Installing PostgreSQL Server service...')
         systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
-        logger.debug('Setting PostgreSQL logs path...')
+        logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
         common.mkdir(LOG_DIR)
         if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
 
-        logger.info('Starting PostgreSQL service...')
+        logger.info('Starting PostgreSQL Server service...')
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def _read_old_file_lines(self, file_path):
@@ -127,7 +127,7 @@ class PostgresqlComponent(BaseComponent):
         return temp_hba_path
 
     def _update_configuration(self, enable_remote_connections):
-        logger.info('Updating PostgreSQL configuration...')
+        logger.info('Updating PostgreSQL Server configuration...')
         logger.debug('Modifying {0}'.format(PG_HBA_CONF))
         common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
         lines = self._read_old_file_lines(PG_HBA_CONF)
@@ -142,29 +142,29 @@ class PostgresqlComponent(BaseComponent):
             common.chown(POSTGRES_USER, POSTGRES_USER, PG_CONF_PATH)
 
     def _configure(self):
-        files.copy_notice(POSTGRESQL)
-        self._init_postgresql()
+        files.copy_notice(POSTGRESQL_SERVER)
+        self._init_postgresql_server()
         enable_remote_connections = \
-            config[POSTGRESQL][ENABLE_REMOTE_CONNECTIONS]
+            config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
         self._update_configuration(enable_remote_connections)
 
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def install(self):
-        logger.notice('Installing PostgreSQL...')
+        logger.notice('Installing PostgreSQL Server...')
         self._install()
         self._configure()
-        logger.notice('PostgreSQL successfully installed')
+        logger.notice('PostgreSQL Server successfully installed')
 
     def configure(self):
-        logger.notice('Configuring PostgreSQL...')
+        logger.notice('Configuring PostgreSQL Server...')
         self._configure()
-        logger.notice('PostgreSQL successfully configured')
+        logger.notice('PostgreSQL Server successfully configured')
 
     def remove(self):
         logger.notice('Removing PostgreSQL...')
-        files.remove_notice(POSTGRESQL)
+        files.remove_notice(POSTGRESQL_SERVER)
         systemd.remove(SYSTEMD_SERVICE_NAME)
         files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
         yum_remove('postgresql95')
@@ -172,15 +172,15 @@ class PostgresqlComponent(BaseComponent):
         logger.notice('PostgreSQL successfully removed')
 
     def start(self):
-        logger.notice('Starting PostgreSQL...')
+        logger.notice('Starting PostgreSQL Server...')
         systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        logger.notice('PostgreSQL successfully started')
+        logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
-        logger.notice('Stopping PostgreSQL...')
+        logger.notice('Stopping PostgreSQL Server...')
         systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        logger.notice('PostgreSQL successfully stopped')
+        logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):
-        super(PostgresqlComponent, self).validate_dependencies()
+        super(PostgresqlServerComponent, self).validate_dependencies()

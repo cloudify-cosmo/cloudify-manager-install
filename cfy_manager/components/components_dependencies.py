@@ -47,7 +47,7 @@ COMPONENTS_DEPENDENCIES = {
     'ManagerIpSetterComponent': ['systemd-sysv'],
     'MgmtWorkerComponent': ['systemd-sysv'],
     'NginxComponent': ['systemd-sysv', 'openssl-1.0.2k'],
-    'PostgresqlComponent': ['systemd-sysv'],
+    'PostgresqlServerComponent': ['systemd-sysv'],
     'PostgresqlClientComponent': [],
     'PythonComponent': [],
     'RabbitMQComponent': ['initscripts', 'systemd-sysv'],
