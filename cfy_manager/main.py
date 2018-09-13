@@ -23,6 +23,7 @@ from traceback import format_exception
 from .components import (
     ComponentsFactory,
     SERVICE_COMPONENTS,
+    MANAGER_SERVICE,
     SERVICE_INSTALLATION_ORDER
 )
 from .components.globals import set_globals, print_password_to_screen
@@ -130,18 +131,20 @@ def _load_config_and_logger(verbose=False,
 
 
 def _print_finish_message():
-    manager_config = config[MANAGER]
-    protocol = 'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
-    logger.notice(
-        'Manager is up at {protocol}://{ip}'.format(
-            protocol=protocol,
-            ip=manager_config[PUBLIC_IP])
-    )
-    print_password_to_screen()
-    logger.notice('#' * 50)
-    logger.notice("To install the default plugins bundle run:")
-    logger.notice("'cfy plugins bundle-upload'")
-    logger.notice('#' * 50)
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        manager_config = config[MANAGER]
+        protocol = \
+            'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
+        logger.notice(
+            'Manager is up at {protocol}://{ip}'.format(
+                protocol=protocol,
+                ip=manager_config[PUBLIC_IP])
+        )
+        print_password_to_screen()
+        logger.notice('#' * 50)
+        logger.notice("To install the default plugins bundle run:")
+        logger.notice("'cfy plugins bundle-upload'")
+        logger.notice('#' * 50)
 
 
 def _is_manager_installed():
