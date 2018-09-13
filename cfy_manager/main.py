@@ -310,6 +310,11 @@ def configure(verbose=False,
     validate(skip_validations=True, components=components)
     set_globals()
 
+    if clean_db:
+        for component in components:
+            if not component.skip_installation:
+                component.stop()
+
     for component in components:
         if not component.skip_installation:
             component.configure()
