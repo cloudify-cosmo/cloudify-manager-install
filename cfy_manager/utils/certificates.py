@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import argh
 import json
 import socket
@@ -283,6 +284,10 @@ def create_internal_certs(manager_ip=None,
     Recreate Cloudify Manager's internal certificates, based on the manager IP
     and a metadata file input
     """
+    if not os.path.exists(const.CA_CERT_PATH) or \
+            not os.path.exists(const.CA_KEY_PATH):
+        raise RuntimeError('Internal CA key and cert mus be available to '
+                           'generate internal certs')
     cert_metadata = load_cert_metadata(filename=metadata)
     internal_rest_host = manager_ip or cert_metadata['internal_rest_host']
 

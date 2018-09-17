@@ -37,13 +37,13 @@ SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
 
 
-def _run_update_provider_context_script(args, cluster_node_ip):
+def _run_update_provider_context_script(args):
     script_path = join(SCRIPT_DIR, 'add-networks-to-provider-context.py')
 
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    cmd = [python_path, script_path, json.dumps(args), cluster_node_ip]
+    cmd = [python_path, script_path, json.dumps(args)]
 
     return common.sudo(cmd)
 
@@ -65,10 +65,7 @@ def _update_metadata_file(networks):
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: `{"<network-name>": "<ip>"}`',
           required=True)
-@argh.arg('--cluster-node-ip',
-          help='Set the networks for the cluster node which uses this IP as '
-               'the default network IP. Only available in a cluster.')
-def add_networks(networks=None, cluster_node_ip=''):
+def add_networks(networks=None):
     """
     Add new networks to a running Cloudify Manager
     """
@@ -76,12 +73,10 @@ def add_networks(networks=None, cluster_node_ip=''):
 
     networks = json.loads(networks)
 
-    _run_update_provider_context_script(networks, cluster_node_ip)
+    _update_metadata_file(networks)
+    create_internal_certs()
 
-    if not cluster_node_ip:
-        # in a cluster, those are run by the options handler
-        _update_metadata_file(networks)
-        create_internal_certs()
+    _run_update_provider_context_script(networks)
 
     print('New networks were added successfully. Please restart the'
           ' following services: `nginx`, `cloudify-mgmtworker`,'
