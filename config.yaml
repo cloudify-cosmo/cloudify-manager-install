@@ -237,6 +237,11 @@ restservice:
   port: 8100
 
 nginx:
+  # Number of nginx worker processes to have.
+  # Specify "auto" to use nginx's recommended configuration of one
+  # process per core.
+  worker_processes: auto
+
   sources:
     nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm
 
