@@ -273,7 +273,9 @@ restservice:
 
 nginx:
   # Number of nginx worker processes to have.
-  worker_processes: 1
+  # Specify "auto" to use nginx's recommended configuration of one
+  # process per core.
+  worker_processes: auto
 
   # Number of connections that any nginx worker is allowed to carry simultaneously.
   worker_connections: 4096

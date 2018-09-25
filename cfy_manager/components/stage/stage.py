@@ -153,10 +153,16 @@ class StageComponent(BaseComponent):
         with open(config_path) as f:
             stage_config = json.load(f)
 
+        host_details = config[POSTGRESQL_CLIENT]['host'].split(':')
+        database_host = host_details[0]
+        database_port = host_details[1] if 1 < len(host_details) else '5432'
+
         stage_config['db']['url'] = \
-            'postgres://{0}:{1}@127.0.0.1:5432/stage'.format(
+            'postgres://{0}:{1}@{2}:{3}/stage'.format(
                 config[POSTGRESQL_CLIENT]['username'],
-                config[POSTGRESQL_CLIENT]['password'])
+                config[POSTGRESQL_CLIENT]['password'],
+                database_host,
+                database_port)
 
         content = json.dumps(stage_config, indent=4, sort_keys=True)
 
