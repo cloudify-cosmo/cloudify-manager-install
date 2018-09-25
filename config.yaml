@@ -233,6 +233,7 @@ restservice:
     username: ''
     password: ''
     domain: ''
+    ou: ''
 
     # True if Active Directory will be used as the LDAP authenticator
     is_active_directory: true
