@@ -45,24 +45,6 @@ def _update_provider_context(networks):
         sm.update(ctx)
 
 
-def _validate_networks(new_networks):
-    """Check that new networks are valid, otherwise throw an error"""
-    with setup_flask_app().app_context():
-        sm = get_storage_manager()
-        ctx = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID)
-        _validate_duplicate_network(ctx, new_networks)
-
-
-def _validate_duplicate_network(ctx, new_networks):
-    """Check that all networks have unique names"""
-    old_networks = ctx.context['cloudify']['cloudify_agent']['networks']
-    for network in new_networks:
-        if network in old_networks:
-            raise Exception('Network name {0} already exists. Cannot add '
-                            'new networks. Choose uniqe network names and '
-                            'run the command again'.format(network))
-
-
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         raise RuntimeError('`add-networks-to-provider-context.py` expects'
@@ -74,5 +56,4 @@ if __name__ == '__main__':
     if has_premium and node_status.get('initialized', False):
         set_node_networks(networks)
     else:
-        _validate_networks(networks)
         _update_provider_context(networks)
