@@ -48,6 +48,15 @@ def _run_update_provider_context_script(args):
     return common.sudo(cmd)
 
 
+def _validate_duplicate_network(old_networks, new_networks):
+    """Check that all networks have unique names"""
+    for network in new_networks:
+        if network in old_networks:
+            raise Exception('Network name {0} already exists. Cannot add '
+                            'new networks. Choose uniqe network names and '
+                            'run the command again'.format(network))
+
+
 def _update_metadata_file(networks):
     """
     Add the new networks to /etc/cloudify/ssl/certificate_metadata
@@ -55,8 +64,10 @@ def _update_metadata_file(networks):
     """
     metadata = load_cert_metadata()
     old_networks = metadata.get('networks', {})
-    networks.update(old_networks)
-    metadata['networks'] = networks
+    new_networks = networks.copy()
+    _validate_duplicate_network(old_networks, new_networks)
+    new_networks.update(old_networks)
+    metadata['networks'] = new_networks
     write_to_file(metadata, CERT_METADATA_FILE_PATH, json_dump=True)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CERT_METADATA_FILE_PATH)
 
