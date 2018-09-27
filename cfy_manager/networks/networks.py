@@ -67,7 +67,7 @@ def _update_metadata_file(networks):
     new_networks = networks.copy()
     _validate_duplicate_network(old_networks, new_networks)
     new_networks.update(old_networks)
-    metadata['networks'] = networks
+    metadata['networks'] = new_networks
     write_to_file(metadata, CERT_METADATA_FILE_PATH, json_dump=True)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CERT_METADATA_FILE_PATH)
 
