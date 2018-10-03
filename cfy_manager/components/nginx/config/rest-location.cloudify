@@ -6,6 +6,11 @@ location ~ ^/api/v(1|2|2\.1|3|3\.1)/(blueprints|executions|deployments|nodes|eve
     proxy_set_header   X-Real-IP        $remote_addr;
     proxy_set_header   X-Server-Port    $server_port;
     proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
+
+    gzip on;
+    gzip_types application/json;
+    gzip_min_length 1000;
+    gzip_proxied any;
 }
 
 location ~ ^/api/version {
@@ -16,6 +21,11 @@ location ~ ^/api/version {
     proxy_set_header   X-Real-IP        $remote_addr;
     proxy_set_header   X-Server-Port    $server_port;
     proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
+
+    gzip on;
+    gzip_types application/json;
+    gzip_min_length 1000;
+    gzip_proxied any;
 }
 
 location ~ ^/(blueprints|snapshots|executions|deployments|nodes|events|search|status|provider|node-instances|version|evaluate|deployment-modifications|tokens)(.*)$ {
