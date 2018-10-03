@@ -36,8 +36,7 @@ server {
   # Other than API requests, and unless otherwise noted: redirect
   # to HTTPS using HTTP code 308 to preserve the request's body.
   location / {
-    add_header Location https://$host$request_uri always;
-    return 308;
+    return 308 https://$host$request_uri;
   }
 
   location /resources/cloudify_agent {
