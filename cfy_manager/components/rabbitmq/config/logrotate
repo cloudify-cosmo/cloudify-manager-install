@@ -10,4 +10,5 @@
         postrotate
             /sbin/service rabbitmq-server rotate-logs > /dev/null
         endscript
+        dateext dateformat -%Y%m%d-%s
 }

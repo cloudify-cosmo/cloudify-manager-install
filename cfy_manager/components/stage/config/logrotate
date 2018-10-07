@@ -7,4 +7,5 @@
         delaycompress
         missingok
         notifempty
+        dateext dateformat -%Y%m%d-%s
 }

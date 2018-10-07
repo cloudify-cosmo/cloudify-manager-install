@@ -4,7 +4,7 @@
         rotate {{ restservice.log.files_backup_count }}
         size {{ restservice.log.file_size}}M
         compress
-        nodateext
+        dateext dateformat -%Y%m%d-%s
         delaycompress
         notifempty
         sharedscripts
