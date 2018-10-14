@@ -37,6 +37,8 @@ SECURITY = 'security'
 ADMIN_PASSWORD = 'admin_password'
 ADMIN_USERNAME = 'admin_username'
 
+PREMIUM_EDITION = 'premium_edition'
+
 # endregion
 
 # region Config Keys
@@ -49,5 +51,7 @@ SKIP_VALIDATIONS = 'skip_validations'
 PROVIDER_CONTEXT = 'provider_context'
 CLEAN_DB = 'clean_db'
 FLASK_SECURITY = 'flask_security'
+MASTER_IP = 'master_ip'
+NODE_NAME = 'node_name'
 
 # endregion

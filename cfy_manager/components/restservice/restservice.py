@@ -27,10 +27,14 @@ from ..components_constants import (
     LOG_DIR_KEY,
     VENV,
     FLASK_SECURITY,
-    CLEAN_DB
+    CLEAN_DB,
+    MASTER_IP,
 )
 from ..base_component import BaseComponent
-from ..service_names import RESTSERVICE
+from ..service_names import (
+    RESTSERVICE,
+    CLUSTER
+)
 from ... import constants
 from ...config import config
 from ...logger import get_logger
@@ -193,8 +197,9 @@ class RestServiceComponent(BaseComponent):
     def _verify_restservice_alive(self):
         systemd.verify_alive(RESTSERVICE)
 
-        logger.info('Verifying Rest service is working as expected...')
-        self._verify_restservice()
+        if not config[CLUSTER][MASTER_IP]:
+            logger.info('Verifying Rest service is working as expected...')
+            self._verify_restservice()
 
     def _configure_db(self):
         configs = {
@@ -202,6 +207,10 @@ class RestServiceComponent(BaseComponent):
             'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
             'security_config': REST_SECURITY_CONFIG_PATH
         }
+        if config[CLUSTER][MASTER_IP]:
+            self.logger.info('Joining cluster during bootstrap, ignoring DB '
+                             'configuration')
+            return
         if config[CLEAN_DB]:
             db.prepare_db()
             db.populate_db(configs)

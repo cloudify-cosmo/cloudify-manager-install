@@ -34,11 +34,24 @@ manager:
     admin_username: admin
     # If admin_password is left blank, a password will be generated for you and provided
     # to you at the end of the install process.
+    # IMPORTANT - In case of clustering with an external database, take note of the admin_password
     admin_password: ''
 
   monitoring_install: &monitoring_install
     # This will cause the monitoring components not to be installed if set to true
     skip_installation: true
+
+cluster:
+  # The cluster's master manager's IP to join to
+  # Must be in the same architecture as this manager:
+  #   I.E - all-in-one with all-in-one or external db with external db
+  # IMPORTANT - Make sure to update the admin_password's value with the correct
+  #             admin_password of the master manager
+  master_ip: ''
+
+  # The joining node's name
+  # In case node_name is left blank, it will be generated
+  node_name: ''
 
 manager-ip-setter:
   sources:

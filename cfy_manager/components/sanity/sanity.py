@@ -19,9 +19,9 @@ import time
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
-from ..components_constants import SOURCES, PRIVATE_IP
+from ..components_constants import SOURCES, PRIVATE_IP, MASTER_IP
 from ..base_component import BaseComponent
-from ..service_names import SANITY, MANAGER
+from ..service_names import SANITY, MANAGER, CLUSTER
 from ...config import config
 from ...logger import get_logger
 from ...constants import CLOUDIFY_HOME_DIR
@@ -134,7 +134,7 @@ class SanityComponent(BaseComponent):
         logger.notice('Sanity completed successfully')
 
     def install(self):
-        if config[SANITY]['skip_sanity']:
+        if config[SANITY]['skip_sanity'] or config[CLUSTER][MASTER_IP]:
             logger.info('Skipping sanity check...')
             return
         self.run_sanity_check()
