@@ -22,7 +22,8 @@ from ..components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
     AGENT,
-    SSL_INPUTS
+    SSL_INPUTS,
+    CLEAN_DB
 )
 from ..base_component import BaseComponent
 from ..service_names import NGINX, MANAGER
@@ -176,6 +177,12 @@ class NginxComponent(BaseComponent):
             self._generate_external_certs()
 
     def _handle_certs(self):
+        if not config[CLEAN_DB]:
+            logger.info('Skipping certificate handling. '
+                        'Pass the `--clean-db` flag in order to recreate '
+                        'all certificates')
+            return
+
         # Needs to be run here, because openssl is required and is
         # installed by nginx
         common.remove(constants.SSL_CERTS_TARGET_DIR)

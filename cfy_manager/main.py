@@ -102,15 +102,7 @@ def _exception_handler(type_, value, traceback):
 sys.excepthook = _exception_handler
 
 
-def _load_config_and_logger(verbose=False,
-                            private_ip=None,
-                            public_ip=None,
-                            admin_password=None,
-                            clean_db=False,
-                            config_write_required=False):
-    setup_console_logger(verbose)
-    validate_config_access(config_write_required)
-    config.load_config()
+def _validate_config_values(private_ip, public_ip, admin_password, clean_db):
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
@@ -128,6 +120,20 @@ def _load_config_and_logger(verbose=False,
                 'The --admin-password argument can only be used in '
                 'conjunction with the --clean-db flag.'
             )
+
+
+def _prepare_execution(verbose=False,
+                       private_ip=None,
+                       public_ip=None,
+                       admin_password=None,
+                       clean_db=False,
+                       config_write_required=False):
+    setup_console_logger(verbose)
+
+    validate_config_access(config_write_required)
+    config.load_config()
+    _validate_config_values(private_ip, public_ip, admin_password, clean_db)
+    _create_component_objects()
 
 
 def _print_finish_message():
@@ -190,39 +196,36 @@ def _validate_manager_installed(cmd):
             "Operation '{0}' is not allowed on a cluster node".format(cmd))
 
 
-def _get_services_to_install():
+def _get_components_list():
     """
     Match all available services to install with all desired ones and
-    return only a unique list
+    return a unique list ordered by service installation order
     """
-    _load_config_and_logger()
-    services_to_install = config[SERVICES_TO_INSTALL]
-    services_components_to_install = []
-    for service in SERVICE_INSTALLATION_ORDER:
-        for service_to_install in services_to_install:
-            if service == service_to_install:
-                services_components_to_install += SERVICE_COMPONENTS[service]
-    # Required to ensure list has only distinct elements
-    seen = set()
-    return [service for service in services_components_to_install
-            if not (service in seen or seen.add(service))]
+    # Order the services to install by service installation order
+    ordered_services = sorted(
+        config[SERVICES_TO_INSTALL],
+        key=SERVICE_INSTALLATION_ORDER.index
+    )
+    # Can't easily use list comprehension here because this is a list of lists
+    ordered_components = []
+    for service in ordered_services:
+        ordered_components.extend(SERVICE_COMPONENTS[service])
+    return ordered_components
 
 
-def _create_components_objects():
-    components_to_install = _get_services_to_install()
+def _create_component_objects():
+    components_to_install = _get_components_list()
     for component_name in components_to_install:
-        try:
-            skip_installation = config[component_name]['skip_installation']
-        except KeyError:
-            skip_installation = False
+        component_config = config.get(component_name, {})
+        skip_installation = component_config.get('skip_installation', False)
         components.append(
-            ComponentsFactory.create_component(
-                component_name,
-                skip_installation))
+            ComponentsFactory.create_component(component_name,
+                                               skip_installation)
+        )
 
 
 def install_args(f):
-    """Aply all the args that are used by `cfy_manager install`"""
+    """Apply all the args that are used by `cfy_manager install`"""
     args = [
         argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
@@ -241,7 +244,7 @@ def validate_command(verbose=False,
                      public_ip=None,
                      admin_password=None,
                      clean_db=False):
-    _load_config_and_logger(
+    _prepare_execution(
         verbose,
         private_ip,
         public_ip,
@@ -255,7 +258,7 @@ def validate_command(verbose=False,
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
 def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
-    _load_config_and_logger(verbose=verbose, private_ip=private_ip)
+    _prepare_execution(verbose=verbose, private_ip=private_ip)
     sanity = ComponentsFactory.create_component('sanity')
     sanity.run_sanity_check()
 
@@ -268,7 +271,7 @@ def install(verbose=False,
             clean_db=False):
     """ Install Cloudify Manager """
 
-    _load_config_and_logger(
+    _prepare_execution(
         verbose,
         private_ip,
         public_ip,
@@ -296,7 +299,7 @@ def configure(verbose=False,
               clean_db=False):
     """ Configure Cloudify Manager """
 
-    _load_config_and_logger(
+    _prepare_execution(
         verbose,
         private_ip,
         public_ip,
@@ -326,7 +329,7 @@ def configure(verbose=False,
 def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
-    _load_config_and_logger(verbose)
+    _prepare_execution(verbose)
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
@@ -347,7 +350,7 @@ def remove(verbose=False, force=False):
 def start(verbose=False):
     """ Start Cloudify Manager services """
 
-    _load_config_and_logger(verbose)
+    _prepare_execution(verbose)
     _validate_manager_installed('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in components:
@@ -360,7 +363,7 @@ def start(verbose=False):
 def stop(verbose=False, force=False):
     """ Stop Cloudify Manager services """
 
-    _load_config_and_logger(verbose)
+    _prepare_execution(verbose)
     _validate_manager_installed('stop')
     _validate_force(force, 'stop')
 
@@ -375,7 +378,7 @@ def stop(verbose=False, force=False):
 def restart(verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
-    _load_config_and_logger(verbose)
+    _prepare_execution(verbose)
     _validate_manager_installed('restart')
     _validate_force(force, 'restart')
 
@@ -386,7 +389,6 @@ def restart(verbose=False, force=False):
 
 def main():
     """Main entry point"""
-    _create_components_objects()
     argh.dispatch_commands([
         validate_command,
         install,
