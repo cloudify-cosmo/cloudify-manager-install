@@ -128,6 +128,7 @@ def _load_config_and_logger(verbose=False,
                 'The --admin-password argument can only be used in '
                 'conjunction with the --clean-db flag.'
             )
+    _create_components_objects()
 
 
 def _print_finish_message():
@@ -195,7 +196,6 @@ def _get_components_list():
     Match all available services to install with all desired ones and
     return a unique list ordered by service installation order
     """
-    _load_config_and_logger()
     # Order the services to install by service installation order
     ordered_services = sorted(
         config[SERVICES_TO_INSTALL],
@@ -220,7 +220,7 @@ def _create_components_objects():
 
 
 def install_args(f):
-    """Aply all the args that are used by `cfy_manager install`"""
+    """Apply all the args that are used by `cfy_manager install`"""
     args = [
         argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
@@ -384,7 +384,6 @@ def restart(verbose=False, force=False):
 
 def main():
     """Main entry point"""
-    _create_components_objects()
     argh.dispatch_commands([
         validate_command,
         install,
