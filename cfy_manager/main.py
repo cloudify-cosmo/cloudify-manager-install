@@ -190,35 +190,33 @@ def _validate_manager_installed(cmd):
             "Operation '{0}' is not allowed on a cluster node".format(cmd))
 
 
-def _get_services_to_install():
+def _get_components_list():
     """
     Match all available services to install with all desired ones and
-    return only a unique list
+    return a unique list ordered by service installation order
     """
     _load_config_and_logger()
-    services_to_install = config[SERVICES_TO_INSTALL]
-    services_components_to_install = []
-    for service in SERVICE_INSTALLATION_ORDER:
-        for service_to_install in services_to_install:
-            if service == service_to_install:
-                services_components_to_install += SERVICE_COMPONENTS[service]
-    # Required to ensure list has only distinct elements
-    seen = set()
-    return [service for service in services_components_to_install
-            if not (service in seen or seen.add(service))]
+    # Order the services to install by service installation order
+    ordered_services = sorted(
+        config[SERVICES_TO_INSTALL],
+        key=SERVICE_INSTALLATION_ORDER.index
+    )
+    # Can't easily use list comprehension here because this is a list of lists
+    ordered_components = []
+    for service in ordered_services:
+        ordered_components.extend(SERVICE_COMPONENTS[service])
+    return ordered_components
 
 
 def _create_components_objects():
-    components_to_install = _get_services_to_install()
+    components_to_install = _get_components_list()
     for component_name in components_to_install:
-        try:
-            skip_installation = config[component_name]['skip_installation']
-        except KeyError:
-            skip_installation = False
+        component_config = config.get(component_name, {})
+        skip_installation = component_config.get('skip_installation', False)
         components.append(
-            ComponentsFactory.create_component(
-                component_name,
-                skip_installation))
+            ComponentsFactory.create_component(component_name,
+                                               skip_installation)
+        )
 
 
 def install_args(f):
