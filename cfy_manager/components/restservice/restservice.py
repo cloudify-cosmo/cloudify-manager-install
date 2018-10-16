@@ -89,10 +89,28 @@ class RestServiceComponent(BaseComponent):
             path = join(constants.MANAGER_RESOURCES_HOME, resource_dir)
             common.mkdir(path)
 
+    def _get_flask_security(self):
+        # If we're recreating the DB, or if there's no previous security
+        # config file, just use the config that was generated
+        if config[CLEAN_DB] or not exists(REST_SECURITY_CONFIG_PATH):
+            return config[FLASK_SECURITY]
+
+        security_config = config[FLASK_SECURITY]
+
+        with open(REST_SECURITY_CONFIG_PATH, 'r') as f:
+            current_config = json.load(f)
+
+        # We want the existing config values to take precedence, but for any
+        # new values to also be in the final config dict
+        security_config.update(current_config)
+
+        return security_config
+
     def _deploy_security_configuration(self):
         logger.info('Deploying REST Security configuration file...')
 
-        write_to_file(config[FLASK_SECURITY], REST_SECURITY_CONFIG_PATH,
+        flask_security = self._get_flask_security()
+        write_to_file(flask_security, REST_SECURITY_CONFIG_PATH,
                       json_dump=True)
         common.chown(
             constants.CLOUDIFY_USER,
