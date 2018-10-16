@@ -21,7 +21,7 @@ from subprocess import check_output
 import logging
 
 from .constants import BASE_LOG_DIR
-from utils import _subprocess_preexec
+from utils import subprocess_preexec
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 
@@ -127,10 +127,10 @@ def _create_log_dir():
         # Need to call subprocess directly, because utils.common depends on the
         # logger, and we'd get a cyclical import
         check_output(['sudo', 'mkdir', '-p', log_dir],
-                     preexec_fn=_subprocess_preexec)
+                     preexec_fn=subprocess_preexec)
         check_output(['sudo', 'chown', '-R',
                       '{0}:{1}'.format(geteuid(), getegid()),
-                      log_dir], preexec_fn=_subprocess_preexec)
+                      log_dir], preexec_fn=subprocess_preexec)
     return log_dir
 
 

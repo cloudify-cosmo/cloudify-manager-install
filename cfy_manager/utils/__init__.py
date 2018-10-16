@@ -18,5 +18,5 @@ import os
 CFY_UMASK = 0022
 
 
-def _subprocess_preexec():
+def subprocess_preexec():
     os.umask(CFY_UMASK)
