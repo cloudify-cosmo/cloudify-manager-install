@@ -12,3 +12,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+import os
+
+CFY_UMASK = 0022
+
+
+def _subprocess_preexec():
+    os.umask(CFY_UMASK)
