@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, dirname
+from os.path import join, dirname, exists
 
 from ..components_constants import (
     SOURCES,
@@ -85,6 +85,12 @@ class MgmtWorkerComponent(BaseComponent):
         file_name = 'hooks.conf'
         config_dir = join(HOME_DIR, 'config')
         hooks_config_dst = join(config_dir, file_name)
+
+        # If the hooks config file already exists, do nothing. This file
+        # can be altered by users, so we shouldn't overwrite it once present
+        if exists(hooks_config_dst):
+            return
+
         deploy(
             src=join(CONFIG_PATH, file_name),
             dst=hooks_config_dst
