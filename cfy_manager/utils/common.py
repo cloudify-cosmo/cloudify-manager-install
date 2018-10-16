@@ -23,6 +23,8 @@ from ..config import config
 from ..logger import get_logger
 from ..exceptions import BootstrapError
 
+from . import _subprocess_preexec
+
 logger = get_logger('utils')
 
 
@@ -40,7 +42,8 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         command = glob_command
     logger.debug('Running: {0}'.format(command))
     proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
-                            stderr=stderr, shell=shell, env=env)
+                            stderr=stderr, shell=shell, env=env,
+                            preexec_fn=_subprocess_preexec)
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
     if proc.returncode != 0:
         command_str = ' '.join(command)
