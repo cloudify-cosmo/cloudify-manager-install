@@ -16,7 +16,7 @@
 import json
 import urllib2
 import subprocess
-from os.path import join
+from os.path import join, exists
 
 from . import db
 from ..components_constants import (
@@ -90,15 +90,6 @@ class RestServiceComponent(BaseComponent):
             common.mkdir(path)
 
     def _deploy_security_configuration(self):
-        # Pre-creating paths so permissions fix can
-        # work correctly in mgmtworker
-        self._pre_create_snapshot_paths()
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            constants.MANAGER_RESOURCES_HOME
-        )
-
         logger.info('Deploying REST Security configuration file...')
 
         write_to_file(config[FLASK_SECURITY], REST_SECURITY_CONFIG_PATH,
@@ -124,11 +115,22 @@ class RestServiceComponent(BaseComponent):
 
         gunicorn_config['worker_count'] = worker_count
 
+    def _chown_resources_dir(self):
+        # Pre-creating paths so permissions fix can
+        # work correctly in mgmtworker
+        self._pre_create_snapshot_paths()
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            constants.MANAGER_RESOURCES_HOME
+        )
+
     def _configure_restservice(self):
         self._calculate_worker_count()
         self._deploy_rest_configuration()
         self._deploy_security_configuration()
         self._deploy_authorization_configuration()
+        self._chown_resources_dir()
 
     def _verify_restservice(self):
         """To verify that the REST service is working, GET the blueprints list.
