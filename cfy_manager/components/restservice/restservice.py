@@ -16,7 +16,7 @@
 import json
 import urllib2
 import subprocess
-from os.path import join
+from os.path import join, exists
 
 from . import db
 from ..components_constants import (
@@ -89,19 +89,28 @@ class RestServiceComponent(BaseComponent):
             path = join(constants.MANAGER_RESOURCES_HOME, resource_dir)
             common.mkdir(path)
 
-    def _deploy_security_configuration(self):
-        # Pre-creating paths so permissions fix can
-        # work correctly in mgmtworker
-        self._pre_create_snapshot_paths()
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            constants.MANAGER_RESOURCES_HOME
-        )
+    def _get_flask_security(self):
+        # If we're recreating the DB, or if there's no previous security
+        # config file, just use the config that was generated
+        if config[CLEAN_DB] or not exists(REST_SECURITY_CONFIG_PATH):
+            return config[FLASK_SECURITY]
 
+        security_config = config[FLASK_SECURITY]
+
+        with open(REST_SECURITY_CONFIG_PATH, 'r') as f:
+            current_config = json.load(f)
+
+        # We want the existing config values to take precedence, but for any
+        # new values to also be in the final config dict
+        security_config.update(current_config)
+
+        return security_config
+
+    def _deploy_security_configuration(self):
         logger.info('Deploying REST Security configuration file...')
 
-        write_to_file(config[FLASK_SECURITY], REST_SECURITY_CONFIG_PATH,
+        flask_security = self._get_flask_security()
+        write_to_file(flask_security, REST_SECURITY_CONFIG_PATH,
                       json_dump=True)
         common.chown(
             constants.CLOUDIFY_USER,
@@ -124,11 +133,22 @@ class RestServiceComponent(BaseComponent):
 
         gunicorn_config['worker_count'] = worker_count
 
+    def _chown_resources_dir(self):
+        # Pre-creating paths so permissions fix can
+        # work correctly in mgmtworker
+        self._pre_create_snapshot_paths()
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            constants.MANAGER_RESOURCES_HOME
+        )
+
     def _configure_restservice(self):
         self._calculate_worker_count()
         self._deploy_rest_configuration()
         self._deploy_security_configuration()
         self._deploy_authorization_configuration()
+        self._chown_resources_dir()
 
     def _verify_restservice(self):
         """To verify that the REST service is working, GET the blueprints list.
