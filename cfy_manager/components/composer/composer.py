@@ -137,8 +137,8 @@ class ComposerComponent(BaseComponent):
         files.copy_notice(COMPOSER)
         set_logrotate(COMPOSER)
         self._create_user_and_set_permissions()
-        self._run_db_migrate()
         self._update_composer_config()
+        self._run_db_migrate()
         self._start_and_validate_composer()
 
     def install(self):
