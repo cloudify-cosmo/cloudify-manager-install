@@ -85,6 +85,16 @@ class MgmtWorkerComponent(BaseComponent):
         file_name = 'hooks.conf'
         config_dir = join(HOME_DIR, 'config')
         hooks_config_dst = join(config_dir, file_name)
+
+        # If the hooks config file already exists, do nothing. This file
+        # can be altered by users, so we shouldn't overwrite it once present.
+        # Can't use os.path.exists because the file is owned by cfyuser
+        r = common.sudo(
+            'ls {0}'.format(hooks_config_dst), ignore_failures=True
+        )
+        if r.returncode == 0:
+            return
+
         deploy(
             src=join(CONFIG_PATH, file_name),
             dst=hooks_config_dst
