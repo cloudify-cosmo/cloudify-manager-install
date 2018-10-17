@@ -42,6 +42,7 @@ from .networks.networks import add_networks
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
+from .utils import CFY_UMASK
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
@@ -388,6 +389,8 @@ def restart(verbose=False, force=False):
 
 
 def main():
+    # Set the umask to 0022; restore it later.
+    current_umask = os.umask(CFY_UMASK)
     """Main entry point"""
     argh.dispatch_commands([
         validate_command,
@@ -403,6 +406,7 @@ def main():
         sanity_check,
         add_networks
     ])
+    os.umask(current_umask)
 
 
 if __name__ == '__main__':
