@@ -25,7 +25,7 @@ from ..components_constants import (
     SSL_INPUTS
 )
 from ..base_component import BaseComponent
-from ..service_names import COMPOSER
+from ..service_names import COMPOSER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -108,7 +108,7 @@ class ComposerComponent(BaseComponent):
         common.chmod('g+w', CONF_DIR)
         common.chmod('g+w', dirname(CONF_DIR))
 
-    def _set_internal_manager_ip(self):
+    def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
         with open(config_path) as f:
             composer_config = json.load(f)
@@ -116,17 +116,29 @@ class ComposerComponent(BaseComponent):
         if config[SSL_INPUTS]['internal_manager_host']:
             composer_config['managerConfig']['ip'] = \
                 config[SSL_INPUTS]['internal_manager_host']
-            content = json.dumps(composer_config, indent=4, sort_keys=True)
-            # Using `write_to_file` because the path belongs to the composer
-            # user, so we need to move with sudo
-            files.write_to_file(contents=content, destination=config_path)
+
+        host_details = config[POSTGRESQL_CLIENT]['host'].split(':')
+        database_host = host_details[0]
+        database_port = host_details[1] if 1 < len(host_details) else '5432'
+
+        composer_config['db']['postgres'] = \
+            'postgres://{0}:{1}@{2}:{3}/composer'.format(
+                config[POSTGRESQL_CLIENT]['username'],
+                config[POSTGRESQL_CLIENT]['password'],
+                database_host,
+                database_port)
+
+        content = json.dumps(composer_config, indent=4, sort_keys=True)
+        # Using `write_to_file` because the path belongs to the composer
+        # user, so we need to move with sudo
+        files.write_to_file(contents=content, destination=config_path)
 
     def _configure(self):
         files.copy_notice(COMPOSER)
         set_logrotate(COMPOSER)
         self._create_user_and_set_permissions()
+        self._update_composer_config()
         self._run_db_migrate()
-        self._set_internal_manager_ip()
         self._start_and_validate_composer()
 
     def install(self):
