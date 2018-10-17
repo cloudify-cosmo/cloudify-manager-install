@@ -32,3 +32,9 @@ class ValidationError(BootstrapError):
 
 class InputError(BootstrapError):
     pass
+
+
+class ProcessExecutionError(BootstrapError):
+    def __init__(self, message, proc=None):
+        super(ProcessExecutionError, self).__init__(message)
+        self.proc = proc
