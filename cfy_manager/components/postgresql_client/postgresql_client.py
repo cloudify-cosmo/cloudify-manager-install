@@ -20,6 +20,7 @@ from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
 from ... import constants
 from ...config import config
+from ...exceptions import ProcessExecutionError
 from ...logger import get_logger
 from ...utils import common, files
 from ...utils.install import (
@@ -60,12 +61,13 @@ class PostgresqlClientComponent(BaseComponent):
             common.sudo(['groupadd',
                          '-g', POSTGRES_GROUP_ID,
                          '-o', '-r',
-                         POSTGRES_GROUP])
-        except Exception as ex:
-            if 'already exists' not in ex.message:
-                raise ex
-            else:
+                         POSTGRES_GROUP],)
+        except ProcessExecutionError as ex:
+            # in `groupadd`, return 9 means group name is not unique
+            if ex.proc.returncode == 9:
                 logger.info('Group postgres already exists')
+            else:
+                raise ex
 
     def _create_postgres_user(self):
         logger.notice('Creating postgres user')
