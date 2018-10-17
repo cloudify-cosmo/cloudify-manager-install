@@ -88,7 +88,7 @@ class MgmtWorkerComponent(BaseComponent):
 
         # If the hooks config file already exists, do nothing. This file
         # can be altered by users, so we shouldn't overwrite it once present.
-        # Can't use os.path.exists because of the file's permissions
+        # Can't use os.path.exists because the file is owned by cfyuser
         r = common.sudo(
             'ls {0}'.format(hooks_config_dst), ignore_failures=True
         )
