@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, dirname, exists
+from os.path import join, dirname
 
 from ..components_constants import (
     SOURCES,
@@ -87,8 +87,12 @@ class MgmtWorkerComponent(BaseComponent):
         hooks_config_dst = join(config_dir, file_name)
 
         # If the hooks config file already exists, do nothing. This file
-        # can be altered by users, so we shouldn't overwrite it once present
-        if exists(hooks_config_dst):
+        # can be altered by users, so we shouldn't overwrite it once present.
+        # Can't use os.path.exists because of the file's permissions
+        r = common.sudo(
+            'ls {0}'.format(hooks_config_dst), ignore_failures=True
+        )
+        if r.returncode == 0:
             return
 
         deploy(
