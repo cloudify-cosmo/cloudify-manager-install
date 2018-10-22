@@ -21,7 +21,7 @@ import subprocess
 
 from ..config import config
 from ..logger import get_logger
-from ..exceptions import BootstrapError
+from ..exceptions import ProcessExecutionError
 
 from . import subprocess_preexec
 
@@ -54,7 +54,7 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         elif not ignore_failures:
             msg = 'Failed running command: {0} ({1}).'.format(
                 command_str, proc.aggr_stderr)
-            raise BootstrapError(msg)
+            raise ProcessExecutionError(msg, proc.returncode)
     return proc
 
 

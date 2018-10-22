@@ -15,6 +15,8 @@
 
 from os.path import join
 
+from ...exceptions import ProcessExecutionError
+
 from ..components_constants import SOURCES
 from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
@@ -28,6 +30,7 @@ from ...utils.install import (
     RpmPackageHandler
 )
 
+GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 POSTGRES_USER_ID = POSTGRES_GROUP_ID = '26'
 POSTGRES_USER_COMMENT = 'PostgreSQL Server'
@@ -61,8 +64,9 @@ class PostgresqlClientComponent(BaseComponent):
                          '-g', POSTGRES_GROUP_ID,
                          '-o', '-r',
                          POSTGRES_GROUP])
-        except Exception as ex:
-            if 'already exists' not in ex.message:
+        except ProcessExecutionError as ex:
+            # Return code 9 for non-unique user/group
+            if ex.return_code != GROUP_USER_ALREADY_EXISTS_EXIT_CODE:
                 raise ex
             else:
                 logger.info('Group postgres already exists')
@@ -79,8 +83,9 @@ class PostgresqlClientComponent(BaseComponent):
                          '-s', '/bin/bash',
                          '-c', POSTGRES_USER_COMMENT,
                          '-u', POSTGRES_USER_ID, POSTGRES_USER])
-        except Exception as ex:
-            if 'already exists' not in ex.message:
+        except ProcessExecutionError as ex:
+            # Return code 9 for non-unique user/group
+            if ex.return_code != GROUP_USER_ALREADY_EXISTS_EXIT_CODE:
                 raise ex
             else:
                 logger.info('User postgres already exists')
