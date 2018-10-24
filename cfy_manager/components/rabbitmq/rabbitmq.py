@@ -140,7 +140,7 @@ class RabbitMQComponent(BaseComponent):
         )
         self._set_rabbitmq_policy(
             name='metrics_queue_message_policy',
-            expression='^amq\.gen.*$',
+            expression=r'^amq\.gen.*$',
             policy=metrics_queue_message_policy
         )
         self._set_rabbitmq_policy(
