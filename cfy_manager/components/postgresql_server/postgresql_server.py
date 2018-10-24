@@ -47,7 +47,7 @@ PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
 PG_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
-PG_HBA_LISTEN_ALL_REGEX_PATTERN = 'host\s+all\s+all\s+0\.0\.0\.0\/0\s+trust'
+PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+trust'
 
 PG_PORT = 5432
 
