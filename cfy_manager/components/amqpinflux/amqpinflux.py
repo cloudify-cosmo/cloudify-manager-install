@@ -39,7 +39,8 @@ class AmqpInfluxComponent(BaseComponent):
 
     def _configure(self):
         logger.info('Starting AMQP-Influx Broker Service...')
-        systemd.configure(AMQPINFLUX)
+        systemd.configure(AMQPINFLUX,
+                          user='amqpinflux', group='amqpinflux')
         systemd.restart(AMQPINFLUX)
         systemd.verify_alive(AMQPINFLUX)
 

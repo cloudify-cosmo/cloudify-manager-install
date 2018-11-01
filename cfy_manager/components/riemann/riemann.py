@@ -46,8 +46,12 @@ class RiemannComponent(BaseComponent):
         yum_install(sources['cloudify_riemann_url'])
 
     def _start_and_verify_service(self):
+        common.sudo([
+            'usermod', '-a', '-G', constants.CLOUDIFY_GROUP, 'riemann',
+        ])
         logger.info('Starting Riemann service...')
-        systemd.configure(RIEMANN)
+        systemd.configure(RIEMANN,
+                          user='riemann', group='riemann')
         systemd.restart(RIEMANN)
         systemd.verify_alive(RIEMANN)
 

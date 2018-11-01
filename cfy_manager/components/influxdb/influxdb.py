@@ -143,7 +143,8 @@ class InfluxDBComponent(BaseComponent):
         self._create_paths()
         copy_notice(INFLUXDB)
 
-        systemd.configure(INFLUXDB)
+        systemd.configure(INFLUXDB,
+                          user='influxdb', group='influxdb')
         # Provided with InfluxDB's package. Will be removed if it exists.
         common.remove(INIT_D_PATH)
 

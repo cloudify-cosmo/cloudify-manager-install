@@ -46,7 +46,7 @@ class JavaComponent(BaseComponent):
         # Move it to live with the rest of the cloudify logs
         java_install_log = '/var/log/java_install.log'
         if isfile(java_install_log):
-            move(java_install_log, LOG_DIR)
+            move(java_install_log, join(LOG_DIR, 'java_install.log'))
 
     def _validate_java_installed(self):
         java_result = sudo(['java', '-version'], ignore_failures=True)
