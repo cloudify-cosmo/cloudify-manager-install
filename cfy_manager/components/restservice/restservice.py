@@ -117,7 +117,7 @@ class RestServiceComponent(BaseComponent):
             constants.CLOUDIFY_GROUP,
             REST_SECURITY_CONFIG_PATH
         )
-        common.chmod('g+r', REST_SECURITY_CONFIG_PATH)
+        common.chmod('660', REST_SECURITY_CONFIG_PATH)
 
     def _calculate_worker_count(self):
         gunicorn_config = config[RESTSERVICE]['gunicorn']
