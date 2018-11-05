@@ -49,7 +49,7 @@ def prepare_db():
 
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
-    common.chmod('+x', tmp_script_path)
+    common.chmod('o+rx', tmp_script_path)
     common.sudo(
         'su - postgres -c "{cmd} {db} {user} {password} {host}"'.format(
             cmd=tmp_script_path,

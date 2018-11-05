@@ -173,7 +173,8 @@ class RabbitMQComponent(BaseComponent):
             )
 
     def _configure(self):
-        systemd.configure(RABBITMQ)
+        systemd.configure(RABBITMQ,
+                          user='rabbitmq', group='rabbitmq')
         self._init_service()
         self._delete_guest_user()
         self._create_rabbitmq_user()

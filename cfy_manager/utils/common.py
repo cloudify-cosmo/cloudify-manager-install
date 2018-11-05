@@ -116,20 +116,20 @@ def untar(source,
     return destination
 
 
-def copy(source, destination):
+def ensure_destination_dir_exists(destination):
     destination_dir = os.path.dirname(destination)
     if not os.path.exists(destination_dir):
         logger.debug(
             'Path does not exist: {0}. Creating it...'.format(
                 destination_dir))
         sudo(['mkdir', '-p', destination_dir])
+
+
+def copy(source, destination):
+    ensure_destination_dir_exists(destination)
     sudo(['cp', '-rp', source, destination])
 
 
-# idempotent move operation
 def move(source, destination, rename_only=False):
-    if rename_only:
-        sudo(['mv', '-T', source, destination])
-    else:
-        copy(source, destination)
-        remove(source)
+    ensure_destination_dir_exists(destination)
+    sudo(['mv', '-T', source, destination])

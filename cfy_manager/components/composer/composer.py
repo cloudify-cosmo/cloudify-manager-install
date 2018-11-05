@@ -82,7 +82,8 @@ class ComposerComponent(BaseComponent):
         # Used in the service template
         config[COMPOSER][SERVICE_USER] = COMPOSER_USER
         config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
-        systemd.configure(COMPOSER)
+        systemd.configure(COMPOSER,
+                          user=COMPOSER_USER, group=COMPOSER_GROUP)
 
         logger.info('Starting Composer service...')
         systemd.restart(COMPOSER)
@@ -90,10 +91,10 @@ class ComposerComponent(BaseComponent):
 
     def _run_db_migrate(self):
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run(
+        common.run([
+            'sudo', '-u', COMPOSER_USER, 'bash', '-c',
             'cd {}; {} run db-migrate'.format(HOME_DIR, npm_path),
-            shell=True
-        )
+        ])
 
     def _create_user_and_set_permissions(self):
         create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
@@ -132,6 +133,7 @@ class ComposerComponent(BaseComponent):
         # Using `write_to_file` because the path belongs to the composer
         # user, so we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
+        common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
 
     def _configure(self):
         files.copy_notice(COMPOSER)

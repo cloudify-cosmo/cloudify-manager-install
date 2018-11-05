@@ -136,17 +136,19 @@ class StageComponent(BaseComponent):
 
     def _create_auth_token(self, rest_service_python):
         common.run([
-            'sudo', '-u', STAGE_USER, rest_service_python,
+            'sudo', rest_service_python,
             join(STAGE_RESOURCES, 'make-auth-token.py')
         ])
+        common.chown(STAGE_USER, STAGE_GROUP,
+                     '/opt/cloudify-stage/resources/admin_token')
 
     def _run_db_migrate(self):
         backend_dir = join(HOME_DIR, 'backend')
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run(
+        common.run([
+            'sudo', '-u', STAGE_USER, 'bash', '-c',
             'cd {0}; {1} run db-migrate'.format(backend_dir, npm_path),
-            shell=True
-        )
+        ])
 
     def _set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
@@ -169,6 +171,7 @@ class StageComponent(BaseComponent):
         # Using `write_to_file` because the path belongs to the stage user, so
         # we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
+        common.chown(STAGE_USER, STAGE_GROUP, config_path)
 
     def _set_internal_manager_ip(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
@@ -191,7 +194,8 @@ class StageComponent(BaseComponent):
         # Used in the service template
         config[STAGE][SERVICE_USER] = STAGE_USER
         config[STAGE][SERVICE_GROUP] = STAGE_GROUP
-        systemd.configure(STAGE)
+        systemd.configure(STAGE,
+                          user=STAGE_USER, group=STAGE_GROUP)
 
         logger.info('Starting Stage service...')
         systemd.restart(STAGE)

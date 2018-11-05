@@ -23,7 +23,7 @@ from os.path import join, isabs
 from jinja2 import Environment, FileSystemLoader
 
 from .network import is_url, curl_download
-from .common import move, sudo, copy, remove, chmod
+from .common import move, sudo, copy, remove
 
 from ..config import config
 from ..logger import get_logger
@@ -101,9 +101,6 @@ def write_to_tempfile(contents, json_dump=False, cleanup=True):
 
     with open(file_path, 'w') as f:
         f.write(contents)
-
-    # By default, tempfiles are created with a permission of 600
-    chmod('644', file_path)
 
     if cleanup:
         config.add_temp_path_to_clean(file_path)
