@@ -145,10 +145,13 @@ class StageComponent(BaseComponent):
     def _run_db_migrate(self):
         backend_dir = join(HOME_DIR, 'backend')
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run([
-            'sudo', '-u', STAGE_USER, 'bash', '-c',
-            'cd {0}; {1} run db-migrate'.format(backend_dir, npm_path),
-        ])
+        common.run(
+            [
+                'sudo', '-u', STAGE_USER,
+                npm_path, 'run' 'db-migrate',
+            ],
+            chdir=backend_dir,
+        )
 
     def _set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')

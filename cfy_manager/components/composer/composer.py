@@ -91,10 +91,13 @@ class ComposerComponent(BaseComponent):
 
     def _run_db_migrate(self):
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run([
-            'sudo', '-u', COMPOSER_USER, 'bash', '-c',
-            'cd {}; {} run db-migrate'.format(HOME_DIR, npm_path),
-        ])
+        common.run(
+            [
+                'sudo', '-u', COMPOSER_USER,
+                npm_path, 'run' 'db-migrate',
+            ],
+            chdir=HOME_DIR,
+        )
 
     def _create_user_and_set_permissions(self):
         create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
