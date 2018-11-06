@@ -1,3 +1,4 @@
+#! /opt/manager/env/bin/python
 #########
 # Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
 #
