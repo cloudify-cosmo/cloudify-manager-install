@@ -2,7 +2,7 @@
 server {
     # server listening for internal requests
     listen              127.0.0.1:53229 ssl;
-    listen              [::1]:53229 ssl;
+    listen              [::]:53229 ssl;
     server_name         127.0.0.1;
 
     # force http redirect to https
