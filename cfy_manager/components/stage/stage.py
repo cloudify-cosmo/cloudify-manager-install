@@ -30,7 +30,12 @@ from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
-from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH, CLOUDIFY_GROUP
+from ...constants import (
+    BASE_LOG_DIR,
+    BASE_RESOURCES_PATH,
+    CLOUDIFY_GROUP,
+    CLOUDIFY_USER,
+)
 from ...utils import sudoers
 from ...utils import common, files
 from ...utils.systemd import systemd
@@ -95,6 +100,9 @@ class StageComponent(BaseComponent):
     def _create_user_and_set_permissions(self):
         create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
 
+        # For snapshot restore purposes
+        common.sudo(['usermod', '-aG', STAGE_GROUP, CLOUDIFY_USER])
+
         logger.debug('Fixing permissions...')
         common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
         common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
@@ -106,12 +114,12 @@ class StageComponent(BaseComponent):
         nodejs = files.get_local_source_path(nodejs_source_url)
         common.untar(nodejs, NODEJS_DIR)
 
-    def _deploy_script(self, script_name, description):
+    def _deploy_script(self, script_name, description, sudo_as=STAGE_USER):
         sudoers.deploy_sudo_command_script(
             script_name,
             description,
             component=STAGE,
-            allow_as=STAGE_USER
+            allow_as=sudo_as,
         )
         common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
         common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
@@ -124,7 +132,8 @@ class StageComponent(BaseComponent):
         )
         self._deploy_script(
             'make-auth-token.py',
-            'Update auth token for stage user'
+            'Update auth token for stage user',
+            sudo_as='root',
         )
 
     def _allow_snapshot_restore_to_restore_token(self, rest_service_python):
@@ -145,10 +154,13 @@ class StageComponent(BaseComponent):
     def _run_db_migrate(self):
         backend_dir = join(HOME_DIR, 'backend')
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run([
-            'sudo', '-u', STAGE_USER, 'bash', '-c',
-            'cd {0}; {1} run db-migrate'.format(backend_dir, npm_path),
-        ])
+        common.run(
+            [
+                'sudo', '-u', STAGE_USER,
+                npm_path, 'run' 'db-migrate',
+            ],
+            chdir=backend_dir,
+        )
 
     def _set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
@@ -172,6 +184,7 @@ class StageComponent(BaseComponent):
         # we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
         common.chown(STAGE_USER, STAGE_GROUP, config_path)
+        common.chmod('640', config_path)
 
     def _set_internal_manager_ip(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
@@ -201,6 +214,13 @@ class StageComponent(BaseComponent):
         systemd.restart(STAGE)
         self._verify_stage_alive()
 
+    def _add_snapshot_sudo_command(self):
+        sudoers.allow_user_to_sudo_command(
+            full_command='/opt/nodejs/bin/node',
+            description='Allow snapshots to restore stage',
+            allow_as=STAGE_USER,
+        )
+
     def _configure(self):
         files.copy_notice(STAGE)
         set_logrotate(STAGE)
@@ -213,6 +233,7 @@ class StageComponent(BaseComponent):
         self._allow_snapshot_restore_to_restore_token(rest_service_python)
         self._create_auth_token(rest_service_python)
         self._run_db_migrate()
+        self._add_snapshot_sudo_command()
         self._start_and_validate_stage()
 
     def install(self):

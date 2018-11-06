@@ -38,6 +38,7 @@ from .components.components_constants import (
     CLEAN_DB
 )
 from .config import config
+from .encryption.encryption import update_encryption_key
 from .networks.networks import add_networks
 from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
@@ -404,7 +405,8 @@ def main():
         create_external_certs,
         create_pkcs12,
         sanity_check,
-        add_networks
+        add_networks,
+        update_encryption_key,
     ])
     os.umask(current_umask)
 
