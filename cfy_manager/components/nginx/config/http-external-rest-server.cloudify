@@ -2,6 +2,7 @@
 server {
   # server listening
   listen              *:80;
+  listen              [::]:80;
   server_name         _;
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
