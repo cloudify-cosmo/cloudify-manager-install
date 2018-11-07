@@ -154,6 +154,7 @@ class ComposerComponent(BaseComponent):
         self._create_user_and_set_permissions()
         self._update_composer_config()
         self._run_db_migrate()
+        self._add_snapshot_sudo_command()
         self._start_and_validate_composer()
 
     def install(self):
