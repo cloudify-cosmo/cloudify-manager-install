@@ -2,6 +2,7 @@
 server {
   # server listening for external requests
   listen              443 ssl;
+  listen              [::]:443 ssl;
   server_name         {{ manager.public_ip }};
 
   ssl_certificate     {{ constants.external_cert_path }};
@@ -24,6 +25,7 @@ server {
 
 server {
   listen 80;
+  listen [::]:80;
   server_name _;
 
   # For REST API requests, return HTTP 400.
