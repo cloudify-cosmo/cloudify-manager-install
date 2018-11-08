@@ -24,18 +24,25 @@ from .components import (
     ComponentsFactory,
     SERVICE_COMPONENTS,
     MANAGER_SERVICE,
+    QUEUE_SERVICE,
+    COMPOSER_SERVICE,
     SERVICE_INSTALLATION_ORDER
 )
 from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
-from .components.service_names import MANAGER
+from .components.service_names import (
+    MANAGER,
+    CLUSTER,
+    POSTGRESQL_CLIENT
+)
 from .components.components_constants import (
     SERVICES_TO_INSTALL,
     SECURITY,
     PRIVATE_IP,
     PUBLIC_IP,
     ADMIN_PASSWORD,
-    CLEAN_DB
+    CLEAN_DB,
+    MASTER_IP
 )
 from .config import config
 from .encryption.encryption import update_encryption_key
@@ -78,6 +85,16 @@ PUBLIC_IP_HELP_MSG = (
     'If your environment does not require a public IP, you can enter the '
     'private IP here.'
 )
+JOIN_CLUSTER_HELP_MSG = (
+    "In case this machine will join an existing cluster with an external DB."
+    "To join to a cluster, use the --join-cluster flag with the "
+    "--admin-password flag supplying the master manager's password, and the "
+    "--database-ip supplying the external database's IP."
+)
+DATABASE_IP_HELP_MSG = (
+    "Used together with --join-cluster flag when joining to an existing "
+    "cluster with an external database."
+)
 
 components = []
 
@@ -104,7 +121,8 @@ def _exception_handler(type_, value, traceback):
 sys.excepthook = _exception_handler
 
 
-def _validate_config_values(private_ip, public_ip, admin_password, clean_db):
+def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
+                            join_cluster=None, database_ip=None):
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
@@ -117,11 +135,29 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db):
     if admin_password:
         if config[CLEAN_DB]:
             manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
+            if all([join_cluster, database_ip]):
+                config[CLUSTER][MASTER_IP] = str(join_cluster)
+                config[POSTGRESQL_CLIENT]['host'] = str(database_ip)
+                config[SERVICES_TO_INSTALL] = [
+                    QUEUE_SERVICE,
+                    COMPOSER_SERVICE,
+                    MANAGER_SERVICE
+                ]
+            elif any([join_cluster, database_ip]):
+                raise BootstrapError(
+                    'The --join-cluster, --database-ip and --admin-password'
+                    'flags must be used together'
+                )
         else:
             raise BootstrapError(
                 'The --admin-password argument can only be used in '
                 'conjunction with the --clean-db flag.'
             )
+    elif any([join_cluster, database_ip]):
+        raise BootstrapError(
+            'The --join-cluster, --database-ip and --admin-password'
+            'flags must be used together'
+        )
 
 
 def _prepare_execution(verbose=False,
@@ -129,12 +165,15 @@ def _prepare_execution(verbose=False,
                        public_ip=None,
                        admin_password=None,
                        clean_db=False,
-                       config_write_required=False):
+                       config_write_required=False,
+                       join_cluster=None,
+                       database_ip=None):
     setup_console_logger(verbose)
 
     validate_config_access(config_write_required)
     config.load_config()
-    _validate_config_values(private_ip, public_ip, admin_password, clean_db)
+    _validate_config_values(private_ip, public_ip, admin_password, clean_db,
+                            join_cluster, database_ip)
     _create_component_objects()
 
 
@@ -233,6 +272,8 @@ def install_args(f):
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
         argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
         argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
+        argh.arg('--join-cluster', help=JOIN_CLUSTER_HELP_MSG),
+        argh.arg('--database-ip', help=DATABASE_IP_HELP_MSG)
     ]
     for arg in args:
         f = arg(f)
@@ -245,13 +286,17 @@ def validate_command(verbose=False,
                      private_ip=None,
                      public_ip=None,
                      admin_password=None,
-                     clean_db=False):
+                     clean_db=False,
+                     join_cluster=None,
+                     database_ip=None):
     _prepare_execution(
         verbose,
         private_ip,
         public_ip,
         admin_password,
         clean_db,
+        join_cluster=join_cluster,
+        database_ip=database_ip,
         config_write_required=False
     )
     validate(components=components)
@@ -270,7 +315,9 @@ def install(verbose=False,
             private_ip=None,
             public_ip=None,
             admin_password=None,
-            clean_db=False):
+            clean_db=False,
+            join_cluster=None,
+            database_ip=None):
     """ Install Cloudify Manager """
 
     _prepare_execution(
@@ -279,6 +326,8 @@ def install(verbose=False,
         public_ip,
         admin_password,
         clean_db,
+        join_cluster=join_cluster,
+        database_ip=database_ip,
         config_write_required=True
     )
     logger.notice('Installing desired components...')
@@ -298,7 +347,9 @@ def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
-              clean_db=False):
+              clean_db=False,
+              join_cluster=None,
+              database_ip=None):
     """ Configure Cloudify Manager """
 
     _prepare_execution(

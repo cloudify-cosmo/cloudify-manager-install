@@ -27,10 +27,15 @@ from .components_constants import (
     PUBLIC_IP,
     VALIDATIONS,
     SKIP_VALIDATIONS,
-    SSL_INPUTS
+    SSL_INPUTS,
+    MASTER_IP
 )
 
-from .service_names import MANAGER
+from .service_names import (
+    MANAGER,
+    CLUSTER,
+    POSTGRESQL_CLIENT
+)
 
 from ..config import config
 from ..logger import get_logger
@@ -93,56 +98,65 @@ def _validate_supported_distros():
         )
 
 
-def _validate_private_ip():
-    logger.info('Validating private IP address...')
-    private_ip = config[MANAGER][PRIVATE_IP]
+def _validate_ip(ip_to_validate, check_local_interfaces=False):
+    """
+    Validate the IP address given is valid.
+
+    :param ip_to_validate: IP address to validate
+    :param check_local_interfaces: If true, will check local interfaces
+           associated with the IP address
+    :return: Will break in case of error
+    """
+    logger.info('Validating IP address...')
 
     try:
         # ip_address() requires a unicode string
-        ip_address(unicode(private_ip, 'utf-8'))
+        ip_address(unicode(ip_to_validate, 'utf-8'))
     except ValueError:
         logger.debug('Failed creating an IP address from "{}"'.format(
-            private_ip), exc_info=True)
+            ip_to_validate), exc_info=True)
         logger.info('Provided value ({}) is not an IP address; '
-                    'skipping'.format(private_ip))
+                    'skipping'.format(ip_to_validate))
         return
 
-    all_addresses = set()
-    found = False
-    for interface in netifaces.interfaces():
-        int_addresses = netifaces.ifaddresses(interface)
-        if not int_addresses:
-            logger.debug(
-                'Could not find any addresses for interface {0}'.format(
-                    interface))
-            continue
-        inet_addresses = int_addresses.get(netifaces.AF_INET)
-        if not inet_addresses:
-            logger.debug('No AF_INET addresses found for interface {0}'.format(
-                interface))
-            continue
-        for inet_addr in inet_addresses:
-            addr = inet_addr.get('addr')
-            if not addr:
-                logger.debug('No addr found for {0}'.format(inet_addr))
+    if check_local_interfaces:
+        all_addresses = set()
+        found = False
+        for interface in netifaces.interfaces():
+            int_addresses = netifaces.ifaddresses(interface)
+            if not int_addresses:
+                logger.debug(
+                    'Could not find any addresses for interface {0}'.format(
+                        interface))
                 continue
-            if addr == private_ip:
-                found = True
+            inet_addresses = int_addresses.get(netifaces.AF_INET)
+            if not inet_addresses:
+                logger.debug('No AF_INET addresses found for interface {0}'
+                             .format(interface))
+                continue
+            for inet_addr in inet_addresses:
+                addr = inet_addr.get('addr')
+                if not addr:
+                    logger.debug('No addr found for {0}'.format(inet_addr))
+                    continue
+                if addr == ip_to_validate:
+                    found = True
+                    break
+                all_addresses.add(addr)
+            if found:
                 break
-            all_addresses.add(addr)
-        if found:
-            break
 
-    if not found:
-        _errors.append(
-            "The provided private IP ({ip}) is not associated with any INET-"
-            "type address available on this machine (available INET-type "
-            "addresses: {addresses}). This will cause installation to fail. "
-            "If you are certain that this IP address should be used, please "
-            "set the '{param}' parameter to 'false'".format(
-                ip=private_ip,
-                addresses=', '.join(all_addresses),
-                param=SKIP_VALIDATIONS))
+        if not found:
+            _errors.append(
+                "The provided private IP ({ip}) is not associated with any "
+                "INET-type address available on this machine (available "
+                "INET-type addresses: {addresses}). This will cause "
+                "installation to fail. If you are certain that this IP address"
+                " should be used, please set the '{param}' parameter to "
+                "'false'".format(
+                    ip=ip_to_validate,
+                    addresses=', '.join(all_addresses),
+                    param=SKIP_VALIDATIONS))
 
 
 def _validate_python_version():
@@ -374,7 +388,11 @@ def validate(components, skip_validations=False):
         return
 
     logger.notice('Validating local machine...')
-    _validate_private_ip()
+    _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
+    _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
+    if config[CLUSTER][MASTER_IP]:
+        _validate_ip(ip_to_validate=config[CLUSTER][MASTER_IP])
+        _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
     _validate_python_version()
     _validate_supported_distros()
     _validate_sufficient_memory()

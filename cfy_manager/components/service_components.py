@@ -44,8 +44,7 @@ SERVICE_COMPONENTS = {
         "cluster",
         "cli",
         "usage_collector",
-        "sanity",
-        "cluster"
+        "sanity"
     ]
 }
 
