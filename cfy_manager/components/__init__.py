@@ -32,7 +32,7 @@ from .riemann import RiemannComponent  # NOQA
 from .sanity import SanityComponent  # NOQA
 from .stage import StageComponent  # NOQA
 from .usage_collector import UsageCollectorComponent  # NOQA
-from .cluster import ClusterComponent  # NOQA
+from .cluster.cluster import ClusterComponent  # NOQA
 
 from components_factory import ComponentsFactory  # NOQA
 from service_components import SERVICE_COMPONENTS  # NOQA

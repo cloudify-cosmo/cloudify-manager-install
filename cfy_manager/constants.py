@@ -18,6 +18,9 @@ from os.path import join, dirname
 BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 NETWORKS_DIR = join(BASE_DIR, 'networks')
+UTILS_DIR = join(BASE_DIR, 'utils')
+
+REST_HOME_DIR = '/opt/manager'
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
@@ -28,7 +31,7 @@ INITIAL_INSTALL_FILE = join(CLOUDIFY_HOME_DIR, '.install')
 
 BASE_RESOURCES_PATH = '/opt/cloudify'
 CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
-MANAGER_RESOURCES_HOME = '/opt/manager/resources'
+MANAGER_RESOURCES_HOME = join(REST_HOME_DIR, 'resources')
 AGENT_ARCHIVES_PATH = '{0}/packages/agents'.format(MANAGER_RESOURCES_HOME)
 
 USER_CONFIG_PATH = join(CLOUDIFY_HOME_DIR, 'config.yaml')
