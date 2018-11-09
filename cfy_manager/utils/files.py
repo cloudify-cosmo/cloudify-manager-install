@@ -40,6 +40,13 @@ def _read(path):
         return f.read()
 
 
+def sudo_read(path):
+    # This will probably fail with binary files
+    # If we start needing it for such files, the best approach is likely:
+    # copy to tmpfile; chown; read; delete tmpfile
+    return sudo(['cat', path]).aggr_stdout
+
+
 def replace_in_file(this, with_this, in_here):
     """Replaces all occurrences of the regex in all matches
     from a file with a specific value.

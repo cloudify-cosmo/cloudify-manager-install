@@ -166,8 +166,8 @@ class StageComponent(BaseComponent):
 
     def _set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
-        with open(config_path) as f:
-            stage_config = json.load(f)
+        # We need to use sudo to read this or we break on configure
+        stage_config = json.loads(files.sudo_read(config_path))
 
         host_details = config[POSTGRESQL_CLIENT]['host'].split(':')
         database_host = host_details[0]
