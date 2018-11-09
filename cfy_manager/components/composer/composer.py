@@ -116,8 +116,8 @@ class ComposerComponent(BaseComponent):
 
     def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
-        with open(config_path) as f:
-            composer_config = json.load(f)
+        # We need to use sudo to read this or we break on configure
+        composer_config = json.loads(files.sudo_read(config_path))
 
         if config[SSL_INPUTS]['internal_manager_host']:
             composer_config['managerConfig']['ip'] = \

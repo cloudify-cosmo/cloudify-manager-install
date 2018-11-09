@@ -43,7 +43,12 @@ from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
-from ...utils.files import deploy, get_local_source_path, write_to_file
+from ...utils.files import (
+    deploy,
+    get_local_source_path,
+    write_to_file,
+    sudo_read,
+)
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
@@ -101,8 +106,7 @@ class RestServiceComponent(BaseComponent):
 
         security_config = config[FLASK_SECURITY]
 
-        with open(REST_SECURITY_CONFIG_PATH, 'r') as f:
-            current_config = json.load(f)
+        current_config = json.loads(sudo_read(REST_SECURITY_CONFIG_PATH))
 
         # We want the existing config values to take precedence, but for any
         # new values to also be in the final config dict
