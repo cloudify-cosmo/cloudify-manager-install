@@ -21,12 +21,11 @@ from ..components_constants import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
-    HOME_DIR_KEY,
-    VENV
+    HOME_DIR_KEY
 )
 from ..components_constants import SSL_INPUTS
 from ..base_component import BaseComponent
-from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL_CLIENT
+from ..service_names import STAGE, MANAGER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
