@@ -2,10 +2,11 @@ location ~ ^/api/v(1|2|2\.1|3|3\.1)/(blueprints|executions|deployments|nodes|eve
     proxy_pass         http://cloudify-rest;
     proxy_redirect     off;
 
-    proxy_set_header   Host             $host;
-    proxy_set_header   X-Real-IP        $remote_addr;
-    proxy_set_header   X-Server-Port    $server_port;
-    proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
 
     gzip on;
     gzip_types application/json;
