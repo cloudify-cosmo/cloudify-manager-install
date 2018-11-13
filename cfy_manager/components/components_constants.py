@@ -39,6 +39,8 @@ ADMIN_USERNAME = 'admin_username'
 
 PREMIUM_EDITION = 'premium_edition'
 
+CLUSTER_HOST_IP = 'cluster_host_ip'
+
 # endregion
 
 # region Config Keys
