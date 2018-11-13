@@ -226,6 +226,10 @@ class NginxComponent(BaseComponent):
                 dst='/etc/nginx/conf.d/rest-location.cloudify',
             ),
             resource(
+                src=join(CONFIG_PATH, 'rest-proxy.cloudify'),
+                dst='/etc/nginx/conf.d/rest-proxy.cloudify',
+            ),
+            resource(
                 src=join(CONFIG_PATH, 'fileserver-location.cloudify'),
                 dst='/etc/nginx/conf.d/fileserver-location.cloudify',
             ),
