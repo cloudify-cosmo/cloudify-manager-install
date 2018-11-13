@@ -53,6 +53,10 @@ cluster:
   # In case node_name is left blank, it will be generated
   node_name: ''
 
+  # The joining node's IP to use for cluster communication
+  # default: Private IP
+  cluster_host_ip: ''
+
 manager-ip-setter:
   sources:
     manager_ip_setter_rpm: cloudify-manager-ip-setter-*.rpm

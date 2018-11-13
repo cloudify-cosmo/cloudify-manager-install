@@ -33,7 +33,8 @@ from ...components.components_constants import (
     SERVICES_TO_INSTALL,
     MASTER_IP,
     NODE_NAME,
-    PUBLIC_IP,
+    CLUSTER_HOST_IP,
+    PRIVATE_IP,
     PREMIUM_EDITION
 )
 from ...constants import REST_HOME_DIR
@@ -129,7 +130,9 @@ class ClusterComponent(BaseComponent):
             random.choice(chars) for _ in range(NODE_NAME_GENERATED_CHAR_SIZE))
 
     def _join_to_cluster(self, master_manager_ip):
-        cluster_node_host_ip = config[MANAGER][PUBLIC_IP]
+        # Use the provided cluster_host_ip or the private_ip by default
+        cluster_node_host_ip = config[MANAGER][CLUSTER_HOST_IP] or \
+                               config[MANAGER][PRIVATE_IP]
         cluster_node_name = \
             config[CLUSTER][NODE_NAME] or self._generate_cluster_node_name()
         self.logger.notice('Adding cluster node "{0}" to the cluster'
