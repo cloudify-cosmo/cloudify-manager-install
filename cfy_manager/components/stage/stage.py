@@ -21,12 +21,11 @@ from ..components_constants import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
-    HOME_DIR_KEY,
-    VENV
+    HOME_DIR_KEY
 )
 from ..components_constants import SSL_INPUTS
 from ..base_component import BaseComponent
-from ..service_names import STAGE, MANAGER, RESTSERVICE, POSTGRESQL_CLIENT
+from ..service_names import STAGE, MANAGER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -130,26 +129,6 @@ class StageComponent(BaseComponent):
             'restore-snapshot.py',
             'Restore stage directories from a snapshot path'
         )
-        self._deploy_script(
-            'make-auth-token.py',
-            'Update auth token for stage user',
-            sudo_as='root',
-        )
-
-    def _allow_snapshot_restore_to_restore_token(self, rest_service_python):
-        sudoers.allow_user_to_sudo_command(
-            rest_service_python,
-            'Snapshot update auth token for stage user',
-            allow_as=STAGE_USER
-        )
-
-    def _create_auth_token(self, rest_service_python):
-        common.run([
-            'sudo', rest_service_python,
-            join(STAGE_RESOURCES, 'make-auth-token.py')
-        ])
-        common.chown(STAGE_USER, STAGE_GROUP,
-                     '/opt/cloudify-stage/resources/admin_token')
 
     def _run_db_migrate(self):
         backend_dir = join(HOME_DIR, 'backend')
@@ -231,9 +210,6 @@ class StageComponent(BaseComponent):
         self._deploy_scripts()
         self._set_db_url()
         self._set_internal_manager_ip()
-        rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
-        self._allow_snapshot_restore_to_restore_token(rest_service_python)
-        self._create_auth_token(rest_service_python)
         self._run_db_migrate()
         self._add_snapshot_sudo_command()
         self._start_and_validate_stage()
