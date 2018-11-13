@@ -104,6 +104,13 @@ rabbitmq:
   # Not used if an external endpoint is used.
   fd_limit: 102400
   nodename: cloudify-manager@localhost
+
+  # The hostname or IP address by which RabbitMQ is known to
+  # Cloudify Manager's components (REST service and management workers).
+  # This setting doesn't affect the hostname/IP by which agents access
+  # the manager.
+  endpoint_ip: localhost
+
   sources:
     erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
     socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm

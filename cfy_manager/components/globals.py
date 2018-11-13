@@ -69,7 +69,6 @@ def _set_external_port_and_protocol():
 
 
 def _set_rabbitmq_config():
-    config[RABBITMQ][ENDPOINT_IP] = config[AGENT][BROKER_IP]
     config[RABBITMQ]['broker_cert_path'] = constants.CA_CERT_PATH
 
 
