@@ -55,7 +55,7 @@ cluster:
 
   # The joining node's IP to use for cluster communication
   # default: Private IP
-  cluster_host_ip: ''
+  host_ip: ''
 
 manager-ip-setter:
   sources:

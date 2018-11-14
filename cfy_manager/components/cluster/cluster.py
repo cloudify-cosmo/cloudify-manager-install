@@ -33,7 +33,7 @@ from ...components.components_constants import (
     SERVICES_TO_INSTALL,
     MASTER_IP,
     NODE_NAME,
-    CLUSTER_HOST_IP,
+    HOST_IP,
     PRIVATE_IP,
     PREMIUM_EDITION
 )
@@ -131,7 +131,7 @@ class ClusterComponent(BaseComponent):
 
     def _join_to_cluster(self, master_manager_ip):
         # Use the provided cluster_host_ip or the private_ip by default
-        cluster_node_host_ip = config[MANAGER][CLUSTER_HOST_IP] or \
+        cluster_node_host_ip = config[CLUSTER][HOST_IP] or \
                                config[MANAGER][PRIVATE_IP]
         cluster_node_name = \
             config[CLUSTER][NODE_NAME] or self._generate_cluster_node_name()
