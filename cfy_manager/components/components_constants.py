@@ -39,7 +39,7 @@ ADMIN_USERNAME = 'admin_username'
 
 PREMIUM_EDITION = 'premium_edition'
 
-CLUSTER_HOST_IP = 'cluster_host_ip'
+HOST_IP = 'host_ip'
 
 # endregion
 
