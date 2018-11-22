@@ -25,7 +25,12 @@ from ..logger import (get_logger,
                       get_file_handlers_level)
 from ..exceptions import InputError
 
-from .service_names import RABBITMQ, MANAGER, INFLUXDB
+from .service_names import (
+    RABBITMQ,
+    MANAGER,
+    INFLUXDB,
+    POSTGRESQL_CLIENT
+)
 
 from .components_constants import (
     PRIVATE_IP,
@@ -36,7 +41,8 @@ from .components_constants import (
     ADMIN_PASSWORD,
     CLEAN_DB,
     FLASK_SECURITY,
-    SERVICES_TO_INSTALL
+    SERVICES_TO_INSTALL,
+    SSL_ENABLED
 )
 from .service_components import MANAGER_SERVICE
 
@@ -90,6 +96,11 @@ def _set_constant_config():
     const_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
     const_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
     const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
+    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        const_conf['postgresql_client_cert_path'] = \
+            constants.POSTGRESQL_CLIENT_CERT_FILENAME
+        const_conf['postgresql_client_key_path'] = \
+            constants.POSTGRESQL_CLIENT_KEY_FILENAME
 
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 

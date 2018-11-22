@@ -363,7 +363,8 @@ def _check_internal_ca_cert():
 def _validate_cert_inputs():
     _check_internal_ca_cert()
     _check_key_and_cert('internal')
-    _check_key_and_cert('postgres')
+    _check_key_and_cert('postgresql_server')
+    _check_key_and_cert('postgresql_client')
     _check_key_and_cert('external')
     _check_key_and_cert('external_ca')
 
@@ -390,39 +391,39 @@ def _validate_postgres_inputs():
                                   'postgres_password must be set')
 
     if _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
-        postgres_host, _ = config[POSTGRESQL_CLIENT]['host'].split(':')
-        if postgres_host != 'localhost' or postgres_host != '127.0.0.1' and \
+        postgres_host = config[POSTGRESQL_CLIENT]['host'].split(':')[0]
+        if postgres_host in ('localhost', '127.0.0.1') and \
                 not config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]:
             raise ValidationError('When using an external database, '
                                   'postgres_password must be set')
 
 
 def _validate_postgres_ssl_certificates_provided():
-    error_msg = 'If Postgresql requires SSL communication {0=None} a ' \
+    error_msg = 'If Postgresql requires SSL communication {0} a ' \
                 'certificate and a key for Postgresql must be provided in ' \
-                'config.yaml->ssl_inputs'
-    if not (config[SSL_INPUTS]['postgresql_cert_path'] and
-            config[SSL_INPUTS]['postgresql_key_path']):
-        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            raise ValidationError(error_msg)
+                'config.yaml->ssl_inputs->{1}'
+    if not (config[SSL_INPUTS]['postgresql_server_cert_path'] and
+            config[SSL_INPUTS]['postgresql_server_key_path'] and
+            config[SSL_INPUTS]['ca_cert_path']):
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
             raise ValidationError(error_msg.format(
-                'an internal_ca certificate,'))
+                'a CA certificate,', 'postgresql_server'))
+    elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
+              config[SSL_INPUTS]['postgresql_client_key_path']):
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            raise ValidationError(error_msg.format('', 'postgresql_client'))
 
 
 def _validate_external_postgres_ssl_enabled():
     """
     Basically, making sure that if the manager and database are not on the same
     machine, SSL for DB communication must be enabled
-    :return:
     """
     if not config[POSTGRESQL_SERVER][SSL_ENABLED] and \
-            MANAGER_SERVICE not in config[SERVICES_TO_INSTALL] and \
-            DATABASE_SERVICE in config[SERVICES_TO_INSTALL] \
+            _services_coexistence_assertion(DATABASE_SERVICE, MANAGER_SERVICE)\
             or \
             not config[POSTGRESQL_CLIENT][SSL_ENABLED] and \
-            MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and \
-            DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
+            _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
         raise ValidationError('When using an external database, SSL must be '
                               'enabled')
 

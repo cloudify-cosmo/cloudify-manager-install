@@ -44,7 +44,7 @@ POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
-POSTGRES_USER = 'postgres'
+POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 HOST = 'host'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
@@ -54,9 +54,9 @@ PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
 PG_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
-ROOT_CA_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'root.crt')
-SERVER_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.crt')
-SERVER_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.key')
+PG_CA_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'root.crt')
+PG_SERVER_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.crt')
+PG_SERVER_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.key')
 
 PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
 PG_HBA_HOSTSSL_REGEX_PATTERN = \
@@ -127,15 +127,12 @@ class PostgresqlServerComponent(BaseComponent):
                                         'listen_addresses = \'{0}\''
                                         .format(config[MANAGER][PRIVATE_IP]))
                 if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-                    if line.startswith('#port = 5432'):
-                        line.replace('#port = 5432',
-                                     'port = {0}'.format(PG_PORT))
                     if line.startswith('#ssl = off'):
                         line = line.replace('#ssl = off', 'ssl = on')
                     if line.startswith('#ssl_ca_file = \'\''):
                         line = line.replace('#ssl_ca_file = \'\'',
                                             'ssl_ca_file = \'{0}\''.format(
-                                                ROOT_CA_CERT_PATH
+                                                PG_CA_CERT_PATH
                                             ))
                 f.write(line)
         return temp_pgconfig_path
@@ -153,26 +150,33 @@ class PostgresqlServerComponent(BaseComponent):
                 f.write('host all all 0.0.0.0/0 md5\n')
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
+                # This will require the client to supply a certificate as well
                 f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1')
         return temp_hba_path
 
     def _configure_ssl(self):
         """
         Copy SSL certificates to postgres data directory.
-        Configuration for postgresql.conf is done in _write_new_pgconfig_file
-        Configuration for pg_hba.conf is done in _write_new_hba_file
-
-        The validation for the existence of the files is already done in
-        validations
+        postgresql.conf and pg_hba.conf configurations are handled in
+        the update_configuration step
         """
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-            shutil.copy(config[SSL_INPUTS]['postgresql_cert_path'],
-                        SERVER_CERT_PATH)
-            shutil.copy(config[SSL_INPUTS]['postgresql_key_path'],
-                        SERVER_KEY_PATH)
-            # This will require the client to supply a certificate as well
+            shutil.copy(config[SSL_INPUTS]['postgresql_server_cert_path'],
+                        PG_SERVER_CERT_PATH)
+            shutil.copy(config[SSL_INPUTS]['postgresql_server_key_path'],
+                        PG_SERVER_KEY_PATH)
+            # This will be used to verify the client's certificate
             shutil.copy(config[SSL_INPUTS]['ca_cert_path'],
-                        ROOT_CA_CERT_PATH)
+                        PG_CA_CERT_PATH)
+
+            common.chown(POSTGRES_USER, POSTGRES_GROUP,
+                         PG_SERVER_CERT_PATH)
+            common.chown(POSTGRES_USER, POSTGRES_GROUP,
+                         PG_SERVER_KEY_PATH)
+            common.chown(POSTGRES_USER, POSTGRES_GROUP,
+                         PG_CA_CERT_PATH)
+
+            common.chmod('600', PG_SERVER_KEY_PATH)
 
     def _update_configuration(self, enable_remote_connections):
         logger.info('Updating PostgreSQL Server configuration...')

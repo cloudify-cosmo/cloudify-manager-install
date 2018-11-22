@@ -12,10 +12,12 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+import os
 import shutil
-from os.path import join
 
 from ...exceptions import ProcessExecutionError
+
 
 from ..components_constants import (
     SOURCES,
@@ -25,7 +27,13 @@ from ..components_constants import (
 )
 from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
-from ... import constants
+from ...constants import (
+    POSTGRESQL_CLIENT_CERT_PATH,
+    POSTGRESQL_CLIENT_KEY_PATH,
+    CLOUDIFY_HOME_DIR,
+    CLOUDIFY_USER,
+    CLOUDIFY_GROUP
+)
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, files
@@ -42,8 +50,8 @@ POSTGRES_USER_COMMENT = 'PostgreSQL Server'
 POSTGRES_USER_HOME_DIR = '/var/lib/pgsql'
 HOST = 'host'
 
-CLOUDIFY_PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
-POSTGRES_PGPASS_PATH = join(POSTGRES_USER_HOME_DIR, '.pgpass')
+CLOUDIFY_PGPASS_PATH = os.path.join(CLOUDIFY_HOME_DIR, '.pgpass')
+POSTGRES_PGPASS_PATH = os.path.join(POSTGRES_USER_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
 
@@ -148,8 +156,8 @@ class PostgresqlClientComponent(BaseComponent):
             user=user,
             password=password,
             pgpass_path=CLOUDIFY_PGPASS_PATH,
-            owning_user=constants.CLOUDIFY_USER,
-            owning_group=constants.CLOUDIFY_GROUP
+            owning_user=CLOUDIFY_USER,
+            owning_group=CLOUDIFY_GROUP
         )
 
     def _configure_ssl(self):
@@ -157,14 +165,15 @@ class PostgresqlClientComponent(BaseComponent):
         Copy the relevant SSL certificates to the cloudify SSL directory
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            shutil.copy(config[SSL_INPUTS]['postgresql_cert_path'],
-                        SERVER_CERT_PATH)
-            shutil.copy(config[SSL_INPUTS]['postgresql_key_path'],
-                        SERVER_KEY_PATH)
-            # This will require the client to supply a certificate as well
-            shutil.copy(config[SSL_INPUTS]['ca_cert_path'],
-                        ROOT_CA_CERT_PATH)
+            shutil.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
+                        POSTGRESQL_CLIENT_CERT_PATH)
+            shutil.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
+                        POSTGRESQL_CLIENT_KEY_PATH)
 
+            # Root certificate is also used for server authentication, but
+            # should be already created and copied in the nginx section
+
+            common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
 
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
