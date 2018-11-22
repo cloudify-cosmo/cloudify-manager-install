@@ -29,16 +29,15 @@ from .components_constants import (
     SKIP_VALIDATIONS,
     SSL_INPUTS,
     MASTER_IP,
+    SSL_ENABLED,
     SERVICES_TO_INSTALL,
     ENABLE_REMOTE_CONNECTIONS,
     POSTGRES_PASSWORD
 )
-
 from .service_components import (
     DATABASE_SERVICE,
     MANAGER_SERVICE
 )
-
 from .service_names import (
     MANAGER,
     CLUSTER,
@@ -364,6 +363,7 @@ def _check_internal_ca_cert():
 def _validate_cert_inputs():
     _check_internal_ca_cert()
     _check_key_and_cert('internal')
+    _check_key_and_cert('postgres')
     _check_key_and_cert('external')
     _check_key_and_cert('external_ca')
 
@@ -395,6 +395,36 @@ def _validate_postgres_inputs():
                 not config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]:
             raise ValidationError('When using an external database, '
                                   'postgres_password must be set')
+
+
+def _validate_postgres_ssl_certificates_provided():
+    error_msg = 'If Postgresql requires SSL communication {0=None} a ' \
+                'certificate and a key for Postgresql must be provided in ' \
+                'config.yaml->ssl_inputs'
+    if not (config[SSL_INPUTS]['postgresql_cert_path'] and
+            config[SSL_INPUTS]['postgresql_key_path']):
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            raise ValidationError(error_msg)
+        if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+            raise ValidationError(error_msg.format(
+                'an internal_ca certificate,'))
+
+
+def _validate_external_postgres_ssl_enabled():
+    """
+    Basically, making sure that if the manager and database are not on the same
+    machine, SSL for DB communication must be enabled
+    :return:
+    """
+    if not config[POSTGRESQL_SERVER][SSL_ENABLED] and \
+            MANAGER_SERVICE not in config[SERVICES_TO_INSTALL] and \
+            DATABASE_SERVICE in config[SERVICES_TO_INSTALL] \
+            or \
+            not config[POSTGRESQL_CLIENT][SSL_ENABLED] and \
+            MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and \
+            DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
+        raise ValidationError('When using an external database, SSL must be '
+                              'enabled')
 
 
 def validate_config_access(write_required):
@@ -438,6 +468,8 @@ def validate(components, skip_validations=False):
     _validate_openssl_version()
     _validate_user_has_sudo_permissions()
     _validate_postgres_inputs()
+    _validate_external_postgres_ssl_enabled()
+    _validate_postgres_ssl_certificates_provided()
     _validate_cert_inputs()
 
     if _errors:

@@ -12,14 +12,16 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import shutil
 from os.path import join
 
 from ...exceptions import ProcessExecutionError
 
 from ..components_constants import (
     SOURCES,
-    POSTGRES_PASSWORD
+    POSTGRES_PASSWORD,
+    SSL_ENABLED,
+    SSL_INPUTS
 )
 from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
@@ -150,9 +152,24 @@ class PostgresqlClientComponent(BaseComponent):
             owning_group=constants.CLOUDIFY_GROUP
         )
 
+    def _configure_ssl(self):
+        """
+        Copy the relevant SSL certificates to the cloudify SSL directory
+        """
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            shutil.copy(config[SSL_INPUTS]['postgresql_cert_path'],
+                        SERVER_CERT_PATH)
+            shutil.copy(config[SSL_INPUTS]['postgresql_key_path'],
+                        SERVER_KEY_PATH)
+            # This will require the client to supply a certificate as well
+            shutil.copy(config[SSL_INPUTS]['ca_cert_path'],
+                        ROOT_CA_CERT_PATH)
+
+
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
         self._create_postgres_pgpass_files()
+        self._configure_ssl()
 
     def install(self):
         logger.notice('Installing PostgreSQL Client...')
