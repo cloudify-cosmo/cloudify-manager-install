@@ -47,7 +47,7 @@ PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
 PG_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
-PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+trust'
+PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
 
 PG_PORT = 5432
 
@@ -123,7 +123,7 @@ class PostgresqlServerComponent(BaseComponent):
                 f.write(line)
             if not re.search(PG_HBA_LISTEN_ALL_REGEX_PATTERN,
                              '\n'.join(lines)) and enable_remote_connections:
-                f.write('host all all 0.0.0.0/0 trust\n')
+                f.write('host all all 0.0.0.0/0 md5\n')
         return temp_hba_path
 
     def _update_configuration(self, enable_remote_connections):
