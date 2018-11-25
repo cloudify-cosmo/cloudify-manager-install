@@ -17,7 +17,10 @@ from os.path import join
 
 from ...exceptions import ProcessExecutionError
 
-from ..components_constants import SOURCES
+from ..components_constants import (
+    SOURCES,
+    POSTGRES_PASSWORD
+)
 from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
 from ... import constants
@@ -109,13 +112,13 @@ class PostgresqlClientComponent(BaseComponent):
 
         logger.debug('Postgresql pass file {0} created'.format(pgpass_path))
 
-    def _create_pgpass_files(self):
+    def _create_postgres_pgpass_files(self):
         pg_config = config[POSTGRESQL_CLIENT]
         host = pg_config['host'],
         port = PG_PORT,
 
-        if pg_config['postgres_password']:
-            postgres_password = pg_config['postgres_password']
+        if pg_config[POSTGRES_PASSWORD]:
+            postgres_password = pg_config[POSTGRES_PASSWORD]
 
             # Creating postgres .pgpass file
             self._create_pgpass(
@@ -130,7 +133,7 @@ class PostgresqlClientComponent(BaseComponent):
             )
 
             logger.info('Removing postgres password from config.yaml')
-            config[POSTGRESQL_CLIENT]['postgres_password'] = '<removed>'
+            config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD] = '<removed>'
 
         # Creating Cloudify .pgpass file
         db_name = '*',  # Allowing for the multiple DBs we have
@@ -149,7 +152,7 @@ class PostgresqlClientComponent(BaseComponent):
 
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
-        self._create_pgpass_files()
+        self._create_postgres_pgpass_files()
 
     def install(self):
         logger.notice('Installing PostgreSQL Client...')

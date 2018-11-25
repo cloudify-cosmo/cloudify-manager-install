@@ -21,7 +21,9 @@ from os.path import join, isdir, islink
 from ..components_constants import (
     SOURCES,
     PRIVATE_IP,
-    SCRIPTS
+    SCRIPTS,
+    ENABLE_REMOTE_CONNECTIONS,
+    POSTGRES_PASSWORD
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -35,12 +37,12 @@ from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
-SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER, SCRIPTS)
+POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
+                               SCRIPTS)
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = 'postgres'
 HOST = 'host'
-ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
@@ -146,10 +148,11 @@ class PostgresqlServerComponent(BaseComponent):
     def _update_postgres_password(self):
         logger.notice('Updating postgres password...')
         postgres_password = \
-            config[POSTGRESQL_SERVER]['postgres_password']
+            config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
 
-        script_path = join(SCRIPTS_PATH, 'update_postgres_password.sh')
-        tmp_script_path = files.temp_copy(script_path)
+        update_password_script_path = join(POSTGRESQL_SCRIPTS_PATH,
+                                           'update_postgres_password.sh')
+        tmp_script_path = files.temp_copy(update_password_script_path)
         common.chmod('o+rx', tmp_script_path)
         common.sudo(
             'su - postgres -c "{cmd} {postgres_password}"'.format(
@@ -157,7 +160,7 @@ class PostgresqlServerComponent(BaseComponent):
                 postgres_password=postgres_password)
         )
         logger.info('Removing postgres password from config.yaml')
-        config[POSTGRESQL_SERVER]['postgres_password'] = '<removed>'
+        config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] = '<removed>'
         logger.notice('postgres password successfully updated')
 
     def _configure(self):
@@ -166,7 +169,7 @@ class PostgresqlServerComponent(BaseComponent):
         enable_remote_connections = \
             config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
         self._update_configuration(enable_remote_connections)
-        if config[POSTGRESQL_SERVER]['postgres_password']:
+        if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
             self._update_postgres_password()
 
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)

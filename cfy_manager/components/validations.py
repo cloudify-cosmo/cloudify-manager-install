@@ -28,7 +28,15 @@ from .components_constants import (
     VALIDATIONS,
     SKIP_VALIDATIONS,
     SSL_INPUTS,
-    MASTER_IP
+    MASTER_IP,
+    SERVICES_TO_INSTALL,
+    ENABLE_REMOTE_CONNECTIONS,
+    POSTGRES_PASSWORD
+)
+
+from .service_components import (
+    DATABASE_SERVICE,
+    MANAGER_SERVICE
 )
 
 from .service_names import (
@@ -360,8 +368,33 @@ def _validate_cert_inputs():
     _check_key_and_cert('external_ca')
 
 
+def _services_coexistence_assertion(service_in_list_to_install,
+                                    service_not_in_list_to_install):
+    return service_in_list_to_install in config[SERVICES_TO_INSTALL] and \
+           service_not_in_list_to_install not in config[SERVICES_TO_INSTALL]
+
+
 def _validate_postgres_inputs():
-    if config
+    """
+    Validating that an external DB will always listen to remote connections
+    and, that a postgres password is set - needed for remote connections
+    """
+    if _services_coexistence_assertion(DATABASE_SERVICE, MANAGER_SERVICE):
+        if config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
+            not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] \
+            or \
+            not config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
+                config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
+            raise ValidationError('When using an external database, both '
+                                  'enable_remote_connections and '
+                                  'postgres_password must be set')
+
+    if _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
+        postgres_host, _ = config[POSTGRESQL_CLIENT]['host'].split(':')
+        if postgres_host != 'localhost' or postgres_host != '127.0.0.1' and \
+                not config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]:
+            raise ValidationError('When using an external database, '
+                                  'postgres_password must be set')
 
 
 def validate_config_access(write_required):
@@ -404,6 +437,7 @@ def validate(components, skip_validations=False):
     _validate_sufficient_disk_space()
     _validate_openssl_version()
     _validate_user_has_sudo_permissions()
+    _validate_postgres_inputs()
     _validate_cert_inputs()
 
     if _errors:
