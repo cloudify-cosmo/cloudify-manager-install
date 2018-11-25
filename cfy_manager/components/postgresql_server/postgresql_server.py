@@ -20,7 +20,8 @@ from os.path import join, isdir, islink
 
 from ..components_constants import (
     SOURCES,
-    PRIVATE_IP
+    PRIVATE_IP,
+    SCRIPTS
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -34,6 +35,7 @@ from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
+SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER, SCRIPTS)
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = 'postgres'
@@ -141,12 +143,31 @@ class PostgresqlServerComponent(BaseComponent):
             common.move(temp_pg_conf_path, PG_CONF_PATH)
             common.chown(POSTGRES_USER, POSTGRES_USER, PG_CONF_PATH)
 
+    def _update_postgres_password(self):
+        logger.notice('Updating postgres password...')
+        postgres_password = \
+            config[POSTGRESQL_SERVER]['postgres_password']
+
+        script_path = join(SCRIPTS_PATH, 'update_postgres_password.sh')
+        tmp_script_path = files.temp_copy(script_path)
+        common.chmod('o+rx', tmp_script_path)
+        common.sudo(
+            'su - postgres -c "{cmd} {postgres_password}"'.format(
+                cmd=tmp_script_path,
+                postgres_password=postgres_password)
+        )
+        logger.info('Removing postgres password from config.yaml')
+        config[POSTGRESQL_SERVER]['postgres_password'] = '<removed>'
+        logger.notice('postgres password successfully updated')
+
     def _configure(self):
         files.copy_notice(POSTGRESQL_SERVER)
         self._init_postgresql_server()
         enable_remote_connections = \
             config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
         self._update_configuration(enable_remote_connections)
+        if config[POSTGRESQL_SERVER]['postgres_password']:
+            self._update_postgres_password()
 
         systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)

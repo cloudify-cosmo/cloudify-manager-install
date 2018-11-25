@@ -34,7 +34,8 @@ from .components_constants import (
 from .service_names import (
     MANAGER,
     CLUSTER,
-    POSTGRESQL_CLIENT
+    POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER
 )
 
 from ..config import config
@@ -357,6 +358,10 @@ def _validate_cert_inputs():
     _check_key_and_cert('internal')
     _check_key_and_cert('external')
     _check_key_and_cert('external_ca')
+
+
+def _validate_postgres_inputs():
+    if config
 
 
 def validate_config_access(write_required):
