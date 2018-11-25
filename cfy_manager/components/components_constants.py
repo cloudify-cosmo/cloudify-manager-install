@@ -41,6 +41,9 @@ PREMIUM_EDITION = 'premium_edition'
 
 HOST_IP = 'host_ip'
 
+ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
+POSTGRES_PASSWORD = 'postgres_password'
+
 # endregion
 
 # region Config Keys

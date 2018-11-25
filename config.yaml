@@ -174,6 +174,10 @@ postgresql_server:
 
   # For external postgres installation, set to true
   enable_remote_connections: false
+  # Password to set for the postgres user
+  # This is only relevant for external postgres installations when you enable
+  # remote connections
+  postgres_password: ''
 
 postgresql_client:
   sources:
@@ -189,6 +193,11 @@ postgresql_client:
   db_name: cloudify_db
   username: cloudify
   password: cloudify
+
+  # Password to use when connecting to the database with the postgres user
+  # This is only relevant for external postgres installations when you enable
+  # remote connections
+  postgres_password: ''
 
 java:
   <<: *monitoring_install
