@@ -44,6 +44,8 @@ HOST_IP = 'host_ip'
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 POSTGRES_PASSWORD = 'postgres_password'
 
+SSL_ENABLED = 'ssl_enabled'
+
 # endregion
 
 # region Config Keys

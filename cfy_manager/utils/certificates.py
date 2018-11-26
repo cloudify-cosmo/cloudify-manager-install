@@ -139,9 +139,10 @@ def _generate_ssl_certificate(ips,
     """
     # Remove duplicates from ips
     subject_altnames = _format_ips(ips)
+    key_used = sign_key if sign_key and sign_cert else key_path
     logger.debug(
         'Generating SSL certificate {0} and key {1} with subjectAltNames: {2}'
-        .format(cert_path, key_path, subject_altnames)
+        .format(cert_path, key_used, subject_altnames)
     )
 
     csr_path = '{0}.csr'.format(cert_path)
@@ -185,9 +186,9 @@ def _generate_ssl_certificate(ips,
         remove(csr_path)
 
     logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
-        cert_path, key_path
+        cert_path, key_used
     ))
-    return cert_path, key_path
+    return cert_path, key_used
 
 
 def generate_internal_ssl_cert(ips, cn):

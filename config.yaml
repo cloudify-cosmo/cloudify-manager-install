@@ -179,6 +179,9 @@ postgresql_server:
   # remote connections
   postgres_password: ''
 
+  # SSL must be enabled for external databases - provide proper certificates
+  ssl_enabled: false
+
 postgresql_client:
   sources:
     ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
@@ -193,6 +196,8 @@ postgresql_client:
   db_name: cloudify_db
   username: cloudify
   password: cloudify
+  # SSL must be enabled for external databases - provide proper certificates
+  ssl_enabled: false
 
   # Password to use when connecting to the database with the postgres user
   # This is only relevant for external postgres installations when you enable
@@ -394,6 +399,10 @@ ssl_inputs:
   external_key_path: ''
   internal_cert_path: ''
   internal_key_path: ''
+  postgresql_server_cert_path: ''
+  postgresql_server_key_path: ''
+  postgresql_client_cert_path: ''
+  postgresql_client_key_path: ''
   ca_cert_path: ''
   ca_key_path: ''
   ca_key_password: ''
