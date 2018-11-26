@@ -114,8 +114,8 @@ class PostgresqlClientComponent(BaseComponent):
 
     def _create_postgres_pgpass_files(self):
         pg_config = config[POSTGRESQL_CLIENT]
-        host = pg_config['host'],
-        port = PG_PORT,
+        host = pg_config['host']
+        port = PG_PORT
 
         if pg_config[POSTGRES_PASSWORD]:
             postgres_password = pg_config[POSTGRES_PASSWORD]
@@ -136,8 +136,8 @@ class PostgresqlClientComponent(BaseComponent):
             config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD] = '<removed>'
 
         # Creating Cloudify .pgpass file
-        db_name = '*',  # Allowing for the multiple DBs we have
-        user = pg_config['username'],
+        db_name = '*'  # Allowing for the multiple DBs we have
+        user = pg_config['username']
         password = pg_config['password']
         self._create_pgpass(
             host=host,
