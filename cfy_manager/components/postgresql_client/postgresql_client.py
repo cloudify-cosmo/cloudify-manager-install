@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import os
-import shutil
 
 from ...exceptions import ProcessExecutionError
 
@@ -165,9 +164,9 @@ class PostgresqlClientComponent(BaseComponent):
         Copy the relevant SSL certificates to the cloudify SSL directory
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            shutil.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
+            common.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
                         POSTGRESQL_CLIENT_CERT_PATH)
-            shutil.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
+            common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
                         POSTGRESQL_CLIENT_KEY_PATH)
 
             # Root certificate is also used for server authentication, but
