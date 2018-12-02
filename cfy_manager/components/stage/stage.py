@@ -23,7 +23,10 @@ from ..components_constants import (
     SERVICE_GROUP,
     HOME_DIR_KEY
 )
-from ..components_constants import SSL_INPUTS
+from ..components_constants import (
+    SSL_INPUTS,
+    SSL_ENABLED
+)
 from ..base_component import BaseComponent
 from ..service_names import STAGE, MANAGER, POSTGRESQL_CLIENT
 from ...config import config
@@ -144,6 +147,8 @@ class StageComponent(BaseComponent):
         )
 
     def _set_db_url(self):
+        pg_cert_path = 'postgresql_client_cert_path'
+        pg_key_path = 'postgresql_client_key_path'
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
         # We need to use sudo to read this or we break on configure
         stage_config = json.loads(files.sudo_read(config_path))
@@ -158,6 +163,17 @@ class StageComponent(BaseComponent):
                 config[POSTGRESQL_CLIENT]['password'],
                 database_host,
                 database_port)
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            stage_config['db']['url'] += \
+                '?sslmode={sslmode}&' \
+                'sslcert={sslcert}&' \
+                'sslkey={sslkey}&' \
+                'sslrootcert={sslrootcert}'.format(
+                    sslmode='verify-full',
+                    sslcert=config['constants'][pg_cert_path],
+                    sslkey=config['constants'][pg_key_path],
+                    sslrootcert=config['constants']['ca_cert_path']
+                )
 
         content = json.dumps(stage_config, indent=4, sort_keys=True)
 

@@ -22,7 +22,8 @@ from ..components_constants import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
-    SSL_INPUTS
+    SSL_INPUTS,
+    SSL_ENABLED
 )
 from ..base_component import BaseComponent
 from ..service_names import COMPOSER, POSTGRESQL_CLIENT
@@ -115,6 +116,8 @@ class ComposerComponent(BaseComponent):
         common.chmod('g+w', dirname(CONF_DIR))
 
     def _update_composer_config(self):
+        pg_cert_path = 'postgresql_client_cert_path'
+        pg_key_path = 'postgresql_client_key_path'
         config_path = os.path.join(CONF_DIR, 'prod.json')
         # We need to use sudo to read this or we break on configure
         composer_config = json.loads(files.sudo_read(config_path))
@@ -133,6 +136,17 @@ class ComposerComponent(BaseComponent):
                 config[POSTGRESQL_CLIENT]['password'],
                 database_host,
                 database_port)
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            composer_config['db']['postgres'] += \
+                '?sslmode={sslmode}&' \
+                'sslcert={sslcert}&' \
+                'sslkey={sslkey}&' \
+                'sslrootcert={sslrootcert}'.format(
+                    sslmode='verify-full',
+                    sslcert=config['constants'][pg_cert_path],
+                    sslkey=config['constants'][pg_key_path],
+                    sslrootcert=config['constants']['ca_cert_path']
+                )
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the composer
