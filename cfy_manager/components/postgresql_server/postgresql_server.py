@@ -15,7 +15,6 @@
 
 import os
 import re
-import shutil
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
@@ -161,12 +160,12 @@ class PostgresqlServerComponent(BaseComponent):
         the update_configuration step
         """
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-            shutil.copy(config[SSL_INPUTS]['postgresql_server_cert_path'],
+            common.copy(config[SSL_INPUTS]['postgresql_server_cert_path'],
                         PG_SERVER_CERT_PATH)
-            shutil.copy(config[SSL_INPUTS]['postgresql_server_key_path'],
+            common.copy(config[SSL_INPUTS]['postgresql_server_key_path'],
                         PG_SERVER_KEY_PATH)
             # This will be used to verify the client's certificate
-            shutil.copy(config[SSL_INPUTS]['ca_cert_path'],
+            common.copy(config[SSL_INPUTS]['ca_cert_path'],
                         PG_CA_CERT_PATH)
 
             common.chown(POSTGRES_USER, POSTGRES_GROUP,
