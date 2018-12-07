@@ -299,11 +299,8 @@ restservice:
   #  even when `failed_logins_before_account_lock` has a value.
   account_lock_period: -1
 
-  # The maximum number of results to return for REST requests that ask
-  # for lists (such as blueprints list, events list etc).
-  # If a request results in more results than `max_results`, then usage
-  # of pagination parameters is required in order to fetch all results.
-  max_results: 1000
+  # The default page size for REST queries
+  default_page_size: 1000
 
   # Additional environment variables to add to the REST Service's service
   # file.
