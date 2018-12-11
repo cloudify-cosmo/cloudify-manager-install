@@ -58,7 +58,7 @@ RPM_PREFIX = re.compile('[^0-9]+')
 ZIP_URL = "https://github.com/cloudify-cosmo/{0}/archive/{1}.zip"
 CLI_INFO = {'name':'cloudify-cli', 'patterns': ['/cloudify-cli']}
 AGENT_INFO = {'name': 'cloudify-agent', 'patterns': ['/cloudify-agents']}
-MANAGER_INFO = {'name': 'cloudify-manager', 'patterns': ['/cloudify-amqp', '/cloudify-logstash',
+MANAGER_INFO = {'name': 'cloudify-manager', 'patterns': ['/cloudify-amqp', '/cloudify-amqp-postgres',
                                                          '/cloudify-rest-service', '/cloudify-premium',
                                                          '/cloudify-rabbitmq', '/cloudify-management-worker',
                                                          '/cloudify-manager-ip-setter', '/cloudify-riemann']}
@@ -169,9 +169,20 @@ def exit_helpfully_on_failure(command, error,
         exit_with_sadness(message)
 
 
+def git_clone_and_checkout(branch, repo, repo_destination_path):
+    subprocess.check_call([
+        'git', 'clone', '-q',
+        '--branch=' + branch,
+        '--depth=1',
+        repo,
+        repo_destination_path,
+    ])
+
+
 def get_package_urls_file(edition, branch, repo_destination_path):
     """
-        Get the package urls list, returning the paths to the file (in a dict)
+        Get the package urls list, returning the paths to the file (in a dict).
+        If the given branch does not exists, will default to repo's master.
     """
     edition_details = EDITIONS[edition]
     repo_path = edition_details['repo']
@@ -216,22 +227,16 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     # We can't use the normal utility function for this or we will spit
     # passwords onto the screen.
     try:
-        subprocess.check_call([
-            'git', 'clone',
-            '--branch=' + branch,
-            '--depth=1',
-            repo,
-            repo_destination_path,
-        ])
+        git_clone_and_checkout(branch, repo, repo_destination_path)
     except subprocess.CalledProcessError:
-        # Don't spit out the password, please.
-        exit_with_sadness(
-            'Could not git clone: {repo}'.format(repo=output_repo),
-        )
+        print('Could not git clone: {repo}, defaults to master'.format(repo=output_repo))
+        git_clone_and_checkout('master', repo, repo_destination_path)
+
     return {
         'manager': os.path.join(repo_destination_path,
                                 'packages-urls/manager-packages.yaml'),
     }
+
 
 def is_branch_exists(module_name, dev_branch):
     subprocess.check_call([
@@ -264,9 +269,12 @@ def replace_manager_resources_loacation(manager_resources_file, modules_info, de
         for pattern in module_info['patterns']:
             release_dir = '{0}{1}'.format('.dev1-release', pattern)
             build_dir = '{0}{1}'.format('.dev1-build', pattern)
+            ga_release_dir = '{0}{1}'.format('ga-release', pattern)
+            ga_build_dir = '{0}{1}'.format('ga-build', pattern)
             string_to_replace = '/{0}{1}'.format(dev_branch, pattern)
-            print("Replacing '{0}' with '{1}' in '{2}'.".format(release_dir, build_dir, manager_resources_file))
-            content = content.replace(release_dir, build_dir)
+            print("Replacing '{0}' with '{1}' or '{2}' with '{3}' in '{4}'.".
+                  format(release_dir, build_dir, ga_release_dir, ga_build_dir, manager_resources_file))
+            content = content.replace(release_dir, build_dir).replace(ga_release_dir, ga_build_dir)
             print("Replacing '{0}' with '{1}' in '{2}'.".format(pattern, string_to_replace, manager_resources_file))
             content = content.replace(pattern, string_to_replace)
     with open(manager_resources_file, "w") as f:
@@ -362,9 +370,10 @@ def retrieve_resources(edition, branch, dev_branch):
         Retrieve all of the required resources for the installer.
     """
     package_urls_destination = os.path.join(RPM_BUILDER_BASE, 'tmp-urls')
+    current_branch = dev_branch or branch
     package_url_files = get_package_urls_file(
         edition,
-        branch,
+        current_branch,
         package_urls_destination,
     )
     if dev_branch:

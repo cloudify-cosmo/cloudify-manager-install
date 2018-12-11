@@ -21,7 +21,9 @@ import subprocess
 
 from ..config import config
 from ..logger import get_logger
-from ..exceptions import BootstrapError
+from ..exceptions import ProcessExecutionError
+
+from . import subprocess_preexec
 
 logger = get_logger('utils')
 
@@ -40,7 +42,8 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         command = glob_command
     logger.debug('Running: {0}'.format(command))
     proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
-                            stderr=stderr, shell=shell, env=env)
+                            stderr=stderr, shell=shell, env=env,
+                            preexec_fn=subprocess_preexec)
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
     if proc.returncode != 0:
         command_str = ' '.join(command)
@@ -51,7 +54,7 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         elif not ignore_failures:
             msg = 'Failed running command: {0} ({1}).'.format(
                 command_str, proc.aggr_stderr)
-            raise BootstrapError(msg)
+            raise ProcessExecutionError(msg, proc.returncode)
     return proc
 
 
@@ -113,20 +116,20 @@ def untar(source,
     return destination
 
 
-def copy(source, destination):
+def ensure_destination_dir_exists(destination):
     destination_dir = os.path.dirname(destination)
     if not os.path.exists(destination_dir):
         logger.debug(
             'Path does not exist: {0}. Creating it...'.format(
                 destination_dir))
         sudo(['mkdir', '-p', destination_dir])
+
+
+def copy(source, destination):
+    ensure_destination_dir_exists(destination)
     sudo(['cp', '-rp', source, destination])
 
 
-# idempotent move operation
 def move(source, destination, rename_only=False):
-    if rename_only:
-        sudo(['mv', '-T', source, destination])
-    else:
-        copy(source, destination)
-        remove(source)
+    ensure_destination_dir_exists(destination)
+    sudo(['mv', '-T', source, destination])

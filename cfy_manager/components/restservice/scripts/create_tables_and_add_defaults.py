@@ -16,6 +16,7 @@
 
 import json
 import argparse
+import logging
 
 from flask_migrate import upgrade
 
@@ -25,6 +26,9 @@ from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
+
+logger = \
+    logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper()))
 
 
 def _init_db_tables(db_migrate_dir):

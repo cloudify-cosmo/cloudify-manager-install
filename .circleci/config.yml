@@ -12,18 +12,18 @@ jobs:
 
     steps:
       - checkout
-      # Running this step in the background allows us to run it in parallel
       - run:
-          name: Python tests
-          background: true
+          name: Installing prerequisites
           command: |
+            pip install requests
             pip install tox
+      - run:
+          name: Running flake8
+          command: |
             tox -e flake8
-            tox -e py27
       - run:
           name: Fetch RPMs built on CircleCI
           command: |
-            pip install requests
             .circleci/fetch_rpms
       - run:
           name: Build base container
@@ -47,7 +47,7 @@ jobs:
           command: |
             set -eux
             BUILD_SCRIPT_PATH=${REMOTE_PATH}/packaging/docker/build_rpm.sh
-            docker exec -t ${CONTAINER_NAME} sh -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH}"
+            docker exec -t ${CONTAINER_NAME} sh -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH} ${CIRCLE_BRANCH}"
       - run:
           name: Install Cloudify Manager
           command: |

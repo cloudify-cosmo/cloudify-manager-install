@@ -1,0 +1,14 @@
+/var/log/cloudify/rest/*.log {
+        hourly
+        missingok
+        rotate {{ restservice.log.files_backup_count }}
+        size {{ restservice.log.file_size}}M
+        compress
+        dateext dateformat -%Y%m%d-%s
+        delaycompress
+        notifempty
+        sharedscripts
+        postrotate
+                [ -f /run/cloudify-restservice/pid ] && kill -USR1 $(cat /run/cloudify-restservice/pid)
+        endscript
+}

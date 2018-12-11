@@ -11,4 +11,5 @@
         postrotate
                 [ -f /var/run/nginx.pid ] && kill -USR1 $(cat /var/run/nginx.pid)
         endscript
+        dateext dateformat -%Y%m%d-%s
 }

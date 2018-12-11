@@ -21,6 +21,7 @@ from subprocess import check_output
 import logging
 
 from .constants import BASE_LOG_DIR
+from utils import subprocess_preexec
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 
@@ -81,6 +82,24 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
+def get_file_handlers_level():
+    # the handlers in the function name is actually handler's
+    # because i assume there is only one file handler
+    # and function gets the first and only one
+    handlers = logging.getLogger().handlers[:]
+    for handler in handlers:
+        if isinstance(handler, logging.FileHandler):
+            return handler.level
+
+
+def set_file_handlers_level(level):
+    # see comment on function above
+    handlers = logging.getLogger().handlers[:]
+    for handler in handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.setLevel(level)
+
+
 def _setup_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -88,7 +107,12 @@ def _setup_logger():
     _setup_file_logger(logger)
 
 
-def setup_console_logger(verbose=False):
+def setup_console_logger(verbose=False, init=[]):
+    if not init:
+        init.append(True)
+    else:
+        # it is enough to init the logger only once for cfy_manager execution
+        return
     logger = logging.getLogger()
     log_level = logging.DEBUG if verbose else logging.INFO
     sh = logging.StreamHandler(sys.stdout)
@@ -102,10 +126,11 @@ def _create_log_dir():
     if not isdir(log_dir):
         # Need to call subprocess directly, because utils.common depends on the
         # logger, and we'd get a cyclical import
-        check_output(['sudo', 'mkdir', '-p', log_dir])
+        check_output(['sudo', 'mkdir', '-p', log_dir],
+                     preexec_fn=subprocess_preexec)
         check_output(['sudo', 'chown', '-R',
                       '{0}:{1}'.format(geteuid(), getegid()),
-                      log_dir])
+                      log_dir], preexec_fn=subprocess_preexec)
     return log_dir
 
 

@@ -16,10 +16,10 @@
 from os.path import exists, join
 
 from .files import deploy
-from .common import sudo, remove
+from .common import sudo, remove, chown
 
 from ..logger import get_logger
-from ..constants import COMPONENTS_DIR
+from ..constants import COMPONENTS_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ..exceptions import ValidationError
 
 logger = get_logger('SystemD')
@@ -34,7 +34,8 @@ class SystemD(object):
         return sudo(systemctl_cmd, retries=retries,
                     ignore_failures=ignore_failure)
 
-    def configure(self, service_name, render=True):
+    def configure(self, service_name, render=True,
+                  user=CLOUDIFY_USER, group=CLOUDIFY_GROUP):
         """This configures systemd for a specific service.
 
         It requires that two files are present for each service one containing
@@ -55,6 +56,7 @@ class SystemD(object):
         if exists(env_src):
             logger.debug('Deploying systemd EnvironmentFile...')
             deploy(env_src, env_dst, render=render)
+            chown(user, group, env_dst)
 
         # components that have had their service file moved to a RPM, won't
         # have the file here.

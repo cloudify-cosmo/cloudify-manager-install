@@ -16,21 +16,19 @@
 import json
 from os.path import join
 
-from .. import (
+from ..components_constants import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
     CONFIG,
     ENDPOINT_IP,
 )
-
+from ..base_component import BaseComponent
 from ..service_names import INFLUXDB
-
 from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError, BootstrapError
-
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -48,178 +46,172 @@ INIT_D_PATH = join('/etc', 'init.d', INFLUXDB)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXDB, CONFIG)
 
 
-def _configure_database(host, port):
-    db_user = "root"
-    db_pass = "root"
-    db_name = "cloudify"
+class InfluxDBComponent(BaseComponent):
 
-    logger.info('Creating InfluxDB Database...')
+    def __init__(self, skip_installation):
+        super(InfluxDBComponent, self).__init__(skip_installation)
 
-    # the below request is equivalent to running:
-    # curl -S -s "http://localhost:8086/db?u=root&p=root" '-d "{\"name\": \"cloudify\"}"  # NOQA
-    import urllib
-    import urllib2
-    import ast
+    def _configure_database(self, host, port):
+        db_user = "root"
+        db_pass = "root"
+        db_name = "cloudify"
 
-    endpoint_for_list = 'http://{0}:{1}/db'.format(host, port)
-    endpoint_for_creation = ('http://{0}:{1}/cluster/database_configs/'
-                             '{2}'.format(host, port, db_name))
-    params = urllib.urlencode(dict(u=db_user, p=db_pass))
-    url_for_list = endpoint_for_list + '?' + params
-    url_for_creation = endpoint_for_creation + '?' + params
+        logger.info('Creating InfluxDB Database...')
 
-    # check if db already exists
-    db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
-    try:
-        assert not any(d.get('name') == db_name for d in db_list)
-    except AssertionError:
-        logger.info('Database {0} already exists!'.format(db_name))
-        return
+        # the below request is equivalent to running:
+        # curl -S -s "http://localhost:8086/db?u=root&p=root" '-d "{\"name\": \"cloudify\"}"  # NOQA
+        import urllib
+        import urllib2
+        import ast
 
-    try:
-        tmp_path = temp_copy(join(CONFIG_PATH, 'retention.json'))
+        endpoint_for_list = 'http://{0}:{1}/db'.format(host, port)
+        endpoint_for_creation = ('http://{0}:{1}/cluster/database_configs/'
+                                 '{2}'.format(host, port, db_name))
+        params = urllib.urlencode(dict(u=db_user, p=db_pass))
+        url_for_list = endpoint_for_list + '?' + params
+        url_for_creation = endpoint_for_creation + '?' + params
 
-        with open(tmp_path) as policy_file:
-            retention_policy = policy_file.read()
-        logger.debug(
-            'Using retention policy: \n{0}'.format(retention_policy))
-        data = json.dumps(ast.literal_eval(retention_policy))
-        logger.debug('Using retention policy: \n{0}'.format(data))
-        content_length = len(data)
-        request = urllib2.Request(url_for_creation, data, {
-            'Content-Type': 'application/json',
-            'Content-Length': content_length})
-        logger.debug('Request is: {0}'.format(request))
-        request_reader = urllib2.urlopen(request)
-        response = request_reader.read()
-        logger.debug('Response: {0}'.format(response))
-        request_reader.close()
-        common.remove('/tmp/retention.json')
+        # check if db already exists
+        db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
+        try:
+            assert not any(d.get('name') == db_name for d in db_list)
+        except AssertionError:
+            logger.info('Database {0} already exists!'.format(db_name))
+            return
 
-    except Exception as ex:
-        raise BootstrapError(
-            'Failed to create: {0} ({1}).'.format(db_name, ex)
+        try:
+            tmp_path = temp_copy(join(CONFIG_PATH, 'retention.json'))
+
+            with open(tmp_path) as policy_file:
+                retention_policy = policy_file.read()
+            logger.debug(
+                'Using retention policy: \n{0}'.format(retention_policy))
+            data = json.dumps(ast.literal_eval(retention_policy))
+            logger.debug('Using retention policy: \n{0}'.format(data))
+            content_length = len(data)
+            request = urllib2.Request(url_for_creation, data, {
+                'Content-Type': 'application/json',
+                'Content-Length': content_length})
+            logger.debug('Request is: {0}'.format(request))
+            request_reader = urllib2.urlopen(request)
+            response = request_reader.read()
+            logger.debug('Response: {0}'.format(response))
+            request_reader.close()
+            common.remove('/tmp/retention.json')
+
+        except Exception as ex:
+            raise BootstrapError(
+                'Failed to create: {0} ({1}).'.format(db_name, ex)
+            )
+
+        logger.debug('Verifying database created successfully...')
+        db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
+        try:
+            assert any(d.get('name') == db_name for d in db_list)
+        except AssertionError:
+            raise ValidationError('Verification failed!')
+        logger.info('Databased {0} successfully created'.format(db_name))
+
+    def _install_influxdb(self):
+        source_url = config[INFLUXDB][SOURCES]['influxdb_source_url']
+        yum_install(source_url)
+
+    def _install(self):
+        if config[INFLUXDB]['is_internal']:
+            self._install_influxdb()
+
+    def _create_paths(self):
+        common.mkdir(HOME_DIR)
+        common.mkdir(LOG_DIR)
+
+        self._deploy_config_file()
+
+        common.chown(INFLUXDB, INFLUXDB, HOME_DIR)
+        common.chown(INFLUXDB, INFLUXDB, LOG_DIR)
+
+    def _deploy_config_file(self):
+        logger.info('Deploying InfluxDB configuration...')
+        common.copy(
+            source=join(CONFIG_PATH, 'config.toml'),
+            destination=join(HOME_DIR, 'shared', 'config.toml')
         )
 
-    logger.debug('Verifying database created successfully...')
-    db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
-    try:
-        assert any(d.get('name') == db_name for d in db_list)
-    except AssertionError:
-        raise ValidationError('Verification failed!')
-    logger.info('Databased {0} successfully created'.format(db_name))
+    def _configure_local_influxdb(self):
+        config[INFLUXDB][SERVICE_USER] = INFLUXDB
+        config[INFLUXDB][SERVICE_GROUP] = INFLUXDB
 
+        self._create_paths()
+        copy_notice(INFLUXDB)
 
-def _install_influxdb():
-    source_url = config[INFLUXDB][SOURCES]['influxdb_source_url']
-    yum_install(source_url)
+        systemd.configure(INFLUXDB,
+                          user='influxdb', group='influxdb')
+        # Provided with InfluxDB's package. Will be removed if it exists.
+        common.remove(INIT_D_PATH)
 
+    def _check_response(self):
+        influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
+        influxdb_url = 'http://{0}:{1}'.format(
+            influxdb_endpoint_ip,
+            INFLUXDB_ENDPOINT_PORT
+        )
+        response = check_http_response(influxdb_url)
 
-def _install():
-    if config[INFLUXDB]['is_internal']:
-        _install_influxdb()
+        # InfluxDB normally responds with a 404 on GET to /,
+        # but also allow other non-server-error response codes to allow for
+        # that behaviour to change.
+        if response.code >= 500:
+            raise ValidationError('Could not validate InfluxDB')
 
+    def _verify_influxdb_alive(self):
+        systemd.verify_alive(INFLUXDB)
+        wait_for_port(INFLUXDB_ENDPOINT_PORT)
+        self._check_response()
 
-def _create_paths():
-    common.mkdir(HOME_DIR)
-    common.mkdir(LOG_DIR)
+    def _configure(self):
+        influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
+        is_internal = config[INFLUXDB]['is_internal']
+        if is_internal:
+            self._configure_local_influxdb()
+            systemd.restart(INFLUXDB)
 
-    _deploy_config_file()
+        wait_for_port(INFLUXDB_ENDPOINT_PORT, influxdb_endpoint_ip)
+        self._configure_database(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
 
-    common.chown(INFLUXDB, INFLUXDB, HOME_DIR)
-    common.chown(INFLUXDB, INFLUXDB, LOG_DIR)
+        if is_internal:
+            logger.info('Starting InfluxDB Service...')
+            systemd.restart(INFLUXDB)
+            self._verify_influxdb_alive()
 
+    def install(self):
+        logger.notice('Installing InfluxDB...')
+        self._install()
+        self._configure()
+        logger.notice('InfluxDB successfully installed')
 
-def _deploy_config_file():
-    logger.info('Deploying InfluxDB configuration...')
-    common.copy(
-        source=join(CONFIG_PATH, 'config.toml'),
-        destination=join(HOME_DIR, 'shared', 'config.toml')
-    )
+    def configure(self):
+        logger.notice('Configuring InfluxDB...')
+        self._configure()
+        logger.notice('InfluxDB successfully configured')
 
+    def remove(self):
+        logger.notice('Removing Influxdb...')
+        remove_notice(INFLUXDB)
+        systemd.remove(INFLUXDB)
+        remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
+        yum_remove(INFLUXDB)
+        logger.notice('InfluxDB successfully removed')
 
-def _configure_local_influxdb():
-    config[INFLUXDB][SERVICE_USER] = INFLUXDB
-    config[INFLUXDB][SERVICE_GROUP] = INFLUXDB
+    def start(self):
+        is_internal = config[INFLUXDB]['is_internal']
+        if is_internal:
+            logger.notice('Starting Influxdb...')
+            systemd.start(INFLUXDB)
+            self._verify_influxdb_alive()
+            logger.notice('Influxdb successfully started')
 
-    _create_paths()
-    copy_notice(INFLUXDB)
-
-    systemd.configure(INFLUXDB)
-    # Provided with InfluxDB's package. Will be removed if it exists.
-    common.remove(INIT_D_PATH)
-
-
-def _check_response():
-    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
-    influxdb_url = 'http://{0}:{1}'.format(
-        influxdb_endpoint_ip,
-        INFLUXDB_ENDPOINT_PORT
-    )
-    response = check_http_response(influxdb_url)
-
-    # InfluxDB normally responds with a 404 on GET to /, but also allow other
-    # non-server-error response codes to allow for that behaviour to change.
-    if response.code >= 500:
-        raise ValidationError('Could not validate InfluxDB')
-
-
-def _verify_influxdb_alive():
-    systemd.verify_alive(INFLUXDB)
-    wait_for_port(INFLUXDB_ENDPOINT_PORT)
-    _check_response()
-
-
-def _configure():
-    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
-    is_internal = config[INFLUXDB]['is_internal']
-    if is_internal:
-        _configure_local_influxdb()
-        systemd.restart(INFLUXDB)
-
-    wait_for_port(INFLUXDB_ENDPOINT_PORT, influxdb_endpoint_ip)
-    _configure_database(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
-
-    if is_internal:
-        logger.info('Starting InfluxDB Service...')
-        systemd.restart(INFLUXDB)
-        _verify_influxdb_alive()
-
-
-def install():
-    logger.notice('Installing InfluxDB...')
-    _install()
-    _configure()
-    logger.notice('InfluxDB successfully installed')
-
-
-def configure():
-    logger.notice('Configuring InfluxDB...')
-    _configure()
-    logger.notice('InfluxDB successfully configured')
-
-
-def remove():
-    logger.notice('Removing Influxdb...')
-    remove_notice(INFLUXDB)
-    systemd.remove(INFLUXDB)
-    remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
-    yum_remove(INFLUXDB)
-    logger.notice('InfluxDB successfully removed')
-
-
-def start():
-    is_internal = config[INFLUXDB]['is_internal']
-    if is_internal:
-        logger.notice('Starting Influxdb...')
-        systemd.start(INFLUXDB)
-        _verify_influxdb_alive()
-        logger.notice('Influxdb successfully started')
-
-
-def stop():
-    is_internal = config[INFLUXDB]['is_internal']
-    if is_internal:
-        logger.notice('Stopping Influxdb...')
-        systemd.stop(INFLUXDB)
-        logger.notice('Influxdb successfully stopped')
+    def stop(self):
+        is_internal = config[INFLUXDB]['is_internal']
+        if is_internal:
+            logger.notice('Stopping Influxdb...')
+            systemd.stop(INFLUXDB)
+            logger.notice('Influxdb successfully stopped')

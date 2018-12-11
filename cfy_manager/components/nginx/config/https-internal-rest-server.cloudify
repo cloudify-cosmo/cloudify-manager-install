@@ -2,6 +2,7 @@
 server {
   # server listening for internal requests
   listen              {{ constants.internal_rest_port }} ssl default_server;
+  listen              [::]:{{ constants.internal_rest_port }} ssl default_server;
   server_name         _;
 
   ssl_certificate     {{ constants.internal_cert_path }};
