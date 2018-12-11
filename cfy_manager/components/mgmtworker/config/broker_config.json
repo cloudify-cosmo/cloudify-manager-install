@@ -4,5 +4,6 @@
   "broker_username": "{{ rabbitmq.username }}",
   "broker_password": "{{ rabbitmq.password }}",
   "broker_hostname": "{{ rabbitmq.endpoint_ip }}",
+  "broker_management_hostname": "{{ rabbitmq.management_endpoint_ip }}",
   "broker_vhost": "/"
 }
