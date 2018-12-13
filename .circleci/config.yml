@@ -47,7 +47,7 @@ jobs:
           command: |
             set -eux
             BUILD_SCRIPT_PATH=${REMOTE_PATH}/packaging/docker/build_rpm.sh
-            docker exec -t ${CONTAINER_NAME} sh -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH} ${CIRCLE_BRANCH}"
+            docker exec -t ${CONTAINER_NAME} bash -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH} ${CIRCLE_BRANCH}"
       - run:
           name: Install Cloudify Manager
           command: |
