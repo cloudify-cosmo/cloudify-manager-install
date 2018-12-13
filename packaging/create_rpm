@@ -132,7 +132,7 @@ def exit_with_sadness(message):
 
 
 def exit_helpfully_on_failure(command, error,
-                              return_output=False, shell=False):
+                              return_output=False, shell=False, bash=False):
     """
         Try to run a command, but exit with a useful error message on failure.
         If return_output is set to True then the stderr and stdout will be out
@@ -143,7 +143,10 @@ def exit_helpfully_on_failure(command, error,
     else:
         func = subprocess.check_call
     try:
-        result = func(command, shell=shell)
+        if not bash:
+            result = func(command, shell=shell)
+        else:
+            result = func(command, shell=shell, executable='/bin/bash')
         if return_output:
             # This will put stdout out of order with stderr, but allows us to
             # parse the resulting output if we need to
@@ -481,7 +484,8 @@ def _install_ruby():
     exit_helpfully_on_failure(
         command=['source /etc/profile.d/rvm.sh && rvm install 2.5.1'],
         error='Failed to install RVM and/or Ruby',
-        shell=True
+        shell=True,
+        bash=True
     )
 
 
