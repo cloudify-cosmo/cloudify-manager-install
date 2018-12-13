@@ -455,6 +455,14 @@ def _install_ruby():
     print_status_update('Installing ruby.')
 
     print('Adding GPG2 keys for RVM...')
+    # exit_helpfully_on_failure(
+    #     command=[
+    #         'command gpg --keyserver hkp://keys.gnupg.net --recv-keys 7D2BAF1CF37B13E2069D6956105BD0E739499BDB'
+    #     ],
+    #     error='Failed to add gpg keys required by RVM',
+    #     shell=True
+    # )
+
     exit_helpfully_on_failure(
         command=[
             'command curl -sSL https://rvm.io/mpapis.asc | gpg2 --import -'
@@ -465,7 +473,7 @@ def _install_ruby():
 
     print('Installing RVM (ruby version manager)...')
     exit_helpfully_on_failure(
-        command=['curl -sSL https://get.rvm.io | bash -s stable --ruby'],
+        command=['curl -sSL https://get.rvm.io | bash -s -- --version 1.29.4'],
         error='Failed to install RVM and/or Ruby',
         shell=True
     )
@@ -524,6 +532,7 @@ def install_dependencies():
     print('Installing fpm...')
     _run_with_rvm(
         command=['gem', 'install', 'fpm'],
+        return_output=True,
         error='Failed to gem install fpm.')
 
     print('Installing pex...')
