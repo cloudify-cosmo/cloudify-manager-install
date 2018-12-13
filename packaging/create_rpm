@@ -478,6 +478,12 @@ def _install_ruby():
         shell=True
     )
 
+    exit_helpfully_on_failure(
+        command=['source /etc/profile.d/rvm.sh && rvm install 2.5.1'],
+        error='Failed to install RVM and/or Ruby',
+        shell=True
+    )
+
 
 def _run_with_rvm(command, error, return_output=False):
     """
