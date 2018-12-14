@@ -24,8 +24,6 @@ URL_TEMPLATE = API_PREFIX + 'tree/{branch}'
 ARTIFACTS_TEMPLATE = API_PREFIX + '{build[build_num]}/artifacts'
 TRY_BRANCHES = (os.getenv('CIRCLE_BRANCH'), 'master')
 
-LOCAL_PACKAGES_DIR = os.path.expanduser('~/cloudify-manager-install-rpms')
-
 # Keys: other repositories in the same organization
 # Values: collection of Workflow jobs from which we need to fetch artifacts.
 REPOS = {
@@ -98,13 +96,12 @@ def get_artifacts(repo, build, rpms):
             print('Downloading {} (build {})'.format(
                 artifact['path'], build['build_num']))
             resp = requests.get(artifact['url'], stream=True)
-            with open(os.path.join(LOCAL_PACKAGES_DIR, filename), 'wb') as f:
+            with open(filename, 'wb') as f:
                 resp.raw.decode_content = True
                 copyfileobj(resp.raw, f)
 
 
 def main():
-    os.makedirs(LOCAL_PACKAGES_DIR)
     downloads = []
     for repo, jobs in REPOS.items():
         for build, rpms in get_builds(repo, jobs):

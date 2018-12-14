@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import argparse
-import json
 import os
 import re
 import subprocess
 import sys
-import urlparse
 import zipfile
 
 from Queue import Empty, Queue
@@ -28,8 +26,8 @@ EDITIONS = {
     },
 }
 
+RPM_BUILDER_BASE = '/tmp/tmp-install-rpm/build'
 
-RPM_BUILDER_BASE = '/tmp/tmp-install-rpm'
 MANAGER_RESOURCES_BASE = os.path.join(
     RPM_BUILDER_BASE,
     'cloudify/sources',
@@ -51,17 +49,30 @@ INSTALLER_REPO_ARCHIVE = (
     'https://github.com/cloudify-cosmo/cloudify-manager-install/'
     'archive/{branch}.tar.gz'
 )
+BUILD_RPM_SCRIPT_SOURCE = (
+    'https://raw.githubusercontent.com/cloudify-cosmo/'
+    'cloudify-manager/master/packaging/build_rpm.py'
+)
 
 RPM_PREFIX = re.compile('[^0-9]+')
 # regex to extract a package name from a full RPM filename
 
 ZIP_URL = "https://github.com/cloudify-cosmo/{0}/archive/{1}.zip"
-CLI_INFO = {'name':'cloudify-cli', 'patterns': ['/cloudify-cli']}
+CLI_INFO = {'name': 'cloudify-cli', 'patterns': ['/cloudify-cli']}
 AGENT_INFO = {'name': 'cloudify-agent', 'patterns': ['/cloudify-agents']}
-MANAGER_INFO = {'name': 'cloudify-manager', 'patterns': ['/cloudify-amqp', '/cloudify-amqp-postgres',
-                                                         '/cloudify-rest-service', '/cloudify-premium',
-                                                         '/cloudify-rabbitmq', '/cloudify-management-worker',
-                                                         '/cloudify-manager-ip-setter', '/cloudify-riemann']}
+MANAGER_INFO = {
+    'name': 'cloudify-manager',
+    'patterns': [
+        '/cloudify-amqp',
+        '/cloudify-amqp-postgres',
+        '/cloudify-rest-service',
+        '/cloudify-premium',
+        '/cloudify-rabbitmq',
+        '/cloudify-management-worker',
+        '/cloudify-manager-ip-setter',
+        '/cloudify-riemann'
+    ]
+}
 
 
 def print_in_color(message, color, stream=None):
@@ -143,7 +154,8 @@ def exit_helpfully_on_failure(command, error,
     else:
         func = subprocess.check_call
     try:
-        result = func(command, shell=shell)
+        result = func(command, shell=shell,
+                      env={'PATH': os.environ.get('PATH')})
         if return_output:
             # This will put stdout out of order with stderr, but allows us to
             # parse the resulting output if we need to
@@ -193,8 +205,8 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     if auth_required:
         print('Authentication is required...')
         if (
-            'GITHUB_USERNAME' in os.environ
-            and 'GITHUB_PASSWORD' in os.environ
+            'GITHUB_USERNAME' in os.environ and
+            'GITHUB_PASSWORD' in os.environ
         ):
             print('Username and password have been supplied.')
             repo = 'https://{username}:{password}@github.com/'.format(
@@ -229,7 +241,8 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     try:
         git_clone_and_checkout(branch, repo, repo_destination_path)
     except subprocess.CalledProcessError:
-        print('Could not git clone: {repo}, defaults to master'.format(repo=output_repo))
+        print('Could not git clone: {repo}, defaults to master'
+              .format(repo=output_repo))
         git_clone_and_checkout('master', repo, repo_destination_path)
 
     return {
@@ -250,7 +263,8 @@ def is_branch_exists(module_name, dev_branch):
             error='Could not delete zip file.',
         )
         if ret is not None:
-            print ("Dev branch: {0} exists on '{1}' repo, but zip file is corrupted, error: {2}"
+            print ("Dev branch: {0} exists on '{1}' repo, but zip file is "
+                   "corrupted, error: {2}"
                    .format(dev_branch, module_name, ret))
             sys.exit(1)
         else:
@@ -261,8 +275,10 @@ def is_branch_exists(module_name, dev_branch):
         return False
 
 
-def replace_manager_resources_loacation(manager_resources_file, modules_info, dev_branch):
-    # In case of dev_branch manager resources packages should be downloaded from dev_branch location
+def replace_manager_resources_location(manager_resources_file, modules_info,
+                                       dev_branch):
+    # In case of dev_branch manager resources packages should be downloaded
+    # from dev_branch location
     with open(manager_resources_file) as f:
         content = f.read()
     for module_info in modules_info:
@@ -273,9 +289,13 @@ def replace_manager_resources_loacation(manager_resources_file, modules_info, de
             ga_build_dir = '{0}{1}'.format('ga-build', pattern)
             string_to_replace = '/{0}{1}'.format(dev_branch, pattern)
             print("Replacing '{0}' with '{1}' or '{2}' with '{3}' in '{4}'.".
-                  format(release_dir, build_dir, ga_release_dir, ga_build_dir, manager_resources_file))
-            content = content.replace(release_dir, build_dir).replace(ga_release_dir, ga_build_dir)
-            print("Replacing '{0}' with '{1}' in '{2}'.".format(pattern, string_to_replace, manager_resources_file))
+                  format(release_dir, build_dir, ga_release_dir,
+                         ga_build_dir, manager_resources_file))
+            content = content\
+                .replace(release_dir, build_dir)\
+                .replace(ga_release_dir, ga_build_dir)
+            print("Replacing '{0}' with '{1}' in '{2}'."
+                  .format(pattern, string_to_replace, manager_resources_file))
             content = content.replace(pattern, string_to_replace)
     with open(manager_resources_file, "w") as f:
         f.write(content)
@@ -290,7 +310,8 @@ def update_resources_url_on_dev_branch(dev_branch, manager_resources_file):
     if is_branch_exists(AGENT_INFO['name'], dev_branch):
         modules_info.append(AGENT_INFO)
 
-    replace_manager_resources_loacation(manager_resources_file, modules_info, dev_branch)
+    replace_manager_resources_location(manager_resources_file,
+                                       modules_info, dev_branch)
 
 
 def file_downloader(download_queue, log_lock, has_errors):
@@ -325,7 +346,7 @@ def file_downloader(download_queue, log_lock, has_errors):
 def _resources_download_queue(resource_file, destination_path):
     """Prepare a Queue populated with resource paths to download
     """
-    local_files = os.listdir(MANAGER_RESOURCES_BASE)
+    local_files = os.listdir('.')
     # Collect a list of local packages (package name, not full filename)
     package_names = set(RPM_PREFIX.findall(f)[0] for f in local_files)
 
@@ -377,11 +398,12 @@ def retrieve_resources(edition, branch, dev_branch):
         package_urls_destination,
     )
     if dev_branch:
-        update_resources_url_on_dev_branch(dev_branch, package_url_files['manager'])
+        update_resources_url_on_dev_branch(
+            dev_branch, package_url_files['manager'])
     print_status_update('Downloading resources...')
     download_listed_resources(
         package_url_files['manager'],
-        MANAGER_RESOURCES_BASE,
+        '.',
     )
 
     exit_helpfully_on_failure(
@@ -392,355 +414,20 @@ def retrieve_resources(edition, branch, dev_branch):
     )
 
 
-def retrieve_required_files(edition, installer_path, installer_branch):
-    """
-        Retrieve all files required for the installer build, either locally or
-        from repositories.
-    """
-    installer_repo_base = INSTALLER_REPO_RAW_BASE.format(
-        branch=installer_branch,
-    )
-
-    print_status_update('Retrieving required files...')
-    for required_file, destination in (
-        ('config.yaml', CONFIG_FILE_DESTINATION),
-        ('packaging/install.sh', INSTALL_SCRIPT_DESTINATION),
-    ):
-        if installer_path:
-            source = os.path.join(installer_path, required_file)
-            exit_helpfully_on_failure(
-                command=[
-                    'cp',
-                    source,
-                    destination,
-                ],
-                error=(
-                    'Could not copy {req} from local installer repo.'.format(
-                        req=required_file,
-                    )
-                ),
-            )
-        else:
-            source = urlparse.urljoin(installer_repo_base, required_file)
-            exit_helpfully_on_failure(
-                command=[
-                    'curl',
-                    '-o', destination,
-                    source,
-                ],
-                error=(
-                    'Could not download {req} from installer '
-                    'repository.'.format(
-                        req=required_file,
-                    )
-                ),
-            )
-
-    print('Setting premium edition flag in config...')
-    premium = json.dumps(edition == 'premium')
-    with open(CONFIG_FILE_DESTINATION) as config_handle:
-        config = config_handle.read()
-    config = config.replace(
-        'premium_edition: set_by_installer_builder',
-        'premium_edition: {premium}'.format(premium=premium),
-    )
-    with open(CONFIG_FILE_DESTINATION, 'w') as config_handle:
-        config_handle.write(config)
-
-
-def _install_ruby():
-    """
-    ruby-xz 1.0.0 which is a prerequisite of fpm requires ruby version 2.3.0
-    """
-    print_status_update('Installing ruby.')
-
-    print('Adding GPG2 keys for RVM...')
-    exit_helpfully_on_failure(
-        command=[
-            'command curl -sSL https://rvm.io/mpapis.asc | gpg2 --import -'
-        ],
-        error='Failed to add gpg keys required by RVM',
-        shell=True
-    )
-
-    print('Installing RVM (ruby version manager)...')
-    exit_helpfully_on_failure(
-        command=['curl -sSL https://get.rvm.io | bash -s stable --ruby'],
-        error='Failed to install RVM and/or Ruby',
-        shell=True
-    )
-
-
-def _run_with_rvm(command, error, return_output=False):
-    """
-    Execute command while sourcing the RVM script
-    """
-    profile_d_path = '/etc/profile.d/rvm.sh'
-    script_path = os.path.expanduser('~/.rvm/scripts/rvm')
-    if os.path.exists(profile_d_path):
-        source = profile_d_path
-    elif os.path.exists(script_path):
-        source = script_path
-    else:
-        exit_with_sadness(
-            'Could not locate rvm source script in both: {0} and {1}'.format(
-                profile_d_path, script_path
-            )
-        )
-    return exit_helpfully_on_failure(
-        command=['/bin/bash -c "source {source} && {command}"'.format(
-            source=source,
-            command=' '.join(command)
-        )],
-        error=error,
-        return_output=return_output,
-        shell=True
-    )
-
-
-def install_dependencies():
-    """
-        Install the dependencies for the package builder.
-    """
-    print_status_update('Installing dependencies.')
-
-    _install_ruby()
-
-    print('Installing required rpms...')
-    install_rpms = [
-        'sudo', 'yum', 'install', '-y', '-q',
-        # Requirement for fpm
-        'rpm-build',
-        # Requirements for this script
-        'git',
-        # Requirements for building the python package
-        'python-devel',
-    ]
-    exit_helpfully_on_failure(
-        command=install_rpms,
-        error='Could not yum install dependencies!',
-    )
-
-    print('Installing fpm...')
-    _run_with_rvm(
-        command=['gem', 'install', 'fpm'],
-        error='Failed to gem install fpm.')
-
-    print('Installing pex...')
-    exit_helpfully_on_failure(
-        command=['sudo', 'pip', 'install', 'pex==1.3.2'],
-        error='Failed to pip install pex.',
-    )
-
-
-def install_pip():
-    print_status_update('Installing pip.')
-    print('Downloading pip installer...')
-    subprocess.check_call([
-        'curl', '-O', 'https://bootstrap.pypa.io/get-pip.py',
-    ])
-    print('Installing pip...')
-    subprocess.check_call([
-        'sudo', 'python', 'get-pip.py',
-    ])
-
-
-def validate_sudo():
-    """
-        Confirm the current user can sudo.
-    """
-    print_status_update('Validating user sudo ability.')
-    exit_helpfully_on_failure(
-        command=['sudo', '-n', 'true'],
-        error='Could not sudo as this user!',
-    )
-
-
-def validate_pip():
-    """
-        Confirm that pip is available for the current user.')
-    """
-    print_status_update('Validating user pip ability.')
-    exit_helpfully_on_failure(
-        command=['pip', '--version'],
-        error='pip is not installed but is required!',
-    )
-
-
-def prepare_directory_structure(local_packages_dir):
-    """
-        Prepare the directory structure needed for building the installer.
-    """
-    print_status_update('Preparing directory structure to build package.')
-    print('Making required directories...')
-    exit_helpfully_on_failure(
-        command=[
-            'mkdir', '-p',
-            RPM_BUILDER_BASE,
-            MANAGER_RESOURCES_BASE,
-            CONFIG_DIR,
-        ],
-        error='Could not create directory tree in /tmp/tmp-install-rpm',
-    )
-
-    if os.path.isdir(local_packages_dir):
-        subprocess.check_call(
-            'cp -R "{dir}/"* "{dest}"'.format(
-                dir=local_packages_dir, dest=MANAGER_RESOURCES_BASE),
-            shell=True,
-            )
-
-
-def create_cfy_manager_command(installer_path, installer_branch):
-    """
-        Ensure that the cfy_manager command can be executed after the
-        installer is on the user's system.
-    """
-    print_status_update('Creating cfy_manager executable.')
-    if installer_path:
-        source = installer_path
-    else:
-        source = INSTALLER_REPO_ARCHIVE.format(
-            branch=installer_branch,
-        )
-    exit_helpfully_on_failure(
-        command=[
-            'pex', source,
-            '-o', os.path.join(RPM_BUILDER_BASE, 'cfy_manager'),
-            '-m', 'cfy_manager.main',
-            '--disable-cache',
-        ],
-        error='Failed to build cfy_manager executable!',
-    )
-
-
-def run_build_command(edition, package_output_dir):
-    """
-        Run the command to build the installer package and return the path to
-        the created package.
-    """
-    print_status_update('Creating RPM.')
-    rpm_builder_command = [
-        'fpm',
-        '-s', 'dir',  # Source is a directory
-        '-t', 'rpm',  # Build an RPM
-        '-n', 'cloudify-manager-install',  # The name of the package
-        '--package', package_output_dir,  # Put the package in /tmp when built
-        '--force',  # Force run even if this will overwrite an existing RPM
-        # Command to run after rpm is installed
-        '--after-install', INSTALL_SCRIPT_DESTINATION,
-        # Which files are considered config files (path as it will be when the
-        # RPM has been installed)
-        '--rpm-attr',
-        "'660,root,wheel) %config(noreplace:/etc/cloudify/config.yaml'",
-        # This is a hack to work around the lack of support in fpm for applying
-        # %config and %attr to the same path
-    ]
-    if 'VERSION' in os.environ:
-        version = os.environ['VERSION']
-        print('Using version {version} setting from env var.'.format(
-            version=version,
-        ))
-        rpm_builder_command.extend([
-            '-v', version,
-        ])
-    if 'PRERELEASE' in os.environ:
-        print('Using iteration set by PRERELEASE env var.')
-        iteration = os.environ['PRERELEASE']
-    else:
-        iteration = edition
-    print('Using iteration {iteration}.'.format(
-        iteration=iteration,
-    ))
-    rpm_builder_command.extend([
-        '--iteration', iteration,
-    ])
-
-    # So that the dir is cleanly removed when uninstalling
-    rpm_builder_command.extend(['--directories', '/opt/cloudify'])
-
-    mapping = '{source}={destination}'
-
-    rpm_builder_command.extend([
-        # What files to include in the package:
-        # <package_path>=<path after RPM is installed>
-        mapping.format(
-            source=os.path.join(RPM_BUILDER_BASE, 'cfy_manager'),
-            destination='/usr/bin/cfy_manager',
-        ),
-        mapping.format(
-            # This will put all of the cloudify directory in /opt/cloudify
-            source=os.path.join(RPM_BUILDER_BASE, 'cloudify'),
-            destination='/opt',
-        ),
-        mapping.format(
-            # This will put all of the config files in /etc/cloudify
-            source=os.path.join(RPM_BUILDER_BASE, 'etc', 'cloudify'),
-            destination='/etc',
-        ),
-    ])
-
-    rpmbuild_output = _run_with_rvm(
-        command=rpm_builder_command,
-        error='Could not build RPM!',
-        return_output=True,
-    )
-
-    print('Cleaning up build directory.')
-    exit_helpfully_on_failure(
-        command=['rm', '-rf', RPM_BUILDER_BASE],
-        error='Could not delete build directory.',
-    )
-
-    return determine_rpm_location(rpmbuild_output)
-
-
-def build_package(edition, branch, dev_branch, installer_branch, installer_path,
-                  should_install_pip,
+def build_package(edition, branch, dev_branch, installer_branch,
+                  installer_path, should_install_pip,
                   should_install_dependencies, local_packages_dir,
                   package_output_dir,
                   ):
     """
         Build the package.
     """
-    if should_install_dependencies or should_install_pip:
-        validate_sudo()
-
-    if should_install_pip:
-        install_pip()
-
-    validate_pip()
-
-    if should_install_dependencies:
-        install_dependencies()
-
-    prepare_directory_structure(local_packages_dir)
-
-    retrieve_required_files(
-        edition=edition,
-        installer_path=installer_path,
-        installer_branch=installer_branch,
-    )
-
-    create_cfy_manager_command(
-        installer_path=installer_path,
-        installer_branch=installer_branch,
-    )
 
     retrieve_resources(
         edition=edition,
         branch=branch,
         dev_branch=dev_branch
     )
-
-    rpm_location = run_build_command(
-        edition=edition,
-        package_output_dir=package_output_dir,
-    )
-
-    print_status_update('RPM created: {location}'.format(
-        location=rpm_location,
-    ))
 
 
 if __name__ == '__main__':
