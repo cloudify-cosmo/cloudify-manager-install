@@ -414,61 +414,13 @@ def retrieve_resources(edition, branch, dev_branch):
     )
 
 
-def build_package(edition, branch, dev_branch, installer_branch,
-                  installer_path, should_install_pip,
-                  should_install_dependencies, local_packages_dir,
-                  package_output_dir,
-                  ):
-    """
-        Build the package.
-    """
-
-    retrieve_resources(
-        edition=edition,
-        branch=branch,
-        dev_branch=dev_branch
-    )
-
-
 if __name__ == '__main__':
     # Env vars are still supported for compatibility with the current build
     # approach.
     # Yes, documenting the env vars like this is a bit ugly. It would be nicer
     # if we made them arguments instead!
     parser = argparse.ArgumentParser(
-        description=(
-            'Create a cloudify installer package. '
-            'The package itself will support offline install. '
-            'The package builder, however, will need internet access.\n'
-            '\n'
-            'Supported env vars:\n'
-            'GITHUB_USERNAME, GITHUB_PASSWORD: These will be used if '
-            'authentication is required for the package urls of the edition '
-            'you are building an installer for. If these are not specified, '
-            'it will be assumed that your SSH key is able to access the git '
-            'repository. Note that many special characters are expected to '
-            'break these variables.\n'
-            'VERSION: If this is set it will be used as the RPM version.\n'
-            'PRERELEASE: If this is set then it will be used as the RPM '
-            '"iteration" value. If this is not set then it will use the name '
-            'of the edition you are building an installer for.'
-        ),
-    )
-
-    parser.add_argument(
-        '--skip-pip-install',
-        dest='install_pip',
-        help='If this is set, pip will not be installed.',
-        action='store_false',
-        default=True,
-    )
-
-    parser.add_argument(
-        '--skip-dependencies',
-        dest='install_dependencies',
-        help='Skip installing fpm, pex, and their dependencies.',
-        action='store_false',
-        default=True,
+        description='Download component RPMs for the manager installer'
     )
 
     parser.add_argument(
@@ -495,36 +447,9 @@ if __name__ == '__main__':
         default='',
     )
 
-    parser.add_argument(
-        '--local_packages_dir',
-        help='Local directory to fetch RPMs from (will fall back to the'
-             'locations in the manager-packages.yaml file',
-        default=os.path.expanduser('~/cloudify-manager-install-rpms'),
-    )
-    parser.add_argument('--package_output_dir', default='/tmp')
-
-    installer_source_group = parser.add_mutually_exclusive_group()
-    installer_source_group.add_argument(
-        '-B', '--installer-branch',
-        help='Which branch of the installer builder to use.',
-        default='master',
-    )
-    installer_source_group.add_argument(
-        '-L', '--local-installer-path',
-        help='Path to local clone of installer builder to use.',
-        default='',
-    )
-
     args = parser.parse_args()
-
-    build_package(
+    retrieve_resources(
         edition=args.edition,
         branch=args.branch,
-        dev_branch=args.dev_branch,
-        installer_branch=args.installer_branch,
-        installer_path=args.local_installer_path,
-        should_install_pip=args.install_pip,
-        local_packages_dir=args.local_packages_dir,
-        should_install_dependencies=args.install_dependencies,
-        package_output_dir=args.package_output_dir,
+        dev_branch=args.dev_branch
     )
