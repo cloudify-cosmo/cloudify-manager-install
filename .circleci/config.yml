@@ -55,7 +55,7 @@ jobs:
             pushd /tmp/cloudify-manager-install/rpms
               /tmp/cloudify-manager-install/packaging/fetch_requirements
             popd
-      - run: rpmbuild -D 'CLOUDIFY_VERSION ${CLOUDIFY_VERSION}' -D 'CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}' -bb packaging/install_rpm.spec
+      - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
       - persist_to_workspace:
           root: ~/rpm
           paths:
