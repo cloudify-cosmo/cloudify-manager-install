@@ -14,7 +14,6 @@ from threading import Thread, Lock, Event
 # Not using click or the cfy_manager/logging.py so that this remains a single
 # file download that is immediately usable without installing anything outside
 # of python stdlib
-
 EDITIONS = {
     'community': {
         'repo': 'cloudify-cosmo/cloudify-versions.git',
@@ -27,32 +26,6 @@ EDITIONS = {
 }
 
 RPM_BUILDER_BASE = '/tmp/tmp-install-rpm/build'
-
-MANAGER_RESOURCES_BASE = os.path.join(
-    RPM_BUILDER_BASE,
-    'cloudify/sources',
-)
-CONFIG_DIR = os.path.join(
-    RPM_BUILDER_BASE,
-    'etc',
-    'cloudify',
-)
-
-CONFIG_FILE_DESTINATION = os.path.join(CONFIG_DIR, 'config.yaml')
-INSTALL_SCRIPT_DESTINATION = os.path.join(RPM_BUILDER_BASE, 'install.sh')
-
-INSTALLER_REPO_RAW_BASE = (
-    'https://raw.githubusercontent.com/cloudify-cosmo/'
-    'cloudify-manager-install/{branch}/'  # Trailing slash needed for urljoin
-)
-INSTALLER_REPO_ARCHIVE = (
-    'https://github.com/cloudify-cosmo/cloudify-manager-install/'
-    'archive/{branch}.tar.gz'
-)
-BUILD_RPM_SCRIPT_SOURCE = (
-    'https://raw.githubusercontent.com/cloudify-cosmo/'
-    'cloudify-manager/master/packaging/build_rpm.py'
-)
 
 RPM_PREFIX = re.compile('[^0-9]+')
 # regex to extract a package name from a full RPM filename
@@ -441,9 +414,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--dev-branch',
-        help=(
-            'Dev branch to get package resources from.'
-        ),
+        help='Dev branch to get package resources from.',
         default='',
     )
 
