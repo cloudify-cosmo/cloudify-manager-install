@@ -46,5 +46,5 @@ cfy_manager install
 
 %files
 /usr/bin/cfy_manager
-/etc/cloudify/config.yaml
 /opt/cloudify
+%attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
