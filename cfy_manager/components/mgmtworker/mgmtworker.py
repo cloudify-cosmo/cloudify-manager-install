@@ -28,7 +28,7 @@ from ..service_names import MGMTWORKER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
-from ...utils import common
+from ...utils import common, sudoers
 from ...utils.files import deploy
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -65,6 +65,20 @@ class MgmtWorkerComponent(BaseComponent):
 
         self._deploy_broker_config()
         self._deploy_hooks_config()
+        self._deploy_admin_token()
+
+    def _deploy_admin_token(self):
+        script_name = 'create-admin-token.py'
+        sudoers.deploy_sudo_command_script(
+            script_name,
+            'Create an admin token for mgmtworker',
+            component=MGMTWORKER,
+            allow_as='root',
+        )
+        script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script_name)
+        common.chown('root', 'root', script_path)
+        common.chmod('0500', script_path)
+        common.run(['sudo', script_path])
 
     def _deploy_broker_config(self):
         file_name = 'broker_config.json'
