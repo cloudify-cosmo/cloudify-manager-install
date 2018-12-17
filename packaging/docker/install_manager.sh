@@ -2,8 +2,6 @@
 
 set -eux
 
-IMAGE_PUB_NAME="docker_cfy_manager"
-
 CONTAINER_IP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
 
 echo "Creating install config file..."
