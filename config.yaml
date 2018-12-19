@@ -92,6 +92,8 @@ agent:
   broker_port: 5671
   min_workers: 2
   max_workers: 5
+  # AMQP heartbeat timeout. 0 means no heartbeats
+  heartbeat: 0
 
 rabbitmq:
   # Sets the username/password to use for clients such as celery to connect to
