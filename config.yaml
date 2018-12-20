@@ -85,7 +85,7 @@ provider_context:
         - {'https://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
       # if this is set to true, the import resolver will try the original,
       # non-resolved URL as well, if the resolved one returns a HTTP error
-      fallback: false
+      fallback: true
 
 agent:
   # A dict of network names and IP addresses associated with them.
