@@ -353,6 +353,10 @@ mgmtworker:
   # file.
   extra_env: {}
 
+patch:
+  sources:
+    patch_source_url: patch-2.7.1-10.el7_5.x86_64.rpm
+
 cli:
   sources:
     cli_source_url: cloudify-cli-*.x86_64.rpm
