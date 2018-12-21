@@ -16,7 +16,11 @@
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...exceptions import ValidationError
-from ...utils.install import RpmPackageHandler
+from ...utils.install import RpmPackageHandler, yum_install, yum_remove
+from ..components_constants import (
+    SOURCES,
+)
+from ...config import config
 from ...logger import get_logger
 
 
@@ -27,7 +31,8 @@ class BaseComponent(object):
         self.skip_installation = skip_installation
 
     def install(self):
-        pass
+        sources = config['patch'][SOURCES]
+        yum_install(sources['patch_source_url'])
 
     def configure(self):
         pass
@@ -39,7 +44,8 @@ class BaseComponent(object):
         pass
 
     def remove(self):
-        pass
+        sources = config['patch'][SOURCES]
+        yum_remove(sources['patch_source_url'])
 
     def _get_dependencies(self):
         dependencies_dict = {}
