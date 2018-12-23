@@ -88,10 +88,16 @@ PUBLIC_IP_HELP_MSG = (
 JOIN_CLUSTER_HELP_MSG = (
     "In case this machine will join an existing cluster with an external DB."
     "To join to a cluster, use the --join-cluster flag with the "
-    "--admin-password flag supplying the master manager's password, and the "
-    "--database-ip supplying the external database's IP."
+    "--admin-password flag supplying the master manager's password, the "
+    "--database-ip supplying the external database's IP, and the"
+    "--postgres-password supplying the external database's postgres user "
+    "password."
 )
 DATABASE_IP_HELP_MSG = (
+    "Used together with --join-cluster flag when joining to an existing "
+    "cluster with an external database."
+)
+POSTGRES_PASSWORD_HELP_MSG = (
     "Used together with --join-cluster flag when joining to an existing "
     "cluster with an external database."
 )
@@ -122,7 +128,8 @@ sys.excepthook = _exception_handler
 
 
 def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
-                            join_cluster=None, database_ip=None):
+                            join_cluster=None, database_ip=None,
+                            postgres_password=None):
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
@@ -135,18 +142,21 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
     if admin_password:
         if config[CLEAN_DB]:
             manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-            if all([join_cluster, database_ip]):
+            if all([join_cluster, database_ip, postgres_password]):
                 config[CLUSTER][MASTER_IP] = str(join_cluster)
                 config[POSTGRESQL_CLIENT]['host'] = str(database_ip)
+                config[POSTGRESQL_CLIENT]['postgres_password'] = \
+                    str(postgres_password)
+                config[POSTGRESQL_CLIENT]['ssl_enabled'] = True
                 config[SERVICES_TO_INSTALL] = [
                     QUEUE_SERVICE,
                     COMPOSER_SERVICE,
                     MANAGER_SERVICE
                 ]
-            elif any([join_cluster, database_ip]):
+            elif any([join_cluster, database_ip, postgres_password]):
                 raise BootstrapError(
-                    'The --join-cluster, --database-ip and --admin-password'
-                    'flags must be used together'
+                    'The --join-cluster, --database-ip, --admin-password '
+                    'and --postgres-password flags must be used together'
                 )
         else:
             raise BootstrapError(
@@ -167,13 +177,14 @@ def _prepare_execution(verbose=False,
                        clean_db=False,
                        config_write_required=False,
                        join_cluster=None,
-                       database_ip=None):
+                       database_ip=None,
+                       postgres_password=None):
     setup_console_logger(verbose)
 
     validate_config_access(config_write_required)
     config.load_config()
     _validate_config_values(private_ip, public_ip, admin_password, clean_db,
-                            join_cluster, database_ip)
+                            join_cluster, database_ip, postgres_password)
     _create_component_objects()
 
 
@@ -273,7 +284,8 @@ def install_args(f):
         argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
         argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
         argh.arg('--join-cluster', help=JOIN_CLUSTER_HELP_MSG),
-        argh.arg('--database-ip', help=DATABASE_IP_HELP_MSG)
+        argh.arg('--database-ip', help=DATABASE_IP_HELP_MSG),
+        argh.arg('--postgres-password', help=POSTGRES_PASSWORD_HELP_MSG)
     ]
     for arg in args:
         f = arg(f)
@@ -288,7 +300,8 @@ def validate_command(verbose=False,
                      admin_password=None,
                      clean_db=False,
                      join_cluster=None,
-                     database_ip=None):
+                     database_ip=None,
+                     postgres_password=None):
     _prepare_execution(
         verbose,
         private_ip,
@@ -297,6 +310,7 @@ def validate_command(verbose=False,
         clean_db,
         join_cluster=join_cluster,
         database_ip=database_ip,
+        postgres_password=postgres_password,
         config_write_required=False
     )
     validate(components=components)
@@ -317,7 +331,8 @@ def install(verbose=False,
             admin_password=None,
             clean_db=False,
             join_cluster=None,
-            database_ip=None):
+            database_ip=None,
+            postgres_password=None):
     """ Install Cloudify Manager """
 
     _prepare_execution(
@@ -328,6 +343,7 @@ def install(verbose=False,
         clean_db,
         join_cluster=join_cluster,
         database_ip=database_ip,
+        postgres_password=postgres_password,
         config_write_required=True
     )
     logger.notice('Installing desired components...')
@@ -349,7 +365,8 @@ def configure(verbose=False,
               admin_password=None,
               clean_db=False,
               join_cluster=None,
-              database_ip=None):
+              database_ip=None,
+              postgres_password=None):
     """ Configure Cloudify Manager """
 
     _prepare_execution(
