@@ -35,7 +35,8 @@ from ...components.components_constants import (
     NODE_NAME,
     HOST_IP,
     PRIVATE_IP,
-    PREMIUM_EDITION
+    PREMIUM_EDITION,
+    AGENT
 )
 from ...constants import REST_HOME_DIR
 from ...components.service_components import DATABASE_SERVICE
@@ -150,7 +151,14 @@ class ClusterComponent(BaseComponent):
             'required': new_node['required'],
             'join_addrs': join_addrs,
             'ignore_database_validation': True,
-            'bootstrap_cluster': False
+            'bootstrap_cluster': False,
+            # Usually in a cluster scenario the provider_context information is
+            # saved in the database. When using an external DB we must send the
+            # cloudify_agent part from the provider_context which holds the
+            # information of the broker IP of the joining manager required by
+            # the agents to communicate, since we skip the DB configuration
+            # and the provider_context is not saved
+            'cloudify_agent_context': config[AGENT]
         }
         manager_rest_python_path = os.path.join(REST_HOME_DIR, 'env', 'bin')
         start_cluster = os.path.join(manager_rest_python_path,
