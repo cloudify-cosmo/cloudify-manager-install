@@ -161,6 +161,7 @@ class MgmtWorkerComponent(BaseComponent):
         systemd.remove(MGMTWORKER, service_file=False)
         yum_remove('cloudify-management-worker')
         common.remove('/opt/mgmtworker')
+        common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
         logger.notice('Management Worker successfully removed')
 
     def start(self):
