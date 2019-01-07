@@ -135,7 +135,7 @@ class RabbitMQComponent(BaseComponent):
         )
         self._set_rabbitmq_policy(
             name='events_queue_message_policy',
-            expression='^cloudify-events$',
+            expression='^cloudify-events-topic$',
             policy=events_queue_message_policy
         )
         self._set_rabbitmq_policy(
