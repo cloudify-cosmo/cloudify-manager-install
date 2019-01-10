@@ -26,7 +26,7 @@ function validate_docker() {
 function validate_users() {
 	user_name=$1
 	user_id=$2
-	echo "Attemting to create user $user_name with id $user_id"
+	echo "Attempting to create user $user_name with id $user_id"
 	USER_OUTPUT=$(id -u $user_name) 1> /dev/null
 	if [ $? -eq 0 ]
 	then
