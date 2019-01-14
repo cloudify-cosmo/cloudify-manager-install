@@ -15,6 +15,8 @@
 
 from os.path import exists, join
 
+from retrying import retry
+
 from .files import deploy
 from .common import sudo, remove, chown
 
@@ -148,6 +150,7 @@ class SystemD(object):
         result = self.systemctl('status', service_name, ignore_failure=True)
         return result.returncode == 0
 
+    @retry(stop_max_attempt_number=3, wait_fixed=1000)
     def verify_alive(self, service_name, append_prefix=True):
         if self.is_alive(service_name, append_prefix):
             logger.debug('{0} is running'.format(service_name))
