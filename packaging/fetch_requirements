@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -155,6 +156,7 @@ def exit_helpfully_on_failure(command, error,
 
 
 def git_clone_and_checkout(branch, repo, repo_destination_path):
+    shutil.rmtree(repo_destination_path, ignore_failure=True)
     subprocess.check_call([
         'git', 'clone', '-q',
         '--branch=' + branch,
