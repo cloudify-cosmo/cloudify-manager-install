@@ -14,11 +14,8 @@
 #  * limitations under the License.
 
 from .amqp_postgres import AmqpPostgresComponent  # NOQA
-from .amqpinflux import AmqpInfluxComponent  # NOQA
 from .cli import CliComponent  # NOQA
 from .composer import ComposerComponent  # NOQA
-from .influxdb import InfluxDBComponent  # NOQA
-from .java import JavaComponent  # NOQA
 from .manager import ManagerComponent  # NOQA
 from .manager_ip_setter import ManagerIpSetterComponent  # NOQA
 from .mgmtworker import MgmtWorkerComponent  # NOQA
@@ -28,7 +25,6 @@ from .postgresql_client import PostgresqlClientComponent # NOQA
 from .python import PythonComponent  # NOQA
 from .rabbitmq import RabbitMQComponent  # NOQA
 from .restservice import RestServiceComponent  # NOQA
-from .riemann import RiemannComponent  # NOQA
 from .sanity import SanityComponent  # NOQA
 from .stage import StageComponent  # NOQA
 from .usage_collector import UsageCollectorComponent  # NOQA

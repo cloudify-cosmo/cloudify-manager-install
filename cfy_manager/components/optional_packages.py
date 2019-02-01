@@ -17,7 +17,7 @@ from os.path import join
 
 from .components_constants import SOURCES, VENV
 
-from .service_names import DEV, RESTSERVICE, MGMTWORKER, AMQPINFLUX
+from .service_names import DEV, RESTSERVICE, MGMTWORKER
 
 from .. import constants
 from ..config import config
@@ -59,10 +59,8 @@ def _install_cloudify_manager_pip_packages(pip_constraints):
     rest_service_dir = join(tmp_dir, 'rest-service')
     resources_dir = join(tmp_dir, 'resources', 'rest-service', 'cloudify')
     workflows_dir = join(tmp_dir, 'workflows')
-    riemann_dir = join(tmp_dir, 'plugins', 'riemann-controller')
 
     logger.info('Installing Management Worker Plugins...')
-    pip_install(riemann_dir, mgmtworker_venv, pip_constraints)
     pip_install(workflows_dir, mgmtworker_venv, pip_constraints)
 
     logger.info('Installing REST Service...')
@@ -75,7 +73,6 @@ def _install_cloudify_manager_pip_packages(pip_constraints):
 def _install_optional_pip_packages(pip_constraints):
     rest_venv = config[RESTSERVICE][VENV]
     mgmtworker_venv = config[MGMTWORKER][VENV]
-    amqpinflux_venv = config[AMQPINFLUX][VENV]
 
     mgmtworker_packages = [
         'rest_client_source_url',
@@ -84,11 +81,9 @@ def _install_optional_pip_packages(pip_constraints):
         'agent_source_url'
     ]
     rest_packages = mgmtworker_packages + ['dsl_parser_source_url']
-    amqpinflux_packages = ['amqpinflux_source_url']
 
     _install_packages(mgmtworker_packages, mgmtworker_venv, pip_constraints)
     _install_packages(rest_packages, rest_venv, pip_constraints)
-    _install_packages(amqpinflux_packages, amqpinflux_venv, pip_constraints)
 
 
 def _get_pip_constraints():
