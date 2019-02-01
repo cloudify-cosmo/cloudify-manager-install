@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,26 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..utils import common
-from ..logger import get_logger
-from ..exceptions import BootstrapError
-
-CLUSTER_REMOVE_SCRIPT = '/opt/manager/env/bin/teardown_cluster'
-logger = get_logger('cluster')
-
-
-def configure():
-    pass
-
-
-def install():
-    pass
-
-
-def remove():
-    try:
-        common.sudo([CLUSTER_REMOVE_SCRIPT])
-    except BootstrapError:
-        logger.notice('Cluster remove script does not exist - skipping')
-    else:
-        logger.notice('Cluster components removed')
+from .amqp_postgres import AmqpPostgresComponent  # NOQA

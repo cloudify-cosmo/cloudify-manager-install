@@ -1,30 +1,75 @@
 version: 2
 jobs:
-  build:
-    machine: true
-
+  fetch_rpms:
+    docker:
+      - image: python:2
     working_directory: ~/cloudify-manager-install
-
-    environment:
-      CONTAINER_NAME: cfy_manager
-      IMAGE_NAME: cfy_manager_image
-      REMOTE_PATH: /root/cloudify-manager-install
-
     steps:
       - checkout
-      # Running this step in the background allows us to run it in parallel
-      - run:
-          name: Python tests
-          background: true
-          command: |
-            pip install tox
-            tox -e flake8
-            tox -e py27
+      - run: pip install requests
       - run:
           name: Fetch RPMs built on CircleCI
           command: |
-            pip install requests
-            .circleci/fetch_rpms
+            mkdir rpms
+            cd rpms
+            ../.circleci/fetch_rpms
+      - persist_to_workspace:
+          root: ~/cloudify-manager-install
+          paths:
+            - rpms
+
+  build_executable:
+    docker:
+      - image: python:2
+    working_directory: ~/cloudify-manager-install
+    steps:
+      - checkout
+      - run: pip install pex==1.3.2
+      - run: |
+          pex . -o pex/cfy_manager -m cfy_manager.main --disable-cache
+      - persist_to_workspace:
+          root: ~/cloudify-manager-install
+          paths:
+            - pex
+
+  build_rpm:
+    working_directory: /tmp/cloudify-manager-install
+    docker:
+      - image: rpmbuild/centos7
+    steps:
+      - checkout
+      - run:
+          name: Set version environment variables 
+          command: cat packaging/version_info >> $BASH_ENV
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Link items from workspace under rpm sources dir
+          command: |
+            rm ~/rpm -fr
+            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install/rpms
+            ln -s /tmp/workspace/pex /tmp/cloudify-manager-install/pex
+            ln -s /tmp/cloudify-manager-install ~/rpm
+      - run:
+          command: |
+            pushd /tmp/cloudify-manager-install/rpms
+              /tmp/cloudify-manager-install/packaging/fetch_requirements --edition community -b ${CIRCLE_BRANCH}
+            popd
+      - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
+      - persist_to_workspace:
+          root: ~/rpm
+          paths:
+            - x86_64
+
+  install_manager:
+    machine: true
+    environment:
+      CONTAINER_NAME: cfy_manager
+      IMAGE_NAME: cfy_manager_image
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
       - run:
           name: Build base container
           command: |
@@ -34,25 +79,34 @@ jobs:
           name: Run base container
           command: |
             set -eux
-            docker run --name ${CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
+            docker run --name ${CONTAINER_NAME} -d -v /tmp/workspace:/tmp/workspace:ro -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
       - run:
           name: Prepare base container
           command: |
             set -eux
-            docker cp ~/cloudify-manager-install ${CONTAINER_NAME}:${REMOTE_PATH}
-            docker cp ~/cloudify-manager-install-rpms ${CONTAINER_NAME}:/root/cloudify-manager-install-rpms
             docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
       - run:
-          name: Create RPM
+          name: Install the created RPM
           command: |
             set -eux
-            BUILD_SCRIPT_PATH=${REMOTE_PATH}/packaging/docker/build_rpm.sh
-            docker exec -t ${CONTAINER_NAME} sh -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH}"
+            docker exec -t ${CONTAINER_NAME} /bin/bash -c "yum install -y /tmp/workspace/x86_64/*.rpm"
       - run:
           name: Install Cloudify Manager
           command: |
             set -eux
             cd packaging/docker
-
             chmod +x install_manager.sh
             ./install_manager.sh
+workflows:
+  version: 2
+  build:
+    jobs:
+      - fetch_rpms
+      - build_executable
+      - build_rpm:
+          requires:
+            - fetch_rpms
+            - build_executable
+      - install_manager:
+          requires:
+            - build_rpm

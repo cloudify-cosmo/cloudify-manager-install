@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .java import install, configure, remove  # NOQA
+from ..java.java import JavaComponent  # NOQA

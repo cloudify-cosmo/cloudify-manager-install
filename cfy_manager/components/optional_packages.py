@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from . import SOURCES, VENV
+from .components_constants import SOURCES, VENV
 
 from .service_names import DEV, RESTSERVICE, MGMTWORKER, AMQPINFLUX
 

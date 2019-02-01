@@ -23,7 +23,7 @@ from os.path import join, isabs
 from jinja2 import Environment, FileSystemLoader
 
 from .network import is_url, curl_download
-from .common import move, sudo, copy, remove, chmod
+from .common import move, sudo, copy, remove
 
 from ..config import config
 from ..logger import get_logger
@@ -38,6 +38,13 @@ _template_env = Environment(loader=FileSystemLoader('/'))
 def _read(path):
     with open(path, 'r') as f:
         return f.read()
+
+
+def sudo_read(path):
+    # This will probably fail with binary files
+    # If we start needing it for such files, the best approach is likely:
+    # copy to tmpfile; chown; read; delete tmpfile
+    return sudo(['cat', path]).aggr_stdout
 
 
 def replace_in_file(this, with_this, in_here):
@@ -101,9 +108,6 @@ def write_to_tempfile(contents, json_dump=False, cleanup=True):
 
     with open(file_path, 'w') as f:
         f.write(contents)
-
-    # By default, tempfiles are created with a permission of 600
-    chmod('644', file_path)
 
     if cleanup:
         config.add_temp_path_to_clean(file_path)

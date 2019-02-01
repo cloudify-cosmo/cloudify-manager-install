@@ -1,0 +1,426 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import argparse
+import os
+import re
+import subprocess
+import sys
+import zipfile
+
+from Queue import Empty, Queue
+from threading import Thread, Lock, Event
+
+
+# Not using click or the cfy_manager/logging.py so that this remains a single
+# file download that is immediately usable without installing anything outside
+# of python stdlib
+EDITIONS = {
+    'community': {
+        'repo': 'cloudify-cosmo/cloudify-versions.git',
+        'requires_auth': False,
+    },
+    'premium': {
+        'repo': 'cloudify-cosmo/cloudify-premium.git',
+        'requires_auth': True,
+    },
+}
+
+RPM_BUILDER_BASE = '/tmp/tmp-install-rpm/build'
+
+RPM_PREFIX = re.compile('[^0-9]+')
+# regex to extract a package name from a full RPM filename
+
+ZIP_URL = "https://github.com/cloudify-cosmo/{0}/archive/{1}.zip"
+CLI_INFO = {'name': 'cloudify-cli', 'patterns': ['/cloudify-cli']}
+AGENT_INFO = {'name': 'cloudify-agent', 'patterns': ['/cloudify-agents']}
+MANAGER_INFO = {
+    'name': 'cloudify-manager',
+    'patterns': [
+        '/cloudify-amqp',
+        '/cloudify-amqp-postgres',
+        '/cloudify-rest-service',
+        '/cloudify-premium',
+        '/cloudify-rabbitmq',
+        '/cloudify-management-worker',
+        '/cloudify-manager-ip-setter',
+        '/cloudify-riemann'
+    ]
+}
+
+
+def print_in_color(message, color, stream=None):
+    """
+        Print a line in color.
+    """
+    if stream:
+        func = stream.write
+    else:
+        func = sys.stdout.write
+
+    esc_seq = '\x1b['
+    reset = esc_seq + '39;49;00m'
+    colors = {
+        'red': esc_seq + '31;01m',
+        'green': esc_seq + '32;01m',
+        'yellow': esc_seq + '33;01m',
+        'blue': esc_seq + '34;01m',
+        'magenta': esc_seq + '35;01m',
+        'cyan': esc_seq + '36;01m',
+    }
+
+    func(colors[color] + message + reset + '\n')
+
+
+def print_status_update(message):
+    """
+        Print clear status update, differentiated from general command output.
+    """
+    line = "-------------------------------------------------------------"
+
+    print_in_color(line, 'yellow')
+    print_in_color(message, 'blue')
+    print_in_color(line, 'yellow')
+
+
+def determine_rpm_location(rpmbuild_output):
+    """
+        Determine the full path of the RPM file produced by fpm.
+    """
+    # Expecting ruby-style output:
+    # {:timestamp=>"2017-12-04T18:31:03.884873+0000", :message=>"Created package", :path=>"cloudify-manager-install-1.0-premium.x86_64.rpm"}  # noqa
+    # Or, when overwriting:
+    # {:timestamp=>"2017-12-04T19:12:30.367577+0000", :message=>"Force flag given. Overwriting package at cloudify-manager-install-1.0-premium.x86_64.rpm", :level=>:warn}  # noqa
+    # {:timestamp=>"2017-12-04T19:12:54.776960+0000", :message=>"Created package", :path=>"cloudify-manager-install-1.0-premium.x86_64.rpm"}  # noqa
+    # We want the path to the produced RPM:
+    # We only need the last line
+    rpmbuild_output = rpmbuild_output.splitlines()[-1]
+    # First, get just the list of items without surrounding whitespace and
+    # without the leading and trailing braces
+    rpmbuild_output = rpmbuild_output.strip().strip('{}').split(',')
+    rpmbuild_output = [element.strip()
+                       for element in rpmbuild_output]
+    # Now split each element on the rocket ruby uses to key hashes
+    rpmbuild_output = [element.split('=>')
+                       for element in rpmbuild_output]
+    # And now it's as close to being a dict as we could hope for!
+    rpmbuild_output = dict(rpmbuild_output)
+    return rpmbuild_output[':path'].strip('"')
+
+
+def exit_with_sadness(message):
+    """
+        Display an error then exit with an error status.
+    """
+    print_in_color(message, 'red', stream=sys.stderr)
+    sys.exit(1)
+
+
+def exit_helpfully_on_failure(command, error,
+                              return_output=False, shell=False):
+    """
+        Try to run a command, but exit with a useful error message on failure.
+        If return_output is set to True then the stderr and stdout will be out
+        of order but the stdout will be returned.
+    """
+    if return_output:
+        func = subprocess.check_output
+    else:
+        func = subprocess.check_call
+    try:
+        result = func(command, shell=shell,
+                      env={'PATH': os.environ.get('PATH')})
+        if return_output:
+            # This will put stdout out of order with stderr, but allows us to
+            # parse the resulting output if we need to
+            print(result)
+            return result
+    except subprocess.CalledProcessError as e:
+        message = 'Tried to execute: {command}'.format(
+            # This is not necessarily exactly what we tried to execute, but is
+            # often good enough to provide pointers for troubleshooting.
+            command=' '.join(command),
+        )
+        print_in_color(message, 'red', stream=sys.stderr)
+        if return_output:
+            print(e.output)
+        exit_with_sadness(error)
+    except OSError as e:
+        if e.errno != 2:
+            raise
+        message = 'No such file: {0}'.format(command[0])
+        print_in_color(message, 'red', stream=sys.stderr)
+        if return_output:
+            print(str(e))
+        exit_with_sadness(message)
+
+
+def git_clone_and_checkout(branch, repo, repo_destination_path):
+    subprocess.check_call([
+        'git', 'clone', '-q',
+        '--branch=' + branch,
+        '--depth=1',
+        repo,
+        repo_destination_path,
+    ])
+
+
+def get_package_urls_file(edition, branch, repo_destination_path):
+    """
+        Get the package urls list, returning the paths to the file (in a dict).
+        If the given branch does not exists, will default to repo's master.
+    """
+    edition_details = EDITIONS[edition]
+    repo_path = edition_details['repo']
+    auth_required = edition_details['requires_auth']
+
+    using_credentials = False
+    print_status_update('Getting package urls.')
+    if auth_required:
+        print('Authentication is required...')
+        if (
+            'GITHUB_USERNAME' in os.environ and
+            'GITHUB_PASSWORD' in os.environ
+        ):
+            print('Username and password have been supplied.')
+            repo = 'https://{username}:{password}@github.com/'.format(
+                username=os.environ['GITHUB_USERNAME'],
+                password=os.environ['GITHUB_PASSWORD'],
+            )
+            repo += '{repo_path}'
+            using_credentials = True
+        else:
+            print('Username and password not supplied, SSH key will be used.')
+            repo = 'git@github.com:{repo_path}'
+    else:
+        print('Authentication not required.')
+        repo = 'https://github.com/{repo_path}'
+
+    repo = repo.format(repo_path=repo_path)
+
+    if using_credentials:
+        # If credentials are used, don't spit them onto the screen.
+        # Note that if there's an error they will be dumped to the screen.
+        output_repo = repo.split('@')[-1]
+        output_repo = 'http://****:****@' + output_repo
+    else:
+        output_repo = repo
+    print('Cloning {branch} from: {repo}'.format(
+        repo=output_repo,
+        branch=branch,
+    ))
+
+    # We can't use the normal utility function for this or we will spit
+    # passwords onto the screen.
+    try:
+        git_clone_and_checkout(branch, repo, repo_destination_path)
+    except subprocess.CalledProcessError:
+        print('Could not git clone: {repo}, defaults to master'
+              .format(repo=output_repo))
+        git_clone_and_checkout('master', repo, repo_destination_path)
+
+    return {
+        'manager': os.path.join(repo_destination_path,
+                                'packages-urls/manager-packages.yaml'),
+    }
+
+
+def is_branch_exists(module_name, dev_branch):
+    subprocess.check_call([
+        'curl', '-sLO', ZIP_URL.format(module_name, dev_branch),
+    ])
+    try:
+        zip_file = zipfile.ZipFile('{}.zip'.format(dev_branch))
+        ret = zip_file.testzip()
+        exit_helpfully_on_failure(
+            command=['rm', '-f', '{}.zip'.format(dev_branch)],
+            error='Could not delete zip file.',
+        )
+        if ret is not None:
+            print ("Dev branch: {0} exists on '{1}' repo, but zip file is "
+                   "corrupted, error: {2}"
+                   .format(dev_branch, module_name, ret))
+            sys.exit(1)
+        else:
+            print("Dev branch: {0} exists on '{1}' repo"
+                  .format(dev_branch, module_name))
+            return True
+    except zipfile.BadZipfile:
+        return False
+
+
+def replace_manager_resources_location(manager_resources_file, modules_info,
+                                       dev_branch):
+    # In case of dev_branch manager resources packages should be downloaded
+    # from dev_branch location
+    with open(manager_resources_file) as f:
+        content = f.read()
+    for module_info in modules_info:
+        for pattern in module_info['patterns']:
+            release_dir = '{0}{1}'.format('.dev1-release', pattern)
+            build_dir = '{0}{1}'.format('.dev1-build', pattern)
+            ga_release_dir = '{0}{1}'.format('ga-release', pattern)
+            ga_build_dir = '{0}{1}'.format('ga-build', pattern)
+            string_to_replace = '/{0}{1}'.format(dev_branch, pattern)
+            print("Replacing '{0}' with '{1}' or '{2}' with '{3}' in '{4}'.".
+                  format(release_dir, build_dir, ga_release_dir,
+                         ga_build_dir, manager_resources_file))
+            content = content\
+                .replace(release_dir, build_dir)\
+                .replace(ga_release_dir, ga_build_dir)
+            print("Replacing '{0}' with '{1}' in '{2}'."
+                  .format(pattern, string_to_replace, manager_resources_file))
+            content = content.replace(pattern, string_to_replace)
+    with open(manager_resources_file, "w") as f:
+        f.write(content)
+
+
+def update_resources_url_on_dev_branch(dev_branch, manager_resources_file):
+    modules_info = []
+    if is_branch_exists(MANAGER_INFO['name'], dev_branch):
+        modules_info.append(MANAGER_INFO)
+    if is_branch_exists(CLI_INFO['name'], dev_branch):
+        modules_info.append(CLI_INFO)
+    if is_branch_exists(AGENT_INFO['name'], dev_branch):
+        modules_info.append(AGENT_INFO)
+
+    replace_manager_resources_location(manager_resources_file,
+                                       modules_info, dev_branch)
+
+
+def file_downloader(download_queue, log_lock, has_errors):
+    while True:
+        try:
+            source, destination = download_queue.get_nowait()
+        except Empty:
+            return
+        with log_lock:
+            print('Downloading {url}...'.format(url=source))
+        try:
+            subprocess.check_output(
+                [
+                    'curl', '--retry', '10', '--fail', '--silent',
+                    '--show-error', '--location',
+                    '-o', destination,
+                    source,
+                ],
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as e:
+            has_errors.set()
+            with log_lock:
+                print('Error downloading {url}: {e}'.format(url=source, e=e))
+        else:
+            with log_lock:
+                print('...finished downloading {url}'.format(url=source))
+        finally:
+            download_queue.task_done()
+
+
+def _resources_download_queue(resource_file, destination_path):
+    """Prepare a Queue populated with resource paths to download
+    """
+    local_files = os.listdir('.')
+    # Collect a list of local packages (package name, not full filename)
+    package_names = set(RPM_PREFIX.findall(f)[0] for f in local_files)
+
+    download_queue = Queue()
+    with open(resource_file) as resources:
+        for resource in resources:
+            resource = resource.strip()
+            if (not resource) or resource.startswith('#'):
+                # Cope with blank lines and comments
+                continue
+            resource_file_name = os.path.basename(resource)
+            # Trim the filename to before the first digit, so that we're
+            # comparing by package name only, not version.
+            resource_file_prefix = RPM_PREFIX.findall(resource_file_name)[0]
+            if resource_file_prefix in package_names:
+                # Use local copy instead
+                continue
+            destination = os.path.join(destination_path, resource_file_name)
+            download_queue.put((resource, destination))
+    return download_queue
+
+
+def download_listed_resources(resource_file, destination_path, concurrency=5):
+    """Download resources listed in a file."""
+    download_queue = _resources_download_queue(resource_file, destination_path)
+    log_lock = Lock()
+    has_errors = Event()
+    for _ in range(concurrency):
+        t = Thread(target=file_downloader,
+                   args=(download_queue, log_lock, has_errors))
+        t.daemon = True
+        t.start()
+
+    download_queue.join()
+    if has_errors.is_set():
+        raise RuntimeError('Some of the resources were not downloaded! '
+                           'See the log above for details')
+
+
+def retrieve_resources(edition, branch, dev_branch):
+    """
+        Retrieve all of the required resources for the installer.
+    """
+    package_urls_destination = os.path.join(RPM_BUILDER_BASE, 'tmp-urls')
+    current_branch = dev_branch or branch
+    package_url_files = get_package_urls_file(
+        edition,
+        current_branch,
+        package_urls_destination,
+    )
+    if dev_branch:
+        update_resources_url_on_dev_branch(
+            dev_branch, package_url_files['manager'])
+    print_status_update('Downloading resources...')
+    download_listed_resources(
+        package_url_files['manager'],
+        '.',
+    )
+
+    exit_helpfully_on_failure(
+        command=[
+            'rm', '-rf', package_urls_destination,
+        ],
+        error='Could not clean up package urls dir.',
+    )
+
+
+if __name__ == '__main__':
+    # Env vars are still supported for compatibility with the current build
+    # approach.
+    # Yes, documenting the env vars like this is a bit ugly. It would be nicer
+    # if we made them arguments instead!
+    parser = argparse.ArgumentParser(
+        description='Download component RPMs for the manager installer'
+    )
+
+    parser.add_argument(
+        '-e', '--edition',
+        help='Specify which edition of cloudify to build',
+        choices=EDITIONS.keys(),
+        default='premium',
+    )
+
+    parser.add_argument(
+        '-b', '--branch',
+        help=(
+            'Which branch of cloudify versions/premium repo to get package '
+            'list from.'
+        ),
+        default='master',
+    )
+
+    parser.add_argument(
+        '--dev-branch',
+        help='Dev branch to get package resources from.',
+        default='',
+    )
+
+    args = parser.parse_args()
+    retrieve_resources(
+        edition=args.edition,
+        branch=args.branch,
+        dev_branch=args.dev_branch
+    )

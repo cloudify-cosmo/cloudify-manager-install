@@ -19,11 +19,31 @@ import platform
 import netifaces
 from getpass import getuser
 from collections import namedtuple
+from ipaddress import ip_address
 from distutils.version import LooseVersion
 
-from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS, SKIP_VALIDATIONS, SSL_INPUTS
-
-from .service_names import MANAGER
+from .components_constants import (
+    PRIVATE_IP,
+    PUBLIC_IP,
+    VALIDATIONS,
+    SKIP_VALIDATIONS,
+    SSL_INPUTS,
+    MASTER_IP,
+    SSL_ENABLED,
+    SERVICES_TO_INSTALL,
+    ENABLE_REMOTE_CONNECTIONS,
+    POSTGRES_PASSWORD
+)
+from .service_components import (
+    DATABASE_SERVICE,
+    MANAGER_SERVICE
+)
+from .service_names import (
+    MANAGER,
+    CLUSTER,
+    POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER
+)
 
 from ..config import config
 from ..logger import get_logger
@@ -31,7 +51,6 @@ from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
 from ..utils.common import run, sudo
-from ..utils.install import RpmPackageHandler
 
 logger = get_logger(VALIDATIONS)
 
@@ -87,45 +106,65 @@ def _validate_supported_distros():
         )
 
 
-def _validate_private_ip():
-    logger.info('Validating private IP address...')
-    private_ip = config[MANAGER][PRIVATE_IP]
-    all_addresses = set()
-    found = False
-    for interface in netifaces.interfaces():
-        int_addresses = netifaces.ifaddresses(interface)
-        if not int_addresses:
-            logger.debug(
-                'Could not find any addresses for interface {0}'.format(
-                    interface))
-            continue
-        inet_addresses = int_addresses.get(netifaces.AF_INET)
-        if not inet_addresses:
-            logger.debug('No AF_INET addresses found for interface {0}'.format(
-                interface))
-            continue
-        for inet_addr in inet_addresses:
-            addr = inet_addr.get('addr')
-            if not addr:
-                logger.debug('No addr found for {0}'.format(inet_addr))
-                continue
-            if addr == private_ip:
-                found = True
-                break
-            all_addresses.add(addr)
-        if found:
-            break
+def _validate_ip(ip_to_validate, check_local_interfaces=False):
+    """
+    Validate the IP address given is valid.
 
-    if not found:
-        _errors.append(
-            "The provided private IP ({ip}) is not associated with any INET-"
-            "type address available on this machine (available INET-type "
-            "addresses: {addresses}). This will cause installation to fail. "
-            "If you are certain that this IP address should be used, please "
-            "set the '{param}' parameter to 'false'".format(
-                ip=private_ip,
-                addresses=', '.join(all_addresses),
-                param=SKIP_VALIDATIONS))
+    :param ip_to_validate: IP address to validate
+    :param check_local_interfaces: If true, will check local interfaces
+           associated with the IP address
+    :return: Will break in case of error
+    """
+    logger.info('Validating IP address...')
+
+    try:
+        # ip_address() requires a unicode string
+        ip_address(unicode(ip_to_validate, 'utf-8'))
+    except ValueError:
+        logger.debug('Failed creating an IP address from "{}"'.format(
+            ip_to_validate), exc_info=True)
+        logger.info('Provided value ({}) is not an IP address; '
+                    'skipping'.format(ip_to_validate))
+        return
+
+    if check_local_interfaces:
+        all_addresses = set()
+        found = False
+        for interface in netifaces.interfaces():
+            int_addresses = netifaces.ifaddresses(interface)
+            if not int_addresses:
+                logger.debug(
+                    'Could not find any addresses for interface {0}'.format(
+                        interface))
+                continue
+            inet_addresses = int_addresses.get(netifaces.AF_INET)
+            if not inet_addresses:
+                logger.debug('No AF_INET addresses found for interface {0}'
+                             .format(interface))
+                continue
+            for inet_addr in inet_addresses:
+                addr = inet_addr.get('addr')
+                if not addr:
+                    logger.debug('No addr found for {0}'.format(inet_addr))
+                    continue
+                if addr == ip_to_validate:
+                    found = True
+                    break
+                all_addresses.add(addr)
+            if found:
+                break
+
+        if not found:
+            _errors.append(
+                "The provided private IP ({ip}) is not associated with any "
+                "INET-type address available on this machine (available "
+                "INET-type addresses: {addresses}). This will cause "
+                "installation to fail. If you are certain that this IP address"
+                " should be used, please set the '{param}' parameter to "
+                "'false'".format(
+                    ip=ip_to_validate,
+                    addresses=', '.join(all_addresses),
+                    param=SKIP_VALIDATIONS))
 
 
 def _validate_python_version():
@@ -227,39 +266,16 @@ def _validate_user_has_sudo_permissions():
         )
 
 
-def _validate_dependencies():
-    logger.info('Validating Cloudify Manager dependencies...')
-    dependencies = {
-        'sudo': 'necessary to run commands with root privileges',
-        'openssl-1.0.2k': 'necessary for creating certificates',
-        'logrotate': 'used in Cloudify logs',
-        'systemd-sysv': 'required by the PostgreSQL DB',
-        'initscripts': 'required by the RabbitMQ server',
-        'which': 'used when installing Logstash plugins',
-        'python-setuptools': 'required by python',
-        'python-backports': 'required by python',
-        'python-backports-ssl_match_hostname': 'required by python',
-        'openssh-server': 'required by the sanity check'
-    }
+def _validate_dependencies(components):
+    logger.info('Validating dependencies...')
 
-    missing_packages = {}
-    for dep, reason in dependencies.items():
-        logger.debug('Validating that `{dep}` is installed'.format(dep=dep))
-        if not RpmPackageHandler.is_package_installed(dep):
-            missing_packages[dep] = reason
+    components_str = ', '.join([component.__class__.__name__
+                               for component in components])
+    logger.debug('The following components are validated: '
+                 '{0}'.format(components_str))
 
-    if missing_packages:
-        error_msg = '\n'.join(
-            '`{package}` - {reason}'.format(package=package, reason=reason)
-            for package, reason in missing_packages.items()
-        )
-        packages = ' '.join(missing_packages.keys())
-        raise ValidationError(
-            'Prerequisite packages missing: \n{error_msg}.\n'
-            'Please ensure these packages are installed and try again.\n'
-            'Possible solution is to run - sudo yum install {packages}'
-            .format(error_msg=error_msg, packages=packages)
-        )
+    for component in components:
+        component.validate_dependencies()
 
 
 def _check_ssl_file(input_name, kind='Key', password=None):
@@ -347,8 +363,69 @@ def _check_internal_ca_cert():
 def _validate_cert_inputs():
     _check_internal_ca_cert()
     _check_key_and_cert('internal')
+    _check_key_and_cert('postgresql_server')
+    _check_key_and_cert('postgresql_client')
     _check_key_and_cert('external')
     _check_key_and_cert('external_ca')
+
+
+def _services_coexistence_assertion(service_in_list_to_install,
+                                    service_not_in_list_to_install):
+    return service_in_list_to_install in config[SERVICES_TO_INSTALL] and \
+           service_not_in_list_to_install not in config[SERVICES_TO_INSTALL]
+
+
+def _validate_postgres_inputs():
+    """
+    Validating that an external DB will always listen to remote connections
+    and, that a postgres password is set - needed for remote connections
+    """
+    if _services_coexistence_assertion(DATABASE_SERVICE, MANAGER_SERVICE):
+        if config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
+            not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] \
+            or \
+            not config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
+                config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
+            raise ValidationError('When using an external database, both '
+                                  'enable_remote_connections and '
+                                  'postgres_password must be set')
+
+    if _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
+        postgres_host = config[POSTGRESQL_CLIENT]['host'].split(':')[0]
+        if postgres_host in ('localhost', '127.0.0.1') and \
+                not config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]:
+            raise ValidationError('When using an external database, '
+                                  'postgres_password must be set')
+
+
+def _validate_postgres_ssl_certificates_provided():
+    error_msg = 'If Postgresql requires SSL communication {0} a ' \
+                'certificate and a key for Postgresql must be provided in ' \
+                'config.yaml->ssl_inputs->{1}'
+    if not (config[SSL_INPUTS]['postgresql_server_cert_path'] and
+            config[SSL_INPUTS]['postgresql_server_key_path'] and
+            config[SSL_INPUTS]['ca_cert_path']):
+        if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+            raise ValidationError(error_msg.format(
+                'a CA certificate,', 'postgresql_server'))
+    elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
+              config[SSL_INPUTS]['postgresql_client_key_path']):
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            raise ValidationError(error_msg.format('', 'postgresql_client'))
+
+
+def _validate_external_postgres_ssl_enabled():
+    """
+    Basically, making sure that if the manager and database are not on the same
+    machine, SSL for DB communication must be enabled
+    """
+    if not config[POSTGRESQL_SERVER][SSL_ENABLED] and \
+            _services_coexistence_assertion(DATABASE_SERVICE, MANAGER_SERVICE)\
+            or \
+            not config[POSTGRESQL_CLIENT][SSL_ENABLED] and \
+            _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
+        raise ValidationError('When using an external database, SSL must be '
+                              'enabled')
 
 
 def validate_config_access(write_required):
@@ -368,25 +445,32 @@ def validate_config_access(write_required):
                     USER_CONFIG_PATH, label))
 
 
-def validate(skip_validations=False):
+def validate(components, skip_validations=False):
     # Inputs always need to be validated, otherwise the install won't work
     _validate_inputs()
 
     # These dependencies also need to always be validated
-    _validate_dependencies()
+    _validate_dependencies(components)
 
     if config[VALIDATIONS][SKIP_VALIDATIONS] or skip_validations:
         logger.info('Skipping validations')
         return
 
     logger.notice('Validating local machine...')
-    _validate_private_ip()
+    _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
+    _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
+    if config[CLUSTER][MASTER_IP]:
+        _validate_ip(ip_to_validate=config[CLUSTER][MASTER_IP])
+        _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
     _validate_python_version()
     _validate_supported_distros()
     _validate_sufficient_memory()
     _validate_sufficient_disk_space()
     _validate_openssl_version()
     _validate_user_has_sudo_permissions()
+    _validate_postgres_inputs()
+    _validate_external_postgres_ssl_enabled()
+    _validate_postgres_ssl_certificates_provided()
     _validate_cert_inputs()
 
     if _errors:

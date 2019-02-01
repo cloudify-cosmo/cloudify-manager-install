@@ -20,12 +20,19 @@ import random
 
 from .. import constants
 from ..config import config
-from ..logger import get_logger, set_file_handlers_level
+from ..logger import (get_logger,
+                      set_file_handlers_level,
+                      get_file_handlers_level)
 from ..exceptions import InputError
 
-from .service_names import RABBITMQ, MANAGER, INFLUXDB
+from .service_names import (
+    RABBITMQ,
+    MANAGER,
+    INFLUXDB,
+    POSTGRESQL_CLIENT
+)
 
-from . import (
+from .components_constants import (
     PRIVATE_IP,
     ENDPOINT_IP,
     SECURITY,
@@ -33,14 +40,15 @@ from . import (
     CONSTANTS,
     ADMIN_PASSWORD,
     CLEAN_DB,
-    FLASK_SECURITY
+    FLASK_SECURITY,
+    SERVICES_TO_INSTALL,
+    SSL_ENABLED
 )
+from .service_components import MANAGER_SERVICE
 
 import logging
 
 BROKER_IP = 'broker_ip'
-BROKER_USERNAME = 'broker_user'
-BROKER_PASSWORD = 'broker_pass'
 logger = get_logger('Globals')
 
 
@@ -61,7 +69,6 @@ def _set_external_port_and_protocol():
 
 
 def _set_rabbitmq_config():
-    config[RABBITMQ][ENDPOINT_IP] = config[AGENT][BROKER_IP]
     config[RABBITMQ]['broker_cert_path'] = constants.CA_CERT_PATH
 
 
@@ -80,11 +87,6 @@ def _set_ip_config():
         networks['default'] = private_ip
 
 
-def _set_agent_broker_credentials():
-    config[AGENT][BROKER_USERNAME] = config[RABBITMQ]['username']
-    config[AGENT][BROKER_PASSWORD] = config[RABBITMQ]['password']
-
-
 def _set_constant_config():
     const_conf = config.setdefault(CONSTANTS, {})
 
@@ -93,6 +95,11 @@ def _set_constant_config():
     const_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
     const_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
     const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
+    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        const_conf['postgresql_client_cert_path'] = \
+            constants.POSTGRESQL_CLIENT_CERT_FILENAME
+        const_conf['postgresql_client_key_path'] = \
+            constants.POSTGRESQL_CLIENT_KEY_FILENAME
 
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
@@ -100,14 +107,22 @@ def _set_constant_config():
 def _set_admin_password():
     if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
         config[MANAGER][SECURITY][ADMIN_PASSWORD] = _generate_password()
+    print_password_to_screen()
+
+
+def print_password_to_screen():
+    if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
+        return
+    password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    current_level = get_file_handlers_level()
+    set_file_handlers_level(logging.ERROR)
+    logger.warning('Admin password: {0}'.format(password))
+    set_file_handlers_level(current_level)
 
 
 def _generate_password(length=12):
     chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
     password = ''.join(random.choice(chars) for _ in range(length))
-    set_file_handlers_level(logging.ERROR)
-    logger.warning('Generated password: {0}'.format(password))
-    set_file_handlers_level(logging.DEBUG)
     return password
 
 
@@ -144,7 +159,7 @@ def _generate_flask_security_config():
         'encoding_alphabet': _random_alphanumeric(),
         'encoding_block_size': 24,
         'encoding_min_length': 5,
-        'encryption_key': base64.urlsafe_b64encode(os.urandom(32))
+        'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
     }
 
 
@@ -171,13 +186,13 @@ def _validate_admin_password_and_security_config():
 
 def set_globals():
     _set_ip_config()
-    _set_agent_broker_credentials()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_influx_db_endpoint()
-    if config[CLEAN_DB]:
-        _set_admin_password()
-        _generate_flask_security_config()
-    else:
-        _validate_admin_password_and_security_config()
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        if config[CLEAN_DB]:
+            _set_admin_password()
+            _generate_flask_security_config()
+        else:
+            _validate_admin_password_and_security_config()

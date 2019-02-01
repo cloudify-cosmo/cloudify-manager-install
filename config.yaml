@@ -34,11 +34,28 @@ manager:
     admin_username: admin
     # If admin_password is left blank, a password will be generated for you and provided
     # to you at the end of the install process.
+    # IMPORTANT - In case of clustering with an external database, take note of the admin_password
     admin_password: ''
 
   monitoring_install: &monitoring_install
     # This will cause the monitoring components not to be installed if set to true
     skip_installation: true
+
+cluster:
+  # The cluster's master manager's IP to join to
+  # Must be in the same architecture as this manager:
+  #   I.E - all-in-one with all-in-one or external db with external db
+  # IMPORTANT - Make sure to update the admin_password's value with the correct
+  #             admin_password of the master manager
+  master_ip: ''
+
+  # The joining node's name
+  # In case node_name is left blank, it will be generated
+  node_name: ''
+
+  # The joining node's IP to use for cluster communication
+  # default: Private IP
+  host_ip: ''
 
 manager-ip-setter:
   sources:
@@ -66,6 +83,9 @@ provider_context:
         - {'http://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
         - {'https://www.getcloudify.org/spec': 'file:///opt/manager/resources/spec'}
         - {'https://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
+      # if this is set to true, the import resolver will try the original,
+      # non-resolved URL as well, if the resolved one returns a HTTP error
+      fallback: true
 
 agent:
   # A dict of network names and IP addresses associated with them.
@@ -75,6 +95,8 @@ agent:
   broker_port: 5671
   min_workers: 2
   max_workers: 5
+  # AMQP heartbeat timeout. 0 means no heartbeats
+  heartbeat: 30
 
 rabbitmq:
   # Sets the username/password to use for clients such as celery to connect to
@@ -87,9 +109,17 @@ rabbitmq:
   # Not used if an external endpoint is used.
   fd_limit: 102400
   nodename: cloudify-manager@localhost
+
+  # The hostname or IP address by which RabbitMQ is known to
+  # Cloudify Manager's components (REST service and management workers).
+  # This setting doesn't affect the hostname/IP by which agents access
+  # the manager.
+  endpoint_ip: localhost
+
   sources:
-    erlang_rpm_source_url: erlang-17.4-1.el6.x86_64.rpm
-    rabbitmq_rpm_source_url: rabbitmq-server-3.5.3-1.noarch.rpm
+    erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
+    socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm
+    rabbitmq_rpm_source_url: rabbitmq-server-3.7.7-1.el7.noarch.rpm
     cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
   # IP of the management API, should be localhost unless an external rabbitmq
@@ -145,7 +175,7 @@ influxdb:
   sources:
     influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
 
-postgresql:
+postgresql_server:
   sources:
     libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
     ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
@@ -153,21 +183,43 @@ postgresql:
     ps_contrib_rpm_url: postgresql95-contrib-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_server_rpm_url: postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_devel_rpm_url: postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
+
+  # For external postgres installation, set to true
+  enable_remote_connections: false
+  # Password to set for the postgres user
+  # This is only relevant for external postgres installations when you enable
+  # remote connections
+  postgres_password: ''
+
+  # SSL must be enabled for external databases - provide proper certificates
+  ssl_enabled: false
+
+postgresql_client:
+  sources:
+    ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
+    ps_rpm_url: postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
     psycopg2_rpm_url: python-psycopg2-2.5.1-3.el7.x86_64.rpm
 
   # Default values for the Postgres DB name, host, username and password
-  db_name: cloudify_db
+  # For external postgres installation, update accordingly
   host: localhost
+  # DB name, user name and password to be created
+  # default postgres user is used for database initialization
+  db_name: cloudify_db
   username: cloudify
   password: cloudify
+  # SSL must be enabled for external databases - provide proper certificates
+  ssl_enabled: false
+
+  # Password to use when connecting to the database with the postgres user
+  # This is only relevant for external postgres installations when you enable
+  # remote connections
+  postgres_password: ''
 
 java:
+  <<: *monitoring_install
   sources:
-    java_source_url: jre1.8.0_45-1.8.0_45-fcs.x86_64.rpm
-
-logstash:
-  sources:
-    cloudify_logstash_source_url: cloudify-logstash-*.rpm
+    java_source_url: jre-8u162-linux-x64.rpm
 
 stage:
   # If set to true, Cloudify UI will not be installed
@@ -203,7 +255,7 @@ restservice:
     file_size: 100
 
     # Number of historical log files to keep when rotating the REST service logs.
-    files_backup_count: 20
+    files_backup_count: 7
 
   gunicorn:
     # The number of gunicorn worker processes for handling requests. If the
@@ -252,11 +304,26 @@ restservice:
   #  even when `failed_logins_before_account_lock` has a value.
   account_lock_period: -1
 
+  # The default page size for REST queries
+  default_page_size: 1000
+
   # Additional environment variables to add to the REST Service's service
   # file.
   extra_env: {}
 
 nginx:
+  # Number of nginx worker processes to have.
+  # Specify "auto" to use nginx's recommended configuration of one
+  # process per core.
+  worker_processes: auto
+
+  # Number of connections that any nginx worker is allowed to carry simultaneously.
+  worker_connections: 4096
+
+  # Maximum number of open file descriptors that any nginx process
+  # is allowed to have.
+  max_open_fds: 102400
+
   sources:
     nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm
 
@@ -285,6 +352,10 @@ mgmtworker:
   # Additional environment variables to add to the management worker's service
   # file.
   extra_env: {}
+
+patch:
+  sources:
+    patch_source_url: patch-2.7.1-10.el7_5.x86_64.rpm
 
 cli:
   sources:
@@ -341,6 +412,10 @@ ssl_inputs:
   external_key_path: ''
   internal_cert_path: ''
   internal_key_path: ''
+  postgresql_server_cert_path: ''
+  postgresql_server_key_path: ''
+  postgresql_client_cert_path: ''
+  postgresql_client_key_path: ''
   ca_cert_path: ''
   ca_key_path: ''
   ca_key_password: ''
@@ -358,7 +433,7 @@ usage_collector:
     active: true
 
     # Sets the interval between running the uptime collector in hours
-    interval_in_hours: 2
+    interval_in_hours: 4
 
   collect_cloudify_usage:
     # True if the usage collector will be installed
@@ -368,3 +443,18 @@ usage_collector:
     interval_in_days: 1
 
 flask_security: {}
+
+# list of services - manager_service, queue_service, database_service, composer_service
+#                    will install only these services on this machine
+# I.E - all-in-one installation
+# services_to_install:
+#   - database_service
+#   - queue_service
+#   - composer_service
+#   - manager_service
+
+services_to_install:
+  - 'database_service'
+  - 'queue_service'
+  - 'composer_service'
+  - 'manager_service'

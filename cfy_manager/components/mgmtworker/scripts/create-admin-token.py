@@ -1,5 +1,6 @@
+#!/opt/manager/env/bin/python
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +21,7 @@ import os
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 RESTSEC_CONFIG_PATH = '/opt/manager/rest-security.conf'
 MANAGER_PYTHON = '/opt/manager/env/bin/python'
-AUTH_TOKEN_LOCATION = '/opt/cloudify-stage/resources/admin_token'
+AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def generate_auth_token():
