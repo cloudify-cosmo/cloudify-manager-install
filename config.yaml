@@ -37,10 +37,6 @@ manager:
     # IMPORTANT - In case of clustering with an external database, take note of the admin_password
     admin_password: ''
 
-  monitoring_install: &monitoring_install
-    # This will cause the monitoring components not to be installed if set to true
-    skip_installation: true
-
 cluster:
   # The cluster's master manager's IP to join to
   # Must be in the same architecture as this manager:
@@ -146,35 +142,6 @@ rabbitmq:
     # the message byte length! Not used if an external endpoint is used.
     logs_queue_length_limit: 1000000
 
-    # Sets the number of milliseconds to wait before a message expires
-    # in the metrics queues. Not used if an external endpoint is used.
-    metrics_queue_message_ttl: 60000
-
-    # Sets the number of messages the metrics queues can hold. This applies to
-    # both the queue that amqp-influx pulls from and the ones Riemann pulls
-    # from. Note this is NOT the message byte length! Not used if an external
-    # endpoint is used.
-    metrics_queue_length_limit: 1000000
-
-riemann:
-  <<: *monitoring_install
-  sources:
-    daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
-    riemann_source_url: riemann-0.2.6-1.noarch.rpm
-    cloudify_riemann_url: cloudify-riemann-*.rpm
-
-amqpinflux:
-  <<: *monitoring_install
-  sources:
-    amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
-
-influxdb:
-  <<: *monitoring_install
-  # An IP Endpoint of your InfluxDB Cluster.
-  endpoint_ip: ''
-  sources:
-    influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
-
 postgresql_server:
   sources:
     libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
@@ -215,11 +182,6 @@ postgresql_client:
   # This is only relevant for external postgres installations when you enable
   # remote connections
   postgres_password: ''
-
-java:
-  <<: *monitoring_install
-  sources:
-    java_source_url: jre-8u162-linux-x64.rpm
 
 stage:
   # If set to true, Cloudify UI will not be installed
@@ -377,7 +339,6 @@ dev:
   pip_constraints: ''
   sources:
     cloudify_resources_url: ''
-    amqpinflux_source_url: ''
     rest_client_source_url: ''
     plugins_common_source_url: ''
     script_plugin_source_url: ''
