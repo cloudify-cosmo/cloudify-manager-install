@@ -27,9 +27,6 @@ TRY_BRANCHES = (os.getenv('CIRCLE_BRANCH'), 'master')
 # Keys: other repositories in the same organization
 # Values: collection of Workflow jobs from which we need to fetch artifacts.
 REPOS = {
-    'cloudify-amqp-influxdb': {
-        'build-rpm': {'cloudify-*.rpm'},
-    },
     'cloudify-manager': {
         'build-rpms': {'cloudify-*.rpm'},
     },

@@ -118,14 +118,6 @@ class RabbitMQComponent(BaseComponent):
             'message-ttl': metrics['events_queue_message_ttl'],
             'max-length': metrics['events_queue_length_limit']
         }
-        metrics_queue_message_policy = {
-            'message-ttl': metrics['metrics_queue_message_ttl'],
-            'max-length': metrics['metrics_queue_length_limit']
-        }
-        riemann_deployment_queues_message_ttl = {
-            'message-ttl': metrics['metrics_queue_message_ttl'],
-            'max-length': metrics['metrics_queue_length_limit']
-        }
 
         logger.info("Setting RabbitMQ Policies...")
         self._set_rabbitmq_policy(
@@ -137,16 +129,6 @@ class RabbitMQComponent(BaseComponent):
             name='events_queue_message_policy',
             expression='^cloudify-events$',
             policy=events_queue_message_policy
-        )
-        self._set_rabbitmq_policy(
-            name='metrics_queue_message_policy',
-            expression=r'^amq\.gen.*$',
-            policy=metrics_queue_message_policy
-        )
-        self._set_rabbitmq_policy(
-            name='riemann_deployment_queues_message_ttl',
-            expression='^.*-riemann$',
-            policy=riemann_deployment_queues_message_ttl
         )
 
     def _start_rabbitmq(self):

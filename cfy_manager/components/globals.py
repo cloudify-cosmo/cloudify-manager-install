@@ -28,7 +28,6 @@ from ..exceptions import InputError
 from .service_names import (
     RABBITMQ,
     MANAGER,
-    INFLUXDB,
     POSTGRESQL_CLIENT
 )
 
@@ -126,21 +125,6 @@ def _generate_password(length=12):
     return password
 
 
-def _set_influx_db_endpoint():
-    influxdb_endpoint_ip = config[INFLUXDB][ENDPOINT_IP]
-
-    if influxdb_endpoint_ip:
-        # The InfluxDB endpoint and `is_internal` could've been set by a
-        # previous install/configure, so we validate before setting
-        is_internal = config[INFLUXDB].setdefault('is_internal', False)
-        if not is_internal:
-            logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
-                influxdb_endpoint_ip))
-    else:
-        config[INFLUXDB]['is_internal'] = True
-        config[INFLUXDB][ENDPOINT_IP] = "localhost"
-
-
 def _random_alphanumeric(result_len=31):
     """
     :return: random string of unique alphanumeric characters
@@ -189,7 +173,6 @@ def set_globals():
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
-    _set_influx_db_endpoint()
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         if config[CLEAN_DB]:
             _set_admin_password()

@@ -50,13 +50,6 @@ class MgmtWorkerComponent(BaseComponent):
         source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
         yum_install(source_url)
 
-        # TODO: Take care of this
-        # Prepare riemann dir. We will change the owner to riemann later,
-        # but the management worker will still need access to it
-        # common.mkdir('/opt/riemann')
-        # utils.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, riemann_dir)
-        # utils.chmod('770', riemann_dir)
-
     def _deploy_mgmtworker_config(self):
         config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
         config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
