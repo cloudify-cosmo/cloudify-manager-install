@@ -326,7 +326,7 @@ cli:
 sanity:
   # If set to true, the sanity blueprint install/uninstall will not be
   # performed during Cloudify Manager installation
-  skip_sanity: true
+  skip_sanity: false
   sources:
     sanity_source_url: cloudify-hello-world-example-*.tar.gz
 
