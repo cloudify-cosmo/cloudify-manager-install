@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ from .sanity import SanityComponent  # NOQA
 from .stage import StageComponent  # NOQA
 from .usage_collector import UsageCollectorComponent  # NOQA
 from .cluster.cluster import ClusterComponent  # NOQA
+from .patch.patch import PatchComponent  # NOQA
 
 from components_factory import ComponentsFactory  # NOQA
 from service_components import SERVICE_COMPONENTS  # NOQA

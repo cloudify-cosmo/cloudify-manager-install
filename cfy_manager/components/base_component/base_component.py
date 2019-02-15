@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,11 +16,7 @@
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...exceptions import ValidationError
-from ...utils.install import RpmPackageHandler, yum_install, yum_remove
-from ..components_constants import (
-    SOURCES,
-)
-from ...config import config
+from ...utils.install import RpmPackageHandler
 from ...logger import get_logger
 
 
@@ -31,8 +27,7 @@ class BaseComponent(object):
         self.skip_installation = skip_installation
 
     def install(self):
-        sources = config['patch'][SOURCES]
-        yum_install(sources['patch_source_url'])
+        pass
 
     def configure(self):
         pass
@@ -44,8 +39,7 @@ class BaseComponent(object):
         pass
 
     def remove(self):
-        sources = config['patch'][SOURCES]
-        yum_remove(sources['patch_source_url'])
+        pass
 
     def _get_dependencies(self):
         dependencies_dict = {}
