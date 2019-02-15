@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ from . import (
     ClusterComponent,
     CliComponent,
     UsageCollectorComponent,
+    PatchComponent,
     SanityComponent
 )
 
@@ -56,5 +57,6 @@ class ComponentsFactory:
             "cluster": ClusterComponent(skip_installation),
             "cli": CliComponent(skip_installation),
             "usage_collector": UsageCollectorComponent(skip_installation),
+            "patch": PatchComponent(skip_installation),
             "sanity": SanityComponent(skip_installation)
         }[component_name]
