@@ -35,5 +35,4 @@ from components_factory import ComponentsFactory  # NOQA
 from service_components import SERVICE_COMPONENTS  # NOQA
 from service_components import MANAGER_SERVICE  # NOQA
 from service_components import QUEUE_SERVICE  # NOQA
-from service_components import COMPOSER_SERVICE  # NOQA
 from service_components import SERVICE_INSTALLATION_ORDER  # NOQA

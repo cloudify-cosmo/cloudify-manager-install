@@ -21,13 +21,73 @@ import tempfile
 from os.path import join
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown
+from .common import sudo, remove, chown, copy
+from ..components.components_constants import SSL_INPUTS
+from ..config import config
+from ..constants import SSL_CERTS_TARGET_DIR
 from .files import write_to_file, write_to_tempfile
 
 from ..logger import get_logger
 from .. import constants as const
 
 logger = get_logger('Certificates')
+
+
+def handle_ca_cert():
+    """
+    The user might provide both the CA key and the CA cert, or just the
+    CA cert, or nothing. It is an error to only provide the CA key.
+    If the user provided nothing, we must generate a CA cert+key.
+    :return: True if there's a CA key available (either passed or
+    generated)
+    """
+    if os.path.exists(const.CA_CERT_PATH):
+        # CA certificate already deployed, no action required
+        return os.path.exists(const.CA_KEY_PATH)
+    logger.info('Handling CA certificate...')
+    cert_deployed, key_deployed = deploy_cert_and_key(
+        prefix='ca',
+        cert_dst_path=const.CA_CERT_PATH,
+        key_dst_path=const.CA_KEY_PATH
+    )
+
+    has_ca_key = key_deployed
+
+    if cert_deployed:
+        logger.info('Deployed user provided CA cert')
+    else:
+        logger.info('Generating CA certificate...')
+        generate_ca_cert()
+        has_ca_key = True
+
+    return has_ca_key
+
+
+def deploy_cert_and_key(prefix, cert_dst_path, key_dst_path):
+    if not os.path.exists(SSL_CERTS_TARGET_DIR):
+        sudo(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
+
+    cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
+    key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
+    key_password = \
+        config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
+
+    cert_deployed = False
+    key_deployed = False
+
+    if os.path.isfile(cert_path):
+        copy(cert_path, cert_dst_path)
+        cert_deployed = True
+    if os.path.isfile(key_path):
+        if key_password:
+            remove_key_encryption(key_path,
+                                  key_dst_path,
+                                  key_password)
+        else:
+            copy(key_path, key_dst_path)
+        key_deployed = True
+
+    return cert_deployed, key_deployed
 
 
 def _format_ips(ips):
@@ -68,13 +128,15 @@ def _format_ips(ips):
 
 def store_cert_metadata(internal_rest_host,
                         networks=None,
-                        filename=const.CERT_METADATA_FILE_PATH):
+                        filename=const.CERT_METADATA_FILE_PATH,
+                        owner=const.CLOUDIFY_USER,
+                        group=const.CLOUDIFY_GROUP):
     metadata = load_cert_metadata()
     metadata['internal_rest_host'] = internal_rest_host
     if networks is not None:
         metadata['networks'] = networks
     write_to_file(metadata, filename, json_dump=True)
-    chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, filename)
+    chown(owner, group, filename)
 
 
 def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):

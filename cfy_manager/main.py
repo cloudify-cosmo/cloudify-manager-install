@@ -25,7 +25,6 @@ from .components import (
     SERVICE_COMPONENTS,
     MANAGER_SERVICE,
     QUEUE_SERVICE,
-    COMPOSER_SERVICE,
     SERVICE_INSTALLATION_ORDER
 )
 from .components.globals import set_globals, print_password_to_screen
@@ -150,7 +149,6 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
                 config[POSTGRESQL_CLIENT]['ssl_enabled'] = True
                 config[SERVICES_TO_INSTALL] = [
                     QUEUE_SERVICE,
-                    COMPOSER_SERVICE,
                     MANAGER_SERVICE
                 ]
             elif any([join_cluster, database_ip, postgres_password]):

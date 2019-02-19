@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, isfile
+from os.path import join
 from collections import namedtuple
 
 from ..components_constants import (
@@ -49,29 +49,6 @@ logger = get_logger(NGINX)
 class NginxComponent(BaseComponent):
     def __init__(self, skip_installation):
         super(NginxComponent, self).__init__(skip_installation)
-
-    def _deploy_cert_and_key(self, prefix, cert_dst_path, key_dst_path):
-        cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
-        key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
-        key_password = \
-            config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
-
-        cert_deployed = False
-        key_deployed = False
-
-        if isfile(cert_path):
-            common.copy(cert_path, cert_dst_path)
-            cert_deployed = True
-        if isfile(key_path):
-            if key_password:
-                certificates.remove_key_encryption(key_path,
-                                                   key_dst_path,
-                                                   key_password)
-            else:
-                common.copy(key_path, key_dst_path)
-            key_deployed = True
-
-        return cert_deployed, key_deployed
 
     def _install(self):
         nginx_source_url = config[NGINX][SOURCES]['nginx_source_url']
@@ -114,32 +91,6 @@ class NginxComponent(BaseComponent):
         if config[SSL_INPUTS]['external_ca_key_password']:
             config[SSL_INPUTS]['external_ca_key_password'] = '<removed>'
 
-    def _handle_ca_cert(self):
-        """
-        The user might provide both the CA key and the CA cert, or just the
-        CA cert, or nothing. It is an error to only provide the CA key.
-        If the user provided nothing, we must generate a CA cert+key.
-        :return: True if there's a CA key available (either passed or
-        generated)
-        """
-        logger.info('Handling CA certificate...')
-        cert_deployed, key_deployed = self._deploy_cert_and_key(
-            prefix='ca',
-            cert_dst_path=constants.CA_CERT_PATH,
-            key_dst_path=constants.CA_KEY_PATH
-        )
-
-        has_ca_key = key_deployed
-
-        if cert_deployed:
-            logger.info('Deployed user provided CA cert')
-        else:
-            logger.info('Generating CA certificate...')
-            certificates.generate_ca_cert()
-            has_ca_key = True
-
-        return has_ca_key
-
     def _handle_internal_cert(self, has_ca_key):
         """
         The user might provide the internal cert and the internal key, or
@@ -151,7 +102,7 @@ class NginxComponent(BaseComponent):
         :param has_ca_key: True if there's a CA key available
         """
         logger.info('Handling internal certificate...')
-        cert_deployed, key_deployed = self._deploy_cert_and_key(
+        cert_deployed, key_deployed = certificates.deploy_cert_and_key(
             prefix='internal',
             cert_dst_path=constants.INTERNAL_CERT_PATH,
             key_dst_path=constants.INTERNAL_KEY_PATH
@@ -165,7 +116,7 @@ class NginxComponent(BaseComponent):
 
     def _handle_external_cert(self):
         logger.info('Handling external certificate...')
-        cert_deployed, key_deployed = self._deploy_cert_and_key(
+        cert_deployed, key_deployed = certificates.deploy_cert_and_key(
             prefix='external',
             cert_dst_path=constants.EXTERNAL_CERT_PATH,
             key_dst_path=constants.EXTERNAL_KEY_PATH
@@ -183,12 +134,7 @@ class NginxComponent(BaseComponent):
                         'all certificates')
             return
 
-        # Needs to be run here, because openssl is required and is
-        # installed by nginx
-        common.remove(constants.SSL_CERTS_TARGET_DIR)
-        common.mkdir(constants.SSL_CERTS_TARGET_DIR)
-
-        has_ca_key = self._handle_ca_cert()
+        has_ca_key = certificates.handle_ca_cert()
         self._handle_internal_cert(has_ca_key)
         self._handle_external_cert()
 
