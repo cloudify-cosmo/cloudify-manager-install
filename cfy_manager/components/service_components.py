@@ -23,15 +23,15 @@ SERVICE_COMPONENTS = {
     "database_service": [
         "postgresql_server"
     ],
-    "queue_service": [],
-    "composer_service": [],
+    "queue_service": [
+        "rabbitmq",
+    ],
     "manager_service": [
         "manager",
         "manager_ip_setter",
         "nginx",
         "python",
         "postgresql_client",
-        "rabbitmq",
         "restservice",
         "amqp_postgres",
         "stage",
@@ -52,7 +52,6 @@ SERVICE_COMPONENTS = {
 # Service names constants
 DATABASE_SERVICE = 'database_service'
 QUEUE_SERVICE = 'queue_service'
-COMPOSER_SERVICE = 'composer_service'
 MANAGER_SERVICE = 'manager_service'
 
 # endregion
@@ -64,7 +63,6 @@ MANAGER_SERVICE = 'manager_service'
 SERVICE_INSTALLATION_ORDER = [
     DATABASE_SERVICE,
     QUEUE_SERVICE,
-    COMPOSER_SERVICE,
     MANAGER_SERVICE
 ]
 

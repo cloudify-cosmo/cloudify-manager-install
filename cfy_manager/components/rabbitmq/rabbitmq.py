@@ -16,10 +16,18 @@
 import json
 from os.path import join
 
-from ..components_constants import SOURCES, CONFIG
+from ..components_constants import (
+    AGENT,
+    CONFIG,
+    PRIVATE_IP,
+    SERVICES_TO_INSTALL,
+    SOURCES,
+)
+from ..service_components import MANAGER_SERVICE
 from ..base_component import BaseComponent
-from ..service_names import RABBITMQ
+from ..service_names import RABBITMQ, MANAGER
 from ... import constants
+from ...utils import certificates
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError, NetworkError
@@ -95,6 +103,36 @@ class RabbitMQComponent(BaseComponent):
                                rabbitmq_username,
                                'administrator'])
 
+    def _generate_rabbitmq_certs(self):
+        logger.info('Generating rabbitmq certificate...')
+
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            has_ca_key = certificates.handle_ca_cert()
+        else:
+            has_ca_key = False
+        networks = config[AGENT]['networks']
+        rabbit_host = config[MANAGER][PRIVATE_IP]
+
+        certificates.store_cert_metadata(
+            rabbit_host,
+            networks,
+            owner='rabbitmq',
+            group='rabbitmq',
+        )
+        cert_ips = [rabbit_host] + list(networks.values())
+
+        sign_cert = constants.CA_CERT_PATH if has_ca_key else None
+        sign_key = constants.CA_KEY_PATH if has_ca_key else None
+
+        certificates._generate_ssl_certificate(
+            ips=cert_ips,
+            cn=rabbit_host,
+            cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
+            key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
+            sign_cert=sign_cert,
+            sign_key=sign_key,
+        )
+
     def _set_rabbitmq_policy(self, name, expression, policy):
         policy = json.dumps(policy)
         logger.debug('Setting policy {0} on queues {1} to {2}'.format(
@@ -157,6 +195,7 @@ class RabbitMQComponent(BaseComponent):
     def _configure(self):
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
+        self._generate_rabbitmq_certs()
         self._init_service()
         self._delete_guest_user()
         self._create_rabbitmq_user()

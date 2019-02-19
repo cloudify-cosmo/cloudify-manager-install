@@ -405,17 +405,15 @@ usage_collector:
 
 flask_security: {}
 
-# list of services - manager_service, queue_service, database_service, composer_service
+# list of services - manager_service, queue_service, database_service
 #                    will install only these services on this machine
 # I.E - all-in-one installation
 # services_to_install:
 #   - database_service
 #   - queue_service
-#   - composer_service
 #   - manager_service
 
 services_to_install:
   - 'database_service'
   - 'queue_service'
-  - 'composer_service'
   - 'manager_service'
