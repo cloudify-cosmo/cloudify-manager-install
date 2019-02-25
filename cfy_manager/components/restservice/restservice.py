@@ -16,6 +16,7 @@
 import json
 import urllib2
 import subprocess
+from collections import namedtuple
 from os.path import join, exists
 
 from . import db
@@ -62,6 +63,7 @@ REST_CONFIG_PATH = join(HOME_DIR, 'cloudify-rest.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(HOME_DIR, 'authorization.conf')
 REST_SECURITY_CONFIG_PATH = join(HOME_DIR, 'rest-security.conf')
 logger = get_logger(RESTSERVICE)
+CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(HOME_DIR, 'license_key.pem.pub')
 
 
 class RestServiceComponent(BaseComponent):
@@ -74,18 +76,27 @@ class RestServiceComponent(BaseComponent):
         config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
         config[RESTSERVICE][VENV] = REST_VENV
 
-    def _deploy_rest_configuration(self):
-        logger.info('Deploying REST Service Configuration file...')
-        deploy(join(CONFIG_PATH, 'cloudify-rest.conf'), REST_CONFIG_PATH)
-        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                     REST_CONFIG_PATH)
-
-    def _deploy_authorization_configuration(self):
-        logger.info('Deploying REST authorization configuration file...')
-        deploy(join(CONFIG_PATH, 'authorization.conf'),
-               REST_AUTHORIZATION_CONFIG_PATH)
-        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                     REST_AUTHORIZATION_CONFIG_PATH)
+    def _deploy_restservice_files(self):
+        logger.info('Deploying REST authorization, REST Service configuration'
+                    'and Cloudify licenses public key...')
+        resource = namedtuple('Resource', 'src dst')
+        resources = [
+            resource(
+                src=join(CONFIG_PATH, 'cloudify-rest.conf'),
+                dst=REST_CONFIG_PATH
+            ),
+            resource(
+                src=join(CONFIG_PATH, 'authorization.conf'),
+                dst=REST_AUTHORIZATION_CONFIG_PATH
+            ),
+            resource(
+                src=join(CONFIG_PATH, 'license_key.pem.pub'),
+                dst=CLOUDIFY_LICENSE_PUBLIC_KEY_PATH
+            )]
+        for resource in resources:
+            deploy(resource.src, resource.dst)
+            common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                         resource.dst)
 
     def _pre_create_snapshot_paths(self):
         for resource_dir in (
@@ -153,9 +164,8 @@ class RestServiceComponent(BaseComponent):
 
     def _configure_restservice(self):
         self._calculate_worker_count()
-        self._deploy_rest_configuration()
+        self._deploy_restservice_files()
         self._deploy_security_configuration()
-        self._deploy_authorization_configuration()
         self._chown_resources_dir()
 
     def _verify_restservice(self):
