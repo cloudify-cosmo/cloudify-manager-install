@@ -84,9 +84,18 @@ provider_context:
       fallback: true
 
 agent:
-  # A dict of network names and IP addresses associated with them.
+  # A dict of network names and IP addresses of managers and brokers associated with them.
   # By default, there is only a "default" network, with the manager's
-  # private IP associated with it. This network can be overwritten
+  # private IP and broker IPs associated with it. This network can be overwritten.
+  # Structure:
+  # networks:
+  #   <network_name>: 
+  #     manager: <manager address or ip>
+  #     brokers:
+  #       - <broker name or ip1>
+  #       ...
+  #       - >broker name or ipN>
+  #   <network2_name>: ...
   networks: {}
   broker_port: 5671
   min_workers: 2
