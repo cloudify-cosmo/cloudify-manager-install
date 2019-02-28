@@ -17,6 +17,7 @@
 import json
 import argparse
 import logging
+from datetime import datetime
 
 from flask_migrate import upgrade
 
@@ -66,6 +67,17 @@ def _get_amqp_manager():
     )
 
 
+def _insert_config(config):
+    sm = get_storage_manager()
+    for item in config:
+        inst = models.Config(
+            _updater_id=0,
+            updated_at=datetime.now(),
+            **item
+        )
+        sm.put(inst)
+
+
 def _add_provider_context(context):
     sm = get_storage_manager()
     provider_context = models.ProviderContext(
@@ -93,5 +105,6 @@ if __name__ == '__main__':
     _init_db_tables(script_config['db_migrate_dir'])
     amqp_manager = _get_amqp_manager()
     _add_default_user_and_tenant(amqp_manager, script_config)
+    _insert_config(script_config['config'])
     _add_provider_context(script_config['provider_context'])
     print 'Finished creating bootstrap admin, default tenant and provider ctx'

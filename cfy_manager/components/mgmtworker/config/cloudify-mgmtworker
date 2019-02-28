@@ -11,10 +11,8 @@ BROKER_SSL_CERT_PATH="{{ constants.ca_cert_path }}"
 KERBEROS_ENV=false
 MANAGER_FILE_SERVER_URL="{{ manager.file_server_url }}"
 MANAGER_FILE_SERVER_ROOT="{{ manager.file_server_root }}"
-C_FORCE_ROOT=true
 MAX_WORKERS="{{ mgmtworker.max_workers }}"
 MIN_WORKERS="{{ mgmtworker.min_workers }}"
-GATEKEEPER_BUCKET_SIZE="{{ mgmtworker.gatekeeper_bucket_size }}"
 {% for key, value in mgmtworker.extra_env.iteritems() %}
 {{ key }}="{{ value }}"
 {% endfor %}

@@ -67,3 +67,7 @@ POSTGRESQL_CLIENT_KEY_PATH = \
 CERT_METADATA_FILE_PATH = join(SSL_CERTS_TARGET_DIR, 'certificate_metadata')
 
 CFY_EXEC_TEMPDIR_ENVVAR = 'CFY_EXEC_TEMP'
+
+# config scopes
+REST_SCOPE = 'rest'
+MGMTWORKER_SCOPE = 'mgmtworker'

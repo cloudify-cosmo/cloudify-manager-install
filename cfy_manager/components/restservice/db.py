@@ -15,6 +15,7 @@
 
 from os.path import join
 
+from .manager_config import make_manager_config
 from ..components_constants import (
     SCRIPTS,
     PROVIDER_CONTEXT,
@@ -78,7 +79,8 @@ def _create_args_dict():
         'provider_context': _get_provider_context(),
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
-                               'migrations')
+                               'migrations'),
+        'config': [item._asdict() for item in make_manager_config()],
     }
     return args_dict
 
