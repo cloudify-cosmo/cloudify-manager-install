@@ -81,7 +81,20 @@ def _create_args_dict():
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
+        'rabbitmq_brokers': [
+            {
+                'name': 'rabbitmq',
+                'host': config['rabbitmq']['endpoint_ip'],
+                'management_host':
+                    config['rabbitmq']['management_endpoint_ip'],
+                'username': config['rabbitmq']['username'],
+                'password': config['rabbitmq']['password'],
+                'params': None
+            }
+        ],
     }
+    with open(constants.CA_CERT_PATH) as f:
+        args_dict['ca_cert'] = f.read()
     return args_dict
 
 
