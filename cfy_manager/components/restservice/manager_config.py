@@ -161,7 +161,7 @@ def make_manager_config():
             True
         ),
         ConfigItem(
-            'mgmtworker_max_workers',
+            'mgmtworker_min_workers',
             config['mgmtworker']['min_workers'],
             MGMTWORKER_SCOPE,
             {'type': 'number', 'minimum': 1},
