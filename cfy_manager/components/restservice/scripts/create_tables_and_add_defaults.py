@@ -69,7 +69,7 @@ def _get_amqp_manager():
 
 def _insert_config(config):
     sm = get_storage_manager()
-    for item in config.items():
+    for item in config:
         inst = models.Config(
             _updater_id=0,
             updated_at=datetime.now(),
