@@ -16,13 +16,11 @@
 from collections import namedtuple
 
 from ...config import config
-
+from ...constants import REST_SCOPE, MGMTWORKER_SCOPE
 
 ConfigItem = namedtuple('ConfigItem', [
     'name', 'value', 'scope', 'schema', 'is_editable'
 ])
-REST_SCOPE = 'rest'
-MGMTWORKER_SCOPE = 'mgmtworker'
 
 
 def make_manager_config():
