@@ -24,14 +24,14 @@ from ..base_component import BaseComponent
 from ..service_names import SANITY, MANAGER, CLUSTER
 from ...config import config
 from ...logger import get_logger
-from ...constants import CLOUDIFY_HOME_DIR
+from ...constants import CLOUDIFY_HOME_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common
 from ...utils.network import wait_for_port
-from ...utils.files import get_local_source_path
+from ...utils.files import get_local_source_path, write_to_file, remove_files
 
 
 logger = get_logger(SANITY)
-
+SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 AUTHORIZED_KEYS_PATH = expanduser('~/.ssh/authorized_keys')
 SANITY_WEB_SERVER_PORT = 12774
 
@@ -52,7 +52,8 @@ class SanityComponent(BaseComponent):
         self._add_ssh_key_to_authorized(key_path)
         return new_path
 
-    def _add_ssh_key_to_authorized(self, ssh_key_path):
+    @staticmethod
+    def _add_ssh_key_to_authorized(ssh_key_path):
         public_ssh = '{0}.pub'.format(ssh_key_path)
         if isfile(AUTHORIZED_KEYS_PATH):
             logger.debug('Adding sanity SSH key to current authorized_keys...')
@@ -69,13 +70,15 @@ class SanityComponent(BaseComponent):
             common.move(public_ssh, AUTHORIZED_KEYS_PATH)
         common.remove(dirname(ssh_key_path))
 
-    def _remove_sanity_ssh(self, ssh_key_path):
+    @staticmethod
+    def _remove_sanity_ssh(ssh_key_path):
         # This removes the last line from the file
         common.run(["sed -i '$ d' {0}".format(AUTHORIZED_KEYS_PATH)],
                    shell=True)
         common.remove(ssh_key_path)
 
-    def _upload_blueprint(self):
+    @staticmethod
+    def _upload_blueprint():
         logger.info('Uploading sanity blueprint...')
         sanity_source_url = config[SANITY][SOURCES]['sanity_source_url']
         sanity_blueprint = get_local_source_path(sanity_source_url)
@@ -83,7 +86,8 @@ class SanityComponent(BaseComponent):
                     'no-monitoring-singlehost-blueprint.yaml', '-b', SANITY],
                    stdout=sys.stdout)
 
-    def _deploy_app(self, ssh_key_path):
+    @staticmethod
+    def _deploy_app(ssh_key_path):
         logger.info('Deploying sanity app...')
         manager_ip = config[MANAGER][PRIVATE_IP]
         ssh_user = getpass.getuser()
@@ -94,15 +98,18 @@ class SanityComponent(BaseComponent):
                     '-i', 'webserver_port={0}'.format(SANITY_WEB_SERVER_PORT)],
                    stdout=sys.stdout)
 
-    def _install_sanity(self):
+    @staticmethod
+    def _install_sanity():
         logger.info('Installing sanity app...')
         common.run(['cfy', 'executions', 'start', 'install', '-d', SANITY],
                    stdout=sys.stdout)
 
-    def _verify_sanity(self):
+    @staticmethod
+    def _verify_sanity():
         wait_for_port(SANITY_WEB_SERVER_PORT)
 
-    def _clean_old_sanity(self):
+    @staticmethod
+    def _clean_old_sanity():
         logger.debug('Removing remnants of old sanity '
                      'installation if exists...')
         common.remove('/opt/mgmtworker/work/deployments/default_tenant/sanity')
@@ -113,8 +120,8 @@ class SanityComponent(BaseComponent):
         self._deploy_app(ssh_key_path)
         self._install_sanity()
 
-    # @retrying.retry(stop_max_attempt_number=3, wait_fixed=1000)
-    def _clean_sanity(self):
+    @staticmethod
+    def _clean_sanity():
         logger.info('Removing sanity...')
         common.run(['cfy', 'executions', 'start', 'uninstall', '-d', SANITY],
                    stdout=sys.stdout)
@@ -124,8 +131,18 @@ class SanityComponent(BaseComponent):
         common.run(['cfy', 'blueprints', 'delete', SANITY],
                    stdout=sys.stdout)
 
+    @staticmethod
+    def _enter_sanity_mode():
+        write_to_file('sanity: True', SANITY_MODE_FILE_PATH)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, SANITY_MODE_FILE_PATH)
+
+    @staticmethod
+    def _exit_sanity_mode():
+        remove_files([SANITY_MODE_FILE_PATH])
+
     def run_sanity_check(self):
         logger.notice('Running Sanity...')
+        self._enter_sanity_mode()
         ssh_key_path = self._create_ssh_key()
         self._run_sanity(ssh_key_path)
         self._verify_sanity()
@@ -137,7 +154,10 @@ class SanityComponent(BaseComponent):
         if config[SANITY]['skip_sanity'] or config[CLUSTER][MASTER_IP]:
             logger.info('Skipping sanity check...')
             return
-        self.run_sanity_check()
+        try:
+            self.run_sanity_check()
+        finally:
+            self._exit_sanity_mode()
 
     def configure(self):
         pass
