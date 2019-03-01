@@ -33,7 +33,6 @@ from .service_names import (
 
 from .components_constants import (
     PRIVATE_IP,
-    ENDPOINT_IP,
     SECURITY,
     AGENT,
     CONSTANTS,

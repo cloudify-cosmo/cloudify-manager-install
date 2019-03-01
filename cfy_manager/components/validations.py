@@ -23,7 +23,6 @@ from ipaddress import ip_address
 from distutils.version import LooseVersion
 
 from .components_constants import (
-    AGENT,
     PRIVATE_IP,
     PUBLIC_IP,
     VALIDATIONS,
@@ -49,7 +48,7 @@ from .service_names import (
 from ..config import config
 from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
-from ..exceptions import InputError, ValidationError
+from ..exceptions import ValidationError
 
 from ..utils.common import run, sudo
 
