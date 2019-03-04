@@ -17,7 +17,6 @@
 import json
 import argparse
 import logging
-from datetime import datetime
 
 from flask_migrate import upgrade
 
@@ -69,13 +68,10 @@ def _get_amqp_manager():
 
 def _insert_config(config):
     sm = get_storage_manager()
-    for item in config:
-        inst = models.Config(
-            _updater_id=0,
-            updated_at=datetime.now(),
-            **item
-        )
-        sm.put(inst)
+    for name, value in config.items():
+        inst = sm.get(models.Config, None, filters={'name': name})
+        inst.value = value
+        sm.update(inst)
 
 
 def _add_provider_context(context):

@@ -80,7 +80,7 @@ def _create_args_dict():
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
-        'config': [item._asdict() for item in make_manager_config()],
+        'config': make_manager_config(),
     }
     return args_dict
 
