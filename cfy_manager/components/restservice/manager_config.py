@@ -13,158 +13,35 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from collections import namedtuple
-
 from ...config import config
-from ...constants import REST_SCOPE, MGMTWORKER_SCOPE
-
-ConfigItem = namedtuple('ConfigItem', [
-    'name', 'value', 'scope', 'schema', 'is_editable'
-])
 
 
 def make_manager_config():
-    return [
-        ConfigItem(
-            'rest_service_log_path',
+    return {
+        'rest_service_log_path':
             config['restservice']['log_dir'] + '/cloudify-rest-service.log',
-            [REST_SCOPE],
-            None,
-            False
-        ),
-        ConfigItem(
-            'rest_service_log_level',
-            config['restservice']['log']['level'],
-            [REST_SCOPE],
-            {'type': 'string', 'enum': ['DEBUG', 'INFO', 'WARNING',
-                                        'ERROR', 'CRITICAL']},
-            True
-        ),
-        ConfigItem(
-            'ldap_server',
-            config['restservice']['ldap']['server'],
-            [REST_SCOPE],
-            {'type': 'string'},
-            True
-        ),
-        ConfigItem(
-            'ldap_username',
-            config['restservice']['ldap']['username'],
-            [REST_SCOPE],
-            {'type': 'string'},
-            True
-        ),
-        ConfigItem(
-            'ldap_password',
-            config['restservice']['ldap']['password'],
-            [REST_SCOPE],
-            {'type': 'string'},
-            True
-        ),
-        ConfigItem(
-            'ldap_domain',
-            config['restservice']['ldap']['domain'],
-            [REST_SCOPE],
-            {'type': 'string'},
-            True
-        ),
-        ConfigItem(
-            'ldap_is_active_directory',
+        'rest_service_log_level': config['restservice']['log']['level'],
+        'ldap_server': config['restservice']['ldap']['server'],
+        'ldap_username': config['restservice']['ldap']['username'],
+        'ldap_password': config['restservice']['ldap']['password'],
+        'ldap_domain': config['restservice']['ldap']['domain'],
+        'ldap_is_active_directory':
             config['restservice']['ldap']['is_active_directory'],
-            [REST_SCOPE],
-            {'type': 'boolean'},
-            True
-        ),
-        ConfigItem(
-            'ldap_dn_extra',
-            config['restservice']['ldap']['dn_extra'],
-            [REST_SCOPE],
-            None,
-            True
-        ),
-        ConfigItem(
-            'ldap_timeout',
-            5.0,
-            [REST_SCOPE],
-            {'type': 'number'},
-            True
-        ),
-        ConfigItem(
-            'file_server_root',
-            config['manager']['file_server_root'],
-            [REST_SCOPE],
-            None,
-            False
-        ),
-        ConfigItem(
-            'file_server_url',
-            config['manager']['file_server_url'],
-            [REST_SCOPE],
-            None,
-            False
-        ),
-        ConfigItem(
-            'insecure_endpoints_disabled',
+        'ldap_dn_extra': config['restservice']['ldap']['dn_extra'],
+        'ldap_timeout': 5.0,
+        'file_server_root': config['manager']['file_server_root'],
+        'file_server_url': config['manager']['file_server_url'],
+        'insecure_endpoints_disabled':
             config['restservice']['insecure_endpoints_disabled'],
-            [REST_SCOPE],
-            {'type': 'boolean'},
-            False
-        ),
-        ConfigItem(
-            'maintenance_folder',
+        'maintenance_folder':
             config['restservice']['home_dir'] + '/maintenance',
-            [REST_SCOPE],
-            None,
-            False
-        ),
-        ConfigItem(
-            'min_available_memory_mb',
+        'min_available_memory_mb':
             config['restservice']['min_available_memory_mb'],
-            [REST_SCOPE],
-            {'type': 'number', 'minimum': 0},
-            True
-        ),
-        ConfigItem(
-            'failed_logins_before_account_lock',
+        'failed_logins_before_account_lock':
             config['restservice']['failed_logins_before_account_lock'],
-            [REST_SCOPE],
-            {'type': 'number', 'minimum': 1},
-            True
-        ),
-        ConfigItem(
-            'account_lock_period',
-            config['restservice']['account_lock_period'],
-            [REST_SCOPE],
-            {'type': 'number', 'minimum': -1},
-            True
-        ),
-        ConfigItem(
-            'public_ip',
-            config['manager']['public_ip'],
-            [REST_SCOPE],
-            None,
-            False
-        ),
-        ConfigItem(
-            'default_page_size',
-            config['restservice']['default_page_size'],
-            [REST_SCOPE],
-            {'type': 'number', 'minimum': 1},
-            True
-        ),
-
-        ConfigItem(
-            'mgmtworker_max_workers',
-            config['mgmtworker']['max_workers'],
-            [MGMTWORKER_SCOPE],
-            {'type': 'number', 'minimum': 1},
-            True
-        ),
-        ConfigItem(
-            'mgmtworker_min_workers',
-            config['mgmtworker']['min_workers'],
-            [MGMTWORKER_SCOPE],
-            {'type': 'number', 'minimum': 1},
-            True
-        )
-    ]
+        'account_lock_period': config['restservice']['account_lock_period'],
+        'public_ip': config['manager']['public_ip'],
+        'default_page_size': config['restservice']['default_page_size'],
+        'mgmtworker_max_workers': config['mgmtworker']['max_workers'],
+        'mgmtworker_min_workers': config['mgmtworker']['min_workers'],
+    }
