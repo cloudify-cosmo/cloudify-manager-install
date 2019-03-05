@@ -68,11 +68,14 @@ class NginxComponent(BaseComponent):
         networks = config[AGENT]['networks']
         internal_rest_host = config[MANAGER][PRIVATE_IP]
 
-        certificates.store_cert_metadata(internal_rest_host, networks)
         cert_ips = set([internal_rest_host])
+        cert_ips.update(certificates.get_managers_from_networks(networks))
 
-        for network in networks.values():
-            cert_ips.add(network['manager'])
+        certificates.store_cert_metadata(
+            internal_rest_host,
+            new_managers=cert_ips,
+            new_networks=networks.keys(),
+        )
 
         certificates.generate_internal_ssl_cert(
             ips=cert_ips,

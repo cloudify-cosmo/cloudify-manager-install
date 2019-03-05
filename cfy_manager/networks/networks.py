@@ -19,17 +19,16 @@ import argh
 from os.path import join
 from cfy_manager.logger import get_logger
 from cfy_manager.utils import common
-from cfy_manager.utils.files import write_to_file
 from cfy_manager.constants import (
     NETWORKS_DIR,
-    CERT_METADATA_FILE_PATH,
-    CLOUDIFY_USER,
-    CLOUDIFY_GROUP
 )
 
 from cfy_manager.utils.certificates import (
     create_internal_certs,
-    load_cert_metadata
+    load_cert_metadata,
+    store_cert_metadata,
+    get_brokers_from_networks,
+    get_managers_from_networks,
 )
 
 logger = get_logger('networks')
@@ -63,13 +62,14 @@ def _update_metadata_file(networks):
     :param networks: a dict containing the new networks
     """
     metadata = load_cert_metadata()
-    old_networks = metadata.get('networks', {})
-    new_networks = networks.copy()
+    old_networks = metadata['network_names']
+    new_networks = networks.keys()
     _validate_duplicate_network(old_networks, new_networks)
-    new_networks.update(old_networks)
-    metadata['networks'] = new_networks
-    write_to_file(metadata, CERT_METADATA_FILE_PATH, json_dump=True)
-    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CERT_METADATA_FILE_PATH)
+    store_cert_metadata(
+        new_networks=networks.keys(),
+        new_brokers=get_brokers_from_networks(networks),
+        new_managers=get_managers_from_networks(networks),
+    )
 
 
 @argh.arg('--networks',
