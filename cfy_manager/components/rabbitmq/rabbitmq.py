@@ -133,7 +133,9 @@ class RabbitMQComponent(BaseComponent):
             certificates.store_cert_metadata(
                 {network_name: network['manager']
                  for network_name, network in networks.items()},
-                component='rabbitmq')
+                component='rabbitmq',
+                owner='rabbitmq',
+                group='rabbitmq')
             certificates.create_internal_certs()
 
     def _set_rabbitmq_policy(self, name, expression, policy):
