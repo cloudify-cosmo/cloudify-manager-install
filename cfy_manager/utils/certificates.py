@@ -133,7 +133,7 @@ def store_cert_metadata(networks,
     for network_name, ip in networks.items():
         network = metadata.get(network_name) or {}
         network[component] = ip
-        metadata[network_name] = networks
+        metadata[network_name] = network
     write_to_file(metadata, filename, json_dump=True)
     chown(owner, group, filename)
 
