@@ -353,9 +353,13 @@ def create_internal_certs(manager_ip=None,
     cert_metadata = load_cert_metadata(filename=metadata)
     internal_rest_host = manager_ip or cert_metadata['internal_rest_host']
 
-    networks = cert_metadata.get('networks', {})
-    networks['default'] = internal_rest_host
-    cert_ips = [internal_rest_host] + list(networks.values())
+    networks = cert_metadata['networks']
+    networks['default']['manager'] = internal_rest_host
+
+    cert_ips = [internal_rest_host]
+    for net in networks.values():
+        cert_ips.append(net['manager'])
+
     generate_internal_ssl_cert(
         ips=cert_ips,
         cn=internal_rest_host
