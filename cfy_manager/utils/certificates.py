@@ -320,7 +320,8 @@ def create_internal_certs(manager_ip=None,
     }
 
     for component, paths in components.items():
-        cert_ips = [network.get(component) for network in cert_metadata]
+        cert_ips = [network.get(component)
+                    for network in cert_metadata.values()]
         if not cert_ips:
             continue
         default = cert_metadata['default'].get(component) or cert_ips[0]
