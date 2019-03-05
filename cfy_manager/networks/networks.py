@@ -19,16 +19,13 @@ import argh
 from os.path import join
 from cfy_manager.logger import get_logger
 from cfy_manager.utils import common
-from cfy_manager.utils.files import write_to_file
 from cfy_manager.constants import (
     NETWORKS_DIR,
-    CERT_METADATA_FILE_PATH,
-    CLOUDIFY_USER,
-    CLOUDIFY_GROUP
 )
 
 from cfy_manager.utils.certificates import (
     create_internal_certs,
+    store_cert_metadata,
     load_cert_metadata
 )
 
@@ -57,21 +54,6 @@ def _validate_duplicate_network(old_networks, new_networks):
                             'run the command again'.format(network))
 
 
-def _update_metadata_file(networks):
-    """
-    Add the new networks to /etc/cloudify/ssl/certificate_metadata
-    :param networks: a dict containing the new networks
-    """
-    metadata = load_cert_metadata()
-    old_networks = metadata.get('networks', {})
-    new_networks = networks.copy()
-    _validate_duplicate_network(old_networks, new_networks)
-    new_networks.update(old_networks)
-    metadata['networks'] = new_networks
-    write_to_file(metadata, CERT_METADATA_FILE_PATH, json_dump=True)
-    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CERT_METADATA_FILE_PATH)
-
-
 @argh.arg('--networks',
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: `{"<network-name>": "<ip>"}`',
@@ -84,7 +66,11 @@ def add_networks(networks=None):
 
     networks = json.loads(networks)
 
-    _update_metadata_file(networks)
+    old_networks = load_cert_metadata()
+    _validate_duplicate_network(old_networks, networks)
+
+    store_cert_metadata(networks, component='rabbitmq')
+    store_cert_metadata(networks, component='nginx')
     create_internal_certs()
 
     _run_update_provider_context_script(networks)
