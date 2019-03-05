@@ -54,7 +54,6 @@ from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
-    create_pkcs12,
 )
 
 logger = get_logger('Main')
@@ -469,7 +468,6 @@ def main():
         restart,
         create_internal_certs,
         create_external_certs,
-        create_pkcs12,
         sanity_check,
         add_networks,
         update_encryption_key,

@@ -17,8 +17,6 @@ import os
 import argh
 import json
 import socket
-import tempfile
-from os.path import join
 from contextlib import contextmanager
 
 from .common import sudo, remove, chown, copy
@@ -126,15 +124,16 @@ def _format_ips(ips):
     return cert_metadata
 
 
-def store_cert_metadata(internal_rest_host,
-                        networks=None,
+def store_cert_metadata(networks,
+                        component,
                         filename=const.CERT_METADATA_FILE_PATH,
                         owner=const.CLOUDIFY_USER,
                         group=const.CLOUDIFY_GROUP):
     metadata = load_cert_metadata()
-    metadata['internal_rest_host'] = internal_rest_host
-    if networks is not None:
-        metadata['networks'] = networks
+    for network_name, ip in networks.items():
+        network = metadata.get(network_name) or {}
+        network[component] = ip
+        metadata[network_name] = networks
     write_to_file(metadata, filename, json_dump=True)
     chown(owner, group, filename)
 
@@ -252,19 +251,6 @@ def _generate_ssl_certificate(ips,
     return cert_path, key_path
 
 
-def generate_internal_ssl_cert(ips, cn):
-    cert_path, key_path = _generate_ssl_certificate(
-        ips,
-        cn,
-        const.INTERNAL_CERT_PATH,
-        const.INTERNAL_KEY_PATH,
-        sign_cert=const.CA_CERT_PATH,
-        sign_key=const.CA_KEY_PATH
-    )
-    create_pkcs12()
-    return cert_path, key_path
-
-
 def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
                                sign_key_password=None):
     return _generate_ssl_certificate(
@@ -289,39 +275,6 @@ def generate_ca_cert():
         '-out', const.CA_CERT_PATH,
         '-keyout', const.CA_KEY_PATH
     ])
-
-
-def create_pkcs12():
-    # PKCS12 file required for riemann due to JVM
-    # While we don't really want the private key in there, not having it
-    # causes failures
-    # The password is also a bit pointless here since it's in the same place
-    # as a readable copy of the certificate and if this path can be written to
-    # maliciously then all is lost already.
-    pkcs12_path = join(
-        const.SSL_CERTS_TARGET_DIR,
-        const.INTERNAL_PKCS12_FILENAME
-    )
-    # extract the cert from the file: in case internal cert is a bundle,
-    # we must only get the first cert from it (the server cert)
-    fh, temp_cert_file = tempfile.mkstemp()
-    sudo([
-        'openssl', 'x509',
-        '-in', const.INTERNAL_CERT_PATH,
-        '-out', temp_cert_file
-    ])
-    sudo([
-        'openssl', 'pkcs12', '-export',
-        '-out', pkcs12_path,
-        '-in', temp_cert_file,
-        '-inkey', const.INTERNAL_KEY_PATH,
-        '-password', 'pass:cloudify',
-    ])
-    remove(temp_cert_file)
-    logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
-                 'and key: {2}'
-                 .format(pkcs12_path, const.INTERNAL_CERT_PATH,
-                         const.INTERNAL_KEY_PATH))
 
 
 def remove_key_encryption(src_key_path,
@@ -350,21 +303,34 @@ def create_internal_certs(manager_ip=None,
             not os.path.exists(const.CA_KEY_PATH):
         raise RuntimeError('Internal CA key and cert mus be available to '
                            'generate internal certs')
+    if manager_ip:
+        store_cert_metadata({'default': manager_ip}, component='nginx')
+        store_cert_metadata({'default': manager_ip}, component='rabbitmq')
     cert_metadata = load_cert_metadata(filename=metadata)
-    internal_rest_host = manager_ip or cert_metadata['internal_rest_host']
 
-    networks = cert_metadata.get('networks', {})
-    networks['default'] = internal_rest_host
-    cert_ips = [internal_rest_host] + list(networks.values())
-    generate_internal_ssl_cert(
-        ips=cert_ips,
-        cn=internal_rest_host
-    )
-    store_cert_metadata(
-        internal_rest_host,
-        networks,
-        filename=metadata
-    )
+    components = {
+        'rabbitmq': {
+            'key': const.RABBITMQ_KEY_PATH,
+            'cert': const.RABBITMQ_CERT_PATH
+        },
+        'nginx': {
+            'key': const.INTERNAL_KEY_PATH,
+            'cert': const.INTERNAL_CERT_PATH
+        }
+    }
+
+    for component, paths in components.items():
+        cert_ips = [network.get(component) for network in cert_metadata]
+        default = cert_metadata['default'].get(component) or cert_ips[0]
+
+        _generate_ssl_certificate(
+            cert_ips,
+            default,
+            paths['cert'],
+            paths['key'],
+            sign_cert=const.CA_CERT_PATH,
+            sign_key=const.CA_KEY_PATH
+        )
 
 
 @argh.arg('--private-ip', help="The manager's private IP", required=True)

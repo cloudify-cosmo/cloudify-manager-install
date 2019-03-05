@@ -66,18 +66,12 @@ class NginxComponent(BaseComponent):
     def _generate_internal_certs(self):
         logger.info('Generating internal certificate...')
         networks = config[AGENT]['networks']
-        internal_rest_host = config[MANAGER][PRIVATE_IP]
 
-        certificates.store_cert_metadata(internal_rest_host, networks)
-        cert_ips = set([internal_rest_host])
-
-        for network in networks.values():
-            cert_ips.add(network['manager'])
-
-        certificates.generate_internal_ssl_cert(
-            ips=cert_ips,
-            cn=internal_rest_host
-        )
+        certificates.store_cert_metadata(
+            {network_name: network['manager']
+             for network_name, network in networks.items()},
+            component='nginx')
+        certificates.create_internal_certs()
 
     def _generate_external_certs(self):
         logger.info('Generating external certificate...')
@@ -114,8 +108,10 @@ class NginxComponent(BaseComponent):
 
         if cert_deployed and key_deployed:
             logger.info('Deployed user provided internal cert and key')
-            certificates.create_pkcs12()
         else:
+            if not has_ca_key:
+                raise RuntimeError(
+                    'No CA key, but no internal cert+key provided')
             self._generate_internal_certs()
 
     def _handle_external_cert(self):

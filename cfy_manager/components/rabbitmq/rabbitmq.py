@@ -19,13 +19,12 @@ from os.path import join
 from ..components_constants import (
     AGENT,
     CONFIG,
-    PRIVATE_IP,
     SERVICES_TO_INSTALL,
     SOURCES,
 )
 from ..service_components import MANAGER_SERVICE
 from ..base_component import BaseComponent
-from ..service_names import RABBITMQ, MANAGER
+from ..service_names import RABBITMQ
 from ... import constants
 from ...utils import certificates
 from ...config import config
@@ -115,35 +114,27 @@ class RabbitMQComponent(BaseComponent):
     def _generate_rabbitmq_certs(self):
         logger.info('Generating rabbitmq certificate...')
 
-        if self._install_manager():
-            has_ca_key = certificates.handle_ca_cert()
+        cert_deployed, key_deployed = certificates.deploy_cert_and_key(
+            prefix='internal',
+            cert_dst_path=constants.RABBITMQ_CERT_PATH,
+            key_dst_path=constants.RABBITMQ_KEY_PATH
+        )
+
+        if cert_deployed and key_deployed:
+            logger.info('Deployed user provided internal cert and key')
         else:
-            has_ca_key = False
-        networks = config[AGENT]['networks']
-        rabbit_host = config[MANAGER][PRIVATE_IP]
+            has_ca_key = certificates.handle_ca_cert()
+            if not has_ca_key:
+                raise RuntimeError(
+                    'No CA key, but no internal cert+key provided')
 
-        certificates.store_cert_metadata(
-            rabbit_host,
-            networks,
-            owner='rabbitmq',
-            group='rabbitmq',
-        )
-        cert_ips = set([rabbit_host])
+            networks = config[AGENT]['networks']
 
-        for network in networks.values():
-            cert_ips.update(network['brokers'])
-
-        sign_cert = constants.CA_CERT_PATH if has_ca_key else None
-        sign_key = constants.CA_KEY_PATH if has_ca_key else None
-
-        certificates._generate_ssl_certificate(
-            ips=cert_ips,
-            cn=rabbit_host,
-            cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
-            key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
-            sign_cert=sign_cert,
-            sign_key=sign_key,
-        )
+            certificates.store_cert_metadata(
+                {network_name: network['manager']
+                 for network_name, network in networks.items()},
+                component='rabbitmq')
+            certificates.create_internal_certs()
 
     def _set_rabbitmq_policy(self, name, expression, policy):
         policy = json.dumps(policy)
