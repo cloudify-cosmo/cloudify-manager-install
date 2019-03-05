@@ -294,7 +294,8 @@ def remove_key_encryption(src_key_path,
           '"internal_rest_host" and "networks" fields.')
 @argh.arg('--manager-ip', help='The IP of this machine on the default network')
 def create_internal_certs(manager_ip=None,
-                          metadata=const.CERT_METADATA_FILE_PATH):
+                          metadata=const.CERT_METADATA_FILE_PATH,
+                          for_component=None):
     """
     Recreate Cloudify Manager's internal certificates, based on the manager IP
     and a metadata file input
@@ -320,6 +321,8 @@ def create_internal_certs(manager_ip=None,
     }
 
     for component, paths in components.items():
+        if for_component and component != for_component:
+            continue
         cert_ips = [network.get(component)
                     for network in cert_metadata.values()
                     if network.get(component)]

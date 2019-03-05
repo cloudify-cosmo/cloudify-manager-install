@@ -136,7 +136,7 @@ class RabbitMQComponent(BaseComponent):
                 component='rabbitmq',
                 owner='rabbitmq',
                 group='rabbitmq')
-            certificates.create_internal_certs()
+            certificates.create_internal_certs(for_component='rabbitmq')
 
     def _set_rabbitmq_policy(self, name, expression, policy):
         policy = json.dumps(policy)

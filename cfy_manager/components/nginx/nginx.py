@@ -71,7 +71,7 @@ class NginxComponent(BaseComponent):
             {network_name: network['manager']
              for network_name, network in networks.items()},
             component='nginx')
-        certificates.create_internal_certs()
+        certificates.create_internal_certs(for_component='nginx')
 
     def _generate_external_certs(self):
         logger.info('Generating external certificate...')
