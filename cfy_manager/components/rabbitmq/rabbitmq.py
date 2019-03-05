@@ -122,16 +122,18 @@ class RabbitMQComponent(BaseComponent):
         networks = config[AGENT]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
+        cert_ips = set([rabbit_host])
+        cert_ips.update(certificates.get_brokers_from_networks(networks))
+
         certificates.store_cert_metadata(
             rabbit_host,
-            networks,
+            new_brokers=cert_ips,
+            new_networks=networks.keys(),
+            # The cfyuser won't exist yet (and may never exist if only rabbit
+            # is being installed)
             owner='rabbitmq',
             group='rabbitmq',
         )
-        cert_ips = set([rabbit_host])
-
-        for network in networks.values():
-            cert_ips.update(network['brokers'])
 
         sign_cert = constants.CA_CERT_PATH if has_ca_key else None
         sign_key = constants.CA_KEY_PATH if has_ca_key else None

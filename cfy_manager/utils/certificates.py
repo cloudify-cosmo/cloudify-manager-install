@@ -25,6 +25,7 @@ from .common import sudo, remove, chown, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR
+from ..exceptions import ProcessExecutionError
 from .files import write_to_file, write_to_tempfile
 
 from ..logger import get_logger
@@ -90,8 +91,11 @@ def deploy_cert_and_key(prefix, cert_dst_path, key_dst_path):
     return cert_deployed, key_deployed
 
 
-def _format_ips(ips):
+def _format_ips(ips, cn=None):
     altnames = set(ips)
+
+    if cn:
+        altnames.add(cn)
 
     # Ensure we trust localhost
     altnames.add('127.0.0.1')
@@ -126,24 +130,52 @@ def _format_ips(ips):
     return cert_metadata
 
 
-def store_cert_metadata(internal_rest_host,
-                        networks=None,
+def get_brokers_from_networks(networks):
+    brokers = []
+    for network in networks.values():
+        brokers.extend(network['brokers'])
+    return brokers
+
+
+def get_managers_from_networks(networks):
+    return [network['manager'] for network in networks.values()]
+
+
+def store_cert_metadata(private_ip=None,
+                        new_brokers=None,
+                        new_managers=None,
+                        new_networks=None,
                         filename=const.CERT_METADATA_FILE_PATH,
                         owner=const.CLOUDIFY_USER,
                         group=const.CLOUDIFY_GROUP):
     metadata = load_cert_metadata()
-    metadata['internal_rest_host'] = internal_rest_host
-    if networks is not None:
-        metadata['networks'] = networks
+    if private_ip:
+        metadata['internal_rest_host'] = private_ip
+    if new_brokers:
+        brokers = metadata.get('broker_addresses', [])
+        brokers.extend(new_brokers)
+        # Add, deduplicated
+        metadata['broker_addresses'] = list(set(brokers))
+    if new_managers:
+        managers = metadata.get('manager_addresses', [])
+        managers.extend(new_managers)
+        # Add, deduplicated
+        metadata['manager_addresses'] = list(set(managers))
+    if new_networks:
+        networks = metadata.get('network_names', [])
+        networks.extend(new_networks)
+        # Add, deduplicated
+        metadata['network_names'] = list(set(networks))
     write_to_file(metadata, filename, json_dump=True)
     chown(owner, group, filename)
 
 
 def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):
     try:
-        with open(filename) as f:
-            return json.load(f)
-    except IOError:
+        # Don't use open because file permissions may cause us to load
+        # nothing then stomp the contents if we do
+        return json.loads(sudo(['cat', filename]).aggr_stdout)
+    except ProcessExecutionError:
         return {}
 
 
@@ -199,8 +231,8 @@ def _generate_ssl_certificate(ips,
     :type sign_key: str
     :return: The path to the cert and key files on the manager
     """
-    # Remove duplicates from ips
-    subject_altnames = _format_ips(ips)
+    # Remove duplicates from ips and ensure CN is in SANs
+    subject_altnames = _format_ips(ips, cn)
     logger.debug(
         'Generating SSL certificate {0} and key {1} with subjectAltNames: {2}'
         .format(cert_path, key_path, subject_altnames)
@@ -353,16 +385,29 @@ def create_internal_certs(manager_ip=None,
     cert_metadata = load_cert_metadata(filename=metadata)
     internal_rest_host = manager_ip or cert_metadata['internal_rest_host']
 
-    networks = cert_metadata.get('networks', {})
-    networks['default'] = internal_rest_host
-    cert_ips = [internal_rest_host] + list(networks.values())
-    generate_internal_ssl_cert(
-        ips=cert_ips,
-        cn=internal_rest_host
-    )
+    if cert_metadata.get('manager_addresses'):
+        cert_ips = cert_metadata['manager_addresses']
+        generate_internal_ssl_cert(
+            ips=cert_ips,
+            cn=internal_rest_host
+        )
+
+    if cert_metadata.get('broker_addresses'):
+        cert_ips = cert_metadata['broker_addresses']
+        _generate_ssl_certificate(
+            ips=cert_ips,
+            cn=internal_rest_host,
+            cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
+            key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
+            # We only support ipsetter on nodes with managers, so the fact
+            # that this would break if used on a node containing only rmq
+            # doesn't matter
+            sign_cert=const.CA_CERT_PATH,
+            sign_key=const.CA_KEY_PATH,
+        )
+
     store_cert_metadata(
         internal_rest_host,
-        networks,
         filename=metadata
     )
 
