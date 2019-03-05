@@ -58,7 +58,8 @@ def _validate_duplicate_network(old_networks, new_networks):
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: `{"<network-name>": "<ip>"}`',
           required=True)
-def add_networks(networks=None):
+@argh.arg('--for-component', help='Only add network for this component')
+def add_networks(networks=None, for_component=None):
     """
     Add new networks to a running Cloudify Manager
     """
@@ -68,9 +69,12 @@ def add_networks(networks=None):
 
     old_networks = load_cert_metadata()
     _validate_duplicate_network(old_networks, networks)
+    if for_component:
+        store_cert_metadata(networks, component=for_component)
+    else:
+        store_cert_metadata(networks, component='nginx')
+        store_cert_metadata(networks, component='rabbitmq')
 
-    store_cert_metadata(networks, component='rabbitmq')
-    store_cert_metadata(networks, component='nginx')
     create_internal_certs()
 
     _run_update_provider_context_script(networks)
