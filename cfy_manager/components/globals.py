@@ -40,7 +40,8 @@ from .components_constants import (
     CLEAN_DB,
     FLASK_SECURITY,
     SERVICES_TO_INSTALL,
-    SSL_ENABLED
+    SSL_ENABLED,
+    HOSTNAME
 )
 from .service_components import MANAGER_SERVICE
 
@@ -48,6 +49,7 @@ import logging
 
 BROKER_IP = 'broker_ip'
 logger = get_logger('Globals')
+HOSTNAME_FILE_PATH = '/etc/hostname'
 
 
 def _set_external_port_and_protocol():
@@ -110,6 +112,12 @@ def _set_admin_password():
     if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
         config[MANAGER][SECURITY][ADMIN_PASSWORD] = _generate_password()
     print_password_to_screen()
+
+
+def _set_hostname():
+    if not config[MANAGER][HOSTNAME]:
+        with open(HOSTNAME_FILE_PATH, 'r') as f:
+            config[MANAGER][HOSTNAME] = f.read()
 
 
 def print_password_to_screen():
@@ -176,6 +184,7 @@ def set_globals():
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
+    _set_hostname()
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         if config[CLEAN_DB]:
             _set_admin_password()

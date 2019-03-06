@@ -28,8 +28,7 @@ from ..components_constants import (
     VENV,
     FLASK_SECURITY,
     CLEAN_DB,
-    MASTER_IP,
-    UNCONFIGURED_INSTALL,
+    UNCONFIGURED_INSTALL
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -202,24 +201,28 @@ class RestServiceComponent(BaseComponent):
     def _verify_restservice_alive(self):
         systemd.verify_alive(RESTSERVICE)
 
-        if not config[CLUSTER][MASTER_IP]:
-            logger.info('Verifying Rest service is working as expected...')
-            self._verify_restservice()
+        logger.info('Verifying Rest service is working as expected...')
+        self._verify_restservice()
 
     def _configure_db(self):
+        config[CLUSTER] = False
         configs = {
             'rest_config': REST_CONFIG_PATH,
             'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
             'security_config': REST_SECURITY_CONFIG_PATH
         }
-        if config[CLUSTER][MASTER_IP]:
-            self.logger.info('Joining cluster during bootstrap, ignoring DB '
-                             'configuration')
-            return
-        if config[CLEAN_DB] or config[UNCONFIGURED_INSTALL]:
+        result = db.check_manager_in_table()
+        if (result == -1 and config[CLEAN_DB]) or config[UNCONFIGURED_INSTALL]:
+            logger.info('DB does not exist, creating DB...')
             db.prepare_db()
             db.populate_db(configs)
+            config[CLUSTER] = True
         else:
+            if result == 0:
+                logger.info('Manager not in DB, will join the cluster...')
+                config[CLUSTER] = True
+            else:
+                logger.info('Manager already in DB, ignoring configuration')
             db.create_amqp_resources(configs)
 
     def _configure(self):

@@ -7,6 +7,10 @@ manager:
   # or external clients. If not applicable, provide the same value as "private_ip".
   public_ip: ''
 
+  # The Manager's hostname, doesn't have to be accessible.
+  # If no hostname is supplied it will be read from /etc/hostname
+  hostname: ''
+
   # Provide an IP or hostname to be used in the local CLI profile on the manager.
   # This might be useful when providing an external certificate.
   cli_local_profile_host_name: 'localhost'
@@ -34,24 +38,7 @@ manager:
     admin_username: admin
     # If admin_password is left blank, a password will be generated for you and provided
     # to you at the end of the install process.
-    # IMPORTANT - In case of clustering with an external database, take note of the admin_password
     admin_password: ''
-
-cluster:
-  # The cluster's master manager's IP to join to
-  # Must be in the same architecture as this manager:
-  #   I.E - all-in-one with all-in-one or external db with external db
-  # IMPORTANT - Make sure to update the admin_password's value with the correct
-  #             admin_password of the master manager
-  master_ip: ''
-
-  # The joining node's name
-  # In case node_name is left blank, it will be generated
-  node_name: ''
-
-  # The joining node's IP to use for cluster communication
-  # default: Private IP
-  host_ip: ''
 
 manager-ip-setter:
   sources:
