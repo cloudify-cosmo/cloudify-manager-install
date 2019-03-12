@@ -44,4 +44,8 @@ def make_manager_config():
         'default_page_size': config['restservice']['default_page_size'],
         'mgmtworker_max_workers': config['mgmtworker']['max_workers'],
         'mgmtworker_min_workers': config['mgmtworker']['min_workers'],
+        'min_workers': config['agent']['min_workers'],
+        'max_workers': config['agent']['max_workers'],
+        'broker_port': config['agent']['broker_port'],
+        'heartbeat': config['agent']['heartbeat'],
     }
