@@ -21,10 +21,11 @@ from ..components_constants import (
     HOME_DIR_KEY,
     LOG_DIR_KEY,
     SERVICE_USER,
-    SERVICE_GROUP
+    SERVICE_GROUP,
+    HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..service_names import MGMTWORKER
+from ..service_names import MGMTWORKER, CLUSTER, MANAGER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
@@ -36,6 +37,7 @@ from ...utils.install import yum_install, yum_remove
 
 HOME_DIR = '/opt/mgmtworker'
 MGMTWORKER_VENV = join(HOME_DIR, 'env')
+CLUSTER_SERVICE_QUEUE = 'cluster_service_queue'
 LOG_DIR = join(const.BASE_LOG_DIR, MGMTWORKER)
 CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
 
@@ -55,6 +57,9 @@ class MgmtWorkerComponent(BaseComponent):
         config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
         config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
         config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
+        if config[CLUSTER]:
+            config[MGMTWORKER][CLUSTER_SERVICE_QUEUE] = \
+                'cluster_service_queue_{0}'.format(config[MANAGER][HOSTNAME])
 
         self._deploy_broker_config()
         self._deploy_hooks_config()

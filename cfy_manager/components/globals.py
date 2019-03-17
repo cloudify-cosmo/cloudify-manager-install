@@ -117,7 +117,7 @@ def _set_admin_password():
 def _set_hostname():
     if not config[MANAGER][HOSTNAME]:
         with open(HOSTNAME_FILE_PATH, 'r') as f:
-            config[MANAGER][HOSTNAME] = f.read()
+            config[MANAGER][HOSTNAME] = f.read().split('\n')[0]
 
 
 def print_password_to_screen():

@@ -16,6 +16,7 @@
 from os.path import join
 
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 
 from .manager_config import make_manager_config
 from ..components_constants import (
@@ -47,17 +48,29 @@ SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
 
 
-def _connect_to_db():
-    pg_config = config[POSTGRESQL_CLIENT]
-    db_connection_string = \
-        'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
-            user=pg_config['username'],
-            password=pg_config['password'],
-            hostname_and_port=pg_config['host'],
-            db=pg_config['db_name']
-        )
-    db = create_engine(db_connection_string)
-    return db
+def _connect_to_db(query_func):
+    def wrapper(*args, **kwargs):
+        pg_config = config[POSTGRESQL_CLIENT]
+        db_connection_string = \
+            'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
+                user=pg_config['username'],
+                password=pg_config['password'],
+                hostname_and_port=pg_config['host'],
+                db=pg_config['db_name']
+            )
+        try:
+            connection = create_engine(db_connection_string,
+                                       poolclass=NullPool).connect()
+
+            return_value = query_func(connection=connection, *args, **kwargs)
+
+            connection.close()
+            return return_value
+        except Exception as err:
+            logger.debug('{0} - Database not initialized yet, proceeding...'
+                         .format(err))
+            return constants.DB_NOT_INITIALIZED
+    return wrapper
 
 
 def prepare_db():
@@ -167,18 +180,19 @@ def create_amqp_resources(configs=None):
     logger.notice('AMQP resources successfully created')
 
 
-def check_manager_in_table():
-    db = _connect_to_db()
+@_connect_to_db
+def check_manager_in_table(connection):
     try:
-        result = \
-            db.execute("SELECT * FROM managers where hostname='{0}'".format(
-                config[MANAGER][HOSTNAME].replace('\n', ''))
-            )
-        return result.row_count
-    except BaseException as err:
-        logger.debug(err)
-        logger.debug('Database not initialized yet, proceeding...')
-        return -1
+        result = (
+            connection.execute(
+                "SELECT * FROM managers where hostname='{0}'".format(
+                    config[MANAGER][HOSTNAME])
+            ))
+        return result.rowcount
+    except Exception as err:
+        logger.debug('{0} - Database not initialized yet, proceeding...'
+                     .format(err))
+        return constants.DB_NOT_INITIALIZED
 
 
 def _log_results(result):

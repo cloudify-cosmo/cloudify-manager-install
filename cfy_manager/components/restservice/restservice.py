@@ -212,18 +212,21 @@ class RestServiceComponent(BaseComponent):
             'security_config': REST_SECURITY_CONFIG_PATH
         }
         result = db.check_manager_in_table()
-        if (result == -1 and config[CLEAN_DB]) or config[UNCONFIGURED_INSTALL]:
-            logger.info('DB does not exist, creating DB...')
+        if (result == constants.DB_NOT_INITIALIZED and config[CLEAN_DB]) or config[UNCONFIGURED_INSTALL]:
+            logger.info('DB not initialized, creating DB...')
             db.prepare_db()
             db.populate_db(configs)
             config[CLUSTER] = True
-        else:
-            if result == 0:
-                logger.info('Manager not in DB, will join the cluster...')
-                config[CLUSTER] = True
-            else:
-                logger.info('Manager already in DB, ignoring configuration')
+        elif not config[CLEAN_DB]:
+            # Reinstalling the manager with the old DB
             db.create_amqp_resources(configs)
+        elif result == constants.MANAGER_NOT_IN_DB:
+            # Adding a manager to the cluster - external RabbitMQ already
+            # configured
+            logger.info('Manager not in DB, will join the cluster...')
+            config[CLUSTER] = True
+        else:
+            logger.info('Manager already in DB, ignoring configuration')
 
     def _configure(self):
         self._make_paths()

@@ -16,8 +16,7 @@
 import sys
 import getpass
 import time
-import string
-import random
+import uuid
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
@@ -36,22 +35,16 @@ logger = get_logger(SANITY)
 
 AUTHORIZED_KEYS_PATH = expanduser('~/.ssh/authorized_keys')
 SANITY_WEB_SERVER_PORT = 12774
-NODE_NAME_GENERATED_CHAR_SIZE = 6
 
 
 class SanityComponent(BaseComponent):
     def __init__(self, skip_installation):
         super(SanityComponent, self).__init__(skip_installation)
-        random_postfix = self._generate_random_name()
+        random_postfix = str(uuid.uuid4())
         self.blueprint_name = '{0}_blueprint_{1}'.format(SANITY,
                                                          random_postfix)
         self.deployment_name = '{0}_deployment_{1}'.format(SANITY,
                                                            random_postfix)
-
-    def _generate_random_name(self):
-        chars = string.ascii_uppercase + string.digits
-        return ''.join(random.choice(chars)
-                       for _ in range(NODE_NAME_GENERATED_CHAR_SIZE))
 
     def _create_ssh_key(self):
         logger.info('Creating SSH key for sanity...')

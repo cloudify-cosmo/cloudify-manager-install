@@ -25,13 +25,17 @@ from ...components.service_names import (
     CLUSTER
 )
 from ...components.components_constants import (
-    SERVICES_TO_INSTALL,
     PRIVATE_IP,
     PUBLIC_IP,
     PREMIUM_EDITION,
     HOSTNAME
 )
-from ...components.service_components import DATABASE_SERVICE
+from ..validations import _services_coexistence_assertion
+from ...components.service_components import (
+    MANAGER_SERVICE,
+    DATABASE_SERVICE,
+    QUEUE_SERVICE
+)
 from ...utils.network import get_auth_headers
 
 NODE_NAME_GENERATED_CHAR_SIZE = 6
@@ -43,8 +47,7 @@ class ClusterComponent(BaseComponent):
     def __init__(self, skip_installation):
         super(ClusterComponent, self).__init__(skip_installation)
 
-    @staticmethod
-    def _generic_cloudify_rest_request(host, port, path,
+    def _generic_cloudify_rest_request(self, host, port, path,
                                        method, data=None):
         url = 'http://{0}:{1}/api/{2}'.format(host, port, path)
         try:
@@ -91,7 +94,7 @@ class ClusterComponent(BaseComponent):
 
     def _get_current_version(self):
         result = self._generic_cloudify_rest_request(
-            PRIVATE_IP,
+            config[MANAGER][PRIVATE_IP],
             80,
             'v3.1/version',
             'get'
@@ -102,9 +105,15 @@ class ClusterComponent(BaseComponent):
         """
         Used for either adding the first node to the cluster (can be
         single-node cluster), or adding a new manager to the cluster
+
+        The next step would be installing the mgmtworker which requires the
+        rest-security.conf to be the same as in the rest of the managers in the
+        cluster, as a result this operation may take a while until the config
+        directories finish replicating
         """
-        logger.notice('Adding manager "{0}" to the cluster'
-                           .format(config[MANAGER][HOSTNAME]))
+        logger.notice('Adding manager "{0}" to the cluster, this may take a '
+                      'while until config files finish replicating'
+                      .format(config[MANAGER][HOSTNAME]))
         version_details = self._get_current_version()
         data = {
             'hostname': config[MANAGER][HOSTNAME],
@@ -115,8 +124,10 @@ class ClusterComponent(BaseComponent):
             'distribution': version_details['distribution'],
             'distro_release': version_details['distro_release']
         }
+        # During the below request, Syncthing will start FS replication and
+        # wait for the config files to finish replicating
         result = self._generic_cloudify_rest_request(
-            PRIVATE_IP,
+            config[MANAGER][PRIVATE_IP],
             80,
             'v3.1/managers',
             'post',
@@ -126,12 +137,12 @@ class ClusterComponent(BaseComponent):
 
     def _remove_manager_from_cluster(self):
         logger.notice('Removing manager "{0}" from cluster'
-                           .format(config[MANAGER][HOSTNAME]))
+                      .format(config[MANAGER][HOSTNAME]))
         data = {
             'hostname': config[MANAGER][HOSTNAME]
         }
         result = self._generic_cloudify_rest_request(
-            PRIVATE_IP,
+            config[MANAGER][PRIVATE_IP],
             80,
             'v3.1/managers',
             'delete',
@@ -145,13 +156,16 @@ class ClusterComponent(BaseComponent):
     def configure(self):
         if config[MANAGER][PREMIUM_EDITION]:
             logger.info('Premium version found')
-            if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
+            if _services_coexistence_assertion(MANAGER_SERVICE,
+                                               DATABASE_SERVICE) and \
+                _services_coexistence_assertion(MANAGER_SERVICE,
+                                                QUEUE_SERVICE):
                 if config[CLUSTER]:
                     self._join_to_cluster()
                     logger.notice('Node has been added successfully!')
             else:
-                logger.debug('All-in-one manager, ignoring cluster '
-                             'configuration')
+                logger.debug('Cluster must be instantiated with external DB'
+                             'and Queue. Ignoring cluster configuration')
 
     def remove(self):
         try:
