@@ -191,7 +191,7 @@ class RestServiceComponent(BaseComponent):
         except urllib2.URLError as e:
             raise NetworkError(
                 'REST service returned an invalid response: {0}'.format(e))
-        if response.code != 200 and response.code != 401:
+        if response.code != 200 and response.code != 400:
             raise NetworkError(
                 'REST service returned an unexpected response: '
                 '{0}'.format(response.code)
