@@ -28,7 +28,6 @@ from .restservice import RestServiceComponent  # NOQA
 from .sanity import SanityComponent  # NOQA
 from .stage import StageComponent  # NOQA
 from .usage_collector import UsageCollectorComponent  # NOQA
-from .cluster.cluster import ClusterComponent  # NOQA
 from .patch.patch import PatchComponent  # NOQA
 
 from components_factory import ComponentsFactory  # NOQA

@@ -33,7 +33,6 @@ SERVICE_COMPONENTS = {
         "python",
         "postgresql_client",
         "restservice",
-        "cluster",
         "amqp_postgres",
         "stage",
         "composer",

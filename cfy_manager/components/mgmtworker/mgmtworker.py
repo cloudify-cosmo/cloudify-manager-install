@@ -15,6 +15,8 @@
 
 from os.path import join, dirname
 
+from .cluster.cluster import ClusterComponent
+
 from ..components_constants import (
     SOURCES,
     CONFIG,
@@ -25,14 +27,18 @@ from ..components_constants import (
     HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..service_names import MGMTWORKER, CLUSTER, MANAGER
+from ..service_names import MGMTWORKER, CLUSTER, MANAGER, PREMIUM
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
 from ...utils import common, sudoers
-from ...utils.files import deploy
+from ...utils.files import (
+    deploy,
+    get_local_source_path
+)
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
+from ...exceptions import FileError
 
 
 HOME_DIR = '/opt/mgmtworker'
@@ -51,6 +57,18 @@ class MgmtWorkerComponent(BaseComponent):
     def _install(self):
         source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
         yum_install(source_url)
+
+        premium_source_url = config[PREMIUM][SOURCES]['premium_source_url']
+        try:
+            get_local_source_path(premium_source_url)
+        except FileError:
+            logger.info(
+                'premium package not found in manager resources package')
+            logger.notice('premium will not be installed.')
+        else:
+            logger.notice('Installing Cloudify Premium...')
+            cluster = ClusterComponent(skip_installation=False)
+            cluster.install()
 
     def _deploy_mgmtworker_config(self):
         config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR

@@ -38,14 +38,13 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import BootstrapError, FileError, NetworkError
+from ...exceptions import BootstrapError, NetworkError
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import (
     deploy,
-    get_local_source_path,
     write_to_file,
     sudo_read,
 )
@@ -251,17 +250,7 @@ class RestServiceComponent(BaseComponent):
         yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
         yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
 
-        premium_source_url = config[RESTSERVICE][SOURCES]['premium_source_url']
-        try:
-            get_local_source_path(premium_source_url)
-        except FileError:
-            logger.info(
-                'premium package not found in manager resources package')
-            logger.notice('premium will not be installed.')
-        else:
-            logger.notice('Installing Cloudify Premium...')
-            yum_install(config[RESTSERVICE][SOURCES]['premium_source_url'])
-
+        self._configure()
         logger.notice('Rest Service successfully installed')
 
     def configure(self):

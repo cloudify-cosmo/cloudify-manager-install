@@ -16,27 +16,31 @@
 import json
 import requests
 
-from ...components.base_component import BaseComponent
-from ...logger import get_logger
-from ...exceptions import BootstrapError, NetworkError
-from ...config import config
-from ...components.service_names import (
+from ...base_component import BaseComponent
+from ....utils.systemd import systemd
+from ....logger import get_logger
+from ....exceptions import BootstrapError, NetworkError
+from ....config import config
+from ....components.service_names import (
     MANAGER,
-    CLUSTER
+    CLUSTER,
+    PREMIUM,
+    RESTSERVICE
 )
-from ...components.components_constants import (
+from ....components.components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
-    PREMIUM_EDITION,
-    HOSTNAME
+    HOSTNAME,
+    SOURCES
 )
-from ..validations import _services_coexistence_assertion
-from ...components.service_components import (
+from ...validations import _services_coexistence_assertion
+from ....components.service_components import (
     MANAGER_SERVICE,
     DATABASE_SERVICE,
     QUEUE_SERVICE
 )
-from ...utils.network import get_auth_headers
+from ....utils.network import get_auth_headers
+from ....utils.install import yum_install
 
 NODE_NAME_GENERATED_CHAR_SIZE = 6
 
@@ -150,22 +154,25 @@ class ClusterComponent(BaseComponent):
         )
         return result
 
+    def _install(self):
+        yum_install(config[PREMIUM][SOURCES]['premium_source_url'])
+        # Need to restart the RESTSERVICE so flask could import premium
+        systemd.restart(RESTSERVICE)
+
     def install(self):
-        pass
+        self._install()
 
     def configure(self):
-        if config[MANAGER][PREMIUM_EDITION]:
-            logger.info('Premium version found')
-            if _services_coexistence_assertion(MANAGER_SERVICE,
-                                               DATABASE_SERVICE) and \
-                _services_coexistence_assertion(MANAGER_SERVICE,
-                                                QUEUE_SERVICE):
-                if config[CLUSTER]:
-                    self._join_to_cluster()
-                    logger.notice('Node has been added successfully!')
-            else:
-                logger.debug('Cluster must be instantiated with external DB'
-                             'and Queue. Ignoring cluster configuration')
+        if _services_coexistence_assertion(MANAGER_SERVICE,
+                                           DATABASE_SERVICE) and \
+            _services_coexistence_assertion(MANAGER_SERVICE,
+                                            QUEUE_SERVICE):
+            if config[CLUSTER]:
+                self._join_to_cluster()
+                logger.notice('Node has been added successfully!')
+        else:
+            logger.warn('Cluster must be instantiated with external DB'
+                        'and Queue. Ignoring cluster configuration')
 
     def remove(self):
         try:

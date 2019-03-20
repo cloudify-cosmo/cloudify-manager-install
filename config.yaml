@@ -214,6 +214,10 @@ python:
   # dependencies weren't available before Cloudify Manager installation
   remove_on_teardown: false
 
+premium:
+  sources:
+    premium_source_url: cloudify-premium-*.x86_64.rpm
+
 restservice:
   log:
     # Logging level for the REST service. Defaults to 'INFO', as 'DEBUG' may
@@ -256,7 +260,6 @@ restservice:
   sources:
     agents_source_url: cloudify-agents-*.rpm
     restservice_source_url: cloudify-rest-service-*.x86_64.rpm
-    premium_source_url: cloudify-premium-*.x86_64.rpm
 
   # Minimum available memory for running list query on Manager host in MB.
   min_available_memory_mb: 100
