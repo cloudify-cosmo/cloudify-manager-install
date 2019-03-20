@@ -95,6 +95,10 @@ def _create_args_dict():
     }
     with open(constants.CA_CERT_PATH) as f:
         args_dict['ca_cert'] = f.read()
+    rabbitmq_cert_path = config['rabbitmq'].get('broker_cert_path')
+    if rabbitmq_cert_path:
+        with open(rabbitmq_cert_path) as f:
+            args_dict['ca_cert'] += '\n' + f.read()
     return args_dict
 
 
