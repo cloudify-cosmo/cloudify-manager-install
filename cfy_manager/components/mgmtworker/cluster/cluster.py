@@ -15,9 +15,12 @@
 
 import json
 import requests
+from os.path import join
 
 from ...base_component import BaseComponent
 from ....utils.systemd import systemd
+from ....constants import COMPONENTS_DIR
+from ....utils.common import sudo
 from ....logger import get_logger
 from ....exceptions import BootstrapError, NetworkError
 from ....config import config
@@ -25,13 +28,15 @@ from ....components.service_names import (
     MANAGER,
     CLUSTER,
     PREMIUM,
-    RESTSERVICE
+    RESTSERVICE,
+    MGMTWORKER
 )
 from ....components.components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
     HOSTNAME,
-    SOURCES
+    SOURCES,
+    SCRIPTS
 )
 from ...validations import _services_coexistence_assertion
 from ....components.service_components import (
@@ -42,9 +47,15 @@ from ....components.service_components import (
 from ....utils.network import get_auth_headers
 from ....utils.install import yum_install
 
+REST_HOME_DIR = '/opt/manager'
+REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
+REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
+REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
+
 NODE_NAME_GENERATED_CHAR_SIZE = 6
 
 logger = get_logger('cluster')
+SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
 class ClusterComponent(BaseComponent):
@@ -105,6 +116,46 @@ class ClusterComponent(BaseComponent):
         )
         return result
 
+    def _log_results(self, result):
+        """Log stdout/stderr output from the script
+        """
+        if result.aggr_stdout:
+            output = result.aggr_stdout.split('\n')
+            output = [line.strip() for line in output if line.strip()]
+            for line in output[:-1]:
+                logger.debug(line)
+            logger.info(output[-1])
+        if result.aggr_stderr:
+            output = result.aggr_stderr.split('\n')
+            output = [line.strip() for line in output if line.strip()]
+            for line in output:
+                logger.error(line)
+
+    def _create_process_env(self):
+        env = {}
+        for value, envvar in [
+            (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
+            (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
+            (REST_AUTHORIZATION_CONFIG_PATH,
+             'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
+        ]:
+            if value is not None:
+                env[envvar] = value
+        return env
+
+    def _run_syncthing_configuration_script(self, hostname):
+        env_dict = self._create_process_env()
+
+        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
+        python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
+
+        # Directly calling with this python bin, in order to make sure it's run
+        # in the correct venv
+        cmd = [python_path, script_path, hostname]
+        result = sudo(cmd, env=env_dict)
+
+        self._log_results(result)
+
     def _join_to_cluster(self):
         """
         Used for either adding the first node to the cluster (can be
@@ -115,6 +166,7 @@ class ClusterComponent(BaseComponent):
         cluster, as a result this operation may take a while until the config
         directories finish replicating
         """
+        self._run_syncthing_configuration_script(config[MANAGER][HOSTNAME])
         logger.notice('Adding manager "{0}" to the cluster, this may take a '
                       'while until config files finish replicating'
                       .format(config[MANAGER][HOSTNAME]))
