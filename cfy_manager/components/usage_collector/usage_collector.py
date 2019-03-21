@@ -68,6 +68,9 @@ class UsageCollectorComponent(BaseComponent):
         if not self._validate_cronie_installed():
             return False
         common.mkdir(LOG_DIR)
+        common.chown(constants.CLOUDIFY_USER,
+                     constants.CLOUDIFY_GROUP,
+                     LOG_DIR)
         set_logrotate(USAGE_COLLECTOR)
         self._remove_cron_jobs()
         self._create_cron_jobs()
