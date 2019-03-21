@@ -16,15 +16,16 @@
 from os.path import join
 from random import randint
 
-from ..components_constants import SCRIPTS
-from ..base_component import BaseComponent
-from ..service_names import USAGE_COLLECTOR
 from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, files
 from ...exceptions import InputError
+from ..components_constants import SCRIPTS
+from ..base_component import BaseComponent
+from ..service_names import USAGE_COLLECTOR
 from ...utils.install import RpmPackageHandler
+from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
 HOURS_INTERVAL = 'interval_in_hours'
@@ -35,6 +36,7 @@ MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COLLECTOR_SCRIPTS = [('collect_cloudify_uptime', HOURS_INTERVAL),
                      ('collect_cloudify_usage', DAYS_INTERVAL)]
 SCRIPTS_DESTINATION_PATH = join('/opt/cloudify', USAGE_COLLECTOR)
+LOG_DIR = join(constants.BASE_LOG_DIR, USAGE_COLLECTOR)
 logger = get_logger(USAGE_COLLECTOR)
 
 
@@ -57,6 +59,7 @@ class UsageCollectorComponent(BaseComponent):
         logger.notice('Removing Usage Collector...')
         if self._validate_cronie_installed():
             self._remove_cron_jobs()
+        remove_logrotate(USAGE_COLLECTOR)
         common.remove(SCRIPTS_DESTINATION_PATH)
         common.remove(MANAGER_ID_PATH)
         logger.notice('Usage Collector successfully removed')
@@ -64,6 +67,11 @@ class UsageCollectorComponent(BaseComponent):
     def _configure(self):
         if not self._validate_cronie_installed():
             return False
+        common.mkdir(LOG_DIR)
+        common.chown(constants.CLOUDIFY_USER,
+                     constants.CLOUDIFY_GROUP,
+                     LOG_DIR)
+        set_logrotate(USAGE_COLLECTOR)
         self._remove_cron_jobs()
         self._create_cron_jobs()
         return True
