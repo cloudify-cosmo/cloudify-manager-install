@@ -40,6 +40,11 @@ manager:
     # to you at the end of the install process.
     admin_password: ''
 
+cluster:
+  # When running a cluster, every extra node must contact any active manager
+  # in the cluster, this will not work on non-premium installations
+  active_manager_ip: ''
+
 manager-ip-setter:
   sources:
     manager_ip_setter_rpm: cloudify-manager-ip-setter-*.rpm

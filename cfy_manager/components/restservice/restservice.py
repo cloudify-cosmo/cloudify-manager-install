@@ -28,6 +28,7 @@ from ..components_constants import (
     VENV,
     FLASK_SECURITY,
     CLEAN_DB,
+    ACTIVE_MANAGER_IP,
     UNCONFIGURED_INSTALL
 )
 from ..base_component import BaseComponent
@@ -64,7 +65,7 @@ logger = get_logger(RESTSERVICE)
 
 
 class RestServiceComponent(BaseComponent):
-    def __init__(self, skip_installation):
+    def __init__(self, skip_installation=False):
         super(RestServiceComponent, self).__init__(skip_installation)
 
     def _make_paths(self):
@@ -204,18 +205,18 @@ class RestServiceComponent(BaseComponent):
         self._verify_restservice()
 
     def _configure_db(self):
-        config[CLUSTER] = False
+        config[CLUSTER]['enabled'] = False
         configs = {
             'rest_config': REST_CONFIG_PATH,
             'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
             'security_config': REST_SECURITY_CONFIG_PATH
         }
         result = db.check_manager_in_table()
-        if (result == constants.DB_NOT_INITIALIZED and config[CLEAN_DB]) or config[UNCONFIGURED_INSTALL]:
+        if result == constants.DB_NOT_INITIALIZED and config[CLEAN_DB]:
             logger.info('DB not initialized, creating DB...')
             db.prepare_db()
             db.populate_db(configs)
-            config[CLUSTER] = True
+            config[CLUSTER]['enabled'] = True
         elif not config[CLEAN_DB]:
             # Reinstalling the manager with the old DB
             db.create_amqp_resources(configs)
@@ -223,7 +224,7 @@ class RestServiceComponent(BaseComponent):
             # Adding a manager to the cluster - external RabbitMQ already
             # configured
             logger.info('Manager not in DB, will join the cluster...')
-            config[CLUSTER] = True
+            config[CLUSTER]['enabled'] = True
         else:
             logger.info('Manager already in DB, ignoring configuration')
 
@@ -234,7 +235,11 @@ class RestServiceComponent(BaseComponent):
         set_logrotate(RESTSERVICE)
         systemd.configure(RESTSERVICE)
         systemd.restart(RESTSERVICE)
-        self._verify_restservice_alive()
+        if not config[CLUSTER][ACTIVE_MANAGER_IP]:
+            self._verify_restservice_alive()
+        else:
+            logger.info('Extra node in cluster, will verify rest-service after'
+                        'clustering configured')
 
     def _remove_files(self):
         """
@@ -250,7 +255,6 @@ class RestServiceComponent(BaseComponent):
         yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
         yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
 
-        self._configure()
         logger.notice('Rest Service successfully installed')
 
     def configure(self):

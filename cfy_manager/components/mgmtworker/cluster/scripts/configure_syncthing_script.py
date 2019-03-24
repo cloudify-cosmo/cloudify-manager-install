@@ -13,26 +13,18 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import argparse
 
-from manager_rest import config
-from manager_rest.flask_utils import setup_flask_app
 from cloudify_premium.ha import syncthing
 
 
-def run_syncthing_configuration(hostname):
-    import sys
-    sys.path.append('/tmp/pycharm-debug.egg')
-    import pydevd
-    pydevd.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
-    print 'Setting up a Flask app'
-    setup_flask_app(
-        manager_ip=config.instance.postgresql_host,
-        hash_salt=config.instance.security_hash_salt,
-        secret_key=config.instance.security_secret_key
-    )
-    syncthing.configure()
-    syncthing.start(hostname)
+def run_syncthing_configuration(hostname, active_manager_ip,
+                                rest_service_port, auth_headers):
+    bootstrap_cluster = syncthing.configure(active_manager_ip,
+                                            rest_service_port, auth_headers)
+    syncthing.start(hostname, active_manager_ip, rest_service_port,
+                    auth_headers, bootstrap_cluster=bootstrap_cluster)
 
 
 if __name__ == '__main__':
@@ -40,15 +32,14 @@ if __name__ == '__main__':
         description='Configure Syncthing replication for the cluster nodes'
     )
     parser.add_argument(
-        'hostname',
+        'args_dict_config_path',
         help='The manager to update in the managers table with its syncthing '
              'ID'
     )
-
-    import sys
-    sys.path.append('/tmp/pycharm-debug.egg')
-    import pydevd
-    pydevd.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
     args = parser.parse_args()
-    config.instance.load_configuration()
-    run_syncthing_configuration(args.hostname)
+    with open(args.args_dict_config_path, 'r') as f:
+        args_dict = json.load(f)
+    run_syncthing_configuration(args_dict['hostname'],
+                                args_dict['active_manager_ip'],
+                                args_dict['rest_service_port'],
+                                args_dict['auth_headers'])

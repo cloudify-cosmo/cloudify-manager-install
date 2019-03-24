@@ -75,7 +75,7 @@ class MgmtWorkerComponent(BaseComponent):
         config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
         config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
         config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
-        if config[CLUSTER]:
+        if config[CLUSTER]['enabled']:
             config[MGMTWORKER][CLUSTER_SERVICE_QUEUE] = \
                 'cluster_service_queue_{0}'.format(config[MANAGER][HOSTNAME])
 
@@ -155,6 +155,8 @@ class MgmtWorkerComponent(BaseComponent):
         systemd.verify_alive(MGMTWORKER)
 
     def _configure(self):
+        cluster = ClusterComponent(skip_installation=False)
+        cluster.configure()
         self._deploy_mgmtworker_config()
         systemd.configure(MGMTWORKER)
         self._prepare_snapshot_permissions()

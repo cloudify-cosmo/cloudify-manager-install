@@ -21,6 +21,7 @@ from ...base_component import BaseComponent
 from ....utils.systemd import systemd
 from ....constants import COMPONENTS_DIR
 from ....utils.common import sudo
+from ...restservice.restservice import RestServiceComponent
 from ....logger import get_logger
 from ....exceptions import BootstrapError, NetworkError
 from ....config import config
@@ -36,7 +37,8 @@ from ....components.components_constants import (
     PUBLIC_IP,
     HOSTNAME,
     SOURCES,
-    SCRIPTS
+    SCRIPTS,
+    ACTIVE_MANAGER_IP
 )
 from ...validations import _services_coexistence_assertion
 from ....components.service_components import (
@@ -45,14 +47,14 @@ from ....components.service_components import (
     QUEUE_SERVICE
 )
 from ....utils.network import get_auth_headers
+from ....utils.files import write_to_tempfile
 from ....utils.install import yum_install
+from ....utils.network import wait_for_port
 
 REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
-
-NODE_NAME_GENERATED_CHAR_SIZE = 6
 
 logger = get_logger('cluster')
 SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
@@ -107,14 +109,26 @@ class ClusterComponent(BaseComponent):
             raise BootstrapError(
                 'REST service returned malformed JSON: {0}'.format(e))
 
-    def _get_current_version(self):
+    def _get_current_version(self, active_manager_ip):
         result = self._generic_cloudify_rest_request(
-            config[MANAGER][PRIVATE_IP],
+            active_manager_ip,
             80,
             'v3.1/version',
             'get'
         )
         return result
+
+    def _verify_local_rest_service_alive(self, verify_rest_call=False):
+        # Restarting rest-service to read the new replicated rest-security.conf
+        systemd.restart(RESTSERVICE)
+        systemd.verify_alive(RESTSERVICE)
+        rest_port = config[RESTSERVICE]['port']
+
+        wait_for_port(rest_port)
+
+        if verify_rest_call:
+            rest_service_component = RestServiceComponent()
+            rest_service_component._verify_restservice_alive()
 
     def _log_results(self, result):
         """Log stdout/stderr output from the script
@@ -143,7 +157,7 @@ class ClusterComponent(BaseComponent):
                 env[envvar] = value
         return env
 
-    def _run_syncthing_configuration_script(self, hostname):
+    def _run_syncthing_configuration_script(self, active_manager_ip):
         env_dict = self._create_process_env()
 
         script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
@@ -151,12 +165,23 @@ class ClusterComponent(BaseComponent):
 
         # Directly calling with this python bin, in order to make sure it's run
         # in the correct venv
-        cmd = [python_path, script_path, hostname]
+
+        cmd = [python_path, script_path]
+        args_dict = {
+            'hostname': config[MANAGER][HOSTNAME],
+            'active_manager_ip': active_manager_ip,
+            'rest_service_port': 80,
+            'auth_headers': get_auth_headers()
+        }
+
+        args_json_path = write_to_tempfile(args_dict, json_dump=True)
+        cmd.append(args_json_path)
+
         result = sudo(cmd, env=env_dict)
 
         self._log_results(result)
 
-    def _join_to_cluster(self):
+    def _join_to_cluster(self, active_manager_ip):
         """
         Used for either adding the first node to the cluster (can be
         single-node cluster), or adding a new manager to the cluster
@@ -166,14 +191,10 @@ class ClusterComponent(BaseComponent):
         cluster, as a result this operation may take a while until the config
         directories finish replicating
         """
-        import sys
-        sys.path.append('/tmp/pycharm-debug.egg')
-        import pydevd
-        pydevd.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
         logger.notice('Adding manager "{0}" to the cluster, this may take a '
                       'while until config files finish replicating'
                       .format(config[MANAGER][HOSTNAME]))
-        version_details = self._get_current_version()
+        version_details = self._get_current_version(active_manager_ip)
         data = {
             'hostname': config[MANAGER][HOSTNAME],
             'private_ip': config[MANAGER][PRIVATE_IP],
@@ -186,7 +207,7 @@ class ClusterComponent(BaseComponent):
         # During the below request, Syncthing will start FS replication and
         # wait for the config files to finish replicating
         result = self._generic_cloudify_rest_request(
-            config[MANAGER][PRIVATE_IP],
+            active_manager_ip,
             80,
             'v3.1/managers',
             'post',
@@ -212,7 +233,7 @@ class ClusterComponent(BaseComponent):
     def _install(self):
         yum_install(config[PREMIUM][SOURCES]['premium_source_url'])
         # Need to restart the RESTSERVICE so flask could import premium
-        systemd.restart(RESTSERVICE)
+        self._verify_local_rest_service_alive()
 
     def install(self):
         self._install()
@@ -222,13 +243,16 @@ class ClusterComponent(BaseComponent):
                                            DATABASE_SERVICE) and \
             _services_coexistence_assertion(MANAGER_SERVICE,
                                             QUEUE_SERVICE):
-            if config[CLUSTER]:
-                self._join_to_cluster()
-                self._run_syncthing_configuration_script(config[MANAGER][HOSTNAME])
+            if config[CLUSTER]['enabled']:
+                active_manager_ip = config[CLUSTER][ACTIVE_MANAGER_IP] or \
+                                    config[MANAGER][PRIVATE_IP]
+                self._join_to_cluster(active_manager_ip)
+                self._run_syncthing_configuration_script(active_manager_ip)
+                self._verify_local_rest_service_alive(verify_rest_call=True)
                 logger.notice('Node has been added successfully!')
         else:
             logger.warn('Cluster must be instantiated with external DB'
-                        'and Queue. Ignoring cluster configuration')
+                        'and Queue endpoints. Ignoring cluster configuration')
 
     def remove(self):
         try:

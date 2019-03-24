@@ -39,6 +39,7 @@ ADMIN_PASSWORD = 'admin_password'
 ADMIN_USERNAME = 'admin_username'
 
 PREMIUM_EDITION = 'premium_edition'
+ACTIVE_MANAGER_IP = 'active_manager_ip'
 
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 POSTGRES_PASSWORD = 'postgres_password'
