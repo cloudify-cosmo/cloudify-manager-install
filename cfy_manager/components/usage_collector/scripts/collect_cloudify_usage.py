@@ -1,4 +1,5 @@
 import json
+import logging
 from uuid import uuid4
 from os import sysconf, path
 from platform import platform
@@ -10,7 +11,6 @@ from logging.handlers import WatchedFileHandler
 import pkg_resources
 from requests import post
 
-from cloudify.utils import setup_logger
 from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
@@ -28,8 +28,14 @@ PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
 CLOUDIFY_ENDPOINT_USAGE_DATA_URL = 'https://api.cloudify.co/cloudifyUsage'
 CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
 LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
+logger = logging.getLogger('usage_collector')
+logger.setLevel(logging.INFO)
 file_handler = WatchedFileHandler(filename=LOGFILE)
-logger = setup_logger('usage_collector', handlers=[file_handler])
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
+                              datefmt='%d/%m/%Y %H:%M:%S')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 @contextmanager
