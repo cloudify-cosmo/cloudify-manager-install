@@ -77,8 +77,16 @@ def _collect_metadata(data):
             image_info = image_file.read().strip()
     else:
         image_info = 'rpm'
+
+    customer_id = None
+    with _get_storage_manager() as sm:
+        licenses = sm.list(models.License)
+        if licenses:
+            customer_id = str(licenses[0].customer_id)
+
     data['metadata'] = {
         'manager_id': manager_id,
+        'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
         'image_info': image_info
