@@ -166,7 +166,10 @@ class ClusterComponent(BaseComponent):
         cluster, as a result this operation may take a while until the config
         directories finish replicating
         """
-        self._run_syncthing_configuration_script(config[MANAGER][HOSTNAME])
+        import sys
+        sys.path.append('/tmp/pycharm-debug.egg')
+        import pydevd
+        pydevd.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
         logger.notice('Adding manager "{0}" to the cluster, this may take a '
                       'while until config files finish replicating'
                       .format(config[MANAGER][HOSTNAME]))
@@ -221,6 +224,7 @@ class ClusterComponent(BaseComponent):
                                             QUEUE_SERVICE):
             if config[CLUSTER]:
                 self._join_to_cluster()
+                self._run_syncthing_configuration_script(config[MANAGER][HOSTNAME])
                 logger.notice('Node has been added successfully!')
         else:
             logger.warn('Cluster must be instantiated with external DB'

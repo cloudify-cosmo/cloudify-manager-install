@@ -15,10 +15,22 @@
 
 import argparse
 
-from cloudify_premium.ha.syncthing import syncthing
+from manager_rest import config
+from manager_rest.flask_utils import setup_flask_app
+from cloudify_premium.ha import syncthing
 
 
 def run_syncthing_configuration(hostname):
+    import sys
+    sys.path.append('/tmp/pycharm-debug.egg')
+    import pydevd
+    pydevd.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
+    print 'Setting up a Flask app'
+    setup_flask_app(
+        manager_ip=config.instance.postgresql_host,
+        hash_salt=config.instance.security_hash_salt,
+        secret_key=config.instance.security_secret_key
+    )
     syncthing.configure()
     syncthing.start(hostname)
 
@@ -33,5 +45,10 @@ if __name__ == '__main__':
              'ID'
     )
 
+    import sys
+    sys.path.append('/tmp/pycharm-debug.egg')
+    import pydevd
+    pydevd.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
     args = parser.parse_args()
+    config.instance.load_configuration()
     run_syncthing_configuration(args.hostname)
