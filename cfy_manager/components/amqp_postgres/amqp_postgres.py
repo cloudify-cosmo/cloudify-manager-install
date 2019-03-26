@@ -45,7 +45,7 @@ class AmqpPostgresComponent(BaseComponent):
         systemd.verify_alive(AMQP_POSTGRES)
 
     def install(self):
-        self.configure()
+        pass
 
     def configure(self):
         logger.notice('Configuring AMQP-Postgres...')

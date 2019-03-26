@@ -249,7 +249,6 @@ class NginxComponent(BaseComponent):
     def install(self):
         logger.notice('Installing NGINX...')
         self._install()
-        self._configure()
         logger.notice('NGINX successfully installed')
 
     def configure(self):

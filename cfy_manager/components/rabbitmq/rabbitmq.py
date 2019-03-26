@@ -219,7 +219,6 @@ class RabbitMQComponent(BaseComponent):
     def install(self):
         logger.notice('Installing RabbitMQ...')
         self._install()
-        self._configure()
         logger.notice('RabbitMQ successfully installed')
 
     def configure(self):

@@ -141,7 +141,6 @@ class MgmtWorkerComponent(BaseComponent):
     def install(self):
         logger.notice('Installing Management Worker...')
         self._install()
-        self._configure()
         logger.notice('Management Worker successfully installed')
 
     def configure(self):

@@ -48,7 +48,6 @@ class ManagerIpSetterComponent(BaseComponent):
     def install(self):
         logger.notice('Installing Manager IP Setter...')
         self._install()
-        self._configure()
         logger.notice('Manager IP Setter successfully installed')
 
     def configure(self):
