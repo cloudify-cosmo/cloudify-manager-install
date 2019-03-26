@@ -1,4 +1,5 @@
 import json
+import logging
 from logging.handlers import WatchedFileHandler
 
 from os import path
@@ -6,7 +7,6 @@ import pkg_resources
 from uuid import uuid4
 from requests import post
 
-from cloudify.utils import setup_logger
 from manager_rest import premium_enabled
 
 try:
@@ -19,8 +19,14 @@ except ImportError:
 MANAGER_ID_PATH = '/etc/cloudify/.id'
 CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
 LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
+logger = logging.getLogger('usage_collector')
+logger.setLevel(logging.INFO)
 file_handler = WatchedFileHandler(filename=LOGFILE)
-logger = setup_logger('usage_collector', handlers=[file_handler])
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
+                              datefmt='%d/%m/%Y %H:%M:%S')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 def _collect_metadata(data):
