@@ -255,7 +255,6 @@ class RestServiceComponent(BaseComponent):
             logger.notice('Installing Cloudify Premium...')
             yum_install(config[RESTSERVICE][SOURCES]['premium_source_url'])
 
-        self._configure()
         logger.notice('Rest Service successfully installed')
 
     def configure(self):

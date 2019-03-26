@@ -351,6 +351,10 @@ def install(verbose=False,
     for component in components:
         if not component.skip_installation:
             component.install()
+        # Separate check because some components set 'skip' if they don't
+        # find the install package
+        if not component.skip_installation:
+            component.configure()
 
     logger.notice('Installation finished successfully!')
     _finish_configuration()

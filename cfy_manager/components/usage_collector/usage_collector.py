@@ -47,7 +47,6 @@ class UsageCollectorComponent(BaseComponent):
     def install(self):
         logger.notice('Installing Usage Collector...')
         self._deploy_collector_scripts()
-        self._configure()
         logger.notice('Usage Collector successfully installed')
 
     def configure(self):

@@ -97,7 +97,6 @@ class CliComponent(BaseComponent):
     def install(self):
         logger.notice('Installing Cloudify CLI...')
         self._install()
-        self._configure()
         logger.notice('Cloudify CLI successfully installed')
 
     def configure(self):
