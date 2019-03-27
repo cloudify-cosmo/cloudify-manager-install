@@ -445,9 +445,10 @@ def validate_config_access(write_required):
                     USER_CONFIG_PATH, label))
 
 
-def validate(components, skip_validations=False):
-    # Inputs always need to be validated, otherwise the install won't work
-    _validate_inputs()
+def validate(components, skip_validations=False, only_install=False):
+    if not only_install:
+        # Inputs always need to be validated, otherwise the install won't work
+        _validate_inputs()
 
     # These dependencies also need to always be validated
     _validate_dependencies(components)
@@ -457,21 +458,24 @@ def validate(components, skip_validations=False):
         return
 
     logger.notice('Validating local machine...')
-    _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
-    _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
-    if config[CLUSTER][MASTER_IP]:
-        _validate_ip(ip_to_validate=config[CLUSTER][MASTER_IP])
-        _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
-    _validate_python_version()
+
+    if not only_install:
+        _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
+        _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
+        if config[CLUSTER][MASTER_IP]:
+            _validate_ip(ip_to_validate=config[CLUSTER][MASTER_IP])
+            _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
+        _validate_python_version()
+        _validate_sufficient_memory()
+        _validate_postgres_inputs()
+        _validate_external_postgres_ssl_enabled()
+        _validate_postgres_ssl_certificates_provided()
+        _validate_cert_inputs()
+
     _validate_supported_distros()
-    _validate_sufficient_memory()
-    _validate_sufficient_disk_space()
     _validate_openssl_version()
     _validate_user_has_sudo_permissions()
-    _validate_postgres_inputs()
-    _validate_external_postgres_ssl_enabled()
-    _validate_postgres_ssl_certificates_provided()
-    _validate_cert_inputs()
+    _validate_sufficient_disk_space()
 
     if _errors:
         printable_error = 'Validation error(s):\n' \
