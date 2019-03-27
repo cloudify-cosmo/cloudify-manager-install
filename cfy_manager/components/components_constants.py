@@ -60,5 +60,6 @@ CLEAN_DB = 'clean_db'
 FLASK_SECURITY = 'flask_security'
 MASTER_IP = 'master_ip'
 NODE_NAME = 'node_name'
+UNCONFIGURED_INSTALL = 'unconfigured_install'
 
 # endregion

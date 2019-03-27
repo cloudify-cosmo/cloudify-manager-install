@@ -41,7 +41,8 @@ from .components.components_constants import (
     PUBLIC_IP,
     ADMIN_PASSWORD,
     CLEAN_DB,
-    MASTER_IP
+    MASTER_IP,
+    UNCONFIGURED_INSTALL,
 )
 from .config import config
 from .encryption.encryption import update_encryption_key
@@ -354,7 +355,7 @@ def install(verbose=False,
         config_write_required=True
     )
     logger.notice('Installing desired components...')
-    validate(components=components)
+    validate(components=components, only_install=only_install)
     set_globals()
 
     for component in components:
@@ -366,6 +367,7 @@ def install(verbose=False,
         if not (component.skip_installation or only_install):
             component.configure()
 
+    config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
     _finish_configuration()
 
@@ -404,6 +406,7 @@ def configure(verbose=False,
         if not component.skip_installation:
             component.configure()
 
+    config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
     _finish_configuration()
 
