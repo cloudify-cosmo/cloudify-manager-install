@@ -226,7 +226,6 @@ class PostgresqlServerComponent(BaseComponent):
     def install(self):
         logger.notice('Installing PostgreSQL Server...')
         self._install()
-        self._configure()
         logger.notice('PostgreSQL Server successfully installed')
 
     def configure(self):

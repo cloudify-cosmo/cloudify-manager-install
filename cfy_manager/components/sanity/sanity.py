@@ -134,13 +134,13 @@ class SanityComponent(BaseComponent):
         logger.notice('Sanity completed successfully')
 
     def install(self):
+        pass
+
+    def configure(self):
         if config[SANITY]['skip_sanity'] or config[CLUSTER][MASTER_IP]:
             logger.info('Skipping sanity check...')
             return
         self.run_sanity_check()
-
-    def configure(self):
-        pass
 
     def remove(self):
         pass

@@ -14,11 +14,10 @@ PLUGINS_TO_BUNDLE = ['vSphere',
                      'Fabric',
                      'GCP',
                      'AWS',
-                     'AWS SDK',
                      'Azure',
+                     'Ansible',
                      'Kubernetes',
-                     'Utilities',
-                     'Diamond']
+                     'Utilities']
 
 
 DISTROS_TO_BUNDLE = ['Centos Core', 'Redhat Maipo']

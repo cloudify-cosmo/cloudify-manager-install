@@ -28,8 +28,7 @@ class PatchComponent(BaseComponent):
         super(PatchComponent, self).__init__(skip_installation)
 
     def remove(self):
-        sources = config['patch'][SOURCES]
-        yum_remove(sources['patch_source_url'])
+        yum_remove('patch')
 
     def install(self):
         logger.notice('Installing Patch...')

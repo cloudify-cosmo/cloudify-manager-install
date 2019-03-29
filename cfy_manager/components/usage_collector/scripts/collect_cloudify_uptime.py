@@ -1,9 +1,11 @@
 import json
+import logging
+from logging.handlers import WatchedFileHandler
+
 from os import path
+import pkg_resources
 from uuid import uuid4
 from requests import post
-
-import pkg_resources
 
 from manager_rest import premium_enabled
 
@@ -16,6 +18,15 @@ except ImportError:
 
 MANAGER_ID_PATH = '/etc/cloudify/.id'
 CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
+LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
+logger = logging.getLogger('usage_collector')
+logger.setLevel(logging.INFO)
+file_handler = WatchedFileHandler(filename=LOGFILE)
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
+                              datefmt='%d/%m/%Y %H:%M:%S')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 def _collect_metadata(data):
@@ -32,6 +43,7 @@ def _collect_metadata(data):
 
 def _send_data(data):
     # for some reason, multi hierarchy dict doesn't pass well to the end point
+    logger.info('The sent data: {0}'.format(data))
     data = {'data': json.dumps(data)}
     post(CLOUDIFY_ENDPOINT_UPTIME_URL, data=data)
 
@@ -60,12 +72,16 @@ def _create_manager_id_file():
 
 
 def main():
+    logger.info('Uptime script started running')
     _create_manager_id_file()
     if not _is_active_manager():
+        logger.info('Uptime script finished running because the manager is '
+                    'not active')
         return
     data = {}
     _collect_metadata(data)
     _send_data(data)
+    logger.info('Uptime script finished running')
 
 
 if __name__ == '__main__':

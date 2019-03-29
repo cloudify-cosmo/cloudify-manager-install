@@ -29,6 +29,7 @@ from ..components_constants import (
     FLASK_SECURITY,
     CLEAN_DB,
     MASTER_IP,
+    UNCONFIGURED_INSTALL,
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -215,7 +216,7 @@ class RestServiceComponent(BaseComponent):
             self.logger.info('Joining cluster during bootstrap, ignoring DB '
                              'configuration')
             return
-        if config[CLEAN_DB]:
+        if config[CLEAN_DB] or config[UNCONFIGURED_INSTALL]:
             db.prepare_db()
             db.populate_db(configs)
         else:
@@ -255,7 +256,6 @@ class RestServiceComponent(BaseComponent):
             logger.notice('Installing Cloudify Premium...')
             yum_install(config[RESTSERVICE][SOURCES]['premium_source_url'])
 
-        self._configure()
         logger.notice('Rest Service successfully installed')
 
     def configure(self):

@@ -55,6 +55,9 @@ class RabbitMQComponent(BaseComponent):
         for source in sources.values():
             yum_install(source)
 
+    def _install_manager(self):
+        return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
+
     def _init_service(self):
         logger.info('Initializing RabbitMQ...')
         rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
@@ -63,6 +66,12 @@ class RabbitMQComponent(BaseComponent):
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
         systemd.systemctl('daemon-reload')
+
+        if not self._install_manager():
+            # If this isn't installed on a manager, we need the management
+            # plugin to listen on all interfaces, not just 127.0.0.1
+            sudo(['sed', '-i', '/{ip, "127.0.0.1"},/d',
+                  '/etc/cloudify/rabbitmq/rabbitmq.config'])
 
         # rabbitmq restart exits with 143 status code that is valid in
         # this case.
@@ -106,20 +115,25 @@ class RabbitMQComponent(BaseComponent):
     def _generate_rabbitmq_certs(self):
         logger.info('Generating rabbitmq certificate...')
 
-        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        if self._install_manager():
             has_ca_key = certificates.handle_ca_cert()
         else:
             has_ca_key = False
         networks = config[AGENT]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
+        cert_ips = set([rabbit_host])
+        cert_ips.update(certificates.get_brokers_from_networks(networks))
+
         certificates.store_cert_metadata(
             rabbit_host,
-            networks,
+            new_brokers=cert_ips,
+            new_networks=networks.keys(),
+            # The cfyuser won't exist yet (and may never exist if only rabbit
+            # is being installed)
             owner='rabbitmq',
             group='rabbitmq',
         )
-        cert_ips = [rabbit_host] + list(networks.values())
 
         sign_cert = constants.CA_CERT_PATH if has_ca_key else None
         sign_key = constants.CA_KEY_PATH if has_ca_key else None
@@ -205,7 +219,6 @@ class RabbitMQComponent(BaseComponent):
     def install(self):
         logger.notice('Installing RabbitMQ...')
         self._install()
-        self._configure()
         logger.notice('RabbitMQ successfully installed')
 
     def configure(self):

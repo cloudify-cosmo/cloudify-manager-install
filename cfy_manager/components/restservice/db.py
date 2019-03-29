@@ -15,6 +15,7 @@
 
 from os.path import join
 
+from .manager_config import make_manager_config
 from ..components_constants import (
     SCRIPTS,
     PROVIDER_CONTEXT,
@@ -78,8 +79,26 @@ def _create_args_dict():
         'provider_context': _get_provider_context(),
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
-                               'migrations')
+                               'migrations'),
+        'config': make_manager_config(),
+        'rabbitmq_brokers': [
+            {
+                'name': 'rabbitmq',
+                'host': config['rabbitmq']['endpoint_ip'],
+                'management_host':
+                    config['rabbitmq']['management_endpoint_ip'],
+                'username': config['rabbitmq']['username'],
+                'password': config['rabbitmq']['password'],
+                'params': None
+            }
+        ],
     }
+    with open(constants.CA_CERT_PATH) as f:
+        args_dict['ca_cert'] = f.read()
+    rabbitmq_cert_path = config['rabbitmq'].get('broker_cert_path')
+    if rabbitmq_cert_path:
+        with open(rabbitmq_cert_path) as f:
+            args_dict['ca_cert'] += '\n' + f.read()
     return args_dict
 
 

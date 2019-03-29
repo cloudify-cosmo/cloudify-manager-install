@@ -174,10 +174,10 @@ class ClusterComponent(BaseComponent):
 
         return self._get_cluster_status(master_manager_ip)
 
-    def configure(self):
+    def install(self):
         pass
 
-    def install(self):
+    def configure(self):
         if config[MANAGER][PREMIUM_EDITION]:
             self.logger.info('Premium version found')
             cluster_master_ip = config[CLUSTER][MASTER_IP]

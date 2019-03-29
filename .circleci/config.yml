@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 jobs:
   fetch_rpms:
     docker:
@@ -39,7 +39,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Set version environment variables 
+          name: Set version environment variables
           command: cat packaging/version_info >> $BASH_ENV
       - attach_workspace:
           at: /tmp/workspace
@@ -60,6 +60,9 @@ jobs:
           root: ~/rpm
           paths:
             - x86_64
+      - store_artifacts:
+          path: ~/rpm/x86_64
+          destination: /
 
   install_manager:
     machine: true
@@ -97,6 +100,15 @@ jobs:
             cd packaging/docker
             chmod +x install_manager.sh
             ./install_manager.sh
+
+  flake8:
+    docker:
+      - image: python:2
+    steps:
+      - checkout
+      - run: pip install --user flake8
+      - run: python -m flake8
+
 workflows:
   version: 2
   build:
@@ -110,3 +122,4 @@ workflows:
       - install_manager:
           requires:
             - build_rpm
+      - flake8

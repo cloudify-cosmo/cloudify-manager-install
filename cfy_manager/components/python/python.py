@@ -41,7 +41,6 @@ class PythonComponent(BaseComponent):
     def install(self):
         logger.notice('Installing Python dependencies...')
         self._install()
-        self._configure()
         logger.notice('Python dependencies successfully installed')
 
     def configure(self):

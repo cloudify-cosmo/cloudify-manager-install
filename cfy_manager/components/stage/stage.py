@@ -231,11 +231,11 @@ class StageComponent(BaseComponent):
         self._start_and_validate_stage()
 
     def install(self):
+        if config[STAGE]['skip_installation']:
+            logger.info('Skipping Stage installation.')
+            return
         logger.notice('Installing Stage...')
         self._install()
-        if config[STAGE]['skip_installation']:
-            return
-        self._configure()
         logger.notice('Stage successfully installed')
 
     def configure(self):

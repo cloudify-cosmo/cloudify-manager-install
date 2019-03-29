@@ -23,7 +23,8 @@ from ..components_constants import (
     PUBLIC_IP,
     AGENT,
     SSL_INPUTS,
-    CLEAN_DB
+    CLEAN_DB,
+    UNCONFIGURED_INSTALL,
 )
 from ..base_component import BaseComponent
 from ..service_names import NGINX, MANAGER
@@ -68,8 +69,15 @@ class NginxComponent(BaseComponent):
         networks = config[AGENT]['networks']
         internal_rest_host = config[MANAGER][PRIVATE_IP]
 
-        certificates.store_cert_metadata(internal_rest_host, networks)
-        cert_ips = [internal_rest_host] + list(networks.values())
+        cert_ips = set([internal_rest_host])
+        cert_ips.update(certificates.get_managers_from_networks(networks))
+
+        certificates.store_cert_metadata(
+            internal_rest_host,
+            new_managers=cert_ips,
+            new_networks=networks.keys(),
+        )
+
         certificates.generate_internal_ssl_cert(
             ips=cert_ips,
             cn=internal_rest_host
@@ -128,15 +136,15 @@ class NginxComponent(BaseComponent):
             self._generate_external_certs()
 
     def _handle_certs(self):
-        if not config[CLEAN_DB]:
+        if config[UNCONFIGURED_INSTALL] or config[CLEAN_DB]:
+            has_ca_key = certificates.handle_ca_cert()
+            self._handle_internal_cert(has_ca_key)
+            self._handle_external_cert()
+        else:
             logger.info('Skipping certificate handling. '
                         'Pass the `--clean-db` flag in order to recreate '
                         'all certificates')
             return
-
-        has_ca_key = certificates.handle_ca_cert()
-        self._handle_internal_cert(has_ca_key)
-        self._handle_external_cert()
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')
@@ -242,7 +250,6 @@ class NginxComponent(BaseComponent):
     def install(self):
         logger.notice('Installing NGINX...')
         self._install()
-        self._configure()
         logger.notice('NGINX successfully installed')
 
     def configure(self):

@@ -68,6 +68,7 @@ class ComposerComponent(BaseComponent):
                 'Composer package not found in manager resources package')
             logger.notice('Composer will not be installed.')
             config[COMPOSER]['skip_installation'] = True
+            self.skip_installation = True
             return
 
         self._create_paths()
@@ -172,11 +173,11 @@ class ComposerComponent(BaseComponent):
         self._start_and_validate_composer()
 
     def install(self):
+        if config[COMPOSER]['skip_installation']:
+            logger.notice('Skipping Cloudify Composer installation.')
+            return
         logger.notice('Installing Cloudify Composer...')
         self._install()
-        if config[COMPOSER]['skip_installation']:
-            return
-        self._configure()
         logger.notice('Cloudify Composer successfully installed')
 
     def configure(self):

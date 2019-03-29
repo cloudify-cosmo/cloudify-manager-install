@@ -14,14 +14,18 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import atexit
 import json
 import argparse
 import logging
+import tempfile
+import os
+from datetime import datetime
 
 from flask_migrate import upgrade
 
 from manager_rest import config
-from manager_rest.storage import db, models, get_storage_manager
+from manager_rest.storage import db, models, get_storage_manager  # NOQA
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage.storage_utils import \
@@ -57,13 +61,47 @@ def _add_default_user_and_tenant(amqp_manager, script_config):
     )
 
 
-def _get_amqp_manager():
+def _get_amqp_manager(script_config):
+    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as f:
+        f.write(script_config['ca_cert'])
+    broker = script_config['rabbitmq_brokers'][0]
+    atexit.register(os.unlink, f.name)
     return AMQPManager(
-        host=config.instance.amqp_management_host,
-        username=config.instance.amqp_username,
-        password=config.instance.amqp_password,
-        verify=config.instance.amqp_ca_path
+        host=broker['management_host'],
+        username=broker['username'],
+        password=broker['password'],
+        verify=f.name
     )
+
+
+def _insert_config(config):
+    sm = get_storage_manager()
+    for name, value in config.items():
+        inst = sm.get(models.Config, None, filters={'name': name})
+        inst.value = value
+        sm.update(inst)
+
+
+def _insert_rabbitmq_broker(brokers, ca_id):
+    sm = get_storage_manager()
+    for broker in brokers:
+        inst = models.RabbitMQBroker(
+            _ca_cert_id=ca_id,
+            **broker
+        )
+        sm.put(inst)
+
+
+def _insert_ca_cert(cert):
+    sm = get_storage_manager()
+    inst = models.Certificate(
+        name='ca',
+        value=cert,
+        updated_at=datetime.now(),
+        _updater_id=0,
+    )
+    sm.put(inst)
+    return inst.id
 
 
 def _add_provider_context(context):
@@ -91,7 +129,10 @@ if __name__ == '__main__':
     with open(args.config_path, 'r') as f:
         script_config = json.load(f)
     _init_db_tables(script_config['db_migrate_dir'])
-    amqp_manager = _get_amqp_manager()
+    amqp_manager = _get_amqp_manager(script_config)
     _add_default_user_and_tenant(amqp_manager, script_config)
+    _insert_config(script_config['config'])
+    ca_id = _insert_ca_cert(script_config['ca_cert'])
+    _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], ca_id)
     _add_provider_context(script_config['provider_context'])
     print 'Finished creating bootstrap admin, default tenant and provider ctx'

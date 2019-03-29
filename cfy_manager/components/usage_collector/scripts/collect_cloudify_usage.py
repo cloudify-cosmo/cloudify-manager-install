@@ -1,13 +1,16 @@
 import json
+import logging
 from uuid import uuid4
 from os import sysconf, path
 from platform import platform
 from os.path import expanduser
 from multiprocessing import cpu_count
+from contextlib import contextmanager
+from logging.handlers import WatchedFileHandler
 
 import pkg_resources
 from requests import post
-from contextlib import contextmanager
+
 from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
@@ -24,6 +27,15 @@ RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
 CLOUDIFY_ENDPOINT_USAGE_DATA_URL = 'https://api.cloudify.co/cloudifyUsage'
 CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
+LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
+logger = logging.getLogger('usage_collector')
+logger.setLevel(logging.INFO)
+file_handler = WatchedFileHandler(filename=LOGFILE)
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
+                              datefmt='%d/%m/%Y %H:%M:%S')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 @contextmanager
@@ -65,8 +77,16 @@ def _collect_metadata(data):
             image_info = image_file.read().strip()
     else:
         image_info = 'rpm'
+
+    customer_id = None
+    with _get_storage_manager() as sm:
+        licenses = sm.list(models.License)
+        if licenses:
+            customer_id = str(licenses[0].customer_id)
+
     data['metadata'] = {
         'manager_id': manager_id,
+        'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
         'image_info': image_info
@@ -127,6 +147,7 @@ def _collect_cloudify_config(data):
 
 def _send_data(data):
     # for some reason. multi hierarchy dict doesn't pass well to the end point
+    logger.info('The sent data: {0}'.format(data))
     data = {'data': json.dumps(data)}
     post(CLOUDIFY_ENDPOINT_USAGE_DATA_URL, data=data)
 
@@ -145,8 +166,11 @@ def _is_active_manager():
 
 
 def main():
+    logger.info('Usage script started running')
     _create_manager_id_file()
     if not _is_active_manager():
+        logger.info('Usage script finished running because the manager is '
+                    'not active')
         return
     data = {}
     _collect_metadata(data)
@@ -154,6 +178,7 @@ def main():
     _collect_cloudify_data(data)
     _collect_cloudify_config(data)
     _send_data(data)
+    logger.info('Usage script finished running')
 
 
 if __name__ == '__main__':

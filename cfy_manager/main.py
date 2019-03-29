@@ -41,7 +41,8 @@ from .components.components_constants import (
     PUBLIC_IP,
     ADMIN_PASSWORD,
     CLEAN_DB,
-    MASTER_IP
+    MASTER_IP,
+    UNCONFIGURED_INSTALL,
 )
 from .config import config
 from .encryption.encryption import update_encryption_key
@@ -72,6 +73,13 @@ ADMIN_PASSWORD_HELP_MSG = (
     'The password of the Cloudify Manager system administrator. '
     'Can only be used on the first install of the manager, or when using '
     'the --clean-db flag'
+)
+ONLY_INSTALL_HELP_MSG = (
+    'Whether to only perform the install, and not configuration. '
+    'Intended to be used to create images for joining to clusters. '
+    'If this is set then all packages will be installed but configuration '
+    'will not be performed. `cfy_manager configure` will need to be run '
+    'before the manager is usable.'
 )
 PRIVATE_IP_HELP_MSG = (
     "The private IP of the manager. This is the address which will be "
@@ -322,6 +330,7 @@ def sanity_check(verbose=False, private_ip=None):
     sanity.run_sanity_check()
 
 
+@argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
 @install_args
 def install(verbose=False,
             private_ip=None,
@@ -330,7 +339,8 @@ def install(verbose=False,
             clean_db=False,
             join_cluster=None,
             database_ip=None,
-            postgres_password=None):
+            postgres_password=None,
+            only_install=None):
     """ Install Cloudify Manager """
 
     _prepare_execution(
@@ -345,13 +355,19 @@ def install(verbose=False,
         config_write_required=True
     )
     logger.notice('Installing desired components...')
-    validate(components=components)
+    validate(components=components, only_install=only_install)
     set_globals()
 
     for component in components:
         if not component.skip_installation:
             component.install()
+        # Separate check because some components set 'skip' if they don't
+        # find the install package, and because if we're set to only install
+        # then we shouldn't configure
+        if not (component.skip_installation or only_install):
+            component.configure()
 
+    config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
     _finish_configuration()
 
@@ -390,6 +406,7 @@ def configure(verbose=False,
         if not component.skip_installation:
             component.configure()
 
+    config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
     _finish_configuration()
 
