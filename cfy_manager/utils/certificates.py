@@ -310,7 +310,8 @@ def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
     )
 
 
-def generate_ca_cert():
+def generate_ca_cert(cert_path=const.CA_CERT_PATH,
+                     key_path=const.CA_KEY_PATH):
     sudo([
         'openssl', 'req',
         '-x509',
@@ -318,8 +319,8 @@ def generate_ca_cert():
         '-newkey', 'rsa:2048',
         '-days', '3650',
         '-batch',
-        '-out', const.CA_CERT_PATH,
-        '-keyout', const.CA_KEY_PATH
+        '-out', cert_path,
+        '-keyout', key_path,
     ])
 
 

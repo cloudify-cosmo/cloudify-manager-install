@@ -51,18 +51,29 @@ from .exceptions import BootstrapError
 from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
 from .utils import CFY_UMASK
+from .utils.common import run
 from .utils.files import remove as _remove, remove_temp_files, touch
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
     create_pkcs12,
+    generate_ca_cert,
+    _generate_ssl_certificate,
 )
 
 logger = get_logger('Main')
 
 START_TIME = time()
+TEST_CA_ROOT_PATH = os.path.expanduser('~/.cloudify-test-ca')
+TEST_CA_CERT_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.crt')
+TEST_CA_KEY_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.key')
 
 
+TEST_CA_GENERATE_SAN_HELP_TEXT = (
+    'Comma separated list of names or IPs that the generated certificate '
+    'should be valid for. '
+    'The first SAN entered will be the certificate name and used as the CN.'
+)
 CLEAN_DB_HELP_MSG = (
     'If set to "false", the DB will not be recreated when '
     'installing/configuring the Manager. Must be set to "true" on the first '
@@ -110,6 +121,43 @@ POSTGRES_PASSWORD_HELP_MSG = (
 )
 
 components = []
+
+
+@argh.decorators.arg('-s', '--sans', help=TEST_CA_GENERATE_SAN_HELP_TEXT,
+                     required=True)
+def generate_test_cert(**kwargs):
+    """Generate keys with certificates signed by a test CA.
+    Not for production use. """
+    sans = kwargs['sans'].split(',')
+    if not os.path.exists(TEST_CA_CERT_PATH):
+        print('CA cert not found, generating CA certs.')
+        run(['mkdir', '-p', TEST_CA_ROOT_PATH])
+        generate_ca_cert(TEST_CA_CERT_PATH, TEST_CA_KEY_PATH)
+
+    cn = sans[0]
+
+    cert_path = os.path.join(TEST_CA_ROOT_PATH, '{cn}.crt'.format(cn=cn))
+    key_path = os.path.join(TEST_CA_ROOT_PATH, '{cn}.key'.format(cn=cn))
+    _generate_ssl_certificate(
+        sans,
+        cn,
+        cert_path,
+        key_path,
+        TEST_CA_CERT_PATH,
+        TEST_CA_KEY_PATH,
+    )
+
+    print(
+        'Created cert and key:\n'
+        '  {cert}\n'
+        '  {key}\n'
+        '\n'
+        'CA cert: {ca_cert}'.format(
+            cert=cert_path,
+            key=key_path,
+            ca_cert=TEST_CA_CERT_PATH,
+        )
+    )
 
 
 def _print_time():
@@ -490,6 +538,7 @@ def main():
         sanity_check,
         add_networks,
         update_encryption_key,
+        generate_test_cert,
     ])
     os.umask(current_umask)
 
