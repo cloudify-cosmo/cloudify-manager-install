@@ -67,7 +67,7 @@ def _set_external_port_and_protocol():
 
 
 def _set_rabbitmq_config():
-    if 'broker_cert_path' not in config[RABBITMQ]:
+    if not config[RABBITMQ].get('broker_cert_path'):
         config[RABBITMQ]['broker_cert_path'] = constants.CA_CERT_PATH
 
 

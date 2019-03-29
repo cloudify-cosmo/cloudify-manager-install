@@ -104,16 +104,20 @@ agent:
   heartbeat: 30
 
 rabbitmq:
+  # For external brokers, the configuration entries up to
+  # management_endpoint_ip should be set to appropriate values.
+
   # Sets the username/password to use for clients such as celery to connect to
   # the rabbitmq broker. It is recommended that you set both the username and
   # password to something reasonably secure.
   username: cloudify
   password: c10udify
 
-  # Sets the File Descriptor limit for the rabbitmq user.
-  # Not used if an external endpoint is used.
-  fd_limit: 102400
-  nodename: cloudify-manager@localhost
+  # Path to broker certificate for external brokers
+  # For all-in-one manager install, this should be left blank
+  # For external brokers, the broker certificate (in PEM format) should be
+  # in the file referred to by this configuration entry
+  broker_cert_path: ''
 
   # The hostname or IP address by which RabbitMQ is known to
   # Cloudify Manager's components (REST service and management workers).
@@ -121,15 +125,23 @@ rabbitmq:
   # the manager.
   endpoint_ip: localhost
 
+  # IP of the management API, should be localhost unless an external rabbitmq
+  # is used
+  # This should be the same as the endpoint_ip unless you are doing something
+  # unusual
+  management_endpoint_ip: localhost
+
+  # Settings after this point are not relevant for external brokers
   sources:
     erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
     socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm
     rabbitmq_rpm_source_url: rabbitmq-server-3.7.7-1.el7.noarch.rpm
     cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
-  # IP of the management API, should be localhost unless an external rabbitmq
-  # is used
-  management_endpoint_ip: 'localhost'
+  # Sets the File Descriptor limit for the rabbitmq user.
+  # Not used if an external endpoint is used.
+  fd_limit: 102400
+  nodename: cloudify-manager@localhost
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
