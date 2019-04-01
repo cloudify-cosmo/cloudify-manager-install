@@ -124,7 +124,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    config.instance.load_configuration()
+    config.instance.load_configuration(from_db=False)
 
     with open(args.config_path, 'r') as f:
         script_config = json.load(f)
