@@ -26,9 +26,7 @@ from cfy_manager.constants import (
 from cfy_manager.utils.certificates import (
     create_internal_certs,
     load_cert_metadata,
-    store_cert_metadata,
-    get_brokers_from_networks,
-    get_managers_from_networks,
+    store_cert_metadata
 )
 
 logger = get_logger('networks')
@@ -36,13 +34,13 @@ SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
 
 
-def _run_update_provider_context_script(args):
+def _run_update_provider_context_script(host, networks):
     script_path = join(SCRIPT_DIR, 'add-networks-to-provider-context.py')
 
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    cmd = [python_path, script_path, json.dumps(args)]
+    cmd = [python_path, script_path, host, json.dumps(networks)]
 
     return common.sudo(cmd)
 
@@ -56,19 +54,28 @@ def _validate_duplicate_network(old_networks, new_networks):
                             'run the command again'.format(network))
 
 
-def _update_metadata_file(networks):
+def _update_metadata_file(metadata, networks):
     """
     Add the new networks to /etc/cloudify/ssl/certificate_metadata
     :param networks: a dict containing the new networks
     """
-    metadata = load_cert_metadata()
+
     old_networks = metadata['network_names']
     new_networks = networks.keys()
     _validate_duplicate_network(old_networks, new_networks)
+    if metadata.get('broker_addresses'):
+        new_brokers = networks.values()
+    else:
+        new_brokers = None
+    if metadata.get('manager_addresses'):
+        new_managers = networks.values()
+    else:
+        new_managers = None
+
     store_cert_metadata(
         new_networks=networks.keys(),
-        new_brokers=get_brokers_from_networks(networks),
-        new_managers=get_managers_from_networks(networks),
+        new_brokers=new_brokers,
+        new_managers=new_managers,
     )
 
 
@@ -83,11 +90,13 @@ def add_networks(networks=None):
     print('Trying to add new networks to Manager...')
 
     networks = json.loads(networks)
+    metadata = load_cert_metadata()
 
-    _update_metadata_file(networks)
+    _update_metadata_file(metadata, networks)
     create_internal_certs()
 
-    _run_update_provider_context_script(networks)
+    _run_update_provider_context_script(
+        metadata['internal_rest_host'], networks)
 
     print('New networks were added successfully. Please restart the'
           ' following services: `nginx`, `cloudify-mgmtworker`,'

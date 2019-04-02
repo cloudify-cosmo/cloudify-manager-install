@@ -26,13 +26,15 @@ from ..components_constants import (
     SECURITY,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
-    HOSTNAME
+    HOSTNAME,
+    PREMIUM_EDITION
 )
 
 from ..service_names import (
     POSTGRESQL_CLIENT,
     MANAGER,
-    RESTSERVICE
+    RESTSERVICE,
+    RABBITMQ
 )
 
 from ... import constants
@@ -110,6 +112,11 @@ def _create_args_dict():
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
+        'networks': config['networks'],
+        'hostname': config[MANAGER][HOSTNAME],
+        'public_ip': config['manager']['public_ip'],
+        'private_ip': config['manager']['private_ip'],
+        'premium': config[MANAGER][PREMIUM_EDITION],
         'rabbitmq_brokers': [
             {
                 'name': 'rabbitmq',
@@ -118,7 +125,8 @@ def _create_args_dict():
                     config['rabbitmq']['management_endpoint_ip'],
                 'username': config['rabbitmq']['username'],
                 'password': config['rabbitmq']['password'],
-                'params': None
+                'params': None,
+                'networks': config[RABBITMQ]['networks']
             }
         ],
     }

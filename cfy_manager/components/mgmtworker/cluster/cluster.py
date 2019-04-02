@@ -243,7 +243,9 @@ class ClusterComponent(BaseComponent):
             if config[CLUSTER]['enabled']:
                 active_manager_ip = config[CLUSTER][ACTIVE_MANAGER_IP] or \
                                     config[MANAGER][PRIVATE_IP]
-                self._join_to_cluster(active_manager_ip)
+                # don't "join" on the first manager
+                if config[CLUSTER][ACTIVE_MANAGER_IP]:
+                    self._join_to_cluster(active_manager_ip)
                 self._run_syncthing_configuration_script(active_manager_ip)
                 self._verify_local_rest_service_alive(verify_rest_call=True)
                 logger.notice('Node has been added successfully!')

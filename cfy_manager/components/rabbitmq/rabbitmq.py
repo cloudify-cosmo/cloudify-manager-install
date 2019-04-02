@@ -17,7 +17,6 @@ import json
 from os.path import join
 
 from ..components_constants import (
-    AGENT,
     CONFIG,
     PRIVATE_IP,
     SERVICES_TO_INSTALL,
@@ -119,15 +118,12 @@ class RabbitMQComponent(BaseComponent):
             has_ca_key = certificates.handle_ca_cert()
         else:
             has_ca_key = False
-        networks = config[AGENT]['networks']
+        networks = config[RABBITMQ]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
-
-        cert_ips = set([rabbit_host])
-        cert_ips.update(certificates.get_brokers_from_networks(networks))
 
         certificates.store_cert_metadata(
             rabbit_host,
-            new_brokers=cert_ips,
+            new_brokers=networks.values(),
             new_networks=networks.keys(),
             # The cfyuser won't exist yet (and may never exist if only rabbit
             # is being installed)
@@ -139,7 +135,7 @@ class RabbitMQComponent(BaseComponent):
         sign_key = constants.CA_KEY_PATH if has_ca_key else None
 
         certificates._generate_ssl_certificate(
-            ips=cert_ips,
+            ips=networks.values(),
             cn=rabbit_host,
             cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
             key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
@@ -209,6 +205,8 @@ class RabbitMQComponent(BaseComponent):
     def _configure(self):
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
+        if not config[RABBITMQ]['networks']:
+            config[RABBITMQ]['networks'] = config['networks']
         self._generate_rabbitmq_certs()
         self._init_service()
         self._delete_guest_user()

@@ -19,6 +19,7 @@ import json
 import argparse
 import logging
 import tempfile
+import platform
 import os
 from datetime import datetime
 
@@ -92,6 +93,21 @@ def _insert_rabbitmq_broker(brokers, ca_id):
         sm.put(inst)
 
 
+def _insert_manager(config):
+    sm = get_storage_manager()
+    inst = models.Manager(
+        public_ip=config['public_ip'],
+        hostname=config['hostname'],
+        private_ip=config['private_ip'],
+        networks=config['networks'],
+        edition='premium' if config['premium'] else 'community',
+        version='5.0.dev1',
+        distribution=platform.linux_distribution()[0],
+        distro_release=' '.join(platform.linux_distribution()[1:])
+    )
+    sm.put(inst)
+
+
 def _insert_ca_cert(cert):
     sm = get_storage_manager()
     inst = models.Certificate(
@@ -133,6 +149,7 @@ if __name__ == '__main__':
     _add_default_user_and_tenant(amqp_manager, script_config)
     _insert_config(script_config['config'])
     ca_id = _insert_ca_cert(script_config['ca_cert'])
+    _insert_manager(script_config)
     _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], ca_id)
     _add_provider_context(script_config['provider_context'])
     print 'Finished creating bootstrap admin, default tenant and provider ctx'
