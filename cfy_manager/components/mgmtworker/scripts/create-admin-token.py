@@ -17,6 +17,8 @@
 from manager_rest import config, server, storage
 
 import os
+import pwd
+import grp
 
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 RESTSEC_CONFIG_PATH = '/opt/manager/rest-security.conf'
@@ -45,6 +47,9 @@ def generate_auth_token():
 def update_auth_token(token):
     with open(AUTH_TOKEN_LOCATION, 'w') as token_handle:
         token_handle.write(token)
+    uid = pwd.getpwnam("cfyuser").pw_uid
+    gid = grp.getgrnam("cfyuser").gr_gid
+    os.chown(AUTH_TOKEN_LOCATION, uid, gid)
 
 
 if __name__ == '__main__':

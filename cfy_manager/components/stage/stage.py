@@ -21,9 +21,7 @@ from ..components_constants import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
-    HOME_DIR_KEY
-)
-from ..components_constants import (
+    HOME_DIR_KEY,
     SSL_INPUTS,
     SSL_ENABLED
 )
@@ -52,6 +50,7 @@ STAGE_USER = '{0}_user'.format(STAGE)
 STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
+CONF_DIR = join(HOME_DIR, 'conf')
 NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
 RESOURCES_DIR = join(HOME_DIR, 'resources')
@@ -109,6 +108,7 @@ class StageComponent(BaseComponent):
         common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
         common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
         common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CONF_DIR)
 
     def _install_nodejs(self):
         logger.info('Installing NodeJS...')

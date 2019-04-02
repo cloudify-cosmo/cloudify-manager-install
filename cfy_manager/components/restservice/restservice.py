@@ -28,8 +28,7 @@ from ..components_constants import (
     VENV,
     FLASK_SECURITY,
     CLEAN_DB,
-    ACTIVE_MANAGER_IP,
-    UNCONFIGURED_INSTALL
+    ACTIVE_MANAGER_IP
 )
 from ..base_component import BaseComponent
 from ..service_names import (
