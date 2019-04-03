@@ -136,14 +136,23 @@ def generate_test_cert(**kwargs):
 
     cert_path = os.path.join(TEST_CA_ROOT_PATH, '{cn}.crt'.format(cn=cn))
     key_path = os.path.join(TEST_CA_ROOT_PATH, '{cn}.key'.format(cn=cn))
-    _generate_ssl_certificate(
-        sans,
-        cn,
-        cert_path,
-        key_path,
-        TEST_CA_CERT_PATH,
-        TEST_CA_KEY_PATH,
-    )
+    try:
+        _generate_ssl_certificate(
+            sans,
+            cn,
+            cert_path,
+            key_path,
+            TEST_CA_CERT_PATH,
+            TEST_CA_KEY_PATH,
+        )
+    except Exception as err:
+        sys.stderr.write(
+            'Certificate creation failed: {err_type}- {msg}\n'.format(
+                err_type=type(err),
+                msg=str(err),
+            )
+        )
+        raise
 
     print(
         'Created cert and key:\n'
