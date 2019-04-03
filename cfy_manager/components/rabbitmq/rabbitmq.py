@@ -15,6 +15,8 @@
 
 import json
 from os.path import join
+import socket
+import time
 
 from ..components_constants import (
     CONFIG,
@@ -26,19 +28,21 @@ from ..service_components import MANAGER_SERVICE
 from ..base_component import BaseComponent
 from ..service_names import RABBITMQ, MANAGER
 from ... import constants
-from ...utils import certificates
+from ...utils import certificates, common
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import ValidationError, NetworkError
+from ...exceptions import ValidationError, NetworkError, ClusteringError
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, remove as remove_file
+from ...utils.files import write_to_file, deploy
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
+RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 SECURE_PORT = 5671
 
 RABBITMQ_CTL = 'rabbitmqctl'
@@ -54,8 +58,13 @@ class RabbitMQComponent(BaseComponent):
         for source in sources.values():
             yum_install(source)
 
-    def _install_manager(self):
+    def _installing_manager(self):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
+
+    def _deploy_configuration(self):
+        logger.info('Deploying RabbitMQ config')
+        deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH)
+        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
 
     def _init_service(self):
         logger.info('Initializing RabbitMQ...')
@@ -64,13 +73,13 @@ class RabbitMQComponent(BaseComponent):
         # Delete old mnesia node
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
+        self._deploy_configuration()
         systemd.systemctl('daemon-reload')
 
-        if not self._install_manager():
-            # If this isn't installed on a manager, we need the management
-            # plugin to listen on all interfaces, not just 127.0.0.1
-            sudo(['sed', '-i', '/{ip, "127.0.0.1"},/d',
-                  '/etc/cloudify/rabbitmq/rabbitmq.config'])
+        if not self._installing_manager():
+            # If we're installing an external rabbit node, management plugin
+            # must listen externally
+            config[RABBITMQ]['management_only_local'] = False
 
         # rabbitmq restart exits with 143 status code that is valid in
         # this case.
@@ -111,13 +120,182 @@ class RabbitMQComponent(BaseComponent):
                                rabbitmq_username,
                                'administrator'])
 
+    def _possibly_set_nodename(self):
+        nodename = config[RABBITMQ]['nodename']
+
+        if not nodename:
+            with open('/etc/hostname') as host_handle:
+                nodename = host_handle.read().strip()
+
+        nodename = self._add_missing_nodename_prefix(nodename)
+
+        config[RABBITMQ]['nodename'] = nodename
+
+    def _add_missing_nodename_prefix(self, nodename):
+        if '@' not in nodename:
+            # Use this prefix to make rabbitmqctl able to work without '-n'
+            nodename = 'rabbit@' + nodename
+        return nodename
+
+    def _set_erlang_cookie(self):
+        cookie = config[RABBITMQ]['erlang_cookie']
+        if config[RABBITMQ]['cluster_members'] and not cookie:
+            raise ValidationError(
+                'Cluster members are configured but erlang_cookie has not '
+                'been set.'
+            )
+
+        if cookie:
+            write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
+            sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
+
+    def _possibly_join_cluster(self):
+        join_node = config[RABBITMQ]['join_cluster']
+        if not join_node:
+            return
+
+        join_node = self._add_missing_nodename_prefix(join_node)
+
+        logger.info(
+            'Joining cluster via node {target_node}.'.format(
+                target_node=join_node,
+            )
+        )
+        self._rabbitmqctl(['stop_app'])
+        self._rabbitmqctl(['reset'])
+        self._rabbitmqctl(['join_cluster', join_node])
+        self._rabbitmqctl(['start_app'])
+
+        # In initial testing the clustering completed in seconds, at most, so
+        # this should be significantly more time than is needed, excepting
+        # network issues
+        attempt = 0
+        max_attempts = 10
+        delay = 3
+        while attempt != max_attempts:
+            attempt += 1
+            logger.info(
+                'Checking rabbit cluster is joined [{at}/{mx}]....'.format(
+                    at=attempt,
+                    mx=max_attempts,
+                )
+            )
+            rmq_cluster_stat = self._rabbitmqctl(['cluster_status'])
+
+            # Check that both this node and the node we're joining to are in
+            # the cluster
+            required = [
+                join_node,
+                config[RABBITMQ]['nodename'],
+            ]
+            if not all([node in rmq_cluster_stat.aggr_stdout
+                        for node in required]):
+                if attempt == max_attempts:
+                    raise ClusteringError(
+                        'Node did not join cluster within {num} attempts. '
+                        'Attempted to join to {target_node}. '
+                        'Last cluster status output was: {output}.'.format(
+                            num=max_attempts,
+                            target_node=join_node,
+                            output=rmq_cluster_stat.aggr_stdout,
+                        )
+                    )
+                else:
+                    time.sleep(delay)
+                    continue
+            else:
+                logger.info('Cluster successfully joined.')
+                break
+
+    def _possibly_add_hosts_entries(self):
+        cluster_nodes = config[RABBITMQ]['cluster_members']
+        if cluster_nodes:
+            logger.info(
+                'Checking whether cluster nodes are resolvable via DNS'
+            )
+            not_resolved = []
+            for node in cluster_nodes:
+                try:
+                    socket.gethostbyname(node)
+                    logger.info(
+                        'Successfully resolved {node}'.format(node=node)
+                    )
+                except socket.gaierror:
+                    not_resolved.append(node)
+
+            add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
+            for node in not_resolved:
+                ip = cluster_nodes[node]['networks']['default']
+                if not ip:
+                    raise ValidationError(
+                        'IP not provided for unresolvable rabbit node '
+                        '{node}. '
+                        'A default network ip must be set for this '
+                        'node.'.format(
+                            node=node,
+                        )
+                    )
+                add_to_hosts.append('{ip} {name}'.format(
+                    ip=ip,
+                    name=node,
+                ))
+
+            logger.info(
+                'Adding rabbit nodes to hosts file: {adding_nodes}'.format(
+                    adding_nodes=', '.join(not_resolved),
+                )
+            )
+            with open('/etc/hosts') as hosts_handle:
+                hosts = hosts_handle.readlines()
+
+            # Append the data to the current hosts entries
+            hosts.extend(add_to_hosts)
+            hosts = '\n'.join(hosts) + '\n'
+
+            # Back up original hosts file
+            sudo([
+                'cp', '/etc/hosts', '/etc/hosts.bak-{timestamp:.0f}'.format(
+                    timestamp=time.time()
+                )
+            ])
+
+            write_to_file(hosts, '/etc/hosts')
+
+            logger.info('Updated /etc/hosts')
+
     def _generate_rabbitmq_certs(self):
+        broker_cert_path = config[RABBITMQ]['broker_cert_path']
+        broker_key_path = config[RABBITMQ]['broker_key_path']
+
+        if broker_cert_path and broker_key_path:
+            logger.info('Using supplied certificates.')
+            if not config[RABBITMQ]['broker_ca_path']:
+                logger.info(
+                    'Broker CA path not supplied, assuming self-signed.'
+                )
+                config[RABBITMQ]['broker_ca_path'] = broker_cert_path
+            return
+        elif broker_cert_path or broker_key_path:
+            raise ValidationError(
+                'Both broker_cert_path and broker_cert_key must be '
+                'provided if one of these settings is provided.'
+            )
+        else:
+            config[RABBITMQ]['broker_cert_path'] = (
+                '/etc/cloudify/ssl/rabbitmq_cert.pem'
+            )
+            config[RABBITMQ]['broker_key_path'] = (
+                '/etc/cloudify/ssl/rabbitmq_key.pem'
+            )
+
         logger.info('Generating rabbitmq certificate...')
 
-        if self._install_manager():
+        if self._installing_manager():
             has_ca_key = certificates.handle_ca_cert()
+            config[RABBITMQ]['broker_ca_path'] = constants.CA_CERT_PATH
         else:
             has_ca_key = False
+            config[RABBITMQ]['broker_ca_path'] = broker_cert_path
         networks = config[RABBITMQ]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
@@ -137,8 +315,8 @@ class RabbitMQComponent(BaseComponent):
         certificates._generate_ssl_certificate(
             ips=networks.values(),
             cn=rabbit_host,
-            cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
-            key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
+            cert_path=config[RABBITMQ]['broker_cert_path'],
+            key_path=config[RABBITMQ]['broker_key_path'],
             sign_cert=sign_cert,
             sign_key=sign_key,
         )
@@ -203,6 +381,9 @@ class RabbitMQComponent(BaseComponent):
             )
 
     def _configure(self):
+        self._possibly_set_nodename()
+        self._set_erlang_cookie()
+        self._possibly_add_hosts_entries()
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
         if not config[RABBITMQ]['networks']:
@@ -213,6 +394,7 @@ class RabbitMQComponent(BaseComponent):
         self._create_rabbitmq_user()
         self._start_rabbitmq()
         self._validate_rabbitmq_running()
+        self._possibly_join_cluster()
 
     def install(self):
         logger.notice('Installing RabbitMQ...')

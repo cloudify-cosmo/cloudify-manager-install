@@ -92,26 +92,11 @@ agent:
   heartbeat: 30
 
 rabbitmq:
-  # For external brokers, the configuration entries up to
-  # management_endpoint_ip should be set to appropriate values.
-
   # Sets the username/password to use for clients such as celery to connect to
   # the rabbitmq broker. It is recommended that you set both the username and
   # password to something reasonably secure.
   username: cloudify
   password: c10udify
-
-  # Path to broker certificate for external brokers
-  # For all-in-one manager install, this should be left blank
-  # For external brokers, the broker certificate (in PEM format) should be
-  # in the file referred to by this configuration entry
-  broker_cert_path: ''
-
-  # The hostname or IP address by which RabbitMQ is known to
-  # Cloudify Manager's components (REST service and management workers).
-  # This setting doesn't affect the hostname/IP by which agents access
-  # the manager.
-  endpoint_ip: localhost
 
   # networks dict with the same semantics as the top-level one. This will be
   # used for the rabbitmq node only in the case of external rabbitmq. If
@@ -119,13 +104,57 @@ rabbitmq:
   # top-level networks dict.
   networks: {}
 
-  # IP of the management API, should be localhost unless an external rabbitmq
-  # is used
-  # This should be the same as the endpoint_ip unless you are doing something
-  # unusual
-  management_endpoint_ip: localhost
+  # Path to cert for CA that signed the broker cert.
+  # Must be provided to use external brokers.
+  # Will default to broker_cert_path if installing a broker locally.
+  broker_ca_path: ''
 
-  # Settings after this point are not relevant for external brokers
+  # Configuration after this point is only valid for external brokers or
+  # all-in-one managers
+
+  # A list of cluster members, including paths to the public certs (or CA cert)
+  # for them.
+  # Example:
+  # cluster_members:
+  #   <hostname of rabbit node>:
+  #     networks:
+  #       default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
+  #       <other network name>: <ip for this node on 'other network'>
+  #       ...
+  #   <name of second rabbit node>:
+  #     networks:
+  #       ...
+  #   ...
+  # This should not be populated on an all-in-one manager.
+  cluster_members: {}
+
+  # Settings after this point are not relevant for
+  # external broker configuration on a manager
+
+  # Path to broker certificate for external broker
+  # For all-in-one manager install, this should be left blank
+  # For external brokers, the broker certificate (in PEM format) should be
+  # in the file referred to by this configuration entry
+  # NOTE: This certificate and key pair must both be provided when installing
+  #       a broker. These are not relevant for a manager-only or postgres-only
+  #       install. For manager-only specification of brokers, see the
+  #       cluster_members setting.
+  broker_cert_path: ''
+  # Associated key
+  broker_key_path: ''
+
+  # The name to give this cluster node. If this is blank, the value in /etc/hostname
+  # will be used
+  nodename: null
+
+  # If this is part of a cluster and not the first node to be configured, set
+  # this to one of the other cluster node names
+  join_cluster: null
+
+  # If this is a cluster then this value must be the same on all rabbitmq nodes
+  # If left blank, it will be auto-generated
+  erlang_cookie: null
+
   sources:
     erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
     socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm
@@ -135,7 +164,11 @@ rabbitmq:
   # Sets the File Descriptor limit for the rabbitmq user.
   # Not used if an external endpoint is used.
   fd_limit: 102400
-  nodename: cloudify-manager@localhost
+
+  # Make the management plugin only listen on the local interface
+  # The plugin will automatically be made to listen externally for external
+  # brokers.
+  management_only_local: true
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
