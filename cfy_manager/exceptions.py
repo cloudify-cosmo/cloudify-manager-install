@@ -38,3 +38,8 @@ class ProcessExecutionError(BootstrapError):
     def __init__(self, message, return_code=None):
         self.return_code = return_code
         super(ProcessExecutionError, self).__init__(message)
+
+
+class ClusteringError(BootstrapError):
+    # Raised by components attempting to cluster themselves but failing
+    pass

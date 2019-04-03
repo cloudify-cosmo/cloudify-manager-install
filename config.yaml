@@ -125,7 +125,33 @@ rabbitmq:
   # unusual
   management_endpoint_ip: localhost
 
-  # Settings after this point are not relevant for external brokers
+  # A list of cluster members, including paths to the public certs (or CA cert)
+  # for them.
+  # Example:
+  # cluster_members:
+  #   <hostname of rabbit node>:
+  #     cert_path: <path to cert/CA cert for this node>
+  #     ip: <ip of rabbit node> (not needed if node name is resolvable via DNS)
+  #   <name of second rabbit node>:
+  #     cert_path: ...
+  #   ...
+  cluster_members: []
+
+  # Settings after this point are not relevant for
+  # external broker configuration on a manager
+
+  # The name to give this cluster node. If this is blank, the value in /etc/hostname
+  # will be used
+  nodename: null
+
+  # If this is part of a cluster and not the first node to be configured, set
+  # this to one of the other cluster node names
+  join_cluster: null
+
+  # If this is a cluster then this value must be the same on all rabbitmq nodes
+  # If left blank, it will be auto-generated
+  erlang_cookie: null
+
   sources:
     erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
     socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm
@@ -135,7 +161,6 @@ rabbitmq:
   # Sets the File Descriptor limit for the rabbitmq user.
   # Not used if an external endpoint is used.
   fd_limit: 102400
-  nodename: cloudify-manager@localhost
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
