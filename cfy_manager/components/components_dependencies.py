@@ -52,7 +52,6 @@ COMPONENTS_DEPENDENCIES = {
     'SanityComponent': ['openssh-server'],
     'StageComponent': ['systemd-sysv'],
     'UsageCollectorComponent': [],
-    'ClusterComponent': [],
     'PatchComponent': []
 }
 

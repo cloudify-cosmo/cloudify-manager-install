@@ -31,7 +31,6 @@ from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
 from .components.service_names import (
     MANAGER,
-    CLUSTER,
     POSTGRESQL_CLIENT
 )
 from .components.components_constants import (
@@ -41,8 +40,7 @@ from .components.components_constants import (
     PUBLIC_IP,
     ADMIN_PASSWORD,
     CLEAN_DB,
-    MASTER_IP,
-    UNCONFIGURED_INSTALL,
+    UNCONFIGURED_INSTALL
 )
 from .config import config
 from .encryption.encryption import update_encryption_key
@@ -197,8 +195,7 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
     if admin_password:
         if config[CLEAN_DB]:
             manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-            if all([join_cluster, database_ip, postgres_password]):
-                config[CLUSTER][MASTER_IP] = str(join_cluster)
+            if all([database_ip, postgres_password]):
                 config[POSTGRESQL_CLIENT]['host'] = str(database_ip)
                 config[POSTGRESQL_CLIENT]['postgres_password'] = \
                     str(postgres_password)
@@ -207,9 +204,9 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
                     QUEUE_SERVICE,
                     MANAGER_SERVICE
                 ]
-            elif any([join_cluster, database_ip, postgres_password]):
+            elif any([database_ip, postgres_password]):
                 raise BootstrapError(
-                    'The --join-cluster, --database-ip, --admin-password '
+                    'The --database-ip, --admin-password '
                     'and --postgres-password flags must be used together'
                 )
         else:

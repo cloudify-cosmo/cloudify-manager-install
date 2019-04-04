@@ -17,6 +17,7 @@ import os
 import base64
 import string
 import random
+import socket
 
 from .. import constants
 from ..config import config
@@ -40,7 +41,8 @@ from .components_constants import (
     CLEAN_DB,
     FLASK_SECURITY,
     SERVICES_TO_INSTALL,
-    SSL_ENABLED
+    SSL_ENABLED,
+    HOSTNAME
 )
 from .service_components import MANAGER_SERVICE
 
@@ -112,6 +114,11 @@ def _set_admin_password():
     print_password_to_screen()
 
 
+def _set_hostname():
+    if not config[MANAGER][HOSTNAME]:
+        config[MANAGER][HOSTNAME] = socket.gethostname()
+
+
 def print_password_to_screen():
     if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
         return
@@ -176,6 +183,7 @@ def set_globals():
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
+    _set_hostname()
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         if config[CLEAN_DB]:
             _set_admin_password()

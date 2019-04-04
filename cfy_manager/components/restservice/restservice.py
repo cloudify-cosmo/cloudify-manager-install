@@ -28,8 +28,7 @@ from ..components_constants import (
     VENV,
     FLASK_SECURITY,
     CLEAN_DB,
-    MASTER_IP,
-    UNCONFIGURED_INSTALL,
+    ACTIVE_MANAGER_IP
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -39,14 +38,13 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import BootstrapError, FileError, NetworkError
+from ...exceptions import BootstrapError, NetworkError
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import (
     deploy,
-    get_local_source_path,
     write_to_file,
     sudo_read,
 )
@@ -66,7 +64,7 @@ logger = get_logger(RESTSERVICE)
 
 
 class RestServiceComponent(BaseComponent):
-    def __init__(self, skip_installation):
+    def __init__(self, skip_installation=False):
         super(RestServiceComponent, self).__init__(skip_installation)
 
     def _make_paths(self):
@@ -202,25 +200,32 @@ class RestServiceComponent(BaseComponent):
     def _verify_restservice_alive(self):
         systemd.verify_alive(RESTSERVICE)
 
-        if not config[CLUSTER][MASTER_IP]:
-            logger.info('Verifying Rest service is working as expected...')
-            self._verify_restservice()
+        logger.info('Verifying Rest service is working as expected...')
+        self._verify_restservice()
 
     def _configure_db(self):
+        config[CLUSTER]['enabled'] = False
         configs = {
             'rest_config': REST_CONFIG_PATH,
             'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
             'security_config': REST_SECURITY_CONFIG_PATH
         }
-        if config[CLUSTER][MASTER_IP]:
-            self.logger.info('Joining cluster during bootstrap, ignoring DB '
-                             'configuration')
-            return
-        if config[CLEAN_DB] or config[UNCONFIGURED_INSTALL]:
+        result = db.check_manager_in_table()
+        if result == constants.DB_NOT_INITIALIZED and config[CLEAN_DB]:
+            logger.info('DB not initialized, creating DB...')
             db.prepare_db()
             db.populate_db(configs)
-        else:
+            config[CLUSTER]['enabled'] = True
+        elif not config[CLEAN_DB]:
+            # Reinstalling the manager with the old DB
             db.create_amqp_resources(configs)
+        elif result == constants.MANAGER_NOT_IN_DB:
+            # Adding a manager to the cluster - external RabbitMQ already
+            # configured
+            logger.info('Manager not in DB, will join the cluster...')
+            config[CLUSTER]['enabled'] = True
+        else:
+            logger.info('Manager already in DB, ignoring configuration')
 
     def _configure(self):
         self._make_paths()
@@ -229,7 +234,11 @@ class RestServiceComponent(BaseComponent):
         set_logrotate(RESTSERVICE)
         systemd.configure(RESTSERVICE)
         systemd.restart(RESTSERVICE)
-        self._verify_restservice_alive()
+        if not config[CLUSTER][ACTIVE_MANAGER_IP]:
+            self._verify_restservice_alive()
+        else:
+            logger.info('Extra node in cluster, will verify rest-service after'
+                        'clustering configured')
 
     def _remove_files(self):
         """
@@ -244,17 +253,6 @@ class RestServiceComponent(BaseComponent):
         logger.notice('Installing Rest Service...')
         yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
         yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
-
-        premium_source_url = config[RESTSERVICE][SOURCES]['premium_source_url']
-        try:
-            get_local_source_path(premium_source_url)
-        except FileError:
-            logger.info(
-                'premium package not found in manager resources package')
-            logger.notice('premium will not be installed.')
-        else:
-            logger.notice('Installing Cloudify Premium...')
-            yum_install(config[RESTSERVICE][SOURCES]['premium_source_url'])
 
         logger.notice('Rest Service successfully installed')
 

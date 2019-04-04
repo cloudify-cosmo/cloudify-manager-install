@@ -37,7 +37,6 @@ SERVICE_COMPONENTS = {
         "stage",
         "composer",
         "mgmtworker",
-        "cluster",
         "cli",
         "usage_collector",
         "patch",

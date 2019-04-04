@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
 
 from os.path import join
 
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
+
 from .manager_config import make_manager_config
 from ..components_constants import (
     SCRIPTS,
@@ -23,6 +26,7 @@ from ..components_constants import (
     SECURITY,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
+    HOSTNAME
 )
 
 from ..service_names import (
@@ -42,6 +46,31 @@ logger = get_logger('DB')
 
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
+
+
+def _connect_to_db(query_func):
+    def wrapper(*args, **kwargs):
+        pg_config = config[POSTGRESQL_CLIENT]
+        db_connection_string = \
+            'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
+                user=pg_config['username'],
+                password=pg_config['password'],
+                hostname_and_port=pg_config['host'],
+                db=pg_config['db_name']
+            )
+        try:
+            connection = create_engine(db_connection_string,
+                                       poolclass=NullPool).connect()
+
+            return_value = query_func(connection=connection, *args, **kwargs)
+
+            connection.close()
+            return return_value
+        except Exception as err:
+            logger.debug('{0} - Database not initialized yet, proceeding...'
+                         .format(err))
+            return constants.DB_NOT_INITIALIZED
+    return wrapper
 
 
 def prepare_db():
@@ -149,6 +178,21 @@ def create_amqp_resources(configs=None):
     logger.notice('Creating AMQP resources...')
     _run_script('create_amqp_resources.py', configs=configs)
     logger.notice('AMQP resources successfully created')
+
+
+@_connect_to_db
+def check_manager_in_table(connection):
+    try:
+        result = (
+            connection.execute(
+                "SELECT * FROM managers where hostname='{0}'".format(
+                    config[MANAGER][HOSTNAME])
+            ))
+        return result.rowcount
+    except Exception as err:
+        logger.debug('{0} - Database not initialized yet, proceeding...'
+                     .format(err))
+        return constants.DB_NOT_INITIALIZED
 
 
 def _log_results(result):

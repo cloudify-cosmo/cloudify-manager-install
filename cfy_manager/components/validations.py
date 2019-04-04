@@ -28,7 +28,6 @@ from .components_constants import (
     VALIDATIONS,
     SKIP_VALIDATIONS,
     SSL_INPUTS,
-    MASTER_IP,
     SSL_ENABLED,
     SERVICES_TO_INSTALL,
     ENABLE_REMOTE_CONNECTIONS,
@@ -40,7 +39,6 @@ from .service_components import (
 )
 from .service_names import (
     MANAGER,
-    CLUSTER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER
 )
@@ -462,8 +460,7 @@ def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
-        if config[CLUSTER][MASTER_IP]:
-            _validate_ip(ip_to_validate=config[CLUSTER][MASTER_IP])
+        if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
         _validate_python_version()
         _validate_sufficient_memory()

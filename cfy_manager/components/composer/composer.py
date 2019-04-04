@@ -41,6 +41,7 @@ logger = get_logger(COMPOSER)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(COMPOSER))
 CONF_DIR = join(HOME_DIR, 'backend', 'conf')
+BLUEPRINTS_DIR = join(HOME_DIR, 'backend', 'dev')
 NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 
@@ -115,6 +116,8 @@ class ComposerComponent(BaseComponent):
 
         common.chmod('g+w', CONF_DIR)
         common.chmod('g+w', dirname(CONF_DIR))
+        common.chown(CLOUDIFY_USER, CLOUDIFY_USER, CONF_DIR)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_USER, BLUEPRINTS_DIR)
 
     def _update_composer_config(self):
         pg_cert_path = 'postgresql_client_cert_path'

@@ -18,9 +18,9 @@ import logging
 from os.path import join, expanduser
 from getpass import getuser
 
-from ..components_constants import SOURCES, SECURITY, MASTER_IP
+from ..components_constants import SOURCES, SECURITY
 from ..base_component import BaseComponent
-from ..service_names import CLI, MANAGER, CLUSTER
+from ..service_names import CLI, MANAGER
 from ...config import config
 from ...logger import (get_logger,
                        set_file_handlers_level,
@@ -60,8 +60,6 @@ class CliComponent(BaseComponent):
         password = config[MANAGER][SECURITY]['admin_password']
 
         manager = config[MANAGER]['cli_local_profile_host_name']
-        if config[CLUSTER][MASTER_IP]:
-            manager = config[CLUSTER][MASTER_IP]
         use_cmd = ['cfy', 'profiles', 'use', manager,
                    '--skip-credentials-validation']
 

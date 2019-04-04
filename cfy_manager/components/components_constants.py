@@ -30,6 +30,7 @@ LOG_DIR_KEY = 'log_dir'
 
 VENV = 'venv'
 
+HOSTNAME = 'hostname'
 PRIVATE_IP = 'private_ip'
 PUBLIC_IP = 'public_ip'
 ENDPOINT_IP = 'endpoint_ip'
@@ -38,8 +39,7 @@ ADMIN_PASSWORD = 'admin_password'
 ADMIN_USERNAME = 'admin_username'
 
 PREMIUM_EDITION = 'premium_edition'
-
-HOST_IP = 'host_ip'
+ACTIVE_MANAGER_IP = 'active_manager_ip'
 
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 POSTGRES_PASSWORD = 'postgres_password'
@@ -58,8 +58,6 @@ SKIP_VALIDATIONS = 'skip_validations'
 PROVIDER_CONTEXT = 'provider_context'
 CLEAN_DB = 'clean_db'
 FLASK_SECURITY = 'flask_security'
-MASTER_IP = 'master_ip'
-NODE_NAME = 'node_name'
 UNCONFIGURED_INSTALL = 'unconfigured_install'
 
 # endregion

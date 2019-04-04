@@ -16,10 +16,11 @@
 import sys
 import getpass
 import time
+import uuid
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
-from ..components_constants import SOURCES, PRIVATE_IP, MASTER_IP
+from ..components_constants import SOURCES, PRIVATE_IP, ACTIVE_MANAGER_IP
 from ..base_component import BaseComponent
 from ..service_names import SANITY, MANAGER, CLUSTER
 from ...config import config
@@ -39,6 +40,11 @@ SANITY_WEB_SERVER_PORT = 12774
 class SanityComponent(BaseComponent):
     def __init__(self, skip_installation):
         super(SanityComponent, self).__init__(skip_installation)
+        random_postfix = str(uuid.uuid4())
+        self.blueprint_name = '{0}_blueprint_{1}'.format(SANITY,
+                                                         random_postfix)
+        self.deployment_name = '{0}_deployment_{1}'.format(SANITY,
+                                                           random_postfix)
 
     def _create_ssh_key(self):
         logger.info('Creating SSH key for sanity...')
@@ -80,14 +86,16 @@ class SanityComponent(BaseComponent):
         sanity_source_url = config[SANITY][SOURCES]['sanity_source_url']
         sanity_blueprint = get_local_source_path(sanity_source_url)
         common.run(['cfy', 'blueprints', 'upload', sanity_blueprint, '-n',
-                    'no-monitoring-singlehost-blueprint.yaml', '-b', SANITY],
+                    'no-monitoring-singlehost-blueprint.yaml', '-b',
+                    self.blueprint_name],
                    stdout=sys.stdout)
 
     def _deploy_app(self, ssh_key_path):
         logger.info('Deploying sanity app...')
         manager_ip = config[MANAGER][PRIVATE_IP]
         ssh_user = getpass.getuser()
-        common.run(['cfy', 'deployments', 'create', '-b', SANITY, SANITY,
+        common.run(['cfy', 'deployments', 'create', '-b', self.blueprint_name,
+                    self.deployment_name,
                     '-i', 'server_ip={0}'.format(manager_ip),
                     '-i', 'agent_user={0}'.format(ssh_user),
                     '-i', 'agent_private_key_path={0}'.format(ssh_key_path),
@@ -96,7 +104,8 @@ class SanityComponent(BaseComponent):
 
     def _install_sanity(self):
         logger.info('Installing sanity app...')
-        common.run(['cfy', 'executions', 'start', 'install', '-d', SANITY],
+        common.run(['cfy', 'executions', 'start', 'install', '-d',
+                    self.deployment_name],
                    stdout=sys.stdout)
 
     def _verify_sanity(self):
@@ -116,12 +125,13 @@ class SanityComponent(BaseComponent):
     # @retrying.retry(stop_max_attempt_number=3, wait_fixed=1000)
     def _clean_sanity(self):
         logger.info('Removing sanity...')
-        common.run(['cfy', 'executions', 'start', 'uninstall', '-d', SANITY],
+        common.run(['cfy', 'executions', 'start', 'uninstall', '-d',
+                    self.deployment_name],
                    stdout=sys.stdout)
-        common.run(['cfy', 'deployments', 'delete', SANITY],
+        common.run(['cfy', 'deployments', 'delete', self.deployment_name],
                    stdout=sys.stdout)
         time.sleep(3)
-        common.run(['cfy', 'blueprints', 'delete', SANITY],
+        common.run(['cfy', 'blueprints', 'delete', self.blueprint_name],
                    stdout=sys.stdout)
 
     def run_sanity_check(self):
@@ -137,7 +147,7 @@ class SanityComponent(BaseComponent):
         pass
 
     def configure(self):
-        if config[SANITY]['skip_sanity'] or config[CLUSTER][MASTER_IP]:
+        if config[SANITY]['skip_sanity'] or config[CLUSTER][ACTIVE_MANAGER_IP]:
             logger.info('Skipping sanity check...')
             return
         self.run_sanity_check()
