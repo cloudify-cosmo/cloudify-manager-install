@@ -61,9 +61,6 @@ SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
 class ClusterComponent(BaseComponent):
-    def __init__(self, skip_installation):
-        super(ClusterComponent, self).__init__(skip_installation)
-
     def _generic_cloudify_rest_request(self, host, port, path,
                                        method, data=None):
         url = 'http://{0}:{1}/api/{2}'.format(host, port, path)
