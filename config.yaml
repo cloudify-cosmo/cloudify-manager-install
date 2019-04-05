@@ -92,38 +92,11 @@ agent:
   heartbeat: 30
 
 rabbitmq:
-  # For external brokers, the configuration entries up to
-  # management_endpoint_ip should be set to appropriate values.
-
   # Sets the username/password to use for clients such as celery to connect to
   # the rabbitmq broker. It is recommended that you set both the username and
   # password to something reasonably secure.
   username: cloudify
   password: c10udify
-
-  # Path to broker certificate for external brokers
-  # For all-in-one manager install, this should be left blank
-  # For external brokers, the broker certificate (in PEM format) should be
-  # in the file referred to by this configuration entry
-  broker_cert_path: ''
-
-  # The hostname or IP address by which RabbitMQ is known to
-  # Cloudify Manager's components (REST service and management workers).
-  # This setting doesn't affect the hostname/IP by which agents access
-  # the manager.
-  endpoint_ip: localhost
-
-  # networks dict with the same semantics as the top-level one. This will be
-  # used for the rabbitmq node only in the case of external rabbitmq. If
-  # rabbitmq is installed as part of the manager, this defaults to the
-  # top-level networks dict.
-  networks: {}
-
-  # IP of the management API, should be localhost unless an external rabbitmq
-  # is used
-  # This should be the same as the endpoint_ip unless you are doing something
-  # unusual
-  management_endpoint_ip: localhost
 
   # A list of cluster members, including paths to the public certs (or CA cert)
   # for them.
@@ -139,6 +112,18 @@ rabbitmq:
 
   # Settings after this point are not relevant for
   # external broker configuration on a manager
+
+  # Path to broker certificate for external broker
+  # For all-in-one manager install, this should be left blank
+  # For external brokers, the broker certificate (in PEM format) should be
+  # in the file referred to by this configuration entry
+  # NOTE: This certificate and key pair must both be provided when installing
+  #       a broker. These are not relevant for a manager-only or postgres-only
+  #       install. For manager-only specification of brokers, see the
+  #       cluster_members setting.
+  broker_cert_path: ''
+  # Associated key
+  broker_key_path: ''
 
   # The name to give this cluster node. If this is blank, the value in /etc/hostname
   # will be used

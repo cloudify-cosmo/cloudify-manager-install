@@ -68,14 +68,12 @@ def _set_external_port_and_protocol():
     config[MANAGER]['external_rest_protocol'] = external_rest_protocol
 
 
-def _set_rabbitmq_config():
-    if not config[RABBITMQ].get('broker_cert_path'):
-        config[RABBITMQ]['broker_cert_path'] = constants.CA_CERT_PATH
-
-
 def _set_ip_config():
     private_ip = config[MANAGER][PRIVATE_IP]
-    config[AGENT][BROKER_IP] = config[RABBITMQ]['endpoint_ip']
+    config[AGENT][BROKER_IP] = [
+        broker['ip']
+        for broker in config[RABBITMQ]['cluster_members'].values()
+    ]
 
     config[MANAGER]['file_server_root'] = constants.MANAGER_RESOURCES_HOME
     config[MANAGER]['file_server_url'] = 'https://{0}:{1}/resources'.format(
@@ -176,7 +174,6 @@ def _validate_admin_password_and_security_config():
 
 def set_globals():
     _set_ip_config()
-    _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_hostname()

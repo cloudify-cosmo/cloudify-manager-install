@@ -140,6 +140,7 @@ class RabbitMQComponent(BaseComponent):
 
         if cookie:
             write_to_file(cookie, '/var/lib/rabbitmq/.erlang.cookie')
+            sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
 
     def _possibly_join_cluster(self):
         join_node = config[RABBITMQ]['join_cluster']
@@ -245,7 +246,7 @@ class RabbitMQComponent(BaseComponent):
 
             # Back up original hosts file
             sudo([
-                'cp', '/etc/hosts', '/etc/hosts.bak-{timestamp.0f}'.format(
+                'cp', '/etc/hosts', '/etc/hosts.bak-{timestamp:.0f}'.format(
                     timestamp=time.time()
                 )
             ])
@@ -255,6 +256,25 @@ class RabbitMQComponent(BaseComponent):
             logger.info('Updated /etc/hosts')
 
     def _generate_rabbitmq_certs(self):
+        broker_cert_path = config[RABBITMQ]['broker_cert_path']
+        broker_key_path = config[RABBITMQ]['broker_key_path']
+
+        if broker_cert_path and broker_key_path:
+            logger.info('Using supplied certificates.')
+            return
+        elif broker_cert_path or broker_key_path:
+            raise ValidationError(
+                'Both broker_cert_path and broker_cert_key must be '
+                'provided if one of these settings is provided.'
+            )
+        else:
+            config[RABBITMQ]['broker_cert_path'] = (
+                '/etc/cloudify/ssl/rabbitmq_cert.pem'
+            )
+            config[RABBITMQ]['broker_key_path'] = (
+                '/etc/cloudify/ssl/rabbitmq_key.pem'
+            )
+
         logger.info('Generating rabbitmq certificate...')
 
         if self._install_manager():
@@ -280,8 +300,8 @@ class RabbitMQComponent(BaseComponent):
         certificates._generate_ssl_certificate(
             ips=networks.values(),
             cn=rabbit_host,
-            cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
-            key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
+            cert_path=config[RABBITMQ]['broker_cert_path'],
+            key_path=config[RABBITMQ]['broker_key_path'],
             sign_cert=sign_cert,
             sign_key=sign_key,
         )
