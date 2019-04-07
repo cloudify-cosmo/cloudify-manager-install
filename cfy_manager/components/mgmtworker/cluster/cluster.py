@@ -248,7 +248,7 @@ class ClusterComponent(BaseComponent):
                 self._verify_local_rest_service_alive(verify_rest_call=True)
                 logger.notice('Node has been added successfully!')
         else:
-            logger.warn('Cluster must be instantiated with external DB'
+            logger.warn('Cluster must be instantiated with external DB '
                         'and Queue endpoints. Ignoring cluster configuration')
 
     def remove(self):
