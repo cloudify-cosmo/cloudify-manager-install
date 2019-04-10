@@ -24,7 +24,7 @@ from datetime import datetime
 
 from flask_migrate import upgrade
 
-from manager_rest import config
+from manager_rest import config, version
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
@@ -92,6 +92,22 @@ def _insert_rabbitmq_broker(brokers, ca_id):
         sm.put(inst)
 
 
+def _insert_manager(config):
+    sm = get_storage_manager()
+    version_data = version.get_version_data()
+    inst = models.Manager(
+        public_ip=config['public_ip'],
+        hostname=config['hostname'],
+        private_ip=config['private_ip'],
+        networks=config['networks'],
+        edition=version_data['edition'],
+        version=version_data['version'],
+        distribution=version_data['distribution'],
+        distro_release=version_data['distro_release']
+    )
+    sm.put(inst)
+
+
 def _insert_ca_cert(cert):
     sm = get_storage_manager()
     inst = models.Certificate(
@@ -133,6 +149,7 @@ if __name__ == '__main__':
     _add_default_user_and_tenant(amqp_manager, script_config)
     _insert_config(script_config['config'])
     ca_id = _insert_ca_cert(script_config['ca_cert'])
+    _insert_manager(script_config)
     _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], ca_id)
     _add_provider_context(script_config['provider_context'])
     print 'Finished creating bootstrap admin, default tenant and provider ctx'

@@ -130,17 +130,6 @@ def _format_ips(ips, cn=None):
     return cert_metadata
 
 
-def get_brokers_from_networks(networks):
-    brokers = []
-    for network in networks.values():
-        brokers.extend(network['brokers'])
-    return brokers
-
-
-def get_managers_from_networks(networks):
-    return [network['manager'] for network in networks.values()]
-
-
 def store_cert_metadata(private_ip=None,
                         new_brokers=None,
                         new_managers=None,

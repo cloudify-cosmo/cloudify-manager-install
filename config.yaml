@@ -75,20 +75,16 @@ provider_context:
       # non-resolved URL as well, if the resolved one returns a HTTP error
       fallback: true
 
+# A dict of network names and IP addresses of managers and brokers associated with them.
+# By default, there is only a "default" network, with the manager's
+# private IP and broker IPs associated with it. This network can be overwritten.
+# Structure:
+# networks:
+#   <network_name>: <manager address or ip>
+#   <network2_name>: ...
+networks: {}
+
 agent:
-  # A dict of network names and IP addresses of managers and brokers associated with them.
-  # By default, there is only a "default" network, with the manager's
-  # private IP and broker IPs associated with it. This network can be overwritten.
-  # Structure:
-  # networks:
-  #   <network_name>: 
-  #     manager: <manager address or ip>
-  #     brokers:
-  #       - <broker name or ip1>
-  #       ...
-  #       - >broker name or ipN>
-  #   <network2_name>: ...
-  networks: {}
   broker_port: 5671
   min_workers: 2
   max_workers: 5
@@ -116,6 +112,12 @@ rabbitmq:
   # This setting doesn't affect the hostname/IP by which agents access
   # the manager.
   endpoint_ip: localhost
+
+  # networks dict with the same semantics as the top-level one. This will be
+  # used for the rabbitmq node only in the case of external rabbitmq. If
+  # rabbitmq is installed as part of the manager, this defaults to the
+  # top-level networks dict.
+  networks: {}
 
   # IP of the management API, should be localhost unless an external rabbitmq
   # is used

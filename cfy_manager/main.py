@@ -230,7 +230,7 @@ def _prepare_execution(verbose=False,
                        join_cluster=None,
                        database_ip=None,
                        postgres_password=None):
-    setup_console_logger(verbose)
+    setup_console_logger(True)
 
     validate_config_access(config_write_required)
     config.load_config()

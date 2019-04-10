@@ -83,12 +83,8 @@ def _set_ip_config():
         constants.INTERNAL_REST_PORT
     )
 
-    networks = config[AGENT]['networks']
-    if not networks or 'default' not in networks:
-        networks['default'] = {
-            'manager': private_ip,
-            'brokers': [config[RABBITMQ]['endpoint_ip']],
-        }
+    config.setdefault('networks', {})
+    config['networks'].setdefault('default', private_ip)
 
 
 def _set_constant_config():
