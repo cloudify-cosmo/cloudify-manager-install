@@ -15,5 +15,5 @@ echo "manager:
 docker cp config.yaml ${CONTAINER_NAME}:/etc/cloudify/config.yaml
 
 echo "Installing manager..."
-docker exec -t ${CONTAINER_NAME} sh -c "cfy_manager install"
+docker exec -t ${CONTAINER_NAME} sh -c "cfy_manager install --verbose"
 echo "The Manager's IP is ${CONTAINER_IP}"
