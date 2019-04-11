@@ -103,12 +103,15 @@ rabbitmq:
   # Example:
   # cluster_members:
   #   <hostname of rabbit node>:
-  #     cert_path: <path to cert/CA cert for this node>
-  #     ip: <ip of rabbit node> (not needed if node name is resolvable via DNS)
+  #     networks:
+  #       default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
+  #       <other network name>: <ip for this node on 'other network'>
+  #       ...
   #   <name of second rabbit node>:
-  #     cert_path: ...
+  #     networks:
+  #       ...
   #   ...
-  cluster_members: []
+  cluster_members: {}
 
   # Settings after this point are not relevant for
   # external broker configuration on a manager
@@ -124,6 +127,8 @@ rabbitmq:
   broker_cert_path: ''
   # Associated key
   broker_key_path: ''
+  # Path to cert for CA that signed the broker cert. Defaults to broker_cert_path
+  broker_ca_path: ''
 
   # The name to give this cluster node. If this is blank, the value in /etc/hostname
   # will be used
@@ -146,6 +151,11 @@ rabbitmq:
   # Sets the File Descriptor limit for the rabbitmq user.
   # Not used if an external endpoint is used.
   fd_limit: 102400
+
+  # Make the management plugin only listen on the local interface
+  # The plugin will automatically be made to listen externally for external
+  # brokers.
+  management_only_local: true
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires

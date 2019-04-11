@@ -104,6 +104,8 @@ def _create_args_dict():
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
     """
+    first_rabbit = config['rabbitmq']['cluster_members'].values()[0][
+        'networks']['default']
     args_dict = {
         'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
@@ -120,9 +122,11 @@ def _create_args_dict():
         'rabbitmq_brokers': [
             {
                 'name': 'rabbitmq',
-                'host': config['rabbitmq']['endpoint_ip'],
-                'management_host':
-                    config['rabbitmq']['management_endpoint_ip'],
+                'host': first_rabbit,
+                'management_host': (
+                    '127.0.0.1' if config['rabbitmq']['management_only_local']
+                    else first_rabbit
+                ),
                 'username': config['rabbitmq']['username'],
                 'password': config['rabbitmq']['password'],
                 'params': None,

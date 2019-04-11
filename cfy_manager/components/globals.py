@@ -71,7 +71,7 @@ def _set_external_port_and_protocol():
 def _set_ip_config():
     private_ip = config[MANAGER][PRIVATE_IP]
     config[AGENT][BROKER_IP] = [
-        broker['ip']
+        broker['networks']['default']
         for broker in config[RABBITMQ]['cluster_members'].values()
     ]
 

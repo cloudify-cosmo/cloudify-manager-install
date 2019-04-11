@@ -28,7 +28,7 @@ from ..service_components import MANAGER_SERVICE
 from ..base_component import BaseComponent
 from ..service_names import RABBITMQ, MANAGER
 from ... import constants
-from ...utils import certificates
+from ...utils import certificates, common
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError, NetworkError, ClusteringError
@@ -36,12 +36,13 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, remove as remove_file
-from ...utils.files import write_to_file
+from ...utils.files import write_to_file, deploy
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
+RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 SECURE_PORT = 5671
 
 RABBITMQ_CTL = 'rabbitmqctl'
@@ -57,8 +58,13 @@ class RabbitMQComponent(BaseComponent):
         for source in sources.values():
             yum_install(source)
 
-    def _install_manager(self):
+    def _installing_manager(self):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
+
+    def _deploy_configuration(self):
+        logger.info('Deploying RabbitMQ config')
+        deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH)
+        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
 
     def _init_service(self):
         logger.info('Initializing RabbitMQ...')
@@ -67,13 +73,13 @@ class RabbitMQComponent(BaseComponent):
         # Delete old mnesia node
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
+        self._deploy_configuration()
         systemd.systemctl('daemon-reload')
 
-        if not self._install_manager():
-            # If this isn't installed on a manager, we need the management
-            # plugin to listen on all interfaces, not just 127.0.0.1
-            sudo(['sed', '-i', '/{ip, "127.0.0.1"},/d',
-                  '/etc/cloudify/rabbitmq/rabbitmq.config'])
+        if not self._installing_manager():
+            # If we're installing an external rabbit node, management plugin
+            # must listen externally
+            config[RABBITMQ]['management_only_local'] = False
 
         # rabbitmq restart exits with 143 status code that is valid in
         # this case.
@@ -139,7 +145,7 @@ class RabbitMQComponent(BaseComponent):
             )
 
         if cookie:
-            write_to_file(cookie, '/var/lib/rabbitmq/.erlang.cookie')
+            write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
             sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
 
     def _possibly_join_cluster(self):
@@ -218,12 +224,13 @@ class RabbitMQComponent(BaseComponent):
 
             add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
             for node in not_resolved:
-                ip = cluster_nodes[node].get('ip')
+                ip = cluster_nodes[node]['networks']['default']
                 if not ip:
                     raise ValidationError(
                         'IP not provided for unresolvable rabbit node '
                         '{node}. '
-                        'An ip property must be set for this node.'.format(
+                        'A default network ip must be set for this '
+                        'node.'.format(
                             node=node,
                         )
                     )
@@ -261,6 +268,11 @@ class RabbitMQComponent(BaseComponent):
 
         if broker_cert_path and broker_key_path:
             logger.info('Using supplied certificates.')
+            if not config[RABBITMQ]['broker_ca_path']:
+                logger.info(
+                    'Broker CA path not supplied, assuming self-signed.'
+                )
+                config[RABBITMQ]['broker_ca_path'] = broker_cert_path
             return
         elif broker_cert_path or broker_key_path:
             raise ValidationError(
@@ -277,11 +289,13 @@ class RabbitMQComponent(BaseComponent):
 
         logger.info('Generating rabbitmq certificate...')
 
-        if self._install_manager():
+        if self._installing_manager():
             has_ca_key = certificates.handle_ca_cert()
+            config[RABBITMQ]['broker_ca_path'] = constants.CA_CERT_PATH
         else:
             has_ca_key = False
-        networks = config[RABBITMQ]['networks']
+            config[RABBITMQ]['broker_ca_path'] = broker_cert_path
+        networks = config[AGENT]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
         certificates.store_cert_metadata(
