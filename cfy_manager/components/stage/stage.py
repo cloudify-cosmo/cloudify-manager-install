@@ -194,6 +194,8 @@ class StageComponent(BaseComponent):
             # Using `write_to_file` because the path belongs to the stage user,
             # so we need to move with sudo
             files.write_to_file(contents=content, destination=config_path)
+            common.chown(STAGE_USER, STAGE_GROUP, config_path)
+            common.chmod('640', config_path)
 
     def _verify_stage_alive(self):
         systemd.verify_alive(STAGE)
