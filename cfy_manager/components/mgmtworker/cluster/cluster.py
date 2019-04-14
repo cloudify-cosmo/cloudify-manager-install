@@ -229,13 +229,13 @@ class ClusterComponent(BaseComponent):
 
     def _install(self):
         yum_install(config[PREMIUM][SOURCES]['premium_source_url'])
-        # Need to restart the RESTSERVICE so flask could import premium
-        self._verify_local_rest_service_alive()
 
     def install(self):
         self._install()
 
     def configure(self):
+        # Need to restart the RESTSERVICE so flask could import premium
+        self._verify_local_rest_service_alive()
         if _services_coexistence_assertion(MANAGER_SERVICE,
                                            DATABASE_SERVICE) and \
             _services_coexistence_assertion(MANAGER_SERVICE,
