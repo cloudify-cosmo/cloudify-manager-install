@@ -56,6 +56,8 @@ class Config(CommentedMap):
         if isfile(USER_CONFIG_PATH):
             # Override any default values with values from config.yaml
             user_config = self._load_yaml(USER_CONFIG_PATH)
+            if 'services_to_install' in self:
+                del self['services_to_install']
             dict_merge(self, user_config)
 
     @staticmethod
