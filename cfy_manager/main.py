@@ -278,9 +278,10 @@ def _create_initial_install_file():
         touch(INITIAL_INSTALL_FILE)
 
 
-def _finish_configuration():
+def _finish_configuration(only_install=None):
     remove_temp_files()
-    _print_finish_message()
+    if not only_install:
+        _print_finish_message()
     _print_time()
     config.dump_config()
     _create_initial_install_file()
@@ -423,7 +424,7 @@ def install(verbose=False,
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
-    _finish_configuration()
+    _finish_configuration(only_install)
 
 
 @install_args
