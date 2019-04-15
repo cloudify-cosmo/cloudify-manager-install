@@ -63,7 +63,7 @@ def _add_default_user_and_tenant(amqp_manager, script_config):
 
 def _get_amqp_manager(script_config):
     with tempfile.NamedTemporaryFile(delete=False, mode='wb') as f:
-        f.write(script_config['ca_cert'])
+        f.write(script_config['rabbitmq_ca_cert'])
     broker = script_config['rabbitmq_brokers'][0]
     atexit.register(os.unlink, f.name)
     return AMQPManager(
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     amqp_manager = _get_amqp_manager(script_config)
     _add_default_user_and_tenant(amqp_manager, script_config)
     _insert_config(script_config['config'])
-    ca_id = _insert_ca_cert(script_config['ca_cert'])
+    ca_id = _insert_ca_cert(script_config['rabbitmq_ca_cert'])
     _insert_manager(script_config)
     _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], ca_id)
     _add_provider_context(script_config['provider_context'])

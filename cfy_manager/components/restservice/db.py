@@ -120,9 +120,11 @@ def _create_args_dict():
         'rabbitmq_brokers': [
             {
                 'name': 'rabbitmq',
-                'host': config['rabbitmq']['endpoint_ip'],
-                'management_host':
-                    config['rabbitmq']['management_endpoint_ip'],
+                'host': config['rabbitmq']['networks']['default'],
+                'management_host': (
+                    '127.0.0.1' if config['rabbitmq']['management_only_local']
+                    else config['rabbitmq']['networks']['default']
+                ),
                 'username': config['rabbitmq']['username'],
                 'password': config['rabbitmq']['password'],
                 'params': None,
@@ -132,10 +134,10 @@ def _create_args_dict():
     }
     with open(constants.CA_CERT_PATH) as f:
         args_dict['ca_cert'] = f.read()
-    rabbitmq_cert_path = config['rabbitmq'].get('broker_cert_path')
+    rabbitmq_cert_path = config['rabbitmq'].get('broker_ca_path')
     if rabbitmq_cert_path:
         with open(rabbitmq_cert_path) as f:
-            args_dict['ca_cert'] += '\n' + f.read()
+            args_dict['rabbitmq_ca_cert'] = f.read()
     return args_dict
 
 

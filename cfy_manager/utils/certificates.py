@@ -171,12 +171,27 @@ def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):
 CSR_CONFIG_TEMPLATE = """
 [req]
 distinguished_name = req_distinguished_name
-req_extensions = server_req_extensions
-[ server_req_extensions ]
-subjectAltName={metadata}
+x509_extensions = v3_ext
 [ req_distinguished_name ]
 commonName = _common_name # ignored, _default is used instead
 commonName_default = {cn}
+[ v3_ext ]
+basicConstraints=CA:false
+authorityKeyIdentifier=keyid:true
+subjectKeyIdentifier=hash
+subjectAltName={metadata}
+"""
+
+CA_CONFIG = """
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_ext
+[ req_distinguished_name ]
+commonName = _common_name # ignored, _default is used instead
+commonName_default = Cloudify generated certificate
+[ v3_ext ]
+basicConstraints=CA:true
+subjectKeyIdentifier=hash
 """
 
 
@@ -190,6 +205,16 @@ def _csr_config(cn, metadata):
     """
     csr_config = CSR_CONFIG_TEMPLATE.format(cn=cn, metadata=metadata)
     temp_config_path = write_to_tempfile(csr_config)
+
+    try:
+        yield temp_config_path
+    finally:
+        remove(temp_config_path)
+
+
+@contextmanager
+def _ca_config():
+    temp_config_path = write_to_tempfile(CA_CONFIG)
 
     try:
         yield temp_config_path
@@ -246,7 +271,7 @@ def _generate_ssl_certificate(ips,
             '-sha256',
             '-req', '-in', csr_path,
             '-out', cert_path,
-            '-extensions', 'server_req_extensions',
+            '-extensions', 'v3_ext',
             '-extfile', conf_path
         ]
 
@@ -301,16 +326,18 @@ def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
 
 def generate_ca_cert(cert_path=const.CA_CERT_PATH,
                      key_path=const.CA_KEY_PATH):
-    sudo([
-        'openssl', 'req',
-        '-x509',
-        '-nodes',
-        '-newkey', 'rsa:2048',
-        '-days', '3650',
-        '-batch',
-        '-out', cert_path,
-        '-keyout', key_path,
-    ])
+    with _ca_config() as conf_path:
+        sudo([
+            'openssl', 'req',
+            '-x509',
+            '-nodes',
+            '-newkey', 'rsa:2048',
+            '-days', '3650',
+            '-batch',
+            '-out', cert_path,
+            '-keyout', key_path,
+            '-config', conf_path,
+        ])
 
 
 def create_pkcs12():
