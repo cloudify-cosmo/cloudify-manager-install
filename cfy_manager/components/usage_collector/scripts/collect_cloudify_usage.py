@@ -14,12 +14,6 @@ from requests import post
 from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
-try:
-    from cloudify_premium.ha import node_status
-    from cloudify_premium.ha.utils import is_master
-except ImportError:
-    node_status = {'initialized': False}
-
 
 GIGA_SIZE = 1024 * 1024 * 1024
 MANAGER_ID_PATH = '/etc/cloudify/.id'
@@ -153,25 +147,14 @@ def _send_data(data):
 
 
 def _is_clustered():
-    return bool(node_status.get('initialized'))
-
-
-def _is_active_manager():
-    if _is_clustered():
-        try:
-            return is_master()
-        except Exception:
-            return False
-    return True
+    with get_storage_manager() as sm:
+        managers = sm.list(models.Manager)
+    return len(managers) > 1
 
 
 def main():
     logger.info('Usage script started running')
     _create_manager_id_file()
-    if not _is_active_manager():
-        logger.info('Usage script finished running because the manager is '
-                    'not active')
-        return
     data = {}
     _collect_metadata(data)
     _collect_system_data(data)
