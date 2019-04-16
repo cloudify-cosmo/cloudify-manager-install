@@ -88,7 +88,10 @@ class RabbitMQComponent(BaseComponent):
 
     def _rabbitmqctl(self, command, **kwargs):
         nodename = config[RABBITMQ]['nodename']
-        return sudo([RABBITMQ_CTL, '-n', nodename] + command, **kwargs)
+        base_command = [RABBITMQ_CTL, '-n', nodename]
+        if config[RABBITMQ]['use_long_name']:
+            base_command.append('--longnames')
+        return sudo(base_command + command, **kwargs)
 
     def user_exists(self, username):
         output = self._rabbitmqctl(['list_users'], retries=5).aggr_stdout
@@ -124,8 +127,14 @@ class RabbitMQComponent(BaseComponent):
         nodename = config[RABBITMQ]['nodename']
 
         if not nodename:
-            with open('/etc/hostname') as host_handle:
-                nodename = host_handle.read().strip()
+            if config[RABBITMQ]['cluster_members']:
+                raise ValidationError(
+                    'Rabbitmq nodename must be set for clustering.'
+                )
+            nodename = 'localhost'
+
+        if not config[RABBITMQ]['use_long_name']:
+            nodename = nodename.split('.')[0]
 
         nodename = self._add_missing_nodename_prefix(nodename)
 
@@ -299,9 +308,12 @@ class RabbitMQComponent(BaseComponent):
         networks = config[RABBITMQ]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
+        cert_addresses = networks.values()
+        cert_addresses.append(config[RABBITMQ]['nodename'].split('@')[-1])
+
         certificates.store_cert_metadata(
             rabbit_host,
-            new_brokers=networks.values(),
+            new_brokers=cert_addresses,
             new_networks=networks.keys(),
             # The cfyuser won't exist yet (and may never exist if only rabbit
             # is being installed)
@@ -313,7 +325,7 @@ class RabbitMQComponent(BaseComponent):
         sign_key = constants.CA_KEY_PATH if has_ca_key else None
 
         certificates._generate_ssl_certificate(
-            ips=networks.values(),
+            ips=cert_addresses,
             cn=rabbit_host,
             cert_path=config[RABBITMQ]['broker_cert_path'],
             key_path=config[RABBITMQ]['broker_key_path'],
