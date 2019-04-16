@@ -28,7 +28,8 @@ from ..exceptions import InputError
 
 from .service_names import (
     MANAGER,
-    POSTGRESQL_CLIENT
+    POSTGRESQL_CLIENT,
+    RABBITMQ,
 )
 
 from .components_constants import (
@@ -40,9 +41,9 @@ from .components_constants import (
     FLASK_SECURITY,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
-    HOSTNAME
+    HOSTNAME,
 )
-from .service_components import MANAGER_SERVICE
+from .service_components import MANAGER_SERVICE, QUEUE_SERVICE
 
 import logging
 
@@ -77,6 +78,13 @@ def _set_ip_config():
 
     config.setdefault('networks', {})
     config['networks'].setdefault('default', private_ip)
+
+
+def _possibly_override_rabbit_local_management():
+    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
+        # If we're installing an external rabbit node, management plugin
+        # must listen externally
+        config[RABBITMQ]['management_only_local'] = False
 
 
 def _set_constant_config():
@@ -171,6 +179,7 @@ def set_globals():
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_hostname()
+    _possibly_override_rabbit_local_management()
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         if config[CLEAN_DB]:
             _set_admin_password()

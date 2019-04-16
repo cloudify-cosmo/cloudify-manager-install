@@ -70,16 +70,16 @@ class RabbitMQComponent(BaseComponent):
         logger.info('Initializing RabbitMQ...')
         rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
 
+        if not self._installing_manager():
+            # If we're installing an external rabbit node, management plugin
+            # must listen externally
+            config[RABBITMQ]['management_only_local'] = False
+
         # Delete old mnesia node
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
         self._deploy_configuration()
         systemd.systemctl('daemon-reload')
-
-        if not self._installing_manager():
-            # If we're installing an external rabbit node, management plugin
-            # must listen externally
-            config[RABBITMQ]['management_only_local'] = False
 
         # rabbitmq restart exits with 143 status code that is valid in
         # this case.
