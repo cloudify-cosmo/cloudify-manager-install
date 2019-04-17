@@ -8,7 +8,12 @@ location / {
   proxy_set_header   Host             $http_host;
   proxy_hide_header X-Powered-By;
 
-  location ~* /console/.*(?:css|js|map|jpe?g|gif|png)$ {
+  location ~* ^/console/static/(.*)$ {
+    gzip_static on;
+    alias /opt/cloudify-stage/dist/static/$1;
+  }
+
+  location ~* ^/console/.*(?:css|js|map|jpe?g|gif|png)$ {
     proxy_pass         http://cloudify-stage;
   }
 
