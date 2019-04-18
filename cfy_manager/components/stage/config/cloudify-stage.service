@@ -4,9 +4,13 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-TimeoutStartSec=0
-Restart=always
+Type=forking
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+Restart=on-failure
 RestartSec=10
+PIDFile=/opt/cloudify-stage/.pm2/pm2.pid
 EnvironmentFile=/etc/sysconfig/cloudify-stage
 User={{ stage.service_user }}
 Group={{ stage.service_group }}
