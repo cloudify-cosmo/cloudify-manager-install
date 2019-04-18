@@ -211,7 +211,7 @@ class RestServiceComponent(BaseComponent):
             'security_config': REST_SECURITY_CONFIG_PATH
         }
         result = db.check_manager_in_table()
-        if result == constants.DB_NOT_INITIALIZED and config[CLEAN_DB]:
+        if result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
             logger.info('DB not initialized, creating DB...')
             db.prepare_db()
             db.populate_db(configs)
@@ -237,8 +237,8 @@ class RestServiceComponent(BaseComponent):
         if not config[CLUSTER][ACTIVE_MANAGER_IP]:
             self._verify_restservice_alive()
         else:
-            logger.info('Extra node in cluster, will verify rest-service after'
-                        'clustering configured')
+            logger.info('Extra node in cluster, will verify rest-service '
+                        'after clustering configured')
 
     def _remove_files(self):
         """
