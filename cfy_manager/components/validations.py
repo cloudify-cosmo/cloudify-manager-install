@@ -16,6 +16,7 @@
 import os
 import sys
 import platform
+import subprocess
 import netifaces
 from getpass import getuser
 from collections import namedtuple
@@ -276,13 +277,12 @@ def _validate_dependencies(components):
         component.validate_dependencies()
 
 
-def _check_ssl_file(input_name, kind='Key', password=None):
+def _check_ssl_file(filename, kind='Key', password=None):
     """Does the cert/key file exist and is it valid?"""
-    filename = config[SSL_INPUTS][input_name]
     if not os.path.isfile(filename):
         raise ValidationError(
-            '{0} file {1} (input name: {2}) does not exist'
-            .format(kind, filename, input_name))
+            '{0} file {1} does not exist'
+            .format(kind, filename))
     if kind == 'Key':
         check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
         if password:
@@ -296,29 +296,38 @@ def _check_ssl_file(input_name, kind='Key', password=None):
         password_err = ''
         if password:
             password_err = '(or the provided password is incorrect)'
-        raise ValidationError('{0} file {1} (input name: {2}) is invalid {3}'
-                              .format(kind, filename, input_name,
-                                      password_err))
+        raise ValidationError('{0} file {1} password is invalid {2}'
+                              .format(kind, filename, password_err))
 
 
-def _check_key_and_cert(prefix):
-    """Check that the provided cert and key actally match"""
-    cert_input = '{0}_cert_path'.format(prefix)
-    key_input = '{0}_key_path'.format(prefix)
-    cert_filename = config[SSL_INPUTS][cert_input]
-    key_filename = config[SSL_INPUTS][key_input]
-    password_input = '{0}_key_password'.format(prefix)
-    password = config[SSL_INPUTS].get(password_input)
+def check_certificates(component,
+                       cert_path='cert_path', key_path='key_path',
+                       ca_path='ca_path', key_password='key_password'):
+    """Check that the provided cert, key, and CA actally match"""
+    cert_filename = config[component].get(cert_path)
+    key_filename = config[component].get(key_path)
+
+    ca_filename = config[component].get(ca_path)
+    password = config[component].get(key_password)
 
     if not cert_filename and not key_filename:
+        failing = []
         if password:
-            raise ValidationError('If {0} was provided, both {1} and {2} '
-                                  'must be provided'
-                                  .format(password_input, key_input,
-                                          cert_input))
+            failing.append('key_password')
+        if ca_filename:
+            failing.append('ca_path')
+        if failing:
+            failing = ' or '.join(failing)
+            raise ValidationError(
+                'If {failing} was provided, both cert_path and key_path '
+                'must be provided in {component}'.format(
+                    failing=failing,
+                    component=component,
+                )
+            )
     elif cert_filename and key_filename:
-        _check_ssl_file(key_input, kind='Key', password=password)
-        _check_ssl_file(cert_input, kind='Cert')
+        _check_ssl_file(key_filename, kind='Key', password=password)
+        _check_ssl_file(cert_filename, kind='Cert')
         key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
                                '-in', key_filename]
         if password:
@@ -328,13 +337,30 @@ def _check_key_and_cert(prefix):
         key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
         cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
         if cert_modulus != key_modulus:
-            raise ValidationError('Key {0} ({1}) does not match the '
-                                  'cert {2} ({3})'
-                                  .format(key_filename, key_input,
-                                          cert_filename, cert_input))
+            raise ValidationError('Key {0} ({1}.{2}) does not match the '
+                                  'cert {3} ({1}.{4})'
+                                  .format(key_filename, component, key_path,
+                                          cert_filename, cert_path))
+        if ca_filename:
+            _check_ssl_file(ca_filename, kind='Cert')
+            ca_check_command = [
+                'openssl', 'verify', '-CAfile', ca_filename, cert_filename
+            ]
+            try:
+                sudo(ca_check_command)
+            except subprocess.CalledProcessError:
+                raise ValidationError(
+                    'Provided certificate {cert} was not signed by provided '
+                    'CA {ca}'.format(
+                        cert=cert_filename,
+                        ca=ca_filename,
+                    )
+                )
     else:
-        raise ValidationError('Either both {0} and {1} must be provided, '
-                              'or neither.'.format(cert_input, key_input))
+        raise ValidationError('Either both cert_path and key_path must be '
+                              'provided, or neither.')
+
+    return cert_filename, key_filename, ca_filename, password
 
 
 def _check_internal_ca_cert():
@@ -360,11 +386,25 @@ def _check_internal_ca_cert():
 
 def _validate_cert_inputs():
     _check_internal_ca_cert()
-    _check_key_and_cert('internal')
-    _check_key_and_cert('postgresql_server')
-    _check_key_and_cert('postgresql_client')
-    _check_key_and_cert('external')
-    _check_key_and_cert('external_ca')
+    for ssl_input in (
+        'internal',
+        'postgresql_server',
+        'postgresql_client',
+        'external',
+        'external_ca',
+    ):
+        cert_path = '{0}_cert_path'.format(ssl_input)
+        key_path = '{0}_key_path'.format(ssl_input)
+        ca_path = '{0}_ca_path'.format(ssl_input)
+        key_password = '{0}_key_password'.format(ssl_input)
+        # These should all be moved to their respective components- see Rabbit
+        check_certificates(
+            SSL_INPUTS,
+            cert_path=cert_path,
+            key_path=key_path,
+            ca_path=ca_path,
+            key_password=key_password,
+        )
 
 
 def _services_coexistence_assertion(service_in_list_to_install,

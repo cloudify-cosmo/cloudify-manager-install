@@ -44,12 +44,17 @@ HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 SECURE_PORT = 5671
+BROKER_CERT_LOCATION = '/etc/cloudify/ssl/rabbitmq-cert.pem'
+BROKER_KEY_LOCATION = '/etc/cloudify/ssl/rabbitmq-key.pem'
+BROKER_CA_LOCATION = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 RABBITMQ_CTL = 'rabbitmqctl'
 logger = get_logger(RABBITMQ)
 
 
 class RabbitMQComponent(BaseComponent):
+    component_name = 'rabbitmq'
+
     def __init__(self, skip_installation):
         super(RabbitMQComponent, self).__init__(skip_installation)
 
@@ -273,38 +278,34 @@ class RabbitMQComponent(BaseComponent):
             logger.info('Updated /etc/hosts')
 
     def _generate_rabbitmq_certs(self):
-        broker_cert_path = config[RABBITMQ]['broker_cert_path']
-        broker_key_path = config[RABBITMQ]['broker_key_path']
+        supplied = self.use_supplied_certificates(
+            cert_destination=BROKER_CERT_LOCATION,
+            key_destination=BROKER_KEY_LOCATION,
+            ca_destination=BROKER_CA_LOCATION,
+            owner='rabbitmq',
+            group='rabbitmq',
+        )
 
-        if broker_cert_path and broker_key_path:
+        if supplied:
             logger.info('Using supplied certificates.')
-            if not config[RABBITMQ]['broker_ca_path']:
-                logger.info(
-                    'Broker CA path not supplied, assuming self-signed.'
-                )
-                config[RABBITMQ]['broker_ca_path'] = broker_cert_path
             return
-        elif broker_cert_path or broker_key_path:
-            raise ValidationError(
-                'Both broker_cert_path and broker_cert_key must be '
-                'provided if one of these settings is provided.'
-            )
         else:
-            config[RABBITMQ]['broker_cert_path'] = (
-                '/etc/cloudify/ssl/rabbitmq_cert.pem'
-            )
-            config[RABBITMQ]['broker_key_path'] = (
-                '/etc/cloudify/ssl/rabbitmq_key.pem'
-            )
+            config[RABBITMQ]['cert_path'] = BROKER_CERT_LOCATION
+            config[RABBITMQ]['key_path'] = BROKER_KEY_LOCATION
 
         logger.info('Generating rabbitmq certificate...')
 
         if self._installing_manager():
             has_ca_key = certificates.handle_ca_cert()
-            config[RABBITMQ]['broker_ca_path'] = constants.CA_CERT_PATH
+            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         else:
             has_ca_key = False
-            config[RABBITMQ]['broker_ca_path'] = broker_cert_path
+            # If we're not installing the manager and user certs were not
+            # supplied then we're about to generate self-signed certs.
+            # As we're going to do this, we'll set the ca_path such that
+            # anything consuming this value will get the path to the cert
+            # that will allow them to trust the broker.
+            config[RABBITMQ]['ca_path'] = config[RABBITMQ]['cert_path']
         networks = config[RABBITMQ]['networks']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
@@ -327,8 +328,8 @@ class RabbitMQComponent(BaseComponent):
         certificates._generate_ssl_certificate(
             ips=cert_addresses,
             cn=rabbit_host,
-            cert_path=config[RABBITMQ]['broker_cert_path'],
-            key_path=config[RABBITMQ]['broker_key_path'],
+            cert_path=config[RABBITMQ]['cert_path'],
+            key_path=config[RABBITMQ]['key_path'],
             sign_cert=sign_cert,
             sign_key=sign_key,
         )
