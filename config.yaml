@@ -143,8 +143,7 @@ rabbitmq:
   # Associated key
   key_path: ''
 
-  # The name to give this cluster node. If this is blank, the value in /etc/hostname
-  # will be used
+  # The name to give this cluster node. If this is blank, it will be set to localhost.
   nodename: null
   # Whether to support FQDNs. If this is set to false, only the hostname will be
   # used even if the FQDN is supplied.
@@ -175,25 +174,47 @@ rabbitmq:
   # brokers.
   management_only_local: true
 
-  policy_metrics:
-    # Sets the number of milliseconds to wait before a message expires
-    # in the events queue. Not used if an external endpoint is used.
-    events_queue_message_ttl: 60000
-
-    # Sets the number of messages the events queue can hold. Note this is NOT
-    # the message byte length! Not used if an external endpoint is used.
-    # Note that for each of the queue length limit properties, new messages
-    # will be queued in RabbitMQ and old messages will be deleted once the
-    # limit is reached! https://www.rabbitmq.com/maxlength.html
-    events_queue_length_limit: 1000000
-
-    # Sets the number of milliseconds to wait before a message expires
-    # in the logs queue. Not used if an external endpoint is used.
-    logs_queue_message_ttl: 60000
-
-    # Sets the number of messages the logs queue can hold. Note this is NOT
-    # the message byte length! Not used if an external endpoint is used.
-    logs_queue_length_limit: 1000000
+  # NOTE: The policy settings are only set up by the first broker in a cluster
+  # of brokers, and they're not configured at all by a manager using an external
+  # broker.
+  policies:
+    # If you remove either of these policies, you may encounter undefined
+    # behaviour, so it's probably best not to remove them.
+    - name: logs_queue_message_policy
+      expression: ^cloudify-log$
+      # Highest value priority is applied in expression collisions
+      priority: 100
+      policy:
+        # Sets the number of milliseconds to wait before a message expires
+        # in the events queue. Not used if an external endpoint is used.
+        message-ttl: 1200000
+        # Sets the number of messages the events queue can hold. Note this is NOT
+        # the message byte length! Not used if an external endpoint is used.
+        # Note that for each of the queue length limit properties, new messages
+        # will be queued in RabbitMQ and old messages will be deleted once the
+        # limit is reached! https://www.rabbitmq.com/maxlength.html
+        max-length: 1000000
+        # Used to ensure data integrity by keeping a replica of the queue on all
+        # cluster nodes
+        ha-mode: all
+        ha-sync-mode: automatic
+        ha-sync-batch-size: 50
+    - name: events_queue_message_policy
+      expression: ^cloudify-events$
+      priority: 100
+      policy:
+        message-ttl: 1200000
+        max-length: 1000000
+        ha-mode: all
+        ha-sync-mode: automatic
+        ha-sync-batch-size: 50
+    - name: default_policy
+      expression: ^
+      priority: 1
+      policy:
+        ha-mode: all
+        ha-sync-mode: automatic
+        ha-sync-batch-size: 50
 
 postgresql_server:
   sources:

@@ -334,7 +334,7 @@ class RabbitMQComponent(BaseComponent):
             sign_key=sign_key,
         )
 
-    def _set_rabbitmq_policy(self, name, expression, policy):
+    def _set_rabbitmq_policy(self, name, expression, policy, priority):
         policy = json.dumps(policy)
         logger.debug('Setting policy {0} on queues {1} to {2}'.format(
             name, expression, policy))
@@ -345,30 +345,16 @@ class RabbitMQComponent(BaseComponent):
                            expression,
                            policy,
                            '--apply-to',
-                           'queues'])
+                           'queues',
+                           '--priority',
+                           str(priority)])
 
     def _set_policies(self):
-        metrics = config[RABBITMQ]['policy_metrics']
-        logs_queue_message_policy = {
-            'message-ttl': metrics['logs_queue_message_ttl'],
-            'max-length': metrics['logs_queue_length_limit']
-        }
-        events_queue_message_policy = {
-            'message-ttl': metrics['events_queue_message_ttl'],
-            'max-length': metrics['events_queue_length_limit']
-        }
-
+        policies = config[RABBITMQ]['policies']
         logger.info("Setting RabbitMQ Policies...")
-        self._set_rabbitmq_policy(
-            name='logs_queue_message_policy',
-            expression='^cloudify-logs$',
-            policy=logs_queue_message_policy
-        )
-        self._set_rabbitmq_policy(
-            name='events_queue_message_policy',
-            expression='^cloudify-events$',
-            policy=events_queue_message_policy
-        )
+        for policy in policies:
+            self._set_rabbitmq_policy(**policy)
+        logger.info("RabbitMQ policies configured.")
 
     def _start_rabbitmq(self):
         logger.info("Starting RabbitMQ Service...")
@@ -376,8 +362,10 @@ class RabbitMQComponent(BaseComponent):
         # in this case.
         systemd.restart(RABBITMQ, ignore_failure=True)
         wait_for_port(SECURE_PORT)
-        self._set_policies()
-        systemd.restart(RABBITMQ)
+        if not config[RABBITMQ]['join_cluster']:
+            # Policies will be obtained from the cluster if we're joining
+            self._set_policies()
+            systemd.restart(RABBITMQ)
 
     def _validate_rabbitmq_running(self):
         logger.info('Making sure RabbitMQ is live...')
@@ -403,8 +391,10 @@ class RabbitMQComponent(BaseComponent):
             config[RABBITMQ]['networks'] = config['networks']
         self._generate_rabbitmq_certs()
         self._init_service()
-        self._delete_guest_user()
-        self._create_rabbitmq_user()
+        if not config[RABBITMQ]['join_cluster']:
+            # Users will be synced with the cluster if we're joining one
+            self._delete_guest_user()
+            self._create_rabbitmq_user()
         self._start_rabbitmq()
         self._validate_rabbitmq_running()
         self._possibly_join_cluster()
