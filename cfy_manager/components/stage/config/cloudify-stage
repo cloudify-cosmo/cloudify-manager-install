@@ -1,2 +1,4 @@
 NODEJS_HOME=/opt/nodejs
 STAGE_HOME=/opt/cloudify-stage
+STAGE_BACKEND_ARGS={{ stage.community_mode }}
+PM2_HOME=/opt/cloudify-stage/.pm2

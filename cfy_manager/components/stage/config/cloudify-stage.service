@@ -4,14 +4,20 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-TimeoutStartSec=0
-Restart=always
+Type=forking
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+Restart=on-failure
 RestartSec=10
+PIDFile=/opt/cloudify-stage/.pm2/pm2.pid
 EnvironmentFile=/etc/sysconfig/cloudify-stage
 User={{ stage.service_user }}
 Group={{ stage.service_group }}
 WorkingDirectory=/opt/cloudify-stage/backend
-ExecStart=/opt/nodejs/bin/node /opt/cloudify-stage/backend/server.js {{ stage.community_mode }}
+ExecStart=/opt/nodejs/bin/npm run start
+ExecStop=/opt/nodejs/bin/npm run stop
+ExecReload=/opt/nodejs/bin/npm run restart
 
 [Install]
 WantedBy=multi-user.target
