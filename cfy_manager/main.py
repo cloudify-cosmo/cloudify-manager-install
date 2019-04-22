@@ -31,6 +31,7 @@ from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
 from .components.service_names import (
     MANAGER,
+    CLUSTER,
     POSTGRESQL_CLIENT
 )
 from .components.components_constants import (
@@ -65,7 +66,6 @@ START_TIME = time()
 TEST_CA_ROOT_PATH = os.path.expanduser('~/.cloudify-test-ca')
 TEST_CA_CERT_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.crt')
 TEST_CA_KEY_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.key')
-
 
 TEST_CA_GENERATE_SAN_HELP_TEXT = (
     'Comma separated list of names or IPs that the generated certificate '
@@ -195,7 +195,9 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _is_manager_installed()
+    config[CLEAN_DB] = \
+        clean_db or not _is_manager_installed() \
+        or config[CLUSTER]['active_manager_ip'] != ''
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
