@@ -48,4 +48,5 @@ def make_manager_config():
         'max_workers': config['agent']['max_workers'],
         'broker_port': config['agent']['broker_port'],
         'heartbeat': config['agent']['heartbeat'],
+        'log_level': config['agent']['log_level']
     }

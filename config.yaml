@@ -90,6 +90,10 @@ agent:
   max_workers: 5
   # AMQP heartbeat timeout. 0 means no heartbeats
   heartbeat: 30
+  # Default logging level.
+  # This can be overridden on a per-agent basis by using the "log_level" directive
+  # under "agent_config".
+  log_level: INFO
 
 rabbitmq:
   # Sets the username/password to use for clients such as celery to connect to
