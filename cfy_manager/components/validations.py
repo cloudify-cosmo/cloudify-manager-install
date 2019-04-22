@@ -366,8 +366,9 @@ def check_certificates(component,
 def _check_internal_ca_cert():
     ssl_inputs = config[SSL_INPUTS]
     if ssl_inputs['ca_key_path'] and ssl_inputs['ca_cert_path']:
-        _check_ssl_file('ca_key_path', password=ssl_inputs['ca_key_password'])
-        _check_ssl_file('ca_cert_path', kind='Cert')
+        _check_ssl_file(ssl_inputs['ca_key_path'],
+                        password=ssl_inputs['ca_key_password'])
+        _check_ssl_file(ssl_inputs['ca_cert_path'], kind='Cert')
     elif ssl_inputs['ca_key_path'] and not ssl_inputs['ca_cert_path']:
         raise ValidationError('Internal CA key provided, but the internal '
                               'CA cert was not')
