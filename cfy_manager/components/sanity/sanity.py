@@ -83,8 +83,7 @@ class SanityComponent(BaseComponent):
                    shell=True)
         common.remove(ssh_key_path)
 
-    @staticmethod
-    def _upload_blueprint():
+    def _upload_blueprint(self):
         logger.info('Uploading sanity blueprint...')
         sanity_source_url = config[SANITY][SOURCES]['sanity_source_url']
         sanity_blueprint = get_local_source_path(sanity_source_url)
@@ -93,8 +92,7 @@ class SanityComponent(BaseComponent):
                     self.blueprint_name],
                    stdout=sys.stdout)
 
-    @staticmethod
-    def _deploy_app(ssh_key_path):
+    def _deploy_app(self, ssh_key_path):
         logger.info('Deploying sanity app...')
         manager_ip = config[MANAGER][PRIVATE_IP]
         ssh_user = getpass.getuser()
@@ -106,8 +104,7 @@ class SanityComponent(BaseComponent):
                     '-i', 'webserver_port={0}'.format(SANITY_WEB_SERVER_PORT)],
                    stdout=sys.stdout)
 
-    @staticmethod
-    def _install_sanity():
+    def _install_sanity(self):
         logger.info('Installing sanity app...')
         common.run(['cfy', 'executions', 'start', 'install', '-d',
                     self.deployment_name],
@@ -129,8 +126,7 @@ class SanityComponent(BaseComponent):
         self._deploy_app(ssh_key_path)
         self._install_sanity()
 
-    @staticmethod
-    def _clean_sanity():
+    def _clean_sanity(self):
         logger.info('Removing sanity...')
         common.run(['cfy', 'executions', 'start', 'uninstall', '-d',
                     self.deployment_name],
