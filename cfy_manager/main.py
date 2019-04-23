@@ -31,7 +31,6 @@ from .components.globals import set_globals, print_password_to_screen
 from .components.validations import validate, validate_config_access
 from .components.service_names import (
     MANAGER,
-    CLUSTER,
     POSTGRESQL_CLIENT
 )
 from .components.components_constants import (
@@ -195,9 +194,7 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = \
-        clean_db or not _is_manager_installed() \
-        or config[CLUSTER]['active_manager_ip'] != ''
+    config[CLEAN_DB] = clean_db or not _is_manager_installed()
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
