@@ -216,14 +216,15 @@ class RestServiceComponent(BaseComponent):
             'security_config': REST_SECURITY_CONFIG_PATH
         }
         result = db.check_manager_in_table()
-        if result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
-            logger.info('DB not initialized, creating DB...')
-            db.prepare_db()
-            db.populate_db(configs)
-            config[CLUSTER]['enabled'] = True
-        elif not config[CLEAN_DB]:
-            # Reinstalling the manager with the old DB
-            db.create_amqp_resources(configs)
+        if not config[CLUSTER]['active_manager_ip']:
+            if result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
+                logger.info('DB not initialized, creating DB...')
+                db.prepare_db()
+                db.populate_db(configs)
+                config[CLUSTER]['enabled'] = True
+            elif not config[CLEAN_DB]:
+                # Reinstalling the manager with the old DB
+                db.create_amqp_resources(configs)
         elif result == constants.MANAGER_NOT_IN_DB:
             # Adding a manager to the cluster - external RabbitMQ already
             # configured
