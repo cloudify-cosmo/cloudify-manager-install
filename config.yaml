@@ -98,22 +98,10 @@ rabbitmq:
   username: cloudify
   password: c10udify
 
-  # networks dict with the same semantics as the top-level one. This will be
-  # used for the rabbitmq node only in the case of external rabbitmq. If
-  # rabbitmq is installed as part of the manager, this defaults to the
-  # top-level networks dict.
-  networks: {}
-
-  # Path to cert for CA that signed the broker cert.
-  # Must be provided to use external brokers.
-  # Will default to cert_path if installing a broker locally.
-  ca_path: ''
-
-  # Configuration after this point is only valid for external brokers or
-  # all-in-one managers
-
-  # A list of cluster members, including paths to the public certs (or CA cert)
-  # for them.
+  # A list of cluster members, including network-specific IPs.
+  # The 'default' network IP must be set for each member.
+  # If installing a single external rabbit (not intended to be part of a cluster),
+  # or an all-in-one manager this section can be left blank.
   # Example:
   # cluster_members:
   #   <hostname of rabbit node>:
@@ -127,6 +115,11 @@ rabbitmq:
   #   ...
   # This should not be populated on an all-in-one manager.
   cluster_members: {}
+
+  # Path to cert for CA that signed the broker cert.
+  # Must be provided to use external brokers.
+  # Will default to cert_path if installing a broker locally.
+  ca_path: ''
 
   # Settings after this point are not relevant for
   # external broker configuration on a manager

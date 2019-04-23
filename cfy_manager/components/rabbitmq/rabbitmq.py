@@ -239,7 +239,7 @@ class RabbitMQComponent(BaseComponent):
 
             add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
             for node in not_resolved:
-                ip = cluster_nodes[node]['networks']['default']
+                ip = cluster_nodes[node]['default']
                 if not ip:
                     raise ValidationError(
                         'IP not provided for unresolvable rabbit node '
@@ -306,7 +306,16 @@ class RabbitMQComponent(BaseComponent):
             # anything consuming this value will get the path to the cert
             # that will allow them to trust the broker.
             config[RABBITMQ]['ca_path'] = config[RABBITMQ]['cert_path']
-        networks = config[RABBITMQ]['networks']
+        if len(config[RABBITMQ]['cluster_members']) > 1:
+            raise ValidationError(
+                'Cannot generate self-signed certificates for a rabbitmq '
+                'cluster- externally generated certificates must be provided '
+                'as well as the appropriate CA certificate.'
+            )
+        # As we only support generating certificates on single-broker setups,
+        # we will take only the first cluster member (having failed before now
+        # if there are multiple cluster members specified)
+        networks = config[RABBITMQ]['cluster_members'][0]
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
         cert_addresses = networks.values()
@@ -387,8 +396,10 @@ class RabbitMQComponent(BaseComponent):
         self._possibly_add_hosts_entries()
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
-        if not config[RABBITMQ]['networks']:
-            config[RABBITMQ]['networks'] = config['networks']
+        if not config[RABBITMQ]['cluster_members']:
+            config[RABBITMQ]['cluster_members'] = {
+                'cloudify-broker': config['networks'],
+            }
         self._generate_rabbitmq_certs()
         self._init_service()
         if not config[RABBITMQ]['join_cluster']:
