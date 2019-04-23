@@ -17,7 +17,7 @@ from ...config import config
 
 
 def make_manager_config():
-    return {
+    rest_config = {
         'rest_service_log_path':
             config['restservice']['log_dir'] + '/cloudify-rest-service.log',
         'rest_service_log_level': config['restservice']['log']['level'],
@@ -41,11 +41,20 @@ def make_manager_config():
             config['restservice']['failed_logins_before_account_lock'],
         'account_lock_period': config['restservice']['account_lock_period'],
         'public_ip': config['manager']['public_ip'],
-        'default_page_size': config['restservice']['default_page_size'],
-        'mgmtworker_max_workers': config['mgmtworker']['max_workers'],
-        'mgmtworker_min_workers': config['mgmtworker']['min_workers'],
+        'default_page_size': config['restservice']['default_page_size']
+    }
+    mgmtworker_config = {
+        'max_workers': config['mgmtworker']['max_workers'],
+        'min_workers': config['mgmtworker']['min_workers'],
+    }
+    agent_config = {
         'min_workers': config['agent']['min_workers'],
         'max_workers': config['agent']['max_workers'],
         'broker_port': config['agent']['broker_port'],
         'heartbeat': config['agent']['heartbeat'],
     }
+    return [  # (scope, {name: value})
+        ('mgmtworker', mgmtworker_config),
+        ('agent', agent_config),
+        ('rest', rest_config)
+    ]
