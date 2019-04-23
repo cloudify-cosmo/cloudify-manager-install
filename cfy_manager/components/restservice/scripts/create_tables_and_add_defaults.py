@@ -76,10 +76,12 @@ def _get_amqp_manager(script_config):
 
 def _insert_config(config):
     sm = get_storage_manager()
-    for name, value in config.items():
-        inst = sm.get(models.Config, None, filters={'name': name})
-        inst.value = value
-        sm.update(inst)
+    for scope, entries in config:
+        for name, value in entries.items():
+            inst = sm.get(models.Config, None,
+                          filters={'name': name, 'scope': scope})
+            inst.value = value
+            sm.update(inst)
 
 
 def _insert_rabbitmq_broker(brokers, ca_id):
