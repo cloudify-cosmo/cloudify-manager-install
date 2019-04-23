@@ -3,7 +3,7 @@
   "broker_cert_path": "{{ rabbitmq.ca_path }}",
   "broker_username": "{{ rabbitmq.username }}",
   "broker_password": "{{ rabbitmq.password }}",
-  "broker_hostname": "{{ rabbitmq.networks.default }}",
-  "broker_management_hostname": "{% if rabbitmq.management_only_local %}127.0.0.1{% else %}{{ rabbitmq.networks.default }}{% endif %}",
+  "broker_hostname": {{ rabbitmq.cluster_members.values()|map(attribute='default')|list|tojson }},
+  "broker_management_hostname": {% if rabbitmq.management_only_local %}"127.0.0.1"{% else %}{{ rabbitmq.cluster_members.values()|map(attribute='default')|list|tojson }}{% endif %},
   "broker_vhost": "/"
 }

@@ -119,17 +119,18 @@ def _create_args_dict():
         'premium': config[MANAGER][PREMIUM_EDITION],
         'rabbitmq_brokers': [
             {
-                'name': 'rabbitmq',
-                'host': config['rabbitmq']['networks']['default'],
+                'name': name,
+                'host': broker['default'],
                 'management_host': (
-                    '127.0.0.1' if config['rabbitmq']['management_only_local']
-                    else config['rabbitmq']['networks']['default']
+                    '127.0.0.1' if config[RABBITMQ]['management_only_local']
+                    else broker['default']
                 ),
-                'username': config['rabbitmq']['username'],
-                'password': config['rabbitmq']['password'],
+                'username': config[RABBITMQ]['username'],
+                'password': config[RABBITMQ]['password'],
                 'params': None,
-                'networks': config[RABBITMQ]['networks']
+                'networks': broker,
             }
+            for name, broker in config[RABBITMQ]['cluster_members'].items()
         ],
     }
     with open(constants.CA_CERT_PATH) as f:
