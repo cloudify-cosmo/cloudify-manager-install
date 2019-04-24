@@ -50,7 +50,11 @@ from .constants import INITIAL_INSTALL_FILE
 from .logger import get_logger, setup_console_logger
 from .utils import CFY_UMASK
 from .utils.common import run
-from .utils.files import remove as _remove, remove_temp_files, touch
+from .utils.files import (
+    remove as _remove,
+    remove_temp_files,
+    touch
+)
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
