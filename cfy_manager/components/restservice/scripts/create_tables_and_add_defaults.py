@@ -94,7 +94,7 @@ def _insert_rabbitmq_broker(brokers, ca_id):
         sm.put(inst)
 
 
-def _insert_manager(config):
+def _insert_manager(config, ca_id):
     sm = get_storage_manager()
     version_data = version.get_version_data()
     inst = models.Manager(
@@ -105,15 +105,16 @@ def _insert_manager(config):
         edition=version_data['edition'],
         version=version_data['version'],
         distribution=version_data['distribution'],
-        distro_release=version_data['distro_release']
+        distro_release=version_data['distro_release'],
+        _ca_cert_id=ca_id
     )
     sm.put(inst)
 
 
-def _insert_ca_cert(cert):
+def _insert_cert(cert, name):
     sm = get_storage_manager()
     inst = models.Certificate(
-        name='ca',
+        name=name,
         value=cert,
         updated_at=datetime.now(),
         _updater_id=0,
@@ -150,8 +151,11 @@ if __name__ == '__main__':
     amqp_manager = _get_amqp_manager(script_config)
     _add_default_user_and_tenant(amqp_manager, script_config)
     _insert_config(script_config['config'])
-    ca_id = _insert_ca_cert(script_config['rabbitmq_ca_cert'])
-    _insert_manager(script_config)
-    _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], ca_id)
+    rabbitmq_ca_id = _insert_cert(script_config['rabbitmq_ca_cert'],
+                                  'rabbitmq-ca')
+    rest_ca_id = _insert_cert(script_config['ca_cert'],
+                              '{0}-ca'.format(script_config['hostname']))
+    _insert_manager(script_config, rest_ca_id)
+    _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], rabbitmq_ca_id)
     _add_provider_context(script_config['provider_context'])
     print 'Finished creating bootstrap admin, default tenant and provider ctx'
