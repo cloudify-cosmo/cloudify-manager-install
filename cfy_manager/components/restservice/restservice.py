@@ -77,7 +77,7 @@ class RestServiceComponent(BaseComponent):
 
     def _deploy_restservice_files(self):
         logger.info('Deploying REST authorization, REST Service configuration'
-                    'and Cloudify licenses public key...')
+                    ' and Cloudify licenses public key...')
         resource = namedtuple('Resource', 'src dst')
         resources = [
             resource(
