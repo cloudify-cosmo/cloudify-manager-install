@@ -190,7 +190,7 @@ class RestServiceComponent(BaseComponent):
         except urllib2.URLError as e:
             raise NetworkError(
                 'REST service returned an invalid response: {0}'.format(e))
-        if response.code != 200 and response.code != 400:
+        if response.code != 200:
             raise NetworkError(
                 'REST service returned an unexpected response: '
                 '{0}'.format(response.code)
@@ -234,17 +234,21 @@ class RestServiceComponent(BaseComponent):
             logger.info('Manager already in DB, ignoring configuration')
 
     def _configure(self):
-        self._make_paths()
-        self._configure_restservice()
-        self._configure_db()
-        set_logrotate(RESTSERVICE)
-        systemd.configure(RESTSERVICE)
-        systemd.restart(RESTSERVICE)
-        if not config[CLUSTER][ACTIVE_MANAGER_IP]:
-            self._verify_restservice_alive()
-        else:
-            logger.info('Extra node in cluster, will verify rest-service '
-                        'after clustering configured')
+        try:
+            self._make_paths()
+            self._configure_restservice()
+            self._enter_sanity_mode()
+            self._configure_db()
+            set_logrotate(RESTSERVICE)
+            systemd.configure(RESTSERVICE)
+            systemd.restart(RESTSERVICE)
+            if not config[CLUSTER][ACTIVE_MANAGER_IP]:
+                self._verify_restservice_alive()
+            else:
+                logger.info('Extra node in cluster, will verify rest-service '
+                            'after clustering configured')
+        finally:
+            self._exit_sanity_mode()
 
     def _remove_files(self):
         """

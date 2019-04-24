@@ -23,6 +23,13 @@ from ...utils.certificates import remove_key_encryption
 from ...utils.install import RpmPackageHandler
 from ...utils.common import sudo, move, copy
 from ...logger import get_logger
+from ...utils.common import chown
+from ...utils.files import (
+    write_to_file,
+    remove_files
+)
+
+SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 
 
 class BaseComponent(object):
@@ -135,3 +142,12 @@ class BaseComponent(object):
 
         # Supplied certificates were used
         return True
+
+    @staticmethod
+    def _enter_sanity_mode():
+        write_to_file('sanity: True', SANITY_MODE_FILE_PATH)
+        chown(CLOUDIFY_USER, CLOUDIFY_GROUP, SANITY_MODE_FILE_PATH)
+
+    @staticmethod
+    def _exit_sanity_mode():
+        remove_files([SANITY_MODE_FILE_PATH])
