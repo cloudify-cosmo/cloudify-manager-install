@@ -25,14 +25,13 @@ from ..base_component import BaseComponent
 from ..service_names import SANITY, MANAGER, CLUSTER
 from ...config import config
 from ...logger import get_logger
-from ...constants import CLOUDIFY_HOME_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
+from ...constants import CLOUDIFY_HOME_DIR
 from ...utils import common
 from ...utils.network import wait_for_port
-from ...utils.files import get_local_source_path, write_to_file, remove_files
+from ...utils.files import get_local_source_path
 
 
 logger = get_logger(SANITY)
-SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 AUTHORIZED_KEYS_PATH = expanduser('~/.ssh/authorized_keys')
 SANITY_WEB_SERVER_PORT = 12774
 
@@ -137,18 +136,8 @@ class SanityComponent(BaseComponent):
         common.run(['cfy', 'blueprints', 'delete', self.blueprint_name],
                    stdout=sys.stdout)
 
-    @staticmethod
-    def _enter_sanity_mode():
-        write_to_file('sanity: True', SANITY_MODE_FILE_PATH)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, SANITY_MODE_FILE_PATH)
-
-    @staticmethod
-    def _exit_sanity_mode():
-        remove_files([SANITY_MODE_FILE_PATH])
-
     def run_sanity_check(self):
         logger.notice('Running Sanity...')
-        self._enter_sanity_mode()
         ssh_key_path = self._create_ssh_key()
         self._run_sanity(ssh_key_path)
         self._verify_sanity()
@@ -164,6 +153,7 @@ class SanityComponent(BaseComponent):
             logger.info('Skipping sanity check...')
             return
         try:
+            self._enter_sanity_mode()
             self.run_sanity_check()
         finally:
             self._exit_sanity_mode()
