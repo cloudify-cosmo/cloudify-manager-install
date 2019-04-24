@@ -121,8 +121,12 @@ rabbitmq:
   # Will default to cert_path if installing a broker locally.
   ca_path: ''
 
-  # Settings after this point are not relevant for
-  # external broker configuration on a manager
+  ##################################################
+  #                                                #
+  # Settings after this point are not relevant for #
+  # external broker configuration on a manager     #
+  #                                                #
+  ##################################################
 
   # Path to broker certificate for external broker
   # For all-in-one manager install, this should be left blank

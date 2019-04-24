@@ -315,7 +315,7 @@ class RabbitMQComponent(BaseComponent):
         # As we only support generating certificates on single-broker setups,
         # we will take only the first cluster member (having failed before now
         # if there are multiple cluster members specified)
-        networks = config[RABBITMQ]['cluster_members'][0]
+        networks = config[RABBITMQ]['cluster_members']['cloudify-broker']
         rabbit_host = config[MANAGER][PRIVATE_IP]
 
         cert_addresses = networks.values()
