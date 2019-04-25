@@ -105,14 +105,14 @@ rabbitmq:
   # Example:
   # cluster_members:
   #   <hostname of rabbit node>:
-  #     networks:
-  #       default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
-  #       <other network name>: <ip for this node on 'other network'>
-  #       ...
+  #     default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
+  #     <other network name>: <ip for this node on 'other network'>
+  #     ...
   #   <name of second rabbit node>:
-  #     networks:
-  #       ...
+  #     default: ...
+  #     ...
   #   ...
+  # All nodes must have a 'default' entry.
   # This should not be populated on an all-in-one manager.
   cluster_members: {}
 
@@ -121,12 +121,19 @@ rabbitmq:
   # Will default to cert_path if installing a broker locally.
   ca_path: ''
 
-  ##################################################
-  #                                                #
-  # Settings after this point are not relevant for #
-  # external broker configuration on a manager     #
-  #                                                #
-  ##################################################
+  #####################################################
+  #                                                   #
+  #             RABBITMQ SERVER SETTINGS              #
+  # Settings before this point are relevant for both  #
+  # locally and remotely installed queue_service.     #
+  # Settings after this point are only relevant when  #
+  # installing the queue_service on its own or as     #
+  # part of an all-in-one manager.                    #
+  # They are not used in any other cases, and so can  #
+  # be left unaltered if the queue_service is not     #
+  # being installed locally.                          #
+  #                                                   #
+  #####################################################
 
   # Path to broker certificate for external broker
   # For all-in-one manager install, this should be left blank
