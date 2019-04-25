@@ -44,9 +44,6 @@ HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 SECURE_PORT = 5671
-BROKER_CERT_LOCATION = '/etc/cloudify/ssl/rabbitmq-cert.pem'
-BROKER_KEY_LOCATION = '/etc/cloudify/ssl/rabbitmq-key.pem'
-BROKER_CA_LOCATION = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 RABBITMQ_CTL = 'rabbitmqctl'
 logger = get_logger(RABBITMQ)
@@ -279,9 +276,9 @@ class RabbitMQComponent(BaseComponent):
 
     def _generate_rabbitmq_certs(self):
         supplied = self.use_supplied_certificates(
-            cert_destination=BROKER_CERT_LOCATION,
-            key_destination=BROKER_KEY_LOCATION,
-            ca_destination=BROKER_CA_LOCATION,
+            cert_destination=constants.BROKER_CERT_LOCATION,
+            key_destination=constants.BROKER_KEY_LOCATION,
+            ca_destination=constants.BROKER_CA_LOCATION,
             owner='rabbitmq',
             group='rabbitmq',
         )
@@ -290,8 +287,8 @@ class RabbitMQComponent(BaseComponent):
             logger.info('Using supplied certificates.')
             return
         else:
-            config[RABBITMQ]['cert_path'] = BROKER_CERT_LOCATION
-            config[RABBITMQ]['key_path'] = BROKER_KEY_LOCATION
+            config[RABBITMQ]['cert_path'] = constants.BROKER_CERT_LOCATION
+            config[RABBITMQ]['key_path'] = constants.BROKER_KEY_LOCATION
 
         logger.info('Generating rabbitmq certificate...')
 

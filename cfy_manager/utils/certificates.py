@@ -21,12 +21,13 @@ import tempfile
 from os.path import join
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown, copy
+from .common import sudo, remove, chown, copy, move
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
-from ..constants import SSL_CERTS_TARGET_DIR
+from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ..exceptions import ProcessExecutionError
 from .files import write_to_file, write_to_tempfile
+from ..components.validations import check_certificates
 
 from ..logger import get_logger
 from .. import constants as const
@@ -458,3 +459,76 @@ def create_external_certs(private_ip=None,
         sign_key=sign_key,
         sign_key_password=sign_key_password
     )
+
+
+def use_supplied_certificates(component_name,
+                              logger,
+                              cert_destination=None,
+                              key_destination=None,
+                              ca_destination=None,
+                              owner=CLOUDIFY_USER,
+                              group=CLOUDIFY_GROUP):
+    """Use user-supplied certificates, checking they're not broken.
+
+    Any private key password will be removed, and the config will be
+    updated after the certificates are moved to the intended destination.
+
+    At least one of the cert_, key_, or ca_ destination entries must be
+    provided.
+
+    Returns True if supplied certificates were used.
+    """
+    cert_src, key_src, ca_src, key_pass = check_certificates(
+        component_name,
+        require_non_ca_certs=False,
+    )
+
+    if not any([cert_src, key_src, ca_src, key_pass]):
+        # No certificates supplied, so not using them
+        logger.debug('No user-supplied certificates were present.')
+        return False
+
+    # Put the files in the correct place
+    logger.info('Ensuring files are in correct locations.')
+
+    if cert_destination and cert_src != cert_destination:
+        move(cert_src, cert_destination)
+    if key_destination and key_src != key_destination:
+        move(key_src, key_destination)
+    if ca_src != ca_destination:
+        if ca_src:
+            move(ca_src, ca_destination)
+        else:
+            copy(cert_destination, ca_destination)
+
+    if key_pass:
+        remove_key_encryption(
+            ca_destination, ca_destination, key_pass
+        )
+
+    logger.info('Setting certificate ownership and permissions.')
+
+    for path in cert_destination, key_destination, ca_destination:
+        if path:
+            sudo(['chown', '{owner}.{group}'.format(owner=owner, group=group),
+                  path])
+    # Make key only readable by user and group
+    if key_destination:
+        sudo(['chmod', '440', key_destination])
+    # Make certs readable by anyone
+    for path in cert_destination, ca_destination:
+        if path:
+            sudo(['chmod', '444', path])
+
+    logger.info('Updating configured certification locations.')
+    if cert_destination:
+        config[component_name]['cert_path'] = cert_destination
+    if key_destination:
+        config[component_name]['key_path'] = key_destination
+    if ca_destination:
+        config[component_name]['ca_path'] = ca_destination
+        # If there was a password, we've now removed it
+        config[component_name]['key_password'] = ''
+
+    # Supplied certificates were used
+    return True
