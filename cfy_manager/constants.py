@@ -53,6 +53,9 @@ EXTERNAL_CERT_FILENAME = 'cloudify_external_cert.pem'
 EXTERNAL_KEY_FILENAME = 'cloudify_external_key.pem'
 POSTGRESQL_CLIENT_CERT_FILENAME = 'postgresql.crt'
 POSTGRESQL_CLIENT_KEY_FILENAME = 'postgresql.key'
+BROKER_CERT_LOCATION = '/etc/cloudify/ssl/rabbitmq-cert.pem'
+BROKER_KEY_LOCATION = '/etc/cloudify/ssl/rabbitmq-key.pem'
+BROKER_CA_LOCATION = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 INTERNAL_CERT_PATH = join(SSL_CERTS_TARGET_DIR, INTERNAL_CERT_FILENAME)
 INTERNAL_KEY_PATH = join(SSL_CERTS_TARGET_DIR, INTERNAL_KEY_FILENAME)

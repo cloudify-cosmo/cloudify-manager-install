@@ -13,15 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..validations import check_certificates
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
-from ...config import config
 from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...exceptions import ValidationError
-from ...utils.certificates import remove_key_encryption
 from ...utils.install import RpmPackageHandler
-from ...utils.common import sudo, move, copy
+from ...utils.certificates import use_supplied_certificates
 from ...logger import get_logger
 from ...utils.common import chown
 from ...utils.files import (
@@ -95,53 +92,21 @@ class BaseComponent(object):
                 'All prerequisites for {class_name} are met'.format(
                     class_name=self.__class__.__name__))
 
-    def use_supplied_certificates(self, cert_destination, key_destination,
-                                  ca_destination,
-                                  owner=CLOUDIFY_USER, group=CLOUDIFY_GROUP):
-        """Use user-supplied certificates, checking they're not broken."""
-        cert_src, key_src, ca_src, key_pass = check_certificates(
-            self.component_name,
+    def use_supplied_certificates(self,
+                                  cert_destination=None,
+                                  key_destination=None,
+                                  ca_destination=None,
+                                  owner=CLOUDIFY_USER,
+                                  group=CLOUDIFY_GROUP):
+        return use_supplied_certificates(
+            component_name=self.component_name,
+            logger=self.logger,
+            cert_destination=cert_destination,
+            key_destination=key_destination,
+            ca_destination=ca_destination,
+            owner=owner,
+            group=group,
         )
-
-        if not any([cert_src, key_src, ca_src, key_pass]):
-            # No certificates supplied, so not using them
-            self.logger.debug('No user-supplied certificates were present.')
-            return False
-
-        # Put the files in the correct place
-        self.logger.info('Ensuring files are in correct locations.')
-
-        if cert_src != cert_destination:
-            move(cert_src, cert_destination)
-        if key_src != key_destination:
-            move(key_src, key_destination)
-        if ca_src != ca_destination:
-            if ca_src:
-                move(ca_src, ca_destination)
-            else:
-                copy(cert_destination, ca_destination)
-
-        if key_pass:
-            remove_key_encryption(
-                ca_destination, ca_destination, key_pass
-            )
-
-        self.logger.info('Setting certificate ownership and permissions.')
-        sudo(['chown', '{owner}.{group}'.format(owner=owner, group=group),
-              cert_destination, key_destination, ca_destination])
-        # Make key only readable by user and group
-        sudo(['chmod', '440', key_destination])
-        # Make certs readable by anyone
-        sudo(['chmod', '444', cert_destination, ca_destination])
-
-        self.logger.info('Updating configured certification locations.')
-        config[self.component_name]['cert_path'] = cert_destination
-        config[self.component_name]['key_path'] = key_destination
-        config[self.component_name]['ca_path'] = ca_destination
-        config[self.component_name]['key_password'] = key_pass
-
-        # Supplied certificates were used
-        return True
 
     @staticmethod
     def _enter_sanity_mode():
