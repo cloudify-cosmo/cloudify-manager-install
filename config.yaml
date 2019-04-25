@@ -181,9 +181,9 @@ rabbitmq:
   # NOTE: The policy settings are only set up by the first broker in a cluster
   # of brokers, and they're not configured at all by a manager using an external
   # broker.
+  # If you remove any of these policies, you may encounter undefined
+  # behaviour, so it's probably best not to remove them.
   policies:
-    # If you remove either of these policies, you may encounter undefined
-    # behaviour, so it's probably best not to remove them.
     - name: logs_queue_message_policy
       expression: ^cloudify-log$
       # Highest value priority is applied in expression collisions
