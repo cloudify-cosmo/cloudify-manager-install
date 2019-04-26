@@ -268,6 +268,12 @@ stage:
     nodejs_source_url: node-v10.15.1-linux-x64.tar.xz
     stage_source_url: cloudify-stage-*.tgz
 
+  # Number of Cloudify Stage processes to be started
+  #   0/max  - to spread the app across all CPUs
+  #   -1     - to spread the app across all CPUs - 1
+  #   number - to spread the app across number CPUs
+  instances: 0
+
 composer:
   # If set to true, Cloudify Composer will not be installed
   skip_installation: false
