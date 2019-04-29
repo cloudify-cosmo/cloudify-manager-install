@@ -31,7 +31,6 @@ from .service_names import (
     POSTGRESQL_CLIENT,
     RABBITMQ,
 )
-from ..utils.certificates import use_supplied_certificates
 
 from .components_constants import (
     PRIVATE_IP,
@@ -86,19 +85,6 @@ def _possibly_override_rabbit_local_management():
         # If we're installing an external rabbit node, management plugin
         # must listen externally
         config[RABBITMQ]['management_only_local'] = False
-
-
-def _prepare_supplied_ca_certs():
-    # We don't need to do this if we're installing the queue service, because
-    # it'll put it in the correct location with the correct permissions.
-    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
-        # Only move it if we have a CA cert
-        if config[RABBITMQ]['ca_path']:
-            use_supplied_certificates(
-                component_name=RABBITMQ,
-                logger=logger,
-                ca_destination=constants.BROKER_CA_LOCATION,
-            )
 
 
 def _set_constant_config():
@@ -194,7 +180,6 @@ def set_globals():
     _set_constant_config()
     _set_hostname()
     _possibly_override_rabbit_local_management()
-    _prepare_supplied_ca_certs()
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         if config[CLEAN_DB]:
             _set_admin_password()
