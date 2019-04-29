@@ -20,16 +20,20 @@ from tempfile import gettempdir
 
 from ..base_component import BaseComponent
 from ..service_names import MANAGER
-from ..components_constants import CONFIG
+from ..components_constants import CONFIG, SERVICES_TO_INSTALL
+from ..service_components import QUEUE_SERVICE
+from ..service_names import RABBITMQ
 from ... import constants
+from ...config import config
 from ...logger import get_logger
 from ...utils import common
-from ...utils.users import create_service_user
-from ...utils.logrotate import setup_logrotate
-from ...utils.sudoers import add_entry_to_sudoers
+from ...utils.certificates import use_supplied_certificates
 from ...utils.files import (replace_in_file,
                             remove_files,
                             touch)
+from ...utils.logrotate import setup_logrotate
+from ...utils.sudoers import add_entry_to_sudoers
+from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
 
@@ -94,8 +98,20 @@ class ManagerComponent(BaseComponent):
         common.mkdir(join(resources_root, 'packages', 'scripts'))
         common.mkdir(join(resources_root, 'packages', 'templates'))
 
+    def _prepare_certificates(self):
+        # Move the broker certificate if we're not installing it locally
+        if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
+            # ...but only if one was provided.
+            if config[RABBITMQ]['ca_path']:
+                use_supplied_certificates(
+                    component_name=RABBITMQ,
+                    logger=logger,
+                    ca_destination=constants.BROKER_CA_LOCATION,
+                )
+
     def _configure(self):
         self._create_cloudify_user()
+        self._prepare_certificates()
         self._create_sudoers_file_and_disable_sudo_requiretty()
         self._set_selinux_permissive()
         setup_logrotate()
