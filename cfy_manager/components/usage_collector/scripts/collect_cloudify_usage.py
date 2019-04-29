@@ -147,7 +147,7 @@ def _send_data(data):
 
 
 def _is_clustered():
-    with get_storage_manager() as sm:
+    with _get_storage_manager() as sm:
         managers = sm.list(models.Manager)
     return len(managers) > 1
 
