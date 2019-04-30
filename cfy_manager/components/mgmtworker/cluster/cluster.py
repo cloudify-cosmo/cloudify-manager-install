@@ -19,7 +19,7 @@ from os.path import join
 
 from ...base_component import BaseComponent
 from ....utils.systemd import systemd
-from ....constants import COMPONENTS_DIR
+from ....constants import COMPONENTS_DIR, CA_CERT_PATH
 from ....utils.common import sudo
 from ...restservice.restservice import RestServiceComponent
 from ....logger import get_logger
@@ -201,6 +201,9 @@ class ClusterComponent(BaseComponent):
             'distribution': version_details['distribution'],
             'distro_release': version_details['distro_release']
         }
+        with open(CA_CERT_PATH) as f:
+            data['ca_cert'] = f.read()
+
         # During the below request, Syncthing will start FS replication and
         # wait for the config files to finish replicating
         result = self._generic_cloudify_rest_request(
