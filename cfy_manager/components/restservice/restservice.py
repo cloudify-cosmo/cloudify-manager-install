@@ -65,9 +65,9 @@ logger = get_logger(RESTSERVICE)
 CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(HOME_DIR, 'license_key.pem.pub')
 
 
-class RestServiceComponent(BaseComponent):
+class RestService(BaseComponent):
     def __init__(self, skip_installation=False):
-        super(RestServiceComponent, self).__init__(skip_installation)
+        super(RestService, self).__init__(skip_installation)
 
     def _make_paths(self):
         # Used in the service templates

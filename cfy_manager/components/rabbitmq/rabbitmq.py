@@ -49,11 +49,11 @@ RABBITMQ_CTL = 'rabbitmqctl'
 logger = get_logger(RABBITMQ)
 
 
-class RabbitMQComponent(BaseComponent):
+class RabbitMQ(BaseComponent):
     component_name = 'rabbitmq'
 
     def __init__(self, skip_installation):
-        super(RabbitMQComponent, self).__init__(skip_installation)
+        super(RabbitMQ, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[RABBITMQ][SOURCES]

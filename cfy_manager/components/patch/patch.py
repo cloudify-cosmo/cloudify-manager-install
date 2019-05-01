@@ -22,10 +22,9 @@ from ...utils.install import yum_install, yum_remove
 logger = get_logger('patch')
 
 
-class PatchComponent(BaseComponent):
-
+class Patch(BaseComponent):
     def __init__(self, skip_installation):
-        super(PatchComponent, self).__init__(skip_installation)
+        super(Patch, self).__init__(skip_installation)
 
     def remove(self):
         yum_remove('patch')

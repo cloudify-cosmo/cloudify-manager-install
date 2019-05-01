@@ -15,7 +15,7 @@
 
 from os.path import join, dirname
 
-from .cluster.cluster import ClusterComponent
+from .cluster.cluster import Cluster
 
 from ..components_constants import (
     SOURCES,
@@ -50,9 +50,9 @@ CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
 logger = get_logger(MGMTWORKER)
 
 
-class MgmtWorkerComponent(BaseComponent):
+class MgmtWorker(BaseComponent):
     def __init__(self, skip_installation):
-        super(MgmtWorkerComponent, self).__init__(skip_installation)
+        super(MgmtWorker, self).__init__(skip_installation)
 
     def _install(self):
         source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
@@ -67,7 +67,7 @@ class MgmtWorkerComponent(BaseComponent):
             logger.notice('premium will not be installed.')
         else:
             logger.notice('Installing Cloudify Premium...')
-            cluster = ClusterComponent(skip_installation=False)
+            cluster = Cluster(skip_installation=False)
             cluster.install()
 
     def _deploy_mgmtworker_config(self):
@@ -157,7 +157,7 @@ class MgmtWorkerComponent(BaseComponent):
     def _configure(self):
         try:
             self._enter_sanity_mode()
-            cluster = ClusterComponent(skip_installation=False)
+            cluster = Cluster(skip_installation=False)
             cluster.configure()
             self._deploy_mgmtworker_config()
             systemd.configure(MGMTWORKER)

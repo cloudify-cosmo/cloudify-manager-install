@@ -40,9 +40,9 @@ CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
 logger = get_logger(MANAGER)
 
 
-class ManagerComponent(BaseComponent):
+class Manager(BaseComponent):
     def __init__(self, skip_installation):
-        super(ManagerComponent, self).__init__(skip_installation)
+        super(Manager, self).__init__(skip_installation)
 
     def _get_exec_tempdir(self):
         return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \

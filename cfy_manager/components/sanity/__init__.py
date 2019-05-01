@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..sanity.sanity import SanityComponent  # NOQA
+from ..sanity.sanity import Sanity  # NOQA

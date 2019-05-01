@@ -30,9 +30,9 @@ MANAGER_IP_SETTER_DIR = join('/opt/cloudify', MANAGER_IP_SETTER)
 logger = get_logger(MANAGER_IP_SETTER)
 
 
-class ManagerIpSetterComponent(BaseComponent):
+class ManagerIpSetter(BaseComponent):
     def __init__(self, skip_installation):
-        super(ManagerIpSetterComponent, self).__init__(skip_installation)
+        super(ManagerIpSetter, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[MANAGER_IP_SETTER][SOURCES]

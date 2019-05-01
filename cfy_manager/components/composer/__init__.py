@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..composer.composer import ComposerComponent  # NOQA
+from ..composer.composer import Composer  # NOQA

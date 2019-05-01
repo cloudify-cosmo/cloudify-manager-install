@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..manager.manager import ManagerComponent  # NOQA
+from ..manager.manager import Manager  # NOQA

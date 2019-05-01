@@ -59,9 +59,9 @@ STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
 NODE_EXECUTABLE_PATH = '/usr/bin/node'
 
 
-class StageComponent(BaseComponent):
+class Stage(BaseComponent):
     def __init__(self, skip_installation):
-        super(StageComponent, self).__init__(skip_installation)
+        super(Stage, self).__init__(skip_installation)
 
     def _create_paths(self):
         common.mkdir(NODEJS_DIR)

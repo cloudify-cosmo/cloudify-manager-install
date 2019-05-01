@@ -46,9 +46,9 @@ UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 logger = get_logger(NGINX)
 
 
-class NginxComponent(BaseComponent):
+class Nginx(BaseComponent):
     def __init__(self, skip_installation):
-        super(NginxComponent, self).__init__(skip_installation)
+        super(Nginx, self).__init__(skip_installation)
 
     def _install(self):
         nginx_source_url = config[NGINX][SOURCES]['nginx_source_url']

@@ -57,9 +57,9 @@ PG_PORT = 5432
 logger = get_logger(POSTGRESQL_CLIENT)
 
 
-class PostgresqlClientComponent(BaseComponent):
+class PostgresqlClient(BaseComponent):
     def __init__(self, skip_installation):
-        super(PostgresqlClientComponent, self).__init__(skip_installation)
+        super(PostgresqlClient, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[POSTGRESQL_CLIENT][SOURCES]

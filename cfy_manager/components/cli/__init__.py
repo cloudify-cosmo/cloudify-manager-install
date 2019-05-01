@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..cli.cli import CliComponent  # NOQA
+from ..cli.cli import Cli  # NOQA

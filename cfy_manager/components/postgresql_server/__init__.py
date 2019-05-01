@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .postgresql_server import PostgresqlServerComponent  # NOQA
+from .postgresql_server import PostgresqlServer  # NOQA
