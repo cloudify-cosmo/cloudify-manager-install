@@ -497,7 +497,7 @@ def use_supplied_certificates(component_name,
         move(key_src, key_destination)
     if ca_src != ca_destination:
         if ca_src:
-            move(ca_src, ca_destination)
+            copy(ca_src, ca_destination)
         else:
             copy(cert_destination, ca_destination)
 
