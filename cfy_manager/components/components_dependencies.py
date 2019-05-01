@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-# region Dependencies with error messages
-
 DEPENDENCIES_ERROR_MESSAGES = {
     'sudo': 'necessary to run commands with root privileges',
     'openssl-1.0.2k': 'necessary for creating certificates',
@@ -30,29 +28,23 @@ DEPENDENCIES_ERROR_MESSAGES = {
     'openssh-server': 'required by the sanity check'
 }
 
-# endregion
-
-# region Components dependencies
-
 COMPONENTS_DEPENDENCIES = {
     'default': ['sudo', 'logrotate', 'yum', 'python-setuptools',
                 'python-backports', 'python-backports-ssl_match_hostname'],
-    'CliComponent': ['sed'],
-    'ComposerComponent': ['systemd-sysv', 'tar'],
-    'AmqpPostgresComponent': ['systemd-sysv'],
-    'ManagerComponent': [],
-    'ManagerIpSetterComponent': ['systemd-sysv'],
-    'MgmtWorkerComponent': ['systemd-sysv'],
-    'NginxComponent': ['systemd-sysv', 'openssl-1.0.2k'],
-    'PostgresqlServerComponent': ['systemd-sysv'],
-    'PostgresqlClientComponent': [],
-    'PythonComponent': [],
-    'RabbitMQComponent': ['initscripts', 'systemd-sysv'],
-    'RestServiceComponent': ['systemd-sysv'],
-    'SanityComponent': ['openssh-server'],
-    'StageComponent': ['systemd-sysv'],
-    'UsageCollectorComponent': [],
-    'PatchComponent': []
+    'Cli': ['sed'],
+    'Composer': ['systemd-sysv', 'tar'],
+    'AmqpPostgres': ['systemd-sysv'],
+    'Manager': [],
+    'ManagerIpSetter': ['systemd-sysv'],
+    'MgmtWorker': ['systemd-sysv'],
+    'Nginx': ['systemd-sysv', 'openssl-1.0.2k'],
+    'PostgresqlServer': ['systemd-sysv'],
+    'PostgresqlClient': [],
+    'Python': [],
+    'RabbitMQ': ['initscripts', 'systemd-sysv'],
+    'RestService': ['systemd-sysv'],
+    'Sanity': ['openssh-server'],
+    'Stage': ['systemd-sysv'],
+    'UsageCollector': [],
+    'Patch': []
 }
-
-# endregion

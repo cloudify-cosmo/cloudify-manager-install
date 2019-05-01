@@ -40,9 +40,9 @@ LOG_DIR = join(constants.BASE_LOG_DIR, USAGE_COLLECTOR)
 logger = get_logger(USAGE_COLLECTOR)
 
 
-class UsageCollectorComponent(BaseComponent):
+class UsageCollector(BaseComponent):
     def __init__(self, skip_installation):
-        super(UsageCollectorComponent, self).__init__(skip_installation)
+        super(UsageCollector, self).__init__(skip_installation)
 
     def install(self):
         logger.notice('Installing Usage Collector...')

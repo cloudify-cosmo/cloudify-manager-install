@@ -13,22 +13,22 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .amqp_postgres import AmqpPostgresComponent  # NOQA
-from .cli import CliComponent  # NOQA
-from .composer import ComposerComponent  # NOQA
-from .manager import ManagerComponent  # NOQA
-from .manager_ip_setter import ManagerIpSetterComponent  # NOQA
-from .mgmtworker import MgmtWorkerComponent  # NOQA
-from .nginx import NginxComponent  # NOQA
-from .postgresql_server import PostgresqlServerComponent  # NOQA
-from .postgresql_client import PostgresqlClientComponent # NOQA
-from .python import PythonComponent  # NOQA
-from .rabbitmq import RabbitMQComponent  # NOQA
-from .restservice import RestServiceComponent  # NOQA
-from .sanity import SanityComponent  # NOQA
-from .stage import StageComponent  # NOQA
-from .usage_collector import UsageCollectorComponent  # NOQA
-from .patch.patch import PatchComponent  # NOQA
+from .amqp_postgres import AmqpPostgres  # NOQA
+from .cli import Cli  # NOQA
+from .composer import Composer  # NOQA
+from .manager import Manager  # NOQA
+from .manager_ip_setter import ManagerIpSetter  # NOQA
+from .mgmtworker import MgmtWorker  # NOQA
+from .nginx import Nginx  # NOQA
+from .postgresql_server import PostgresqlServer  # NOQA
+from .postgresql_client import PostgresqlClient # NOQA
+from .python import Python  # NOQA
+from .rabbitmq import RabbitMQ  # NOQA
+from .restservice import RestService  # NOQA
+from .sanity import Sanity  # NOQA
+from .stage import Stage  # NOQA
+from .usage_collector import UsageCollector  # NOQA
+from .patch.patch import Patch  # NOQA
 
 from components_factory import ComponentsFactory  # NOQA
 from service_components import SERVICE_COMPONENTS  # NOQA

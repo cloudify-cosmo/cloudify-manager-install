@@ -66,9 +66,9 @@ PG_PORT = 5432
 logger = get_logger(POSTGRESQL_SERVER)
 
 
-class PostgresqlServerComponent(BaseComponent):
+class PostgresqlServer(BaseComponent):
     def __init__(self, skip_installation):
-        super(PostgresqlServerComponent, self).__init__(skip_installation)
+        super(PostgresqlServer, self).__init__(skip_installation)
 
     def _install(self):
         sources = config[POSTGRESQL_SERVER][SOURCES]
@@ -254,4 +254,4 @@ class PostgresqlServerComponent(BaseComponent):
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):
-        super(PostgresqlServerComponent, self).validate_dependencies()
+        super(PostgresqlServer, self).validate_dependencies()

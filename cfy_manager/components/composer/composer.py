@@ -49,10 +49,10 @@ COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
 COMPOSER_PORT = 3000
 
 
-class ComposerComponent(BaseComponent):
+class Composer(BaseComponent):
 
     def __init__(self, skip_installation):
-        super(ComposerComponent, self).__init__(skip_installation)
+        super(Composer, self).__init__(skip_installation)
 
     def _create_paths(self):
         common.mkdir(NODEJS_DIR)

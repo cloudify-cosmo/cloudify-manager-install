@@ -24,9 +24,9 @@ from ...utils.files import copy_notice, remove_notice
 logger = get_logger(PYTHON)
 
 
-class PythonComponent(BaseComponent):
+class Python(BaseComponent):
     def __init__(self, skip_installation):
-        super(PythonComponent, self).__init__(skip_installation)
+        super(Python, self).__init__(skip_installation)
 
     def _install(self):
         if config[PYTHON]['install_python_compilers']:

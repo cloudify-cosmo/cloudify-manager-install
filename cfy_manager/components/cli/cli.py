@@ -32,10 +32,10 @@ from ...utils.install import yum_install, yum_remove
 logger = get_logger(CLI)
 
 
-class CliComponent(BaseComponent):
+class Cli(BaseComponent):
 
     def __init__(self, skip_installation):
-        super(CliComponent, self).__init__(skip_installation)
+        super(Cli, self).__init__(skip_installation)
 
     def _install(self):
         source_url = config[CLI][SOURCES]['cli_source_url']

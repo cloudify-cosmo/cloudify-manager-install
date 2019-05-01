@@ -36,9 +36,9 @@ AUTHORIZED_KEYS_PATH = expanduser('~/.ssh/authorized_keys')
 SANITY_WEB_SERVER_PORT = 12774
 
 
-class SanityComponent(BaseComponent):
+class Sanity(BaseComponent):
     def __init__(self, skip_installation):
-        super(SanityComponent, self).__init__(skip_installation)
+        super(Sanity, self).__init__(skip_installation)
         random_postfix = str(uuid.uuid4())
         self.blueprint_name = '{0}_blueprint_{1}'.format(SANITY,
                                                          random_postfix)

@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..python.python import PythonComponent  # NOQA
+from ..python.python import Python  # NOQA

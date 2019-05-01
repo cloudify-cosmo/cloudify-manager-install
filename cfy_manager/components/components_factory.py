@@ -15,22 +15,22 @@
 
 
 from . import (
-    AmqpPostgresComponent,
-    ManagerComponent,
-    ManagerIpSetterComponent,
-    NginxComponent,
-    PythonComponent,
-    PostgresqlServerComponent,
-    PostgresqlClientComponent,
-    RabbitMQComponent,
-    RestServiceComponent,
-    StageComponent,
-    ComposerComponent,
-    MgmtWorkerComponent,
-    CliComponent,
-    UsageCollectorComponent,
-    PatchComponent,
-    SanityComponent
+    AmqpPostgres,
+    Manager,
+    ManagerIpSetter,
+    Nginx,
+    Python,
+    PostgresqlServer,
+    PostgresqlClient,
+    RabbitMQ,
+    RestService,
+    Stage,
+    Composer,
+    MgmtWorker,
+    Cli,
+    UsageCollector,
+    Patch,
+    Sanity
 )
 
 
@@ -41,20 +41,20 @@ class ComponentsFactory:
     @staticmethod
     def create_component(component_name, skip_installation=False):
         return {
-            "manager": ManagerComponent(skip_installation),
-            "manager_ip_setter": ManagerIpSetterComponent(skip_installation),
-            "nginx": NginxComponent(skip_installation),
-            "python": PythonComponent(skip_installation),
-            "postgresql_server": PostgresqlServerComponent(skip_installation),
-            "postgresql_client": PostgresqlClientComponent(skip_installation),
-            "rabbitmq": RabbitMQComponent(skip_installation),
-            "restservice": RestServiceComponent(skip_installation),
-            "amqp_postgres": AmqpPostgresComponent(skip_installation),
-            "stage": StageComponent(skip_installation),
-            "composer": ComposerComponent(skip_installation),
-            "mgmtworker": MgmtWorkerComponent(skip_installation),
-            "cli": CliComponent(skip_installation),
-            "usage_collector": UsageCollectorComponent(skip_installation),
-            "patch": PatchComponent(skip_installation),
-            "sanity": SanityComponent(skip_installation)
+            "manager": Manager(skip_installation),
+            "manager_ip_setter": ManagerIpSetter(skip_installation),
+            "nginx": Nginx(skip_installation),
+            "python": Python(skip_installation),
+            "postgresql_server": PostgresqlServer(skip_installation),
+            "postgresql_client": PostgresqlClient(skip_installation),
+            "rabbitmq": RabbitMQ(skip_installation),
+            "restservice": RestService(skip_installation),
+            "amqp_postgres": AmqpPostgres(skip_installation),
+            "stage": Stage(skip_installation),
+            "composer": Composer(skip_installation),
+            "mgmtworker": MgmtWorker(skip_installation),
+            "cli": Cli(skip_installation),
+            "usage_collector": UsageCollector(skip_installation),
+            "patch": Patch(skip_installation),
+            "sanity": Sanity(skip_installation)
         }[component_name]

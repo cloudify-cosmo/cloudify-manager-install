@@ -21,7 +21,7 @@ from ...base_component import BaseComponent
 from ....utils.systemd import systemd
 from ....constants import COMPONENTS_DIR, CA_CERT_PATH
 from ....utils.common import sudo
-from ...restservice.restservice import RestServiceComponent
+from ...restservice.restservice import RestService
 from ....logger import get_logger
 from ....exceptions import BootstrapError, NetworkError
 from ....config import config
@@ -60,7 +60,7 @@ logger = get_logger('cluster')
 SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
-class ClusterComponent(BaseComponent):
+class Cluster(BaseComponent):
     def _generic_cloudify_rest_request(self, host, port, path,
                                        method, data=None):
         url = 'http://{0}:{1}/api/{2}'.format(host, port, path)
@@ -124,7 +124,7 @@ class ClusterComponent(BaseComponent):
         wait_for_port(rest_port)
 
         if verify_rest_call:
-            rest_service_component = RestServiceComponent()
+            rest_service_component = RestService()
             rest_service_component._verify_restservice_alive()
 
     def _log_results(self, result):

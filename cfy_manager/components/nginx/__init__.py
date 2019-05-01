@@ -13,4 +13,4 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ..nginx.nginx import NginxComponent  # NOQA
+from ..nginx.nginx import Nginx  # NOQA
