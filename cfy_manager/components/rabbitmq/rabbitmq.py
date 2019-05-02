@@ -150,7 +150,7 @@ class RabbitMQ(BaseComponent):
 
     def _set_erlang_cookie(self):
         cookie = config[RABBITMQ]['erlang_cookie']
-        if config[RABBITMQ]['cluster_members'] and not cookie:
+        if len(config[RABBITMQ]['cluster_members']) > 1 and not cookie:
             raise ValidationError(
                 'Cluster members are configured but erlang_cookie has not '
                 'been set.'
