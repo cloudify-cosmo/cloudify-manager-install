@@ -14,11 +14,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import logging
 import os
 import sys
-import argh
 from time import time
 from traceback import format_exception
+
+import argh
 
 from .components import (
     ComponentsFactory,
@@ -27,7 +29,7 @@ from .components import (
     QUEUE_SERVICE,
     SERVICE_INSTALLATION_ORDER
 )
-from .components.globals import set_globals, print_password_to_screen
+from .components.globals import set_globals
 from .components.validations import validate, validate_config_access
 from .components.service_names import (
     MANAGER,
@@ -46,8 +48,13 @@ from .config import config
 from .encryption.encryption import update_encryption_key
 from .networks.networks import add_networks
 from .exceptions import BootstrapError
-from .constants import INITIAL_INSTALL_FILE
-from .logger import get_logger, setup_console_logger
+from .constants import INITIAL_CONFIGURE_FILE, INITIAL_INSTALL_FILE
+from .logger import (
+    get_file_handlers_level,
+    get_logger,
+    setup_console_logger,
+    set_file_handlers_level,
+)
 from .utils import CFY_UMASK
 from .utils.common import run
 from .utils.files import (
@@ -198,7 +205,7 @@ def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _is_manager_installed()
+    config[CLEAN_DB] = clean_db or not _is_manager_configured()
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
@@ -268,8 +275,20 @@ def _print_finish_message():
         logger.notice('#' * 50)
 
 
+def print_password_to_screen():
+    password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    current_level = get_file_handlers_level()
+    set_file_handlers_level(logging.ERROR)
+    logger.warning('Admin password: {0}'.format(password))
+    set_file_handlers_level(current_level)
+
+
 def _is_manager_installed():
     return os.path.isfile(INITIAL_INSTALL_FILE)
+
+
+def _is_manager_configured():
+    return os.path.isfile(INITIAL_CONFIGURE_FILE)
 
 
 def _create_initial_install_file():
@@ -281,13 +300,23 @@ def _create_initial_install_file():
         touch(INITIAL_INSTALL_FILE)
 
 
+def _create_initial_configure_file():
+    """
+    Create /etc/cloudify/.configured if configure finished successfully
+    for the first time
+    """
+    if not _is_manager_configured():
+        touch(INITIAL_CONFIGURE_FILE)
+
+
 def _finish_configuration(only_install=None):
     remove_temp_files()
+    _create_initial_install_file()
     if not only_install:
         _print_finish_message()
+        _create_initial_configure_file()
     _print_time()
     config.dump_config()
-    _create_initial_install_file()
 
 
 def _validate_force(force, cmd):
@@ -297,19 +326,28 @@ def _validate_force(force, cmd):
         )
 
 
-def _validate_manager_installed(cmd):
+def _validate_manager_prepared(cmd):
+    error_message = (
+        'Could not find {touched_file}.\nThis most likely means '
+        'that you need to run `cfy_manager {fix_cmd}` before '
+        'running `cfy_manager {cmd}`'
+    )
     if not _is_manager_installed():
         raise BootstrapError(
-            'Could not find {touched_file}.\nThis most likely means '
-            'that you need to run `cfy_manager install` before '
-            'running `cfy_manager {cmd}`'.format(
+            error_message.format(
+                fix_cmd='install',
                 touched_file=INITIAL_INSTALL_FILE,
                 cmd=cmd
             )
         )
-    if os.path.exists('/etc/cloudify/cluster'):
+    if not _is_manager_configured() and cmd != 'configure':
         raise BootstrapError(
-            "Operation '{0}' is not allowed on a cluster node".format(cmd))
+            error_message.format(
+                fix_cmd='configure',
+                touched_file=INITIAL_INSTALL_FILE,
+                cmd=cmd
+            )
+        )
 
 
 def _get_components_list():
@@ -450,8 +488,8 @@ def configure(verbose=False,
         config_write_required=True
     )
 
+    _validate_manager_prepared('configure')
     logger.notice('Configuring desired components...')
-    _validate_manager_installed('configure')
     validate(skip_validations=True, components=components)
     set_globals()
 
@@ -476,7 +514,7 @@ def remove(verbose=False, force=False):
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
-    should_stop = _is_manager_installed()
+    should_stop = _is_manager_configured()
 
     for component in reversed(components):
         if should_stop and not component.skip_installation:
@@ -486,6 +524,9 @@ def remove(verbose=False, force=False):
     if _is_manager_installed():
         _remove(INITIAL_INSTALL_FILE)
 
+    if _is_manager_configured():
+        _remove(INITIAL_CONFIGURE_FILE)
+
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
 
@@ -494,7 +535,7 @@ def start(verbose=False):
     """ Start Cloudify Manager services """
 
     _prepare_execution(verbose)
-    _validate_manager_installed('start')
+    _validate_manager_prepared('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in components:
         if not component.skip_installation:
@@ -507,7 +548,7 @@ def stop(verbose=False, force=False):
     """ Stop Cloudify Manager services """
 
     _prepare_execution(verbose)
-    _validate_manager_installed('stop')
+    _validate_manager_prepared('stop')
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
@@ -522,7 +563,7 @@ def restart(verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
     _prepare_execution(verbose)
-    _validate_manager_installed('restart')
+    _validate_manager_prepared('restart')
     _validate_force(force, 'restart')
 
     stop(verbose, force)
