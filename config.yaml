@@ -155,16 +155,16 @@ rabbitmq:
   nodename: null
   # Whether to support FQDNs. If this is set to false, only the hostname will be
   # used even if the FQDN is supplied.
-  # Caution: Setting this to true will require manually specifying target node for
+  # Caution: Setting this to true will require manually specifying target node
   # and using the --longnames argument for any rabbitmqctl operations.
   use_long_name: false
 
   # If this is part of a cluster and not the first node to be configured, set
-  # this to one of the other cluster node names
+  # this to one of the other cluster node names.
   join_cluster: null
 
-  # If this is a cluster then this value must be the same on all rabbitmq nodes
-  # If left blank, it will be auto-generated
+  # If this is a cluster then this value must be the same on all rabbitmq nodes.
+  # If left blank, it will be auto-generated.
   erlang_cookie: null
 
   sources:
@@ -174,11 +174,10 @@ rabbitmq:
     cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
   # Sets the File Descriptor limit for the rabbitmq user.
-  # Not used if an external endpoint is used.
   fd_limit: 102400
 
   # Make the management plugin only listen on the local interface
-  # The plugin will automatically be made to listen externally for external
+  # The plugin will automatically be made to listen externally on external
   # brokers.
   management_only_local: true
 
