@@ -13,18 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
-import base64
-import string
-import random
 import socket
 
 from .. import constants
 from ..config import config
-from ..logger import (get_logger,
-                      set_file_handlers_level,
-                      get_file_handlers_level)
-from ..exceptions import InputError
+from ..logger import get_logger
 
 from .service_names import (
     MANAGER,
@@ -36,16 +29,11 @@ from .components_constants import (
     PRIVATE_IP,
     SECURITY,
     CONSTANTS,
-    ADMIN_PASSWORD,
-    CLEAN_DB,
-    FLASK_SECURITY,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
     HOSTNAME,
 )
-from .service_components import MANAGER_SERVICE, QUEUE_SERVICE
-
-import logging
+from .service_components import QUEUE_SERVICE
 
 BROKER_IP = 'broker_ip'
 logger = get_logger('Globals')
@@ -104,74 +92,9 @@ def _set_constant_config():
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
 
-def _set_admin_password():
-    if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
-        config[MANAGER][SECURITY][ADMIN_PASSWORD] = _generate_password()
-    print_password_to_screen()
-
-
 def _set_hostname():
     if not config[MANAGER][HOSTNAME]:
         config[MANAGER][HOSTNAME] = socket.gethostname()
-
-
-def print_password_to_screen():
-    if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
-        return
-    password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-    current_level = get_file_handlers_level()
-    set_file_handlers_level(logging.ERROR)
-    logger.warning('Admin password: {0}'.format(password))
-    set_file_handlers_level(current_level)
-
-
-def _generate_password(length=12):
-    chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
-    password = ''.join(random.choice(chars) for _ in range(length))
-    return password
-
-
-def _random_alphanumeric(result_len=31):
-    """
-    :return: random string of unique alphanumeric characters
-    """
-    ascii_alphanumeric = string.ascii_letters + string.digits
-    return ''.join(
-        random.SystemRandom().sample(ascii_alphanumeric, result_len)
-    )
-
-
-def _generate_flask_security_config():
-    logger.info('Generating random hash salt and secret key...')
-    config[FLASK_SECURITY] = {
-        'hash_salt': base64.b64encode(os.urandom(32)),
-        'secret_key': base64.b64encode(os.urandom(32)),
-        'encoding_alphabet': _random_alphanumeric(),
-        'encoding_block_size': 24,
-        'encoding_min_length': 5,
-        'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
-    }
-
-
-def _validate_admin_password_and_security_config():
-    if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
-        raise InputError(
-            'Admin password not found in {config_path} and '
-            'was not provided as an argument.\n'
-            'The password was not generated because the `--clean-db` flag '
-            'was not passed cfy_manager install/configure'.format(
-                config_path=constants.USER_CONFIG_PATH
-            )
-        )
-    if not config[FLASK_SECURITY]:
-        raise InputError(
-            'Flask security configuration not found in {config_path}.\n'
-            'The Flask security configuration was not generated because '
-            'the `--clean-db` flag was not passed cfy_manager '
-            'install/configure'.format(
-                config_path=constants.USER_CONFIG_PATH
-            )
-        )
 
 
 def set_globals():
@@ -180,9 +103,3 @@ def set_globals():
     _set_constant_config()
     _set_hostname()
     _possibly_override_rabbit_local_management()
-    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-        if config[CLEAN_DB]:
-            _set_admin_password()
-            _generate_flask_security_config()
-        else:
-            _validate_admin_password_and_security_config()

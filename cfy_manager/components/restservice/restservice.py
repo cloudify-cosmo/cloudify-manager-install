@@ -13,33 +13,42 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import base64
 import json
-import urllib2
+import random
+import string
 import subprocess
+import urllib2
 from collections import namedtuple
 from os.path import join, exists
 
 from . import db
 from ..components_constants import (
-    SOURCES,
+    ACTIVE_MANAGER_IP,
+    ADMIN_PASSWORD,
+    CLEAN_DB,
     CONFIG,
-    SCRIPTS,
+    FLASK_SECURITY,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
+    SCRIPTS,
+    SECURITY,
+    SOURCES,
     VENV,
-    FLASK_SECURITY,
-    CLEAN_DB,
-    ACTIVE_MANAGER_IP
 )
 from ..base_component import BaseComponent
 from ..service_names import (
+    CLUSTER,
+    MANAGER,
     RESTSERVICE,
-    CLUSTER
 )
 from ... import constants
 from ...config import config
-from ...logger import get_logger
-from ...exceptions import BootstrapError, NetworkError
+from ...logger import (
+    get_logger,
+)
+from ...exceptions import BootstrapError, NetworkError, InputError
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -50,7 +59,6 @@ from ...utils.files import (
     sudo_read,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
-
 
 HOME_DIR = '/opt/manager'
 REST_VENV = join(HOME_DIR, 'env')
@@ -96,6 +104,17 @@ class RestService(BaseComponent):
             deploy(resource.src, resource.dst)
             common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
                          resource.dst)
+
+    def _generate_flask_security_config(self):
+        logger.info('Generating random hash salt and secret key...')
+        config[FLASK_SECURITY] = {
+            'hash_salt': base64.b64encode(os.urandom(32)),
+            'secret_key': base64.b64encode(os.urandom(32)),
+            'encoding_alphabet': self._random_alphanumeric(),
+            'encoding_block_size': 24,
+            'encoding_min_length': 5,
+            'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
+        }
 
     def _pre_create_snapshot_paths(self):
         for resource_dir in (
@@ -233,8 +252,52 @@ class RestService(BaseComponent):
         else:
             logger.info('Manager already in DB, ignoring configuration')
 
+    def _generate_password(self, length=12):
+        chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
+        password = ''.join(random.choice(chars) for _ in range(length))
+        return password
+
+    def _set_admin_password(self):
+        if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
+            config[MANAGER][SECURITY][ADMIN_PASSWORD] = \
+                self._generate_password()
+
+    def _random_alphanumeric(self, result_len=31):
+        """
+        :return: random string of unique alphanumeric characters
+        """
+        ascii_alphanumeric = string.ascii_letters + string.digits
+        return ''.join(
+            random.SystemRandom().sample(ascii_alphanumeric, result_len)
+        )
+
+    def _validate_admin_password_and_security_config(self):
+        if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
+            raise InputError(
+                'Admin password not found in {config_path} and '
+                'was not provided as an argument.\n'
+                'The password was not generated because the `--clean-db` flag '
+                'was not passed cfy_manager install/configure'.format(
+                    config_path=constants.USER_CONFIG_PATH
+                )
+            )
+        if not config[FLASK_SECURITY]:
+            raise InputError(
+                'Flask security configuration not found in {config_path}.\n'
+                'The Flask security configuration was not generated because '
+                'the `--clean-db` flag was not passed cfy_manager '
+                'install/configure'.format(
+                    config_path=constants.USER_CONFIG_PATH
+                )
+            )
+
     def _configure(self):
         try:
+            if config[CLEAN_DB]:
+                self._set_admin_password()
+                self._generate_flask_security_config()
+            else:
+                self._validate_admin_password_and_security_config()
             self._make_paths()
             self._configure_restservice()
             self._enter_sanity_mode()
