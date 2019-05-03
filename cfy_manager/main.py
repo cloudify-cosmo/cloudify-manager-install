@@ -465,11 +465,14 @@ def install(verbose=False,
     for component in components:
         if not component.skip_installation:
             component.install()
-        # Separate check because some components set 'skip' if they don't
-        # find the install package, and because if we're set to only install
-        # then we shouldn't configure
-        if not (component.skip_installation or only_install):
-            component.configure()
+
+    if not only_install:
+        for component in components:
+            # Separate check because some components set 'skip' if they don't
+            # find the install package, and because if we're set to only
+            # install then we shouldn't configure
+            if not component.skip_installation:
+                component.configure()
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
