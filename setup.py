@@ -51,7 +51,7 @@ setup(
     zip_safe=False,
     package_data={'': extra_files},
     install_requires=[
-        'ruamel.yaml==0.15.35',
+        'ruamel.yaml==0.15.94',
         'Jinja2==2.10',
         'argh==0.26.2',
         'netifaces==0.10.6',

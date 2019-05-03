@@ -13,7 +13,7 @@ manager:
 
   # Provide an IP or hostname to be used in the local CLI profile on the manager.
   # This might be useful when providing an external certificate.
-  cli_local_profile_host_name: 'localhost'
+  cli_local_profile_host_name: localhost
 
   ######################################################################################
   #
@@ -67,10 +67,10 @@ provider_context:
   import_resolver:
     parameters:
       rules:
-        - {'http://www.getcloudify.org/spec': 'file:///opt/manager/resources/spec'}
-        - {'http://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
-        - {'https://www.getcloudify.org/spec': 'file:///opt/manager/resources/spec'}
-        - {'https://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
+      - {http://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {http://cloudify.co/spec: file:///opt/manager/resources/spec}
+      - {https://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {https://cloudify.co/spec: file:///opt/manager/resources/spec}
       # if this is set to true, the import resolver will try the original,
       # non-resolved URL as well, if the resolved one returns a HTTP error
       fallback: true
@@ -152,7 +152,7 @@ rabbitmq:
   key_path: ''
 
   # The name to give this cluster node. If this is blank, it will be set to localhost.
-  nodename: null
+  nodename:
   # Whether to support FQDNs. If this is set to false, only the hostname will be
   # used even if the FQDN is supplied.
   # Caution: Setting this to true will require manually specifying target node
@@ -161,11 +161,11 @@ rabbitmq:
 
   # If this is part of a cluster and not the first node to be configured, set
   # this to one of the other cluster node names.
-  join_cluster: null
+  join_cluster:
 
   # If this is a cluster then this value must be the same on all rabbitmq nodes.
   # If left blank, it will be auto-generated.
-  erlang_cookie: null
+  erlang_cookie:
 
   sources:
     erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
@@ -187,41 +187,41 @@ rabbitmq:
   # If you remove any of these policies, you may encounter undefined
   # behaviour, so it's probably best not to remove them.
   policies:
-    - name: logs_queue_message_policy
-      expression: ^cloudify-log$
-      # Highest value priority is applied in expression collisions
-      priority: 100
-      policy:
-        # Sets the number of milliseconds to wait before a message expires
-        # in the events queue. Not used if an external endpoint is used.
-        message-ttl: 1200000
-        # Sets the number of messages the events queue can hold. Note this is NOT
-        # the message byte length! Not used if an external endpoint is used.
-        # Note that for each of the queue length limit properties, new messages
-        # will be queued in RabbitMQ and old messages will be deleted once the
-        # limit is reached! https://www.rabbitmq.com/maxlength.html
-        max-length: 1000000
-        # Used to ensure data integrity by keeping a replica of the queue on all
-        # cluster nodes
-        ha-mode: all
-        ha-sync-mode: automatic
-        ha-sync-batch-size: 50
-    - name: events_queue_message_policy
-      expression: ^cloudify-events$
-      priority: 100
-      policy:
-        message-ttl: 1200000
-        max-length: 1000000
-        ha-mode: all
-        ha-sync-mode: automatic
-        ha-sync-batch-size: 50
-    - name: default_policy
-      expression: ^
-      priority: 1
-      policy:
-        ha-mode: all
-        ha-sync-mode: automatic
-        ha-sync-batch-size: 50
+  - name: logs_queue_message_policy
+    expression: ^cloudify-log$
+    # Highest value priority is applied in expression collisions
+    priority: 100
+    policy:
+      # Sets the number of milliseconds to wait before a message expires
+      # in the events queue. Not used if an external endpoint is used.
+      message-ttl: 1200000
+      # Sets the number of messages the events queue can hold. Note this is NOT
+      # the message byte length! Not used if an external endpoint is used.
+      # Note that for each of the queue length limit properties, new messages
+      # will be queued in RabbitMQ and old messages will be deleted once the
+      # limit is reached! https://www.rabbitmq.com/maxlength.html
+      max-length: 1000000
+      # Used to ensure data integrity by keeping a replica of the queue on all
+      # cluster nodes
+      ha-mode: all
+      ha-sync-mode: automatic
+      ha-sync-batch-size: 50
+  - name: events_queue_message_policy
+    expression: ^cloudify-events$
+    priority: 100
+    policy:
+      message-ttl: 1200000
+      max-length: 1000000
+      ha-mode: all
+      ha-sync-mode: automatic
+      ha-sync-batch-size: 50
+  - name: default_policy
+    expression: ^
+    priority: 1
+    policy:
+      ha-mode: all
+      ha-sync-mode: automatic
+      ha-sync-batch-size: 50
 
 postgresql_server:
   sources:
@@ -435,7 +435,6 @@ dev:
     agent_source_url: ''
     dsl_parser_source_url: ''
 
-
 validations:
   # If set to true, install/configuration validations will not be performed
   skip_validations: false
@@ -453,7 +452,7 @@ validations:
 
   # The only Linux distros fully supported, on which a Cloudify Manager can
   # be installed
-  supported_distros: ['centos', 'redhat']
+  supported_distros: [centos, redhat]
 
   # The supported versions of the above distros
   supported_distro_versions: ['7']
@@ -502,10 +501,9 @@ flask_security: {}
 #   - database_service
 #   - queue_service
 #   - manager_service
-
 services_to_install:
-  - 'database_service'
-  - 'queue_service'
-  - 'manager_service'
+- database_service
+- queue_service
+- manager_service
 
 unconfigured_install: true
