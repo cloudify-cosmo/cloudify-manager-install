@@ -199,9 +199,10 @@ def _exception_handler(type_, value, traceback):
 sys.excepthook = _exception_handler
 
 
-def _validate_config_values(private_ip, public_ip, admin_password, clean_db,
-                            join_cluster=None, database_ip=None,
-                            postgres_password=None):
+def _populate_and_validate_config_values(private_ip, public_ip,
+                                         admin_password, clean_db,
+                                         join_cluster=None, database_ip=None,
+                                         postgres_password=None):
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
@@ -248,13 +249,19 @@ def _prepare_execution(verbose=False,
                        config_write_required=False,
                        join_cluster=None,
                        database_ip=None,
-                       postgres_password=None):
+                       postgres_password=None,
+                       only_install=False):
     setup_console_logger(verbose)
 
     validate_config_access(config_write_required)
     config.load_config()
-    _validate_config_values(private_ip, public_ip, admin_password, clean_db,
-                            join_cluster, database_ip, postgres_password)
+    if not only_install:
+        # We don't validate anything that applies to the install anyway,
+        # but we do populate things that are not relevant.
+        _populate_and_validate_config_values(private_ip, public_ip,
+                                             admin_password, clean_db,
+                                             join_cluster, database_ip,
+                                             postgres_password)
     _create_component_objects()
 
 
@@ -448,11 +455,12 @@ def install(verbose=False,
         join_cluster=join_cluster,
         database_ip=database_ip,
         postgres_password=postgres_password,
-        config_write_required=True
+        config_write_required=True,
+        only_install=only_install,
     )
     logger.notice('Installing desired components...')
     validate(components=components, only_install=only_install)
-    set_globals()
+    set_globals(only_install=only_install)
 
     for component in components:
         if not component.skip_installation:
