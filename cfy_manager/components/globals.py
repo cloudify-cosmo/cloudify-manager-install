@@ -97,7 +97,9 @@ def _set_hostname():
         config[MANAGER][HOSTNAME] = socket.gethostname()
 
 
-def set_globals():
+def set_globals(only_install=False):
+    if only_install:
+        return
     _set_ip_config()
     _set_external_port_and_protocol()
     _set_constant_config()
