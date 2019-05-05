@@ -35,7 +35,7 @@ logger = get_logger('Files')
 _template_env = Environment(loader=FileSystemLoader('/'))
 
 
-def _read(path):
+def read(path):
     with open(path, 'r') as f:
         return f.read()
 
@@ -53,7 +53,7 @@ def replace_in_file(this, with_this, in_here):
     """
     logger.debug('Replacing {0} with {1} in {2}...'.format(
         this, with_this, in_here))
-    content = _read(in_here)
+    content = read(in_here)
     new_content = re.sub(this, with_this, content)
     write_to_file(new_content, in_here)
 
@@ -158,7 +158,7 @@ def remove_notice(service_name):
 
 def temp_copy(source):
     """ Create a copy at a temporary location """
-    content = _read(source)
+    content = read(source)
     return write_to_tempfile(content)
 
 

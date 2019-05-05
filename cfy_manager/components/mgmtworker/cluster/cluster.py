@@ -18,13 +18,26 @@ import requests
 from os.path import join
 
 from ...base_component import BaseComponent
-from ....utils.systemd import systemd
-from ....constants import COMPONENTS_DIR, CA_CERT_PATH
-from ....utils.common import sudo
 from ...restservice.restservice import RestService
-from ....logger import get_logger
-from ....exceptions import BootstrapError, NetworkError
+from ...validations import _services_coexistence_assertion
 from ....config import config
+from ....logger import get_logger
+from ....constants import COMPONENTS_DIR, CA_CERT_PATH
+from ....exceptions import BootstrapError, NetworkError
+from ....components.components_constants import (
+    PRIVATE_IP,
+    PUBLIC_IP,
+    HOSTNAME,
+    SOURCES,
+    SCRIPTS,
+    ACTIVE_MANAGER_IP,
+    SSL_INPUTS
+)
+from ....components.service_components import (
+    MANAGER_SERVICE,
+    DATABASE_SERVICE,
+    QUEUE_SERVICE
+)
 from ....components.service_names import (
     MANAGER,
     CLUSTER,
@@ -32,24 +45,11 @@ from ....components.service_names import (
     RESTSERVICE,
     MGMTWORKER
 )
-from ....components.components_constants import (
-    PRIVATE_IP,
-    PUBLIC_IP,
-    HOSTNAME,
-    SOURCES,
-    SCRIPTS,
-    ACTIVE_MANAGER_IP
-)
-from ...validations import _services_coexistence_assertion
-from ....components.service_components import (
-    MANAGER_SERVICE,
-    DATABASE_SERVICE,
-    QUEUE_SERVICE
-)
-from ....utils.network import get_auth_headers
-from ....utils.files import write_to_tempfile
+from ....utils.common import sudo
+from ....utils.systemd import systemd
 from ....utils.install import yum_install
-from ....utils.network import wait_for_port
+from ....utils.files import write_to_tempfile, read
+from ....utils.network import get_auth_headers, wait_for_port
 
 REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
@@ -128,8 +128,7 @@ class Cluster(BaseComponent):
             rest_service_component._verify_restservice_alive()
 
     def _log_results(self, result):
-        """Log stdout/stderr output from the script
-        """
+        """Log stdout/stderr output from the script"""
         if result.aggr_stdout:
             output = result.aggr_stdout.split('\n')
             output = [line.strip() for line in output if line.strip()]
@@ -191,6 +190,7 @@ class Cluster(BaseComponent):
         logger.notice('Adding manager "{0}" to the cluster, this may take a '
                       'while until config files finish replicating'
                       .format(config[MANAGER][HOSTNAME]))
+        ca_cert_content = read(config[MANAGER][SSL_INPUTS]['ca_cert_path'])
         version_details = self._get_current_version(active_manager_ip)
         data = {
             'hostname': config[MANAGER][HOSTNAME],
@@ -199,7 +199,8 @@ class Cluster(BaseComponent):
             'version': version_details['version'],
             'edition': version_details['edition'],
             'distribution': version_details['distribution'],
-            'distro_release': version_details['distro_release']
+            'distro_release': version_details['distro_release'],
+            'ca_cert_content': ca_cert_content
         }
         with open(CA_CERT_PATH) as f:
             data['ca_cert'] = f.read()
