@@ -190,7 +190,7 @@ class Cluster(BaseComponent):
         logger.notice('Adding manager "{0}" to the cluster, this may take a '
                       'while until config files finish replicating'
                       .format(config[MANAGER][HOSTNAME]))
-        ca_cert_content = read(config[MANAGER][SSL_INPUTS]['ca_cert_path'])
+        ca_cert_content = read(config[SSL_INPUTS]['ca_cert_path'])
         version_details = self._get_current_version(active_manager_ip)
         data = {
             'hostname': config[MANAGER][HOSTNAME],
