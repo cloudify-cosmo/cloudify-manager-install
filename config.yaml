@@ -40,6 +40,9 @@ manager:
     # to you at the end of the install process.
     admin_password: ''
 
+  # A path to a Cloudify license to be uploaded on the Manager during installation
+  cloudify_license_path: ''
+
 cluster:
   # When running a cluster, every extra node must contact any active manager
   # in the cluster, this will not work on non-premium installations

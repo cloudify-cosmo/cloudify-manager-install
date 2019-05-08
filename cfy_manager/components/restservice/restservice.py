@@ -14,14 +14,16 @@
 #  * limitations under the License.
 
 import os
-import base64
 import json
+import base64
 import random
 import string
-import subprocess
 import urllib2
-from collections import namedtuple
+import subprocess
 from os.path import join, exists
+from collections import namedtuple
+
+import requests
 
 from . import db
 from ..components_constants import (
@@ -71,6 +73,7 @@ REST_AUTHORIZATION_CONFIG_PATH = join(HOME_DIR, 'authorization.conf')
 REST_SECURITY_CONFIG_PATH = join(HOME_DIR, 'rest-security.conf')
 logger = get_logger(RESTSERVICE)
 CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(HOME_DIR, 'license_key.pem.pub')
+REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
 
 
 class RestService(BaseComponent):
@@ -194,9 +197,7 @@ class RestService(BaseComponent):
         there's a good chance everything is configured correctly.
         """
         rest_port = config[RESTSERVICE]['port']
-        url = 'http://{0}:{1}/api/v2.1/blueprints'.format('127.0.0.1',
-                                                          rest_port)
-
+        url = REST_URL.format(port=rest_port, endpoint='blueprints')
         wait_for_port(rest_port)
         req = urllib2.Request(url, headers=get_auth_headers())
 
@@ -322,16 +323,39 @@ class RestService(BaseComponent):
 
         common.remove('/opt/manager')
 
+    @staticmethod
+    def _upload_cloudify_license():
+        """
+        Upload a Cloudify license to the Manager (only when a path to a
+        license is provided in config.yaml).
+        """
+        license_path = config[MANAGER]['cloudify_license_path']
+        if license_path:
+            try:
+                logger.info('Uploading Cloudify license `{0}` to the'
+                            ' Manager...'.format(license_path))
+                rest_port = config[RESTSERVICE]['port']
+                wait_for_port(rest_port)
+                url = REST_URL.format(port=rest_port, endpoint='license')
+                response = requests.put(url=url, headers=get_auth_headers(),
+                                        data=open(license_path, 'rb'))
+                if response.status_code != 200:
+                    logger.warning('Failed to upload Cloudify license...')
+            except IOError as e:
+                logger.warning('Failed to upload Cloudify license `{0}` due'
+                               ' to IOError: {1}'.format(license_path,
+                                                         e.message))
+
     def install(self):
         logger.notice('Installing Rest Service...')
         yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
         yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
-
         logger.notice('Rest Service successfully installed')
 
     def configure(self):
         logger.notice('Configuring Rest Service...')
         self._configure()
+        self._upload_cloudify_license()
         logger.notice('Rest Service successfully configured')
 
     def remove(self):
