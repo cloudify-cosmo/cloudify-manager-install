@@ -199,6 +199,8 @@ class Cluster(BaseComponent):
             'distribution': version_details['distribution'],
             'distro_release': version_details['distro_release']
         }
+        if config['networks']:
+            data['networks'] = config['networks']
         with open(CA_CERT_PATH) as f:
             data['ca_cert'] = f.read()
 
