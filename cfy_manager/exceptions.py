@@ -43,3 +43,8 @@ class ProcessExecutionError(BootstrapError):
 class ClusteringError(BootstrapError):
     """Raised by components attempting to cluster themselves but failing."""
     pass
+
+
+class RabbitNodeListError(StandardError):
+    """Raised when there is an error listing rabbit nodes."""
+    pass
