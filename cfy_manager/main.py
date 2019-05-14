@@ -56,7 +56,7 @@ from .logger import (
     set_file_handlers_level,
 )
 from .utils import CFY_UMASK
-from .utils.common import run
+from .utils.common import run, can_lookup_hostname
 from .utils.files import (
     remove as _remove,
     remove_temp_files,
@@ -127,6 +127,19 @@ POSTGRES_PASSWORD_HELP_MSG = (
     "Used together with --join-cluster flag when joining to an existing "
     "cluster with an external database."
 )
+BROKER_ADD_JOIN_NODE_HELP_MSG = (
+    "The hostname of the node you are joining to the rabbit cluster. "
+    "This node must be resolvable via DNS or a hosts file entry. "
+    "If not using a rabbit@<hostname> nodename, the prefix should also be "
+    "supplied."
+)
+BROKER_REMOVE_NODE_HELP_MSG = (
+    "Broker node to remove. Before removal, the target broker must be taken "
+    "offline by stopping its service or shutting down its host."
+)
+VERBOSE_HELP_MSG = (
+    "Used to give more verbose output."
+)
 
 components = []
 
@@ -177,6 +190,159 @@ def generate_test_cert(**kwargs):
     )
 
 
+@argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
+                     required=True)
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+def brokers_add(**kwargs):
+    _validate_components_prepared('brokers_add')
+    join_node = kwargs['join_node']
+
+    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+
+    nodes = rabbitmq.list_rabbit_nodes()
+    complain_about_dead_broker_cluster(nodes)
+    if len(nodes['nodes']) > 1:
+        logger.error(
+            'This node is already in a rabbit cluster. '
+            'The brokers-add command must be run on the node that is joining '
+            'the rabbit cluster, not one of the existing members.'
+        )
+        sys.exit(1)
+
+    if QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+        if not can_lookup_hostname(join_node):
+            logger.error(
+                'Could not get address for "{node}".\n'
+                'Node must be resolvable by DNS or as a hosts entry.'.format(
+                    node=join_node,
+                )
+            )
+            sys.exit(1)
+        rabbitmq.join_cluster(join_node, restore_users_on_fail=True)
+    else:
+        logger.error(
+            'Broker management tasks must be performed on nodes with '
+            'installed brokers.'
+        )
+        sys.exit(1)
+
+
+@argh.decorators.arg('-r', '--remove-node', help=BROKER_REMOVE_NODE_HELP_MSG,
+                     required=True)
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+def brokers_remove(**kwargs):
+    _validate_components_prepared('brokers_remove')
+    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+
+    remove_node = rabbitmq.add_missing_nodename_prefix(kwargs['remove_node'])
+    nodes = rabbitmq.list_rabbit_nodes()
+    complain_about_dead_broker_cluster(nodes)
+
+    if remove_node in nodes['running_nodes']:
+        logger.error(
+            'Broker nodes to be removed must be shut down. '
+            'If you recently shut down the node, please wait up to one '
+            'minute before re-running this command.'
+        )
+        sys.exit(1)
+
+    if remove_node not in nodes['nodes']:
+        logger.error(
+            'Broker node {node_name} not found in cluster. '
+            'Valid nodes are: {nodes}'.format(
+                node_name=remove_node,
+                nodes=', '.join(sorted(nodes['nodes'])),
+            )
+        )
+        sys.exit(1)
+
+    rabbitmq.remove_node(remove_node)
+    logger.info('Broker {node} removed from cluster.'.format(
+        node=remove_node,
+    ))
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+def brokers_list(**kwargs):
+    _validate_components_prepared('brokers_list')
+    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+
+    brokers = rabbitmq.list_rabbit_nodes()
+    complain_about_dead_broker_cluster(brokers)
+    output_columns = ('broker_name', 'running', 'alarms')
+    output_rows = []
+    for node in sorted(brokers['nodes']):
+        output_rows.append({
+            'broker_name': node,
+            'running': node in brokers['running_nodes'],
+            'alarms': ', '.join(brokers['alarms'].get(node, [])),
+        })
+
+    output_table(output_rows, output_columns)
+
+
+def complain_about_dead_broker_cluster(nodes):
+    if not nodes:
+        logger.error(
+            'Broker node status could not be determined. This may mean that '
+            'the broker cluster has failed. '
+            'Please try to recover enough cluster nodes to make a majority '
+            'be online. '
+            'If this is not possible, please contact support.'
+        )
+        sys.exit(1)
+
+
+def output_table(data, fields):
+    field_lengths = []
+    for field in fields:
+        for entry in data:
+            if isinstance(entry[field], list):
+                entry[field] = ', '.join(entry[field])
+        if data:
+            field_length = max(
+                2 + len(str(entry[field])) for entry in data
+            )
+        else:
+            field_length = 2
+        field_length = max(
+            field_length,
+            2 + len(field)
+        )
+        field_lengths.append(field_length)
+
+    output_table_divider(field_lengths)
+    # Column headings
+    output_table_row(field_lengths, fields)
+    output_table_divider(field_lengths)
+
+    for entry in data:
+        row = [
+            entry[field] for field in fields
+        ]
+        output_table_row(field_lengths, row)
+    output_table_divider(field_lengths)
+
+
+def output_table_divider(lengths):
+    output = '+'
+    for length in lengths:
+        output += '-' * length
+        output += '+'
+    print(output)
+
+
+def output_table_row(lengths, entries):
+    output = '|'
+    for i in range(len(lengths)):
+        output += str(entries[i]).center(lengths[i])
+        output += '|'
+    print(output)
+
+
 def _print_time():
     running_time = time() - START_TIME
     m, s = divmod(running_time, 60)
@@ -206,7 +372,7 @@ def _populate_and_validate_config_values(private_ip, public_ip,
     manager_config = config[MANAGER]
 
     # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _is_manager_configured()
+    config[CLEAN_DB] = clean_db or not _are_components_configured()
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
@@ -239,6 +405,14 @@ def _populate_and_validate_config_values(private_ip, public_ip,
             'The --join-cluster, --database-ip and --admin-password'
             'flags must be used together'
         )
+
+
+def _prepare_component_management(component, verbose):
+    setup_console_logger(verbose=verbose)
+    validate_config_access(write_required=False)
+    config.load_config()
+    return ComponentsFactory.create_component(component,
+                                              skip_installation=True)
 
 
 def _prepare_execution(verbose=False,
@@ -290,11 +464,11 @@ def print_password_to_screen():
     set_file_handlers_level(current_level)
 
 
-def _is_manager_installed():
+def _are_components_installed():
     return os.path.isfile(INITIAL_INSTALL_FILE)
 
 
-def _is_manager_configured():
+def _are_components_configured():
     return os.path.isfile(INITIAL_CONFIGURE_FILE)
 
 
@@ -303,7 +477,7 @@ def _create_initial_install_file():
     Create /etc/cloudify/.installed if install finished successfully
     for the first time
     """
-    if not _is_manager_installed():
+    if not _are_components_installed():
         touch(INITIAL_INSTALL_FILE)
 
 
@@ -312,7 +486,7 @@ def _create_initial_configure_file():
     Create /etc/cloudify/.configured if configure finished successfully
     for the first time
     """
-    if not _is_manager_configured():
+    if not _are_components_configured():
         touch(INITIAL_CONFIGURE_FILE)
 
 
@@ -333,13 +507,13 @@ def _validate_force(force, cmd):
         )
 
 
-def _validate_manager_prepared(cmd):
+def _validate_components_prepared(cmd):
     error_message = (
         'Could not find {touched_file}.\nThis most likely means '
         'that you need to run `cfy_manager {fix_cmd}` before '
         'running `cfy_manager {cmd}`'
     )
-    if not _is_manager_installed():
+    if not _are_components_installed():
         raise BootstrapError(
             error_message.format(
                 fix_cmd='install',
@@ -347,7 +521,7 @@ def _validate_manager_prepared(cmd):
                 cmd=cmd
             )
         )
-    if not _is_manager_configured() and cmd != 'configure':
+    if not _are_components_configured() and cmd != 'configure':
         raise BootstrapError(
             error_message.format(
                 fix_cmd='configure',
@@ -499,7 +673,7 @@ def configure(verbose=False,
         config_write_required=True
     )
 
-    _validate_manager_prepared('configure')
+    _validate_components_prepared('configure')
     logger.notice('Configuring desired components...')
     validate(skip_validations=True, components=components)
     set_globals()
@@ -525,17 +699,17 @@ def remove(verbose=False, force=False):
     _validate_force(force, 'remove')
     logger.notice('Removing Cloudify Manager...')
 
-    should_stop = _is_manager_configured()
+    should_stop = _are_components_configured()
 
     for component in reversed(components):
         if should_stop and not component.skip_installation:
             component.stop()
         component.remove()
 
-    if _is_manager_installed():
+    if _are_components_installed():
         _remove(INITIAL_INSTALL_FILE)
 
-    if _is_manager_configured():
+    if _are_components_configured():
         _remove(INITIAL_CONFIGURE_FILE)
 
     logger.notice('Cloudify Manager successfully removed!')
@@ -546,7 +720,7 @@ def start(verbose=False):
     """ Start Cloudify Manager services """
 
     _prepare_execution(verbose)
-    _validate_manager_prepared('start')
+    _validate_components_prepared('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in components:
         if not component.skip_installation:
@@ -559,7 +733,7 @@ def stop(verbose=False, force=False):
     """ Stop Cloudify Manager services """
 
     _prepare_execution(verbose)
-    _validate_manager_prepared('stop')
+    _validate_components_prepared('stop')
     _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
@@ -574,7 +748,7 @@ def restart(verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
     _prepare_execution(verbose)
-    _validate_manager_prepared('restart')
+    _validate_components_prepared('restart')
     _validate_force(force, 'restart')
 
     stop(verbose, force)
@@ -601,6 +775,9 @@ def main():
         add_networks,
         update_encryption_key,
         generate_test_cert,
+        brokers_add,
+        brokers_list,
+        brokers_remove,
     ])
     os.umask(current_umask)
 

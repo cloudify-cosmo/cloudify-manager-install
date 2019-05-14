@@ -15,8 +15,9 @@
 
 import json
 from os.path import join
-import socket
 import time
+
+import requests
 
 from ..components_constants import (
     CONFIG,
@@ -31,11 +32,16 @@ from ... import constants
 from ...utils import certificates, common
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import ValidationError, NetworkError, ClusteringError
+from ...exceptions import (
+    ClusteringError,
+    NetworkError,
+    RabbitNodeListError,
+    ValidationError,
+)
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
-from ...utils.common import sudo, remove as remove_file
+from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
 from ...utils.files import write_to_file, deploy
 
 
@@ -99,6 +105,10 @@ class RabbitMQ(BaseComponent):
         output = self._rabbitmqctl(['list_users'], retries=5).aggr_stdout
         return username in output
 
+    def _manage_users(self):
+        self._delete_guest_user()
+        self._create_rabbitmq_user()
+
     def _delete_guest_user(self):
         if self.user_exists('guest'):
             logger.info('Disabling RabbitMQ guest user...')
@@ -138,11 +148,11 @@ class RabbitMQ(BaseComponent):
         if not config[RABBITMQ]['use_long_name']:
             nodename = nodename.split('.')[0]
 
-        nodename = self._add_missing_nodename_prefix(nodename)
+        nodename = self.add_missing_nodename_prefix(nodename)
 
         config[RABBITMQ]['nodename'] = nodename
 
-    def _add_missing_nodename_prefix(self, nodename):
+    def add_missing_nodename_prefix(self, nodename):
         if '@' not in nodename:
             # Use this prefix to make rabbitmqctl able to work without '-n'
             nodename = 'rabbit@' + nodename
@@ -164,8 +174,11 @@ class RabbitMQ(BaseComponent):
         join_node = config[RABBITMQ]['join_cluster']
         if not join_node:
             return
+        self.join_cluster(join_node)
 
-        join_node = self._add_missing_nodename_prefix(join_node)
+    def join_cluster(self, join_node, restore_users_on_fail=False):
+        join_node = self.add_missing_nodename_prefix(join_node)
+        joined = False
 
         logger.info(
             'Joining cluster via node {target_node}.'.format(
@@ -174,15 +187,20 @@ class RabbitMQ(BaseComponent):
         )
         self._rabbitmqctl(['stop_app'])
         self._rabbitmqctl(['reset'])
-        self._rabbitmqctl(['join_cluster', join_node])
-        self._rabbitmqctl(['start_app'])
+        try:
+            self._rabbitmqctl(['join_cluster', join_node])
+            joined = True
+        finally:
+            self._rabbitmqctl(['start_app'])
+            if restore_users_on_fail and not joined:
+                self._manage_users()
 
-        # In initial testing the clustering completed in seconds, at most, so
-        # this should be significantly more time than is needed, excepting
-        # network issues
+        # Clustering completes very quickly but the management plugin can take
+        # a long time to reflect the actual cluster state so we wait longer
+        # than we should need to.
         attempt = 0
-        max_attempts = 10
-        delay = 3
+        max_attempts = 20
+        delay = 5
         while attempt != max_attempts:
             attempt += 1
             logger.info(
@@ -191,7 +209,7 @@ class RabbitMQ(BaseComponent):
                     mx=max_attempts,
                 )
             )
-            rmq_cluster_stat = self._rabbitmqctl(['cluster_status'])
+            rabbit_nodes = self.list_rabbit_nodes()
 
             # Check that both this node and the node we're joining to are in
             # the cluster
@@ -199,7 +217,7 @@ class RabbitMQ(BaseComponent):
                 join_node,
                 config[RABBITMQ]['nodename'],
             ]
-            if not all([node in rmq_cluster_stat.aggr_stdout
+            if not all([node in rabbit_nodes['nodes']
                         for node in required]):
                 if attempt == max_attempts:
                     raise ClusteringError(
@@ -208,7 +226,7 @@ class RabbitMQ(BaseComponent):
                         'Last cluster status output was: {output}.'.format(
                             num=max_attempts,
                             target_node=join_node,
-                            output=rmq_cluster_stat.aggr_stdout,
+                            output=json.dumps(rabbit_nodes),
                         )
                     )
                 else:
@@ -218,6 +236,77 @@ class RabbitMQ(BaseComponent):
                 logger.info('Cluster successfully joined.')
                 break
 
+    def list_rabbit_nodes(self):
+        nodes_url = 'https://localhost:15671/api/nodes'
+        auth = (
+            config[RABBITMQ]['username'],
+            config[RABBITMQ]['password'],
+        )
+        try:
+            nodes_list = requests.get(
+                nodes_url,
+                auth=auth,
+                verify=config[RABBITMQ]['ca_path'],
+            ).json()
+        except requests.ConnectionError as err:
+            logger.error(
+                'Failed to list rabbit nodes. Error was: {err}'.format(
+                    err=str(err),
+                )
+            )
+            return None
+
+        if 'error' in nodes_list:
+            raise RabbitNodeListError(
+                'Error trying to list nodes. Response was: {0}'.format(
+                    nodes_list,
+                )
+            )
+
+        # The returned structure is based on Rabbitmq management plugin 3.7.7
+        # It expects a list of nodes with structure similar to:
+        # {
+        #    "name": "<name of node>",
+        #    "running": <true|false>,
+        #    "some_alarm": <true|false>,
+        #    "other_alarm": <true|false>,
+        #    # The following listed items are also treated as alarms
+        #    "badrpc": <true|false>,
+        #    "nodedown": <true|false>,
+        #    ...
+        # }
+        likely_name_resolution_issue = False
+        alarms = {}
+        for node in nodes_list:
+            alarms[node['name']] = [
+                entry for entry in node
+                if 'alarm' in entry and node[entry]
+            ]
+            for resolution_fail_alarm in ('badrpc', 'nodedown'):
+                if node.get(resolution_fail_alarm):
+                    alarms[node['name']].append(resolution_fail_alarm)
+                    likely_name_resolution_issue = True
+
+        if likely_name_resolution_issue:
+            logger.error(
+                'badrpc and/or nodedown alarms found. '
+                'This may indicate that the affected node(s) cannot resolve '
+                'the names of other nodes in the cluster. This likely '
+                'requires DNS or hosts entries for the affected nodes.'
+            )
+
+        return {
+            'nodes': [node['name'] for node in nodes_list],
+            'running_nodes': [
+                node['name'] for node in nodes_list
+                if node['running']
+            ],
+            'alarms': alarms,
+        }
+
+    def remove_node(self, node_name):
+        self._rabbitmqctl(['forget_cluster_node', node_name])
+
     def _possibly_add_hosts_entries(self):
         cluster_nodes = config[RABBITMQ]['cluster_members']
         if cluster_nodes:
@@ -226,12 +315,11 @@ class RabbitMQ(BaseComponent):
             )
             not_resolved = []
             for node in cluster_nodes:
-                try:
-                    socket.gethostbyname(node)
+                if can_lookup_hostname(node):
                     logger.info(
                         'Successfully resolved {node}'.format(node=node)
                     )
-                except socket.gaierror:
+                else:
                     not_resolved.append(node)
 
             add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
@@ -401,8 +489,7 @@ class RabbitMQ(BaseComponent):
         self._init_service()
         if not config[RABBITMQ]['join_cluster']:
             # Users will be synced with the cluster if we're joining one
-            self._delete_guest_user()
-            self._create_rabbitmq_user()
+            self._manage_users()
         self._start_rabbitmq()
         self._validate_rabbitmq_running()
         self._possibly_join_cluster()

@@ -13,11 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 import glob
+import os
 import shlex
-import tempfile
+import socket
 import subprocess
+import tempfile
 
 from ..config import config
 from ..logger import get_logger
@@ -134,3 +135,11 @@ def move(source, destination, rename_only=False):
     ensure_destination_dir_exists(destination)
     sudo(['cp', source, destination])
     sudo(['rm', source])
+
+
+def can_lookup_hostname(hostname):
+    try:
+        socket.gethostbyname(hostname)
+        return True
+    except socket.gaierror:
+        return False
