@@ -34,8 +34,8 @@ SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
 
 
-def _run_update_provider_context_script(host, networks):
-    script_path = join(SCRIPT_DIR, 'add-networks-to-provider-context.py')
+def _run_update_networks_script(host, networks):
+    script_path = join(SCRIPT_DIR, 'update-manager-networks.py')
 
     # Directly calling with this python bin, in order to make sure it's run
     # in the correct venv
@@ -95,8 +95,7 @@ def add_networks(networks=None):
     _update_metadata_file(metadata, networks)
     create_internal_certs()
 
-    _run_update_provider_context_script(
-        metadata['internal_rest_host'], networks)
+    _run_update_networks_script(metadata['internal_rest_host'], networks)
 
     print('New networks were added successfully. Please restart the'
           ' following services: `nginx`, `cloudify-mgmtworker`,'
