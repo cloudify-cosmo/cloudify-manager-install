@@ -31,7 +31,6 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 HOURS_INTERVAL = 'interval_in_hours'
 DAYS_INTERVAL = 'interval_in_days'
 MANAGER_ID_PATH = '/etc/cloudify/.id'
-COLLECT_UPTIME = 'collect_cloudify_uptime'
 MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COLLECTOR_SCRIPTS = [('collect_cloudify_uptime', HOURS_INTERVAL),
                      ('collect_cloudify_usage', DAYS_INTERVAL)]
@@ -85,9 +84,10 @@ class UsageCollector(BaseComponent):
     def _deploy_collector_scripts(self):
         logger.info('Deploying Usage Collector scripts...')
         common.mkdir(SCRIPTS_DESTINATION_PATH)
+        script_names = ['{}.py'.format(item[0]) for item in COLLECTOR_SCRIPTS]
+        script_names.append('script_utils.py')
 
-        for collector, interval_type in COLLECTOR_SCRIPTS:
-            script_name = '{}.py'.format(collector)
+        for script_name in script_names:
             source_path = join(constants.COMPONENTS_DIR,
                                USAGE_COLLECTOR,
                                SCRIPTS,
