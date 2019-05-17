@@ -20,9 +20,9 @@ import time
 
 from ..components_constants import (
     CONFIG,
-    PRIVATE_IP,
     SERVICES_TO_INSTALL,
     SOURCES,
+    HOSTNAME
 )
 from ..service_components import MANAGER_SERVICE
 from ..base_component import BaseComponent
@@ -313,7 +313,7 @@ class RabbitMQ(BaseComponent):
         # we will take only the first cluster member (having failed before now
         # if there are multiple cluster members specified)
         networks = config[RABBITMQ]['cluster_members']['cloudify-broker']
-        rabbit_host = config[MANAGER][PRIVATE_IP]
+        rabbit_host = config[MANAGER][HOSTNAME]
 
         cert_addresses = networks.values()
         cert_addresses.append(config[RABBITMQ]['nodename'].split('@')[-1])

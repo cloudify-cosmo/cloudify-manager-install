@@ -34,17 +34,6 @@ SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
 
 
-def _run_update_networks_script(host, networks):
-    script_path = join(SCRIPT_DIR, 'update-manager-networks.py')
-
-    # Directly calling with this python bin, in order to make sure it's run
-    # in the correct venv
-    python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    cmd = [python_path, script_path, host, json.dumps(networks)]
-
-    return common.sudo(cmd)
-
-
 def _validate_duplicate_network(old_networks, new_networks):
     """Check that all networks have unique names"""
     for network in new_networks:
@@ -95,7 +84,18 @@ def add_networks(networks=None):
     _update_metadata_file(metadata, networks)
     create_internal_certs()
 
-    _run_update_networks_script(metadata['internal_rest_host'], networks)
+    cmd = [
+        join(REST_HOME_DIR, 'env', 'bin', 'python'),
+        join(SCRIPT_DIR, 'update-manager-networks.py'),
+        '--hostname', metadata['hostname'],
+        '--networks', json.dumps(networks),
+    ]
+    if bool(metadata.get('broker_addresses')):
+        # if we store broker addresses in the metadata file, that means we
+        # have a local broker and must update that too
+        cmd.append('--broker')
+
+    common.sudo(cmd)
 
     print('New networks were added successfully. Please restart the'
           ' following services: `nginx`, `cloudify-mgmtworker`,'
