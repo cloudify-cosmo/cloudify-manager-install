@@ -424,6 +424,8 @@ class RabbitMQ(BaseComponent):
         sudo(['epmd', '-kill'], ignore_failures=True)
         systemd.remove(RABBITMQ, service_file=False)
         yum_remove('socat')
+        logger.info('Removing rabbit data...')
+        sudo(['rm', '-rf', '/var/lib/rabbitmq'])
         logger.notice('RabbitMQ successfully removed')
 
     def start(self):
