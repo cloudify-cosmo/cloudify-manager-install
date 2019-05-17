@@ -95,7 +95,7 @@ def add_networks(networks=None):
     _update_metadata_file(metadata, networks)
     create_internal_certs()
 
-    _run_update_networks_script(metadata['internal_rest_host'], networks)
+    _run_update_networks_script(metadata['hostname'], networks)
 
     print('New networks were added successfully. Please restart the'
           ' following services: `nginx`, `cloudify-mgmtworker`,'

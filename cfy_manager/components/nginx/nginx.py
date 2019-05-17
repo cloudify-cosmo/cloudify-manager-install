@@ -24,6 +24,7 @@ from ..components_constants import (
     SSL_INPUTS,
     CLEAN_DB,
     UNCONFIGURED_INSTALL,
+    HOSTNAME
 )
 from ..base_component import BaseComponent
 from ..service_names import NGINX, MANAGER
@@ -66,16 +67,16 @@ class Nginx(BaseComponent):
     def _generate_internal_certs(self):
         logger.info('Generating internal certificate...')
         networks = config['networks']
-        internal_rest_host = config[MANAGER][PRIVATE_IP]
+        hostname = config[MANAGER][HOSTNAME]
         certificates.store_cert_metadata(
-            internal_rest_host,
+            hostname,
             new_managers=networks.values(),
             new_networks=networks.keys(),
         )
 
         certificates.generate_internal_ssl_cert(
             ips=networks.values(),
-            cn=internal_rest_host
+            cn=hostname
         )
 
     def _generate_external_certs(self):

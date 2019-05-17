@@ -140,7 +140,7 @@ def store_cert_metadata(private_ip=None,
                         group=const.CLOUDIFY_GROUP):
     metadata = load_cert_metadata()
     if private_ip:
-        metadata['internal_rest_host'] = private_ip
+        metadata['hostname'] = private_ip
     if new_brokers:
         brokers = metadata.get('broker_addresses', [])
         brokers.extend(new_brokers)
@@ -388,9 +388,9 @@ def remove_key_encryption(src_key_path,
 @argh.arg('--metadata',
           help='File containing the cert metadata. It should be a '
           'JSON file containing an object with the '
-          '"internal_rest_host" and "networks" fields.')
-@argh.arg('--manager-ip', help='The IP of this machine on the default network')
-def create_internal_certs(manager_ip=None,
+          '"hostname" and "networks" fields.')
+@argh.arg('--manager-hostname', help='The manager hostname to be stored')
+def create_internal_certs(manager_hostname=None,
                           metadata=const.CERT_METADATA_FILE_PATH):
     """
     Recreate Cloudify Manager's internal certificates, based on the manager IP
@@ -401,20 +401,20 @@ def create_internal_certs(manager_ip=None,
         raise RuntimeError('Internal CA key and cert mus be available to '
                            'generate internal certs')
     cert_metadata = load_cert_metadata(filename=metadata)
-    internal_rest_host = manager_ip or cert_metadata['internal_rest_host']
+    hostname = manager_hostname or cert_metadata['hostname']
 
     if cert_metadata.get('manager_addresses'):
         cert_ips = cert_metadata['manager_addresses']
         generate_internal_ssl_cert(
             ips=cert_ips,
-            cn=internal_rest_host
+            cn=hostname
         )
 
     if cert_metadata.get('broker_addresses'):
         cert_ips = cert_metadata['broker_addresses']
         _generate_ssl_certificate(
             ips=cert_ips,
-            cn=internal_rest_host,
+            cn=hostname,
             cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
             key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
             # We only support ipsetter on nodes with managers, so the fact
@@ -425,7 +425,7 @@ def create_internal_certs(manager_ip=None,
         )
 
     store_cert_metadata(
-        internal_rest_host,
+        hostname,
         filename=metadata
     )
 
