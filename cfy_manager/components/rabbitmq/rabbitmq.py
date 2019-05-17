@@ -322,6 +322,9 @@ class RabbitMQ(BaseComponent):
                 else:
                     not_resolved.append(node)
 
+            if not not_resolved:
+                logger.info('All nodes were resolvable.')
+
             add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
             for node in not_resolved:
                 ip = cluster_nodes[node]['default']
@@ -349,6 +352,7 @@ class RabbitMQ(BaseComponent):
 
             # Append the data to the current hosts entries
             hosts.extend(add_to_hosts)
+            hosts = [host.strip() for host in hosts]
             hosts = '\n'.join(hosts) + '\n'
 
             # Back up original hosts file
@@ -481,7 +485,11 @@ class RabbitMQ(BaseComponent):
         self._possibly_add_hosts_entries()
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
-        if not config[RABBITMQ]['cluster_members']:
+        if (
+            self._installing_manager()
+            and not config[RABBITMQ]['cluster_members']
+        ):
+            # We must populate the brokers table for an all-in-one manager
             config[RABBITMQ]['cluster_members'] = {
                 'cloudify-broker': config['networks'],
             }
