@@ -15,9 +15,9 @@
 #  * limitations under the License.
 
 import json
-import sys
-from sqlalchemy.orm.attributes import flag_modified
+import argparse
 
+from sqlalchemy.orm.attributes import flag_modified
 
 from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app
@@ -31,29 +31,55 @@ except ImportError:
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 
 
-def _update_manager_networks(hostname, networks):
+def _update_manager_networks(hostname, networks, with_broker=False):
     """
     Add the new networks to the `provider context` DB table
     :param networks: a dict containing the new networks
     """
     with setup_flask_app().app_context():
         sm = get_storage_manager()
-        manager = sm.get(models.Manager, None, filters={'hostname': hostname})
+
+        filters = {}
+        if hostname:
+            filters = {'hostname': hostname}
+        managers = sm.list(models.Manager, filters=filters)
+        if len(managers) != 1:
+            raise RuntimeError(
+                'Expected 1 manager, found {0} (passed hostname: {1}'
+                .format(len(managers), hostname))
+        manager = managers[0]
+
+        if with_broker:
+            brokers = sm.list(models.RabbitMQBroker)
+            if len(brokers) != 1:
+                raise RuntimeError('Expected 1 broker, found {0}'
+                                   .format(len(brokers)))
+            broker = brokers[0]
+            broker.networks.update(networks)
+            flag_modified(broker, 'networks')
+            sm.update(broker)
+
         manager.networks.update(networks)
         flag_modified(manager, 'networks')
         sm.update(manager)
+
         if update_agents:
             update_agents(sm)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        raise RuntimeError('`{0}` expects exactly two arguments, it received '
-                           '{1} arguments'.format(len(sys.argv) - 1))
-    hostname = sys.argv[1]
-    networks = sys.argv[2]
-    networks = json.loads(networks)
+    parser = argparse.ArgumentParser(
+        description='Store the new network in the database')
+    parser.add_argument('--hostname', help='Hostname of the current node')
+    parser.add_argument('--networks', required=True,
+                        help='JSON string containing the new networks')
+    parser.add_argument('--broker', dest='broker', action='store_true',
+                        help='The broker networks will also be updated, '
+                             'assuming there is only one broker (all-in-one '
+                             'installation)')
+    args = parser.parse_args()
 
     config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
     config.instance.load_configuration()
-    _update_manager_networks(hostname, networks)
+    _update_manager_networks(
+        args.hostname, json.loads(args.networks), with_broker=args.broker)
