@@ -412,6 +412,9 @@ def _validate_cert_inputs():
             ca_path=ca_path,
             key_password=key_password,
         )
+    if config[SSL_INPUTS]['postgresql_ca_cert_path']:
+        _check_ssl_file(config[SSL_INPUTS]['postgresql_ca_cert_path'],
+                        kind='Cert')
 
 
 def _services_coexistence_assertion(service_in_list_to_install,

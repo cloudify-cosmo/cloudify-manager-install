@@ -29,6 +29,7 @@ from ..service_names import POSTGRESQL_CLIENT
 from ...constants import (
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
+    POSTGRESQL_CA_CERT_PATH,
     CLOUDIFY_HOME_DIR,
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
@@ -164,15 +165,16 @@ class PostgresqlClient(BaseComponent):
         Copy the relevant SSL certificates to the cloudify SSL directory
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            common.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
-                        POSTGRESQL_CLIENT_CERT_PATH)
-            common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
-                        POSTGRESQL_CLIENT_KEY_PATH)
-
-            # Root certificate is also used for server authentication, but
-            # should be already created and copied in the nginx section
-
-            common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
+            if config[SSL_INPUTS]['postgresql_client_cert_path'] and \
+                    config[POSTGRESQL_CLIENT]['ssl_client_verification']:
+                common.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
+                            POSTGRESQL_CLIENT_CERT_PATH)
+                common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
+                            POSTGRESQL_CLIENT_KEY_PATH)
+                common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
+            if config[SSL_INPUTS]['postgresql_ca_cert_path']:
+                common.copy(config[SSL_INPUTS]['postgresql_ca_cert_path'],
+                            POSTGRESQL_CA_CERT_PATH)
 
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
