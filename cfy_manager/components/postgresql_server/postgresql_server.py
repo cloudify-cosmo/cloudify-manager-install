@@ -59,7 +59,7 @@ PG_SERVER_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.key')
 
 PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
 PG_HBA_HOSTSSL_REGEX_PATTERN = \
-    r'hostssl\s+all\s+all\s+0\.0\.0\.0\/0\s+md5\s+clientcert=1'
+    r'hostssl\s+all\s+all\s+0\.0\.0\.0\/0\s+md5\s+.*'
 
 PG_PORT = 5432
 
@@ -145,12 +145,16 @@ class PostgresqlServer(BaseComponent):
                     line = line.replace('ident', 'md5')
                 f.write(line)
             if not re.search(PG_HBA_LISTEN_ALL_REGEX_PATTERN,
-                             '\n'.join(lines)) and enable_remote_connections:
+                             '\n'.join(lines)) and enable_remote_connections\
+                    and not config[POSTGRESQL_SERVER]['ssl_only_connections']:
                 f.write('host all all 0.0.0.0/0 md5\n')
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # This will require the client to supply a certificate as well
-                f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1')
+                if config[POSTGRESQL_SERVER]['ssl_client_verification']:
+                    f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1')
+                else:
+                    f.write('hostssl all all 0.0.0.0/0 md5')
         return temp_hba_path
 
     def _configure_ssl(self):
@@ -165,7 +169,7 @@ class PostgresqlServer(BaseComponent):
             common.copy(config[SSL_INPUTS]['postgresql_server_key_path'],
                         PG_SERVER_KEY_PATH)
             # This will be used to verify the client's certificate
-            common.copy(config[SSL_INPUTS]['ca_cert_path'],
+            common.copy(config[SSL_INPUTS]['postgresql_ca_cert_path'],
                         PG_CA_CERT_PATH)
 
             common.chown(POSTGRES_USER, POSTGRES_GROUP,
