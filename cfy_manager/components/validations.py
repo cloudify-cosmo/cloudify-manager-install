@@ -30,6 +30,7 @@ from .components_constants import (
     SKIP_VALIDATIONS,
     SSL_INPUTS,
     SSL_ENABLED,
+    SSL_CLIENT_VERIFICATION,
     SERVICES_TO_INSTALL,
     ENABLE_REMOTE_CONNECTIONS,
     POSTGRES_PASSWORD,
@@ -447,19 +448,28 @@ def _validate_postgres_inputs():
 
 
 def _validate_postgres_ssl_certificates_provided():
-    error_msg = 'If Postgresql requires SSL communication {0} a ' \
-                'certificate and a key for Postgresql must be provided in ' \
-                'config.yaml->ssl_inputs->{1}'
+    error_msg = 'If Postgresql requires SSL communication {0} ' \
+                'for Postgresql must be provided in ' \
+                'config.yaml->ssl_inputs->{2}'
     if not (config[SSL_INPUTS]['postgresql_server_cert_path'] and
             config[SSL_INPUTS]['postgresql_server_key_path'] and
-            config[SSL_INPUTS]['ca_cert_path']):
+            config[SSL_INPUTS]['postgresql_ca_cert_path']):
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
             raise ValidationError(error_msg.format(
-                'a CA certificate,', 'postgresql_server'))
+                'a CA certificate, a certificate and a key',
+                'postgresql_server'))
     elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
-              config[SSL_INPUTS]['postgresql_client_key_path']):
-        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            raise ValidationError(error_msg.format('', 'postgresql_client'))
+              config[SSL_INPUTS]['postgresql_client_key_path'] and
+              config[SSL_INPUTS]['postgresql_ca_cert_path']):
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            raise ValidationError(error_msg.format(
+                'with client verification, a CA certificate, '
+                'a certificate and a key ',
+                'postgresql_client'))
+    if not config[SSL_INPUTS]['postgresql_ca_cert_path'] and \
+            config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        raise ValidationError(error_msg.format('a CA certificate',
+                                               'postgresql_client'))
 
 
 def _validate_external_postgres_ssl_enabled():
