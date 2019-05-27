@@ -25,7 +25,8 @@ from ..components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     POSTGRES_PASSWORD,
     SSL_ENABLED,
-    SSL_INPUTS
+    SSL_INPUTS,
+    SSL_CLIENT_VERIFICATION
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -151,7 +152,7 @@ class PostgresqlServer(BaseComponent):
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # This will require the client to supply a certificate as well
-                if config[POSTGRESQL_SERVER]['ssl_client_verification']:
+                if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
                     f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1')
                 else:
                     f.write('hostssl all all 0.0.0.0/0 md5')

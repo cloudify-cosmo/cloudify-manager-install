@@ -31,6 +31,7 @@ from .components_constants import (
     CONSTANTS,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
+    SSL_CLIENT_VERIFICATION,
     HOSTNAME,
 )
 from .service_components import QUEUE_SERVICE
@@ -84,10 +85,13 @@ def _set_constant_config():
     const_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
     const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
     if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-        const_conf['postgresql_client_cert_path'] = \
-            constants.POSTGRESQL_CLIENT_CERT_FILENAME
-        const_conf['postgresql_client_key_path'] = \
-            constants.POSTGRESQL_CLIENT_KEY_FILENAME
+        const_conf['postgresql_ca_cert_path'] = \
+            constants.POSTGRESQL_CA_CERT_PATH
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            const_conf['postgresql_client_cert_path'] = \
+                constants.POSTGRESQL_CLIENT_CERT_PATH
+            const_conf['postgresql_client_key_path'] = \
+                constants.POSTGRESQL_CLIENT_KEY_PATH
 
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
