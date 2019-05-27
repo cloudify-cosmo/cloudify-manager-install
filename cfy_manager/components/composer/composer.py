@@ -23,7 +23,8 @@ from ..components_constants import (
     SERVICE_USER,
     SERVICE_GROUP,
     SSL_INPUTS,
-    SSL_ENABLED
+    SSL_ENABLED,
+    SSL_CLIENT_VERIFICATION
 )
 from ..base_component import BaseComponent
 from ..service_names import COMPOSER, POSTGRESQL_CLIENT
@@ -118,8 +119,6 @@ class Composer(BaseComponent):
         common.chown(CLOUDIFY_USER, CLOUDIFY_USER, CONF_DIR)
 
     def _update_composer_config(self):
-        pg_cert_path = 'postgresql_client_cert_path'
-        pg_key_path = 'postgresql_client_key_path'
         config_path = os.path.join(CONF_DIR, 'prod.json')
         # We need to use sudo to read this or we break on configure
         composer_config = json.loads(files.sudo_read(config_path))
@@ -138,17 +137,30 @@ class Composer(BaseComponent):
                 config[POSTGRESQL_CLIENT]['password'],
                 database_host,
                 database_port)
+
+        pg_ca_cert_path = 'postgresql_ca_cert_path'
+        pg_client_cert_path = 'postgresql_client_cert_path'
+        pg_client_key_path = 'postgresql_client_key_path'
+        params = {}
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            composer_config['db']['postgres'] += \
-                '?sslmode={sslmode}&' \
-                'sslcert={sslcert}&' \
-                'sslkey={sslkey}&' \
-                'sslrootcert={sslrootcert}'.format(
-                    sslmode='verify-full',
-                    sslcert=config['constants'][pg_cert_path],
-                    sslkey=config['constants'][pg_key_path],
-                    sslrootcert=config['constants']['ca_cert_path']
-                )
+            ssl_mode = 'verify-ca'
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                ssl_mode = 'verify-full'
+                params.update({
+                    'sslcert': config['constants'][pg_client_cert_path],
+                    'sslkey': config['constants'][pg_client_key_path],
+                })
+            params.update({
+                'sslmode': ssl_mode,
+                'sslrootcert': config['constants'][pg_ca_cert_path]
+            })
+
+        if any(params.values()):
+            query = '&'.join('{0}={1}'.format(key, value)
+                             for key, value in params.items()
+                             if value)
+            composer_config['db']['postgres'] = '{0}?{1}'.format(
+                composer_config['db']['postgres'], query)
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the composer

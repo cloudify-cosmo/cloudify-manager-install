@@ -178,6 +178,7 @@ class PostgresqlClient(BaseComponent):
                             POSTGRESQL_CA_CERT_PATH)
                 common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                              POSTGRESQL_CA_CERT_PATH)
+                common.chmod('444', POSTGRESQL_CA_CERT_PATH)
 
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
