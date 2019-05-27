@@ -22,7 +22,8 @@ from ..components_constants import (
     SOURCES,
     POSTGRES_PASSWORD,
     SSL_ENABLED,
-    SSL_INPUTS
+    SSL_INPUTS,
+    SSL_CLIENT_VERIFICATION
 )
 from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
@@ -166,7 +167,7 @@ class PostgresqlClient(BaseComponent):
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             if config[SSL_INPUTS]['postgresql_client_cert_path'] and \
-                    config[POSTGRESQL_CLIENT]['ssl_client_verification']:
+                    config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
                 common.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
                             POSTGRESQL_CLIENT_CERT_PATH)
                 common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
@@ -175,6 +176,8 @@ class PostgresqlClient(BaseComponent):
             if config[SSL_INPUTS]['postgresql_ca_cert_path']:
                 common.copy(config[SSL_INPUTS]['postgresql_ca_cert_path'],
                             POSTGRESQL_CA_CERT_PATH)
+                common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
+                             POSTGRESQL_CA_CERT_PATH)
 
     def _configure(self):
         files.copy_notice(POSTGRESQL_CLIENT)
