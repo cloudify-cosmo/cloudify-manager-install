@@ -195,6 +195,10 @@ def generate_test_cert(**kwargs):
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def brokers_add(**kwargs):
+    """Add a new broker to the broker cluster. This should not be done while
+    the manager cluster has any running executions.
+    Use the cfy command afterwards to register it with the manager cluster.
+    """
     _validate_components_prepared('brokers_add')
     join_node = kwargs['join_node']
 
@@ -233,6 +237,12 @@ def brokers_add(**kwargs):
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def brokers_remove(**kwargs):
+    """Remove a lost broker from the broker cluster. This should not be done
+    while the manager cluster has any running executions. This should only be
+    done with a broker that has been verified uninstalled or otherwise
+    destroyed.
+    Use the cfy command afterwards to unregister it from the manager cluster.
+    """
     _validate_components_prepared('brokers_remove')
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
 
@@ -267,6 +277,9 @@ def brokers_remove(**kwargs):
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def brokers_list(**kwargs):
+    """List brokers in the broker cluster.
+    Use the cfy command to list brokers registered with the manager cluster.
+    """
     _validate_components_prepared('brokers_list')
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
 
