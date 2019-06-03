@@ -485,11 +485,9 @@ class RabbitMQ(BaseComponent):
         self._possibly_add_hosts_entries()
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
-        if (
-            self._installing_manager()
-            and not config[RABBITMQ]['cluster_members']
-        ):
-            # We must populate the brokers table for an all-in-one manager
+        if not config[RABBITMQ]['cluster_members']:
+            # We must populate the brokers table for an all-in-one manager,
+            # or a single external broker
             config[RABBITMQ]['cluster_members'] = {
                 'cloudify-broker': config['networks'],
             }
