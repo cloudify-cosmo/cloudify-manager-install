@@ -450,7 +450,7 @@ def _validate_postgres_inputs():
 def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
-                'config.yaml->ssl_inputs->{2}'
+                'config.yaml->ssl_inputs->{1}'
     if not (config[SSL_INPUTS]['postgresql_server_cert_path'] and
             config[SSL_INPUTS]['postgresql_server_key_path'] and
             config[SSL_INPUTS]['postgresql_ca_cert_path']):
