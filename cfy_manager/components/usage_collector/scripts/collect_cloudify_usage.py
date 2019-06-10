@@ -1,4 +1,5 @@
-from os import sysconf
+import subprocess
+from os import sysconf, path
 from platform import platform
 from os.path import expanduser
 from multiprocessing import cpu_count
@@ -16,10 +17,25 @@ from script_utils import (logger,
 GIGA_SIZE = 1024 * 1024 * 1024
 PROFILE_CONTEXT_PATH = expanduser('~/.cloudify/profiles/localhost/context')
 CLOUDIFY_ENDPOINT_USAGE_DATA_URL = 'https://api.cloudify.co/cloudifyUsage'
+CPU_INFO_PATH = '/proc/cpuinfo'
 
 
 def _find_substring_in_list(str_list, substring):
     return any(string for string in str_list if substring in string)
+
+
+def _get_cpu_model():
+    if not path.exists(CPU_INFO_PATH):
+        return None
+
+    model_command = "cat {0} | grep 'model name' | uniq".format(CPU_INFO_PATH)
+    proc = subprocess.Popen(model_command, shell=True, stdout=subprocess.PIPE)
+    stdout = proc.communicate()[0]
+    if proc.returncode != 0:
+        return None
+
+    # Get only the model name
+    return stdout.strip().split(': ')[1]
 
 
 def _collect_system_data(data):
@@ -28,6 +44,7 @@ def _collect_system_data(data):
         'centos_os': 'centos' in sys_tech,
         'redhat_os': 'redhat' in sys_tech,
         'cpu_count': cpu_count(),
+        'cpu_model': _get_cpu_model(),
         'mem_size_gb':
             sysconf('SC_PAGE_SIZE') * sysconf('SC_PHYS_PAGES') / GIGA_SIZE
     }
