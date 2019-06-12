@@ -239,10 +239,9 @@ class Cluster(BaseComponent):
     def configure(self):
         # Need to restart the RESTSERVICE so flask could import premium
         self._verify_local_rest_service_alive()
-        if _services_coexistence_assertion(MANAGER_SERVICE,
-                                           DATABASE_SERVICE) and \
-            _services_coexistence_assertion(MANAGER_SERVICE,
-                                            QUEUE_SERVICE):
+        if _is_installed(MANAGER_SERVICE) and not \
+                _is_installed(DATABASE_SERVICE) and not\
+                _is_installed(QUEUE_SERVICE):
             if config[CLUSTER]['enabled']:
                 active_manager_ip = config[CLUSTER][ACTIVE_MANAGER_IP] or \
                                     config[MANAGER][PRIVATE_IP]

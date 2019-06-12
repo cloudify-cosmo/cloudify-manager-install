@@ -418,10 +418,8 @@ def _validate_cert_inputs():
                         kind='Cert')
 
 
-def _services_coexistence_assertion(service_in_list_to_install,
-                                    service_not_in_list_to_install):
-    return service_in_list_to_install in config[SERVICES_TO_INSTALL] and \
-           service_not_in_list_to_install not in config[SERVICES_TO_INSTALL]
+def _is_installed(service):
+    return service in config[SERVICES_TO_INSTALL]
 
 
 def _validate_postgres_inputs():
@@ -429,7 +427,7 @@ def _validate_postgres_inputs():
     Validating that an external DB will always listen to remote connections
     and, that a postgres password is set - needed for remote connections
     """
-    if _services_coexistence_assertion(DATABASE_SERVICE, MANAGER_SERVICE):
+    if _is_installed(DATABASE_SERVICE) and not _is_installed(MANAGER_SERVICE):
         if config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
             not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] \
             or \
@@ -439,7 +437,7 @@ def _validate_postgres_inputs():
                                   'enable_remote_connections and '
                                   'postgres_password must be set')
 
-    if _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
+    if _is_installed(MANAGER_SERVICE) and not _is_installed(DATABASE_SERVICE):
         postgres_host = config[POSTGRESQL_CLIENT]['host'].split(':')[0]
         if postgres_host in ('localhost', '127.0.0.1') and \
                 not config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]:
@@ -473,17 +471,17 @@ def _validate_postgres_ssl_certificates_provided():
 
 
 def _validate_external_postgres_ssl_enabled():
-    """
-    Basically, making sure that if the manager and database are not on the same
-    machine, SSL for DB communication must be enabled
-    """
-    if not config[POSTGRESQL_SERVER][SSL_ENABLED] and \
-            _services_coexistence_assertion(DATABASE_SERVICE, MANAGER_SERVICE)\
-            or \
-            not config[POSTGRESQL_CLIENT][SSL_ENABLED] and \
-            _services_coexistence_assertion(MANAGER_SERVICE, DATABASE_SERVICE):
-        raise ValidationError('When using an external database, SSL must be '
-                              'enabled')
+    """For an external database, SSL for the DB must be enabled."""
+    if _is_installed(DATABASE_SERVICE) and _is_installed(MANAGER_SERVICE):
+        return
+    if _is_installed(DATABASE_SERVICE) \
+            and not config[POSTGRESQL_SERVER][SSL_ENABLED]:
+        raise ValidationError('When installing an external database, SSL'
+                              ' must be enabled')
+    if _is_installed(MANAGER_SERVICE) \
+            and not config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        raise ValidationError('When using an external database, SSL'
+                              ' must be enabled')
 
 
 def validate_config_access(write_required):
