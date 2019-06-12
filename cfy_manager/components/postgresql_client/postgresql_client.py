@@ -172,6 +172,8 @@ class PostgresqlClient(BaseComponent):
                             POSTGRESQL_CLIENT_CERT_PATH)
                 common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
                             POSTGRESQL_CLIENT_KEY_PATH)
+                common.chown(
+                    CLOUDIFY_USER, CLOUDIFY_GROUP, POSTGRESQL_CLIENT_KEY_PATH)
                 common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
             if config[SSL_INPUTS]['postgresql_ca_cert_path']:
                 common.copy(config[SSL_INPUTS]['postgresql_ca_cert_path'],
