@@ -44,6 +44,13 @@ class Manager(BaseComponent):
     def __init__(self, skip_installation):
         super(Manager, self).__init__(skip_installation)
 
+    def _install(self):
+        self._create_cloudify_user()
+        self._create_sudoers_file_and_disable_sudo_requiretty()
+        self._set_selinux_permissive()
+        setup_logrotate()
+        self._create_manager_resources_dirs()
+
     def _get_exec_tempdir(self):
         return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \
                gettempdir()
@@ -110,24 +117,21 @@ class Manager(BaseComponent):
                 )
 
     def _configure(self):
-        self._create_cloudify_user()
         self._prepare_certificates()
-        self._create_sudoers_file_and_disable_sudo_requiretty()
-        self._set_selinux_permissive()
-        setup_logrotate()
-        self._create_manager_resources_dirs()
 
     def install(self):
-        pass
+        logger.notice('Installing Cloudify Manager resources...')
+        self._install()
+        logger.notice('Cloudify Manager resources successfully installed!')
 
     def configure(self):
         logger.notice('Configuring Cloudify Manager resources...')
         self._configure()
-        logger.notice('Cloudify Manager resources successfully configured...')
+        logger.notice('Cloudify Manager resources successfully configured!')
 
     def remove(self):
         logger.notice('Removing Cloudify Manager resources...')
         remove_files([
             join(self._get_exec_tempdir(), 'cloudify-ctx'),
         ])
-        logger.notice('Cloudify Manager resources successfully removed')
+        logger.notice('Cloudify Manager resources successfully removed!')
