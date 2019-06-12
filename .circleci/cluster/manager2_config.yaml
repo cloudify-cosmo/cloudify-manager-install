@@ -15,6 +15,7 @@ postgresql_client:
   ssl_enabled: true
   postgres_password: postgres
   host: DB_IP
+  ssl_client_verification: true
 
 cluster:
   active_manager_ip: ACTIVE_MANAGER_IP

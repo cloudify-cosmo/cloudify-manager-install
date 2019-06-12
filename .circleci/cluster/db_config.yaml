@@ -6,6 +6,7 @@ postgresql_server:
   ssl_enabled: true
   enable_remote_connections: true
   postgres_password: postgres
+  ssl_client_verification: true
 
 ssl_inputs:
   postgresql_server_cert_path: /etc/cloudify/cert.pem
