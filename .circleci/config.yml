@@ -171,7 +171,7 @@ jobs:
             docker cp db_config.yaml ${DB_NAME}:/etc/cloudify/config.yaml
             docker cp db_cert.pem ${DB_NAME}:/etc/cloudify/cert.pem
             docker cp db_key.pem ${DB_NAME}:/etc/cloudify/key.pem
-            docker cp ca_cert.pem ${DB_NAME}:/etc/cloudify/ca.pem
+            docker cp ca.crt ${DB_NAME}:/etc/cloudify/ca.pem
             docker exec ${DB_NAME} cfy_manager install
       - run:
           name: Install the first manager container
@@ -188,7 +188,7 @@ jobs:
             set -x
 
             docker cp license.yaml ${MANAGER1_NAME}:/etc/cloudify/license.yaml
-            docker cp ca_cert.pem ${MANAGER1_NAME}:/etc/cloudify/ca.pem
+            docker cp ca.crt ${MANAGER1_NAME}:/etc/cloudify/ca.pem
             docker cp db_client_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_key.pem
             docker cp db_client_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_cert.pem
             docker exec ${MANAGER1_NAME} cfy_manager install
@@ -203,7 +203,7 @@ jobs:
               .circleci/cluster/manager2_config.yaml > manager2_config.yaml
             docker cp manager2_config.yaml ${MANAGER2_NAME}:/etc/cloudify/config.yaml
 
-            docker cp ca_cert.pem ${MANAGER2_NAME}:/etc/cloudify/ca.pem
+            docker cp ca.crt ${MANAGER2_NAME}:/etc/cloudify/ca.pem
             docker cp db_client_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_key.pem
             docker cp db_client_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_cert.pem
             docker exec ${MANAGER2_NAME} cfy_manager install
