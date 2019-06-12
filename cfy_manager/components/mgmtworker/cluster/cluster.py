@@ -19,7 +19,7 @@ from os.path import join
 
 from ...base_component import BaseComponent
 from ...restservice.restservice import RestService
-from ...validations import _services_coexistence_assertion
+from ...validations import _is_installed
 from ....config import config
 from ....logger import get_logger
 from ....constants import COMPONENTS_DIR, CA_CERT_PATH
@@ -95,7 +95,7 @@ class Cluster(BaseComponent):
             logger.debug(response.content)
             raise NetworkError(
                 'REST service returned an unexpected response: '
-                '{0}'.format(response.status_code)
+                '{0}: {1}'.format(response.status_code, response.content)
             )
 
         try:
