@@ -1,0 +1,11 @@
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_ext
+[ req_distinguished_name ]
+commonName = _common_name # ignored, _default is used instead
+commonName_default = CONTAINER_IP
+[ v3_ext ]
+basicConstraints=CA:false
+authorityKeyIdentifier=keyid:true
+subjectKeyIdentifier=hash
+subjectAltName=IP:127.0.0.1,IP:CONTAINER_IP

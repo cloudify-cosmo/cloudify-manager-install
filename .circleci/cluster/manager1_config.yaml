@@ -1,0 +1,26 @@
+manager:
+  private_ip: CONTAINER_IP
+  public_ip: CONTAINER_IP
+  hostname: manager1
+  security:
+    admin_password: admin
+  cloudify_license_path: /etc/cloudify/license.yaml
+
+rabbitmq:
+  ca_path: /etc/cloudify/ca.pem
+  cluster_members:
+    rabbit1:
+      default: QUEUE_IP
+
+postgresql_client:
+  ssl_enabled: true
+  postgres_password: postgres
+  host: DB_IP
+
+ssl_inputs:
+  postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
+  postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem
+  postgresql_ca_cert_path: /etc/cloudify/ca.pem
+
+services_to_install:
+- manager_service

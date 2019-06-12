@@ -101,6 +101,121 @@ jobs:
             chmod +x install_manager.sh
             ./install_manager.sh
 
+  install_cluster:
+    machine: true
+    environment:
+      CONTAINER_NAME: cfy_manager
+      IMAGE_NAME: cfy_manager_image
+      CLUSTER_IMAGE: cfy_manager_image_preinstalled
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Build base container
+          command: |
+            set -eux
+            docker build --tag ${IMAGE_NAME} packaging/docker
+            cp -fr /tmp/workspace/x86_64/*.rpm .circleci/cluster
+            docker build --tag ${CLUSTER_IMAGE} .circleci/cluster
+      - run:
+          name: Prepare name envvars
+          command: |
+            echo "export MANAGER1_NAME=${CONTAINER_NAME}_1" >> $BASH_ENV
+            echo "export MANAGER2_NAME=${CONTAINER_NAME}_2" >> $BASH_ENV
+            echo "export DB_NAME=${CONTAINER_NAME}_db" >> $BASH_ENV
+            echo "export QUEUE_NAME=${CONTAINER_NAME}_queue" >> $BASH_ENV
+      - run:
+          name: Run base container
+          command: |
+            set -eux
+            function run_container {
+              docker run --name $1 -d -v /tmp/workspace:/tmp/workspace:ro -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${CLUSTER_IMAGE}
+            }
+            run_container ${MANAGER1_NAME}
+            run_container ${MANAGER2_NAME}
+            run_container ${QUEUE_NAME}
+            run_container ${DB_NAME}
+            docker exec -d ${MANAGER1_NAME} sh -c "systemctl start sshd"
+            docker exec -d ${MANAGER2_NAME} sh -c "systemctl start sshd"
+      - run:
+          name: Prepare ip envvars
+          command: |
+            IP_FORMAT='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+            QUEUE_IP=$(docker inspect --format="$IP_FORMAT" ${QUEUE_NAME})
+            DB_IP=$(docker inspect --format="$IP_FORMAT" ${DB_NAME})
+            MANAGER1_IP=$(docker inspect --format="$IP_FORMAT" ${MANAGER1_NAME})
+            MANAGER2_IP=$(docker inspect --format="$IP_FORMAT" ${MANAGER2_NAME})
+
+            echo "export MANAGER1_IP=${MANAGER1_IP}" >> $BASH_ENV
+            echo "export MANAGER2_IP=${MANAGER2_IP}" >> $BASH_ENV
+            echo "export DB_IP=${DB_IP}" >> $BASH_ENV
+            echo "export QUEUE_IP=${QUEUE_IP}" >> $BASH_ENV
+      - run:
+          name: generate certs
+          command: /bin/bash .circleci/cluster/create_certs.sh
+      - run:
+          name: Install the queue container
+          command: |
+            set -eux
+            sed -e "s/CONTAINER_IP/${QUEUE_IP}/g" .circleci/cluster/queue_config.yaml > queue_config.yaml
+            docker cp queue_config.yaml ${QUEUE_NAME}:/etc/cloudify/config.yaml
+            docker cp queue_key.pem ${QUEUE_NAME}:/etc/cloudify/queue_key.pem
+            docker cp queue_cert.pem ${QUEUE_NAME}:/etc/cloudify/queue_cert.pem
+            docker exec ${QUEUE_NAME} cfy_manager install
+      - run:
+          name: Install the DB container
+          command: |
+            set -eux
+            sed -e "s/CONTAINER_IP/${DB_IP}/g" .circleci/cluster/db_config.yaml > db_config.yaml
+            docker cp db_config.yaml ${DB_NAME}:/etc/cloudify/config.yaml
+            docker cp db_cert.pem ${DB_NAME}:/etc/cloudify/cert.pem
+            docker cp db_key.pem ${DB_NAME}:/etc/cloudify/key.pem
+            docker cp ca_cert.pem ${DB_NAME}:/etc/cloudify/ca.pem
+            docker exec ${DB_NAME} cfy_manager install
+      - run:
+          name: Install the first manager container
+          command: |
+            set -eux
+            sed -e "s/CONTAINER_IP/${MANAGER1_IP}/g" \
+              -e "s/QUEUE_IP/${QUEUE_IP}/g" \
+              -e "s/DB_IP/${DB_IP}/g" \
+              .circleci/cluster/manager1_config.yaml > manager1_config.yaml
+            docker cp manager1_config.yaml ${CONTAINER_NAME}_1:/etc/cloudify/config.yaml
+
+            set +x
+            echo ${TEST_LICENSE} | sed -e 's/\\n/\n/g' > license.yaml
+            set -x
+
+            docker cp license.yaml ${MANAGER1_NAME}:/etc/cloudify/license.yaml
+            docker cp ca_cert.pem ${MANAGER1_NAME}:/etc/cloudify/ca.pem
+            docker cp db_client_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_key.pem
+            docker cp db_client_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_cert.pem
+
+            docker exec ${MANAGER1_NAME} cfy_manager install
+      - run:
+          name: install manager2
+          command: |
+            set -eux
+            sed -e "s/CONTAINER_IP/${MANAGER2_IP}/g" \
+              -e "s/QUEUE_IP/${QUEUE_IP}/g" \
+              -e "s/DB_IP/${DB_IP}/g" \
+              -e "s/ACTIVE_MANAGER_IP/${MANAGER1_IP}/g" \
+              .circleci/cluster/manager2_config.yaml > manager2_config.yaml
+            docker cp manager2_config.yaml ${MANAGER2_NAME}:/etc/cloudify/config.yaml
+
+            docker cp ca_cert.pem ${MANAGER2_NAME}:/etc/cloudify/ca.pem
+            docker cp db_client_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_key.pem
+            docker cp db_client_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_cert.pem
+
+            docker exec ${MANAGER2_NAME} cfy_manager install
+      - run:
+          name: status
+          command: |
+            set -eux
+            docker exec ${MANAGER1_NAME} cfy cluster status
+            docker exec ${MANAGER2_NAME} cfy cluster status
+
   flake8:
     docker:
       - image: python:2
@@ -113,6 +228,7 @@ workflows:
   version: 2
   build:
     jobs: &build_jobs
+      - flake8
       - fetch_rpms
       - build_executable
       - build_rpm:
@@ -122,7 +238,9 @@ workflows:
       - install_manager:
           requires:
             - build_rpm
-      - flake8
+      - install_cluster:
+          requires:
+            - build_rpm
 
   nightly:
     triggers:
