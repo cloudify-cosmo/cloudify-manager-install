@@ -1,4 +1,4 @@
 FROM cfy_manager_image
 
-COPY *.rpm /opt
-RUN yum install -y /opt/*.rpm
+COPY *.rpm /tmp
+RUN yum install -y /tmp/*.rpm && rm -rf /tmp/*.rpm
