@@ -77,6 +77,11 @@ class Composer(BaseComponent):
         logger.info('Installing Cloudify Composer...')
         common.untar(composer_tar, HOME_DIR)
 
+        files.copy_notice(COMPOSER)
+        set_logrotate(COMPOSER)
+        self._create_user_and_set_permissions()
+        self._add_snapshot_sudo_command()
+
     def _verify_composer_alive(self):
         systemd.verify_alive(COMPOSER)
         wait_for_port(COMPOSER_PORT)
@@ -177,12 +182,8 @@ class Composer(BaseComponent):
         )
 
     def _configure(self):
-        files.copy_notice(COMPOSER)
-        set_logrotate(COMPOSER)
-        self._create_user_and_set_permissions()
         self._update_composer_config()
         self._run_db_migrate()
-        self._add_snapshot_sudo_command()
         self._start_and_validate_composer()
 
     def install(self):

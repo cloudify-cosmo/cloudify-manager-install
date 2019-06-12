@@ -54,6 +54,11 @@ class Nginx(BaseComponent):
     def _install(self):
         nginx_source_url = config[NGINX][SOURCES]['nginx_source_url']
         yum_install(nginx_source_url)
+        common.mkdir(LOG_DIR)
+        copy_notice(NGINX)
+        self._deploy_unit_override()
+        set_logrotate(NGINX)
+        self._deploy_nginx_config_files()
 
     def _deploy_unit_override(self):
         logger.debug('Creating systemd unit override...')
@@ -235,12 +240,7 @@ class Nginx(BaseComponent):
         systemd.verify_alive(NGINX, append_prefix=False)
 
     def _configure(self):
-        common.mkdir(LOG_DIR)
-        copy_notice(NGINX)
-        self._deploy_unit_override()
-        set_logrotate(NGINX)
         self._handle_certs()
-        self._deploy_nginx_config_files()
         self._start_and_verify_service()
 
     def install(self):

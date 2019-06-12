@@ -99,6 +99,14 @@ class Stage(BaseComponent):
             params='-sf'
         )
 
+        files.copy_notice(STAGE)
+        set_logrotate(STAGE)
+        self._create_user_and_set_permissions()
+        self._install_nodejs()
+        self._deploy_scripts()
+
+        self._add_snapshot_sudo_command()
+
     def _create_user_and_set_permissions(self):
         create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
 
@@ -233,15 +241,9 @@ class Stage(BaseComponent):
         )
 
     def _configure(self):
-        files.copy_notice(STAGE)
-        set_logrotate(STAGE)
-        self._create_user_and_set_permissions()
-        self._install_nodejs()
-        self._deploy_scripts()
         self._set_db_url()
         self._set_internal_manager_ip()
         self._run_db_migrate()
-        self._add_snapshot_sudo_command()
         self._start_and_validate_stage()
 
     def install(self):
@@ -250,12 +252,12 @@ class Stage(BaseComponent):
             return
         logger.notice('Installing Stage...')
         self._install()
-        logger.notice('Stage successfully installed')
+        logger.notice('Stage successfully installed!')
 
     def configure(self):
         logger.notice('Configuring Stage...')
         self._configure()
-        logger.notice('Stage successfully configured')
+        logger.notice('Stage successfully configured!')
 
     def remove(self):
         logger.notice('Removing Stage...')

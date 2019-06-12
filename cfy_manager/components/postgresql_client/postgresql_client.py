@@ -73,6 +73,11 @@ class PostgresqlClient(BaseComponent):
         logger.debug('Installing python libs for PostgreSQL...')
         yum_install(sources['psycopg2_rpm_url'])
 
+        files.copy_notice(POSTGRESQL_CLIENT)
+
+        self._create_postgres_group()
+        self._create_postgres_user()
+
     def _create_postgres_group(self):
         logger.notice('Creating postgres group')
         try:
@@ -183,7 +188,6 @@ class PostgresqlClient(BaseComponent):
                 common.chmod('444', POSTGRESQL_CA_CERT_PATH)
 
     def _configure(self):
-        files.copy_notice(POSTGRESQL_CLIENT)
         self._create_postgres_pgpass_files()
         self._configure_ssl()
 
@@ -194,8 +198,6 @@ class PostgresqlClient(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring PostgreSQL Client...')
-        self._create_postgres_group()
-        self._create_postgres_user()
         self._configure()
         logger.notice('PostgreSQL successfully configured')
 

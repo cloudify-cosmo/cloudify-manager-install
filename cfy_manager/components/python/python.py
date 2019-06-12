@@ -34,8 +34,6 @@ class Python(BaseComponent):
             yum_install('python-devel', disable_all_repos=False)
             yum_install('gcc', disable_all_repos=False)
             yum_install('gcc-c++', disable_all_repos=False)
-
-    def _configure(self):
         copy_notice(PYTHON)
 
     def install(self):
@@ -44,9 +42,7 @@ class Python(BaseComponent):
         logger.notice('Python dependencies successfully installed')
 
     def configure(self):
-        logger.notice('Configuring Python dependencies...')
-        self._configure()
-        logger.notice('Python dependencies successfully configured')
+        pass
 
     def remove(self):
         remove_notice(PYTHON)
