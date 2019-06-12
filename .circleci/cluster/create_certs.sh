@@ -76,7 +76,7 @@ openssl x509 \
     -CAcreateserial
 
 
-sed -e "s/CONTAINER_IP/${MANAGER1_IP}/g" .circleci/cluster/csr_config.template > db_client_2_cert_config
+sed -e "s/CONTAINER_IP/${MANAGER2_IP}/g" .circleci/cluster/csr_config.template > db_client_2_cert_config
 openssl req \
     -newkey rsa:2048 \
     -nodes \
