@@ -213,6 +213,9 @@ jobs:
             set -eux
             docker exec ${MANAGER1_NAME} cfy cluster status
             docker exec ${MANAGER2_NAME} cfy cluster status
+      - run:
+          name: status
+          command: docker exec ${MANAGER2_NAME} cfy_manager sanity-check
 
   flake8:
     docker:
