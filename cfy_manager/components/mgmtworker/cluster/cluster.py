@@ -19,7 +19,7 @@ from os.path import join
 
 from ...base_component import BaseComponent
 from ...restservice.restservice import RestService
-from ...validations import _services_coexistence_assertion
+from ...validations import _is_installed
 from ....config import config
 from ....logger import get_logger
 from ....constants import COMPONENTS_DIR, CA_CERT_PATH
@@ -95,7 +95,7 @@ class Cluster(BaseComponent):
             logger.debug(response.content)
             raise NetworkError(
                 'REST service returned an unexpected response: '
-                '{0}'.format(response.status_code)
+                '{0}: {1}'.format(response.status_code, response.content)
             )
 
         try:
@@ -239,10 +239,9 @@ class Cluster(BaseComponent):
     def configure(self):
         # Need to restart the RESTSERVICE so flask could import premium
         self._verify_local_rest_service_alive()
-        if _services_coexistence_assertion(MANAGER_SERVICE,
-                                           DATABASE_SERVICE) and \
-            _services_coexistence_assertion(MANAGER_SERVICE,
-                                            QUEUE_SERVICE):
+        if _is_installed(MANAGER_SERVICE) and not \
+                _is_installed(DATABASE_SERVICE) and not\
+                _is_installed(QUEUE_SERVICE):
             if config[CLUSTER]['enabled']:
                 active_manager_ip = config[CLUSTER][ACTIVE_MANAGER_IP] or \
                                     config[MANAGER][PRIVATE_IP]

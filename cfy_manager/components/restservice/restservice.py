@@ -340,7 +340,9 @@ class RestService(BaseComponent):
                 response = requests.put(url=url, headers=get_auth_headers(),
                                         data=open(license_path, 'rb'))
                 if response.status_code != 200:
-                    logger.warning('Failed to upload Cloudify license...')
+                    raise BootstrapError(
+                        'Failed to upload Cloudify license: {0} {1}'
+                        .format(response.status_code, response.content))
             except IOError as e:
                 logger.warning('Failed to upload Cloudify license `{0}` due'
                                ' to IOError: {1}'.format(license_path,

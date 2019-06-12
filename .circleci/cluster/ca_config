@@ -1,0 +1,9 @@
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_ext
+[ req_distinguished_name ]
+commonName = _common_name # ignored, _default is used instead
+commonName_default = Cloudify generated certificate
+[ v3_ext ]
+basicConstraints=CA:true
+subjectKeyIdentifier=hash

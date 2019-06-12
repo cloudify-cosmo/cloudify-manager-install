@@ -33,25 +33,29 @@ REPOS = {
     'cloudify-agent': {
         'build_rpm': {'cloudify-*.rpm'},
     },
+    'cloudify-premium': {
+        'build-rpm': {'cloudify-*.rpm'}
+    }
 }
+NEED_AUTH = {'cloudify-premium'}
 
 
-def list_builds(repo):
+def list_builds(repo, query):
     """List all builds for the given repo (filtered to only the current
     CIRCLE_BRANCH and then master branches)
     """
     for branch in TRY_BRANCHES:
         url = URL_TEMPLATE.format(
-                organization=os.getenv(
-                    'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
-                project=repo,
-                branch=branch,
-                )
+            organization=os.getenv(
+                'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
+            project=repo,
+            branch=branch,
+        ) + query
 
         print('API path', url)
         for offset in itertools.count(0, BATCH_SIZE):
             resp = requests.get(
-                    url, params={'branch': branch, 'offset': offset})
+                url, params={'branch': branch, 'offset': offset})
             builds = resp.json()
 
             if not builds:
@@ -65,14 +69,14 @@ def list_builds(repo):
         print('WARNING: matching build not found in branch', branch)
 
 
-def get_builds(repo, jobs):
+def get_builds(repo, jobs, query):
     """For the given repo, find a build which successfully built each rpm.
 
     This will examine the CircleCI build outputs going backwards (fetching
     the builds list in batches of BATCH_SIZE), looking for a successful
     build that had built the rpm.
     """
-    for build in list_builds(repo):
+    for build in list_builds(repo, query):
         job = build.get('workflows', {'job_name': None})['job_name']
         if job in jobs and build['status'] == 'success':
 
@@ -86,8 +90,8 @@ def get_builds(repo, jobs):
         raise ValueError("Didn't find builds for jobs", jobs)
 
 
-def get_artifacts(repo, build, rpms):
-    url = ARTIFACTS_TEMPLATE.format(project=repo, build=build)
+def get_artifacts(repo, build, rpms, query):
+    url = ARTIFACTS_TEMPLATE.format(project=repo, build=build) + query
     resp = requests.get(url)
 
     for artifact in resp.json():
@@ -95,7 +99,7 @@ def get_artifacts(repo, build, rpms):
         if any(fnmatch(filename, glob) for glob in rpms):
             print('Downloading {} (build {})'.format(
                 artifact['path'], build['build_num']))
-            resp = requests.get(artifact['url'], stream=True)
+            resp = requests.get(artifact['url'] + query, stream=True)
             with open(filename, 'wb') as f:
                 resp.raw.decode_content = True
                 copyfileobj(resp.raw, f)
@@ -104,11 +108,19 @@ def get_artifacts(repo, build, rpms):
 def main():
     downloads = []
     for repo, jobs in REPOS.items():
-        for build, rpms in get_builds(repo, jobs):
+        if repo in NEED_AUTH:
+            key = os.environ.get('CLOUDIFY_PREMIUM_CIRCLE_ARTIFACTS_TOKEN')
+            if not key:
+                raise RuntimeError('CircleCI token must be set in env '
+                                   'CLOUDIFY_PREMIUM_CIRCLE_ARTIFACTS_TOKEN')
+            query = '?circle-token=' + key
+        else:
+            query = ''
+        for build, rpms in get_builds(repo, jobs, query):
             download = threading.Thread(
                 target=get_artifacts,
-                args=(repo, build, rpms),
-                )
+                args=(repo, build, rpms, query),
+            )
             download.start()
             downloads.append(download)
 
