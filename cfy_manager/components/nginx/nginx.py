@@ -58,7 +58,6 @@ class Nginx(BaseComponent):
         copy_notice(NGINX)
         self._deploy_unit_override()
         set_logrotate(NGINX)
-        self._deploy_nginx_config_files()
 
     def _deploy_unit_override(self):
         logger.debug('Creating systemd unit override...')
@@ -241,6 +240,7 @@ class Nginx(BaseComponent):
 
     def _configure(self):
         self._handle_certs()
+        self._deploy_nginx_config_files()
         self._start_and_verify_service()
 
     def install(self):

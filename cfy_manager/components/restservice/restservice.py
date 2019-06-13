@@ -84,7 +84,6 @@ class RestService(BaseComponent):
         yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
         yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
 
-        self._deploy_restservice_files()
         self._chown_resources_dir()
 
         set_logrotate(RESTSERVICE)
@@ -194,6 +193,7 @@ class RestService(BaseComponent):
 
     def _configure_restservice(self):
         self._calculate_worker_count()
+        self._deploy_restservice_files()
         self._deploy_security_configuration()
 
     def _verify_restservice(self):
