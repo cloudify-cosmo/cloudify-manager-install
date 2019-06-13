@@ -202,7 +202,7 @@ class Cluster(BaseComponent):
         if config['networks']:
             data['networks'] = config['networks']
         with open(CA_CERT_PATH) as f:
-            data['ca_cert'] = f.read()
+            data['ca_cert_content'] = f.read()
 
         # During the below request, Syncthing will start FS replication and
         # wait for the config files to finish replicating
