@@ -455,7 +455,8 @@ def _validate_postgres_ssl_certificates_provided():
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
             raise ValidationError(error_msg.format(
                 'a CA certificate, a certificate and a key',
-                'postgresql_server'))
+                'postgresql_server_cert_path, postgresql_server_key_path, '
+                'postgresql_ca_cert_path'))
     elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
               config[SSL_INPUTS]['postgresql_client_key_path'] and
               config[SSL_INPUTS]['postgresql_ca_cert_path']):
@@ -463,11 +464,12 @@ def _validate_postgres_ssl_certificates_provided():
             raise ValidationError(error_msg.format(
                 'with client verification, a CA certificate, '
                 'a certificate and a key ',
-                'postgresql_client'))
+                'postgresql_client_cert_path, postgresql_client_key_path, '
+                'postgresql_ca_cert_path'))
     if not config[SSL_INPUTS]['postgresql_ca_cert_path'] and \
             config[POSTGRESQL_CLIENT][SSL_ENABLED]:
         raise ValidationError(error_msg.format('a CA certificate',
-                                               'postgresql_client'))
+                                               'postgresql_ca_cert_path'))
 
 
 def _validate_external_postgres_ssl_enabled():

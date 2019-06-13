@@ -688,7 +688,7 @@ def configure(verbose=False,
 
     _validate_components_prepared('configure')
     logger.notice('Configuring desired components...')
-    validate(skip_validations=True, components=components)
+    validate(components=components)
     set_globals()
 
     if clean_db:
