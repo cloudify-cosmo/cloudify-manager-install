@@ -26,11 +26,11 @@ class Patch(BaseComponent):
     def __init__(self, skip_installation):
         super(Patch, self).__init__(skip_installation)
 
+    def remove(self):
+        yum_remove('patch')
+
     def install(self):
         logger.notice('Installing Patch...')
         source_url = config['patch'][SOURCES]['patch_source_url']
         yum_install(source_url)
         logger.notice('Patch successfully installed')
-
-    def remove(self):
-        yum_remove('patch')

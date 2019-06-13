@@ -80,15 +80,6 @@ class RestService(BaseComponent):
     def __init__(self, skip_installation=False):
         super(RestService, self).__init__(skip_installation)
 
-    def _install(self):
-        yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
-        yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
-
-        self._deploy_restservice_files()
-        self._chown_resources_dir()
-
-        set_logrotate(RESTSERVICE)
-
     def _make_paths(self):
         # Used in the service templates
         config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
@@ -194,7 +185,9 @@ class RestService(BaseComponent):
 
     def _configure_restservice(self):
         self._calculate_worker_count()
+        self._deploy_restservice_files()
         self._deploy_security_configuration()
+        self._chown_resources_dir()
 
     def _verify_restservice(self):
         """To verify that the REST service is working, GET the blueprints list.
@@ -310,6 +303,7 @@ class RestService(BaseComponent):
             self._configure_restservice()
             self._enter_sanity_mode()
             self._configure_db()
+            set_logrotate(RESTSERVICE)
             systemd.configure(RESTSERVICE)
             systemd.restart(RESTSERVICE)
             if not config[CLUSTER][ACTIVE_MANAGER_IP]:
@@ -356,7 +350,8 @@ class RestService(BaseComponent):
 
     def install(self):
         logger.notice('Installing Rest Service...')
-        self._install()
+        yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
+        yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
         logger.notice('Rest Service successfully installed')
 
     def configure(self):
