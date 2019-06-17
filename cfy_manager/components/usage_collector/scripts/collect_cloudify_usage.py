@@ -74,6 +74,8 @@ def _collect_cloudify_data(data):
                                                         'openstack'),
             'agents_count': sm.count(models.Agent),
             'compute_count': sm.count(models.NodeInstance,
+                                      filters={models.NodeInstance.state:
+                                               'started'},
                                       distinct_by=models.NodeInstance.host_id)
         }
 
