@@ -20,10 +20,11 @@ from cloudify_premium.ha import syncthing
 
 
 def run_syncthing_configuration(hostname, active_manager_ip,
-                                rest_service_port, auth_headers):
+                                rest_service_port, verify, auth_headers):
     bootstrap_cluster = syncthing.configure(active_manager_ip,
-                                            rest_service_port, auth_headers)
-    syncthing.start(hostname, active_manager_ip, rest_service_port,
+                                            rest_service_port, verify,
+                                            auth_headers)
+    syncthing.start(hostname, active_manager_ip, rest_service_port, verify,
                     auth_headers, bootstrap_cluster=bootstrap_cluster)
 
 
@@ -42,4 +43,5 @@ if __name__ == '__main__':
     run_syncthing_configuration(args_dict['hostname'],
                                 args_dict['active_manager_ip'],
                                 args_dict['rest_service_port'],
+                                args_dict['verify'],
                                 args_dict['auth_headers'])

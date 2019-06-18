@@ -22,7 +22,7 @@ from ...restservice.restservice import RestService
 from ...validations import _is_installed
 from ....config import config
 from ....logger import get_logger
-from ....constants import COMPONENTS_DIR, CA_CERT_PATH
+from ....constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
 from ....exceptions import BootstrapError, NetworkError
 from ....components.components_constants import (
     PRIVATE_IP,
@@ -60,21 +60,24 @@ SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
 class Cluster(BaseComponent):
-    def _generic_cloudify_rest_request(self, host, port, path,
-                                       method, data=None):
-        url = 'http://{0}:{1}/api/{2}'.format(host, port, path)
+    def _generic_cloudify_rest_request(self, host, path, method, data=None):
+        url = 'https://{0}:{1}/api/{2}'.format(host, INTERNAL_REST_PORT, path)
         try:
             if method == 'get':
-                response = requests.get(url, headers=get_auth_headers())
+                response = requests.get(url, headers=get_auth_headers(),
+                                        verify=CA_CERT_PATH)
             elif method == 'post':
                 response = requests.post(url, json=data,
-                                         headers=get_auth_headers())
+                                         headers=get_auth_headers(),
+                                         verify=CA_CERT_PATH)
             elif method == 'put':
                 response = requests.put(url, json=data,
-                                        headers=get_auth_headers())
+                                        headers=get_auth_headers(),
+                                        verify=CA_CERT_PATH)
             elif method == 'delete':
                 response = requests.delete(url, json=data,
-                                           headers=get_auth_headers())
+                                           headers=get_auth_headers(),
+                                           verify=CA_CERT_PATH)
             else:
                 raise ValueError('Only GET/POST/PUT/DELETE requests are '
                                  'supported')
@@ -108,7 +111,6 @@ class Cluster(BaseComponent):
     def _get_current_version(self, active_manager_ip):
         result = self._generic_cloudify_rest_request(
             active_manager_ip,
-            80,
             'v3.1/version',
             'get'
         )
@@ -165,7 +167,8 @@ class Cluster(BaseComponent):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
             'active_manager_ip': active_manager_ip,
-            'rest_service_port': 80,
+            'rest_service_port': INTERNAL_REST_PORT,
+            'verify': CA_CERT_PATH,
             'auth_headers': get_auth_headers()
         }
 
@@ -208,7 +211,6 @@ class Cluster(BaseComponent):
         # wait for the config files to finish replicating
         result = self._generic_cloudify_rest_request(
             active_manager_ip,
-            80,
             'v3.1/managers',
             'post',
             data
@@ -223,7 +225,6 @@ class Cluster(BaseComponent):
         }
         result = self._generic_cloudify_rest_request(
             config[MANAGER][PRIVATE_IP],
-            80,
             'v3.1/managers',
             'delete',
             data
@@ -244,7 +245,7 @@ class Cluster(BaseComponent):
                 _is_installed(QUEUE_SERVICE):
             if config[CLUSTER]['enabled']:
                 active_manager_ip = config[CLUSTER][ACTIVE_MANAGER_IP] or \
-                                    config[MANAGER][PRIVATE_IP]
+                    config[MANAGER][PRIVATE_IP]
                 # don't "join" on the first manager
                 if config[CLUSTER][ACTIVE_MANAGER_IP]:
                     self._join_to_cluster(active_manager_ip)
