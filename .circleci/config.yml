@@ -189,7 +189,7 @@ jobs:
 
             docker cp license.yaml ${MANAGER1_NAME}:/etc/cloudify/license.yaml
             docker cp ca.crt ${MANAGER1_NAME}:/etc/cloudify/ca.pem
-            docker cp ca.key ${MANAGER2_NAME}:/etc/cloudify/ca_key.pem
+            docker cp ca.key ${MANAGER1_NAME}:/etc/cloudify/ca_key.pem
             docker cp db_client_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_key.pem
             docker cp db_client_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_cert.pem
             docker exec ${MANAGER1_NAME} cfy_manager install
