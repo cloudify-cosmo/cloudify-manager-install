@@ -3,6 +3,7 @@ manager:
   public_ip: CONTAINER_IP
   hostname: manager1
   security:
+    ssl_enabled: true
     admin_password: admin
   cloudify_license_path: /etc/cloudify/license.yaml
 
