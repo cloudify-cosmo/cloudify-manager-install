@@ -24,6 +24,8 @@ ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
   postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem
   postgresql_ca_cert_path: /etc/cloudify/ca.pem
+  ca_cert_path: /etc/cloudify/ca.pem
+  ca_key_path: /etc/cloudify/ca_key.pem
 
 services_to_install:
 - manager_service
