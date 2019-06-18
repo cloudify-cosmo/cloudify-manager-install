@@ -60,8 +60,7 @@ SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
 class Cluster(BaseComponent):
-    def _generic_cloudify_rest_request(self, host, port, path,
-                                       method, data=None):
+    def _generic_cloudify_rest_request(self, host, path, method, data=None):
         url = 'https://{0}:{1}/api/{2}'.format(host, INTERNAL_REST_PORT, path)
         try:
             if method == 'get':
