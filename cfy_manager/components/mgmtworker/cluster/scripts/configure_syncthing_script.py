@@ -16,16 +16,23 @@
 import json
 import argparse
 
-from cloudify_premium.ha import syncthing
+from manager_rest import config
+from manager_rest.flask_utils import setup_flask_app
+from manager_rest.storage import models, get_storage_manager
+
+from cloudify_premium.ha import controller, syncthing
 
 
-def run_syncthing_configuration(hostname, active_manager_ip,
-                                rest_service_port, verify, auth_headers):
-    bootstrap_cluster = syncthing.configure(active_manager_ip,
-                                            rest_service_port, verify,
-                                            auth_headers)
-    syncthing.start(hostname, active_manager_ip, rest_service_port, verify,
-                    auth_headers, bootstrap_cluster=bootstrap_cluster)
+def run_syncthing_configuration(hostname, bootstrap_cluster):
+    syncthing.configure(bootstrap_cluster)
+    syncthing.start(hostname)
+
+    if not bootstrap_cluster:
+        sm = get_storage_manager()
+        managers_list = sm.list(models.Manager)
+        controller.add_manager(managers_list)
+        syncthing.wait_for_replication()
+    syncthing.finish()
 
 
 if __name__ == '__main__':
@@ -40,8 +47,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with open(args.args_dict_config_path, 'r') as f:
         args_dict = json.load(f)
+
+    config.instance.load_configuration()
+    setup_flask_app(manager_ip=config.instance.postgresql_host)
+
     run_syncthing_configuration(args_dict['hostname'],
-                                args_dict['active_manager_ip'],
-                                args_dict['rest_service_port'],
-                                args_dict['verify'],
-                                args_dict['auth_headers'])
+                                args_dict['bootstrap_cluster'])

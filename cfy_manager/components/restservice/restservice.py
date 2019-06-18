@@ -27,7 +27,6 @@ import requests
 
 from . import db
 from ..components_constants import (
-    ACTIVE_MANAGER_IP,
     ADMIN_PASSWORD,
     CLEAN_DB,
     CONFIG,
@@ -38,10 +37,10 @@ from ..components_constants import (
     SECURITY,
     SOURCES,
     VENV,
+    CLUSTER_JOIN
 )
 from ..base_component import BaseComponent
 from ..service_names import (
-    CLUSTER,
     MANAGER,
     RESTSERVICE,
 )
@@ -236,29 +235,27 @@ class RestService(BaseComponent):
         self._verify_restservice()
 
     def _configure_db(self):
-        config[CLUSTER]['enabled'] = False
         configs = {
             'rest_config': REST_CONFIG_PATH,
             'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
             'security_config': REST_SECURITY_CONFIG_PATH
         }
+        config[CLUSTER_JOIN] = False
         result = db.check_manager_in_table()
-        if not config[CLUSTER]['active_manager_ip']:
-            if result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
-                logger.info('DB not initialized, creating DB...')
-                db.prepare_db()
-                db.populate_db(configs)
-                config[CLUSTER]['enabled'] = True
-            elif not config[CLEAN_DB]:
-                # Reinstalling the manager with the old DB
-                db.create_amqp_resources(configs)
-        elif result == constants.MANAGER_NOT_IN_DB:
+        if result == constants.MANAGER_NOT_IN_DB:
             # Adding a manager to the cluster - external RabbitMQ already
             # configured
             logger.info('Manager not in DB, will join the cluster...')
-            config[CLUSTER]['enabled'] = True
-        else:
-            logger.info('Manager already in DB, ignoring configuration')
+            config[CLUSTER_JOIN] = True
+            db.insert_manager(configs)
+        elif result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
+            logger.info('DB not initialized, creating DB...')
+            db.prepare_db()
+            db.populate_db(configs)
+            db.insert_manager(configs)
+        elif not config[CLEAN_DB]:
+            # Reinstalling the manager with the old DB
+            db.create_amqp_resources(configs)
 
     def _generate_password(self, length=12):
         chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
@@ -312,11 +309,11 @@ class RestService(BaseComponent):
             self._configure_db()
             systemd.configure(RESTSERVICE)
             systemd.restart(RESTSERVICE)
-            if not config[CLUSTER][ACTIVE_MANAGER_IP]:
-                self._verify_restservice_alive()
-            else:
+            if config[CLUSTER_JOIN]:
                 logger.info('Extra node in cluster, will verify rest-service '
                             'after clustering configured')
+            else:
+                self._verify_restservice_alive()
         finally:
             self._exit_sanity_mode()
 
