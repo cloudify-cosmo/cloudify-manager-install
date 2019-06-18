@@ -44,8 +44,10 @@ manager:
   cloudify_license_path: ''
 
 cluster:
+  # This will not work on non-premium installations.
+
   # When running a cluster, every extra node must contact any active manager
-  # in the cluster, this will not work on non-premium installations
+  # in the cluster. This must be the private_ip of the active manager.
   active_manager_ip: ''
 
 manager-ip-setter:
