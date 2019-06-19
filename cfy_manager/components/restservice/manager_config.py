@@ -54,8 +54,10 @@ def make_manager_config():
         'heartbeat': config['agent']['heartbeat'],
         'log_level': config['agent']['log_level']
     }
+    workflow_config = config['mgmtworker']['workflows']
     return [  # (scope, {name: value})
         ('mgmtworker', mgmtworker_config),
+        ('workflow', workflow_config),
         ('agent', agent_config),
         ('rest', rest_config)
     ]
