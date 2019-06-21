@@ -33,6 +33,7 @@ from ...utils.files import (replace_in_file,
                             touch)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
+from ...utils.systemd import systemd
 from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
@@ -133,5 +134,10 @@ class Manager(BaseComponent):
         logger.notice('Removing Cloudify Manager resources...')
         remove_files([
             join(self._get_exec_tempdir(), 'cloudify-ctx'),
+        ])
+        # Remove syncthing so a reinstall of a cluster node can work
+        systemd.remove('cloudify-syncthing')
+        remove_files([
+            '/opt/syncthing',
         ])
         logger.notice('Cloudify Manager resources successfully removed!')
