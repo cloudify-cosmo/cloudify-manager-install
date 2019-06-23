@@ -304,6 +304,38 @@ def _check_ssl_file(filename, kind='Key', password=None):
                               .format(kind, filename, password_err))
 
 
+def _check_signed_by(ca_filename, cert_filename):
+    ca_check_command = [
+        'openssl', 'verify', '-CAfile', ca_filename, cert_filename
+    ]
+    try:
+        sudo(ca_check_command)
+    except subprocess.CalledProcessError:
+        raise ValidationError(
+            'Provided certificate {cert} was not signed by provided '
+            'CA {ca}'.format(
+                cert=cert_filename,
+                ca=ca_filename,
+            )
+        )
+
+
+def _check_cert_key_match(cert_filename, key_filename, password=None):
+    _check_ssl_file(key_filename, kind='Key', password=password)
+    _check_ssl_file(cert_filename, kind='Cert')
+    key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
+                           '-in', key_filename]
+    if password:
+        key_filename += ['-passin', 'pass:{0}'.format(password)]
+    cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
+                            '-in', cert_filename]
+    key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
+    cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
+    if cert_modulus != key_modulus:
+        raise ValidationError('Key {0} does not match the cert {3}'
+                              .format(key_filename, cert_filename))
+
+
 def check_certificates(component,
                        cert_path='cert_path', key_path='key_path',
                        ca_path='ca_path', key_password='key_password',
@@ -331,42 +363,14 @@ def check_certificates(component,
                 )
             )
     elif cert_filename and key_filename:
-        _check_ssl_file(key_filename, kind='Key', password=password)
-        _check_ssl_file(cert_filename, kind='Cert')
-        key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
-                               '-in', key_filename]
-        if password:
-            key_filename += ['-passin', 'pass:{0}'.format(password)]
-        cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
-                                '-in', cert_filename]
-        key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
-        cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
-        if cert_modulus != key_modulus:
-            raise ValidationError('Key {0} ({1}.{2}) does not match the '
-                                  'cert {3} ({1}.{4})'
-                                  .format(key_filename, component, key_path,
-                                          cert_filename, cert_path))
+        _check_cert_key_match(cert_filename, key_filename, password)
     elif cert_filename or key_filename:
         raise ValidationError('Either both cert_path and key_path must be '
                               'provided, or neither.')
-
     if ca_filename:
         _check_ssl_file(ca_filename, kind='Cert')
         if cert_filename:
-            ca_check_command = [
-                'openssl', 'verify', '-CAfile', ca_filename, cert_filename
-            ]
-            try:
-                sudo(ca_check_command)
-            except subprocess.CalledProcessError:
-                raise ValidationError(
-                    'Provided certificate {cert} was not signed by provided '
-                    'CA {ca}'.format(
-                        cert=cert_filename,
-                        ca=ca_filename,
-                    )
-                )
-
+            _check_signed_by(ca_filename, cert_filename)
     return cert_filename, key_filename, ca_filename, password
 
 
