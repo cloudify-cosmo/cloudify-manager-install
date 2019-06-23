@@ -20,3 +20,11 @@ mv $MANAGER1_IP.key db_client_1_key.pem
 generate_test_cert $MANAGER2_IP
 mv $MANAGER2_IP.crt db_client_2_cert.pem
 mv $MANAGER2_IP.key db_client_2_key.pem
+
+generate_test_cert $MANAGER1_IP
+mv $MANAGER1_IP.crt external_cert_1.pem
+mv $MANAGER1_IP.key external_key_1.pem
+
+generate_test_cert $MANAGER2_IP
+mv $MANAGER2_IP.crt external_cert_2.pem
+mv $MANAGER2_IP.key external_key_2.pem
