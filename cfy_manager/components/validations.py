@@ -402,8 +402,7 @@ def _validate_cert_inputs():
         'internal',
         'postgresql_server',
         'postgresql_client',
-        'external',
-        'external_ca',
+        'external'
     ):
         cert_path = '{0}_cert_path'.format(ssl_input)
         key_path = '{0}_key_path'.format(ssl_input)
@@ -417,6 +416,16 @@ def _validate_cert_inputs():
             ca_path=ca_path,
             key_password=key_password,
         )
+    if config[SSL_INPUTS].get('external_ca_cert_path'):
+        if config[SSL_INPUTS].get('external_ca_key_path'):
+            _check_cert_key_match(
+                config[SSL_INPUTS]['external_ca_cert_path'],
+                config[SSL_INPUTS]['external_ca_key_path'],
+                config[SSL_INPUTS].get('external_ca_key_password')
+            )
+        else:
+            _check_ssl_file(config[SSL_INPUTS]['external_ca_cert_path'],
+                            kind='Cert')
     if config[SSL_INPUTS]['postgresql_ca_cert_path']:
         _check_ssl_file(config[SSL_INPUTS]['postgresql_ca_cert_path'],
                         kind='Cert')
