@@ -15,10 +15,10 @@
 
 import errno
 import logging
-from os.path import join, expanduser
+from os.path import join, exists, expanduser
 from getpass import getuser
 
-from ..components_constants import SOURCES, SECURITY
+from ..components_constants import SOURCES, SECURITY, SSL_INPUTS
 from ..base_component import BaseComponent
 from ..service_names import CLI, MANAGER
 from ...config import config
@@ -26,7 +26,7 @@ from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
 from ...utils import common
-from ...constants import EXTERNAL_CERT_PATH
+from ...constants import EXTERNAL_CERT_PATH, EXTERNAL_CA_CERT_PATH
 from ...utils.install import yum_install, yum_remove
 
 logger = get_logger(CLI)
@@ -66,10 +66,11 @@ class Cli(BaseComponent):
         ssl_enabled = \
             'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
 
+        cert_path = self._deploy_external_cert()
         set_cmd = [
             'cfy', 'profiles', 'set', '-u', username,
             '-p', password, '-t', 'default_tenant',
-            '-c', EXTERNAL_CERT_PATH, '--ssl', ssl_enabled
+            '-c', cert_path, '--ssl', ssl_enabled
         ]
 
         current_user = getuser()
@@ -135,3 +136,17 @@ class Cli(BaseComponent):
         logger.notice('Removing Cloudify CLI...')
         yum_remove('cloudify')
         logger.notice('Cloudify CLI successfully removed')
+
+    def _deploy_external_cert(self):
+        """Return the path of the external cert to use with the CLI.
+
+        If provided, copy the external CA cert and return that.
+        Otherwise, just return the external cert path.
+        """
+        if exists(config[SSL_INPUTS]['external_ca_cert_path']):
+            common.copy(
+                config[SSL_INPUTS]['external_ca_cert_path'],
+                EXTERNAL_CA_CERT_PATH)
+            return EXTERNAL_CA_CERT_PATH
+        else:
+            return EXTERNAL_CERT_PATH

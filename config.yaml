@@ -488,6 +488,7 @@ ssl_inputs:
   # External CA cert is used to auto-generate the external cert, if the
   # external cert is not provided.
   # The key and the password will not be stored.
+  # External CA cert, if provided, will also be used with the on-manager CLI.
   external_ca_cert_path: ''
   external_ca_key_path: ''
   external_ca_key_password: ''
