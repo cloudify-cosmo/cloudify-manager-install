@@ -18,9 +18,6 @@ postgresql_client:
   host: DB_IP
   ssl_client_verification: true
 
-cluster:
-  active_manager_ip: ACTIVE_MANAGER_IP
-
 ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
   postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem

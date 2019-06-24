@@ -27,7 +27,7 @@ from ..components_constants import (
     HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..service_names import MGMTWORKER, CLUSTER, MANAGER, PREMIUM
+from ..service_names import MGMTWORKER, MANAGER, PREMIUM
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
@@ -79,7 +79,7 @@ class MgmtWorker(BaseComponent):
         config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
         config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
         config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
-        if config[CLUSTER]['enabled'] and self.is_premium_installed():
+        if self.is_premium_installed():
             config[MGMTWORKER][CLUSTER_SERVICE_QUEUE] = \
                 'cluster_service_queue_{0}'.format(config[MANAGER][HOSTNAME])
 

@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 import requests
 from os.path import join
 
@@ -23,14 +22,12 @@ from ...validations import _is_installed
 from ....config import config
 from ....logger import get_logger
 from ....constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
-from ....exceptions import BootstrapError, NetworkError
 from ....components.components_constants import (
     PRIVATE_IP,
-    PUBLIC_IP,
     HOSTNAME,
     SOURCES,
     SCRIPTS,
-    ACTIVE_MANAGER_IP,
+    CLUSTER_JOIN
 )
 from ....components.service_components import (
     MANAGER_SERVICE,
@@ -60,61 +57,7 @@ SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
 class Cluster(BaseComponent):
-    def _generic_cloudify_rest_request(self, host, path, method, data=None):
-        url = 'https://{0}:{1}/api/{2}'.format(host, INTERNAL_REST_PORT, path)
-        try:
-            if method == 'get':
-                response = requests.get(url, headers=get_auth_headers(),
-                                        verify=CA_CERT_PATH)
-            elif method == 'post':
-                response = requests.post(url, json=data,
-                                         headers=get_auth_headers(),
-                                         verify=CA_CERT_PATH)
-            elif method == 'put':
-                response = requests.put(url, json=data,
-                                        headers=get_auth_headers(),
-                                        verify=CA_CERT_PATH)
-            elif method == 'delete':
-                response = requests.delete(url, json=data,
-                                           headers=get_auth_headers(),
-                                           verify=CA_CERT_PATH)
-            else:
-                raise ValueError('Only GET/POST/PUT/DELETE requests are '
-                                 'supported')
-        # keep an erroneous HTTP response to examine its status code, but still
-        # abort on fatal errors like being unable to connect at all
-        except requests.HTTPError as e:
-            response = e
-        except requests.URLRequired as e:
-            raise NetworkError(
-                'REST service returned an invalid response: {0}'.format(e))
-        if response.status_code == 401:
-            raise NetworkError(
-                'Could not connect to the REST service: '
-                '401 unauthorized. Possible access control misconfiguration,'
-                'Master and replica nodes must have the same admin password'
-            )
-        if response.status_code != 200:
-            logger.debug(response.content)
-            raise NetworkError(
-                'REST service returned an unexpected response: '
-                '{0}: {1}'.format(response.status_code, response.content)
-            )
-
-        try:
-            return json.loads(response.content)
-        except ValueError as e:
-            logger.debug(response.content)
-            raise BootstrapError(
-                'REST service returned malformed JSON: {0}'.format(e))
-
-    def _get_current_version(self, active_manager_ip):
-        result = self._generic_cloudify_rest_request(
-            active_manager_ip,
-            'v3.1/version',
-            'get'
-        )
-        return result
+    API_VERSION = 'v3.1'
 
     def _verify_local_rest_service_alive(self, verify_rest_call=False):
         # Restarting rest-service to read the new replicated rest-security.conf
@@ -154,82 +97,27 @@ class Cluster(BaseComponent):
                 env[envvar] = value
         return env
 
-    def _run_syncthing_configuration_script(self, active_manager_ip):
-        env_dict = self._create_process_env()
-
-        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
-        python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-
-        # Directly calling with this python bin, in order to make sure it's run
-        # in the correct venv
-
-        cmd = [python_path, script_path]
+    def _run_syncthing_configuration_script(self, bootstrap_cluster):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
-            'active_manager_ip': active_manager_ip,
-            'rest_service_port': INTERNAL_REST_PORT,
-            'verify': CA_CERT_PATH,
-            'auth_headers': get_auth_headers()
+            'bootstrap_cluster': bootstrap_cluster,
         }
-
         args_json_path = write_to_tempfile(args_dict, json_dump=True)
-        cmd.append(args_json_path)
-
-        result = sudo(cmd, env=env_dict)
-
+        cmd = [
+            join(REST_HOME_DIR, 'env', 'bin', 'python'),
+            join(SCRIPTS_PATH, 'configure_syncthing_script.py'),
+            args_json_path
+        ]
+        result = sudo(cmd, env=self._create_process_env())
         self._log_results(result)
-
-    def _join_to_cluster(self, active_manager_ip):
-        """
-        Used for either adding the first node to the cluster (can be
-        single-node cluster), or adding a new manager to the cluster
-
-        The next step would be installing the mgmtworker which requires the
-        rest-security.conf to be the same as in the rest of the managers in the
-        cluster, as a result this operation may take a while until the config
-        directories finish replicating
-        """
-        logger.notice('Adding manager "{0}" to the cluster, this may take a '
-                      'while until config files finish replicating'
-                      .format(config[MANAGER][HOSTNAME]))
-        version_details = self._get_current_version(active_manager_ip)
-        data = {
-            'hostname': config[MANAGER][HOSTNAME],
-            'private_ip': config[MANAGER][PRIVATE_IP],
-            'public_ip': config[MANAGER][PUBLIC_IP],
-            'version': version_details['version'],
-            'edition': version_details['edition'],
-            'distribution': version_details['distribution'],
-            'distro_release': version_details['distro_release']
-        }
-        if config['networks']:
-            data['networks'] = config['networks']
-        with open(CA_CERT_PATH) as f:
-            data['ca_cert'] = f.read()
-
-        # During the below request, Syncthing will start FS replication and
-        # wait for the config files to finish replicating
-        result = self._generic_cloudify_rest_request(
-            active_manager_ip,
-            'v3.1/managers',
-            'post',
-            data
-        )
-        return result
 
     def _remove_manager_from_cluster(self):
         logger.notice('Removing manager "{0}" from cluster'
                       .format(config[MANAGER][HOSTNAME]))
-        data = {
-            'hostname': config[MANAGER][HOSTNAME]
-        }
-        result = self._generic_cloudify_rest_request(
-            config[MANAGER][PRIVATE_IP],
-            'v3.1/managers',
-            'delete',
-            data
-        )
-        return result
+        url = 'https://{0}:{1}/api/{2}/managers/{4}'.format(
+            config[PRIVATE_IP], INTERNAL_REST_PORT, self.API_VERSION,
+            config[HOSTNAME])
+        requests.delete(url, headers=get_auth_headers(), verify=CA_CERT_PATH)
 
     def _install(self):
         yum_install(config[PREMIUM][SOURCES]['premium_source_url'])
@@ -243,15 +131,16 @@ class Cluster(BaseComponent):
         if _is_installed(MANAGER_SERVICE) and not \
                 _is_installed(DATABASE_SERVICE) and not\
                 _is_installed(QUEUE_SERVICE):
-            if config[CLUSTER]['enabled']:
-                active_manager_ip = config[CLUSTER][ACTIVE_MANAGER_IP] or \
-                    config[MANAGER][PRIVATE_IP]
-                # don't "join" on the first manager
-                if config[CLUSTER][ACTIVE_MANAGER_IP]:
-                    self._join_to_cluster(active_manager_ip)
-                self._run_syncthing_configuration_script(active_manager_ip)
-                self._verify_local_rest_service_alive(verify_rest_call=True)
-                logger.notice('Node has been added successfully!')
+            # this flag is set inside of restservice._configure_db
+            join = config[CLUSTER_JOIN]
+            if join:
+                logger.notice(
+                    'Adding manager "{0}" to the cluster, this may take a '
+                    'while until config files finish replicating'
+                    .format(config[MANAGER][HOSTNAME]))
+            self._run_syncthing_configuration_script(not join)
+            self._verify_local_rest_service_alive(verify_rest_call=True)
+            logger.notice('Node has been added successfully!')
         else:
             logger.warn('Cluster must be instantiated with external DB '
                         'and Queue endpoints. Ignoring cluster configuration')

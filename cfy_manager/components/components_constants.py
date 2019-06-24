@@ -38,7 +38,6 @@ ADMIN_PASSWORD = 'admin_password'
 ADMIN_USERNAME = 'admin_username'
 
 PREMIUM_EDITION = 'premium_edition'
-ACTIVE_MANAGER_IP = 'active_manager_ip'
 
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 POSTGRES_PASSWORD = 'postgres_password'
@@ -59,5 +58,9 @@ PROVIDER_CONTEXT = 'provider_context'
 CLEAN_DB = 'clean_db'
 FLASK_SECURITY = 'flask_security'
 UNCONFIGURED_INSTALL = 'unconfigured_install'
+
+# this key is set if the current install is joining a manager to a cluster.
+# It is set in db.py, and used when running the syncthing config script.
+CLUSTER_JOIN = 'join'
 
 # endregion

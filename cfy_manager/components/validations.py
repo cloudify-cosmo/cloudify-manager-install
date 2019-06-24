@@ -33,8 +33,7 @@ from .components_constants import (
     SSL_CLIENT_VERIFICATION,
     SERVICES_TO_INSTALL,
     ENABLE_REMOTE_CONNECTIONS,
-    POSTGRES_PASSWORD,
-    ACTIVE_MANAGER_IP
+    POSTGRES_PASSWORD
 )
 from .service_components import (
     DATABASE_SERVICE,
@@ -43,8 +42,7 @@ from .service_components import (
 from .service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER,
-    CLUSTER
+    POSTGRESQL_SERVER
 )
 
 from ..config import config
@@ -53,7 +51,6 @@ from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
 from ..utils.common import run, sudo
-from ..utils.network import is_port_open
 
 logger = get_logger(VALIDATIONS)
 
@@ -516,10 +513,6 @@ def validate_config_access(write_required):
                     USER_CONFIG_PATH, label))
 
 
-def _validate_active_manager_access():
-    is_port_open(80, config[CLUSTER][ACTIVE_MANAGER_IP])
-
-
 def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         # Inputs always need to be validated, otherwise the install won't work
@@ -539,8 +532,6 @@ def validate(components, skip_validations=False, only_install=False):
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
-        if config[CLUSTER][ACTIVE_MANAGER_IP]:
-            _validate_active_manager_access()
         _validate_python_version()
         _validate_sufficient_memory()
         _validate_postgres_inputs()
