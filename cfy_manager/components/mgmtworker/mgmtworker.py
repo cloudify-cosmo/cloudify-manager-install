@@ -37,7 +37,7 @@ from ...utils.files import (
     get_local_source_path
 )
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
+from ...utils.install import yum_install, yum_remove, RpmPackageHandler
 from ...exceptions import FileError
 
 
@@ -70,12 +70,16 @@ class MgmtWorker(BaseComponent):
             cluster = Cluster(skip_installation=False)
             cluster.install()
 
+    @staticmethod
+    def is_premium_installed():
+        return RpmPackageHandler.is_package_installed('cloudify-premium')
+
     def _deploy_mgmtworker_config(self):
         config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
         config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
         config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
         config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
-        if config[CLUSTER]['enabled']:
+        if config[CLUSTER]['enabled'] and self.is_premium_installed():
             config[MGMTWORKER][CLUSTER_SERVICE_QUEUE] = \
                 'cluster_service_queue_{0}'.format(config[MANAGER][HOSTNAME])
 
@@ -141,8 +145,9 @@ class MgmtWorker(BaseComponent):
     def _configure(self):
         try:
             self._enter_sanity_mode()
-            cluster = Cluster(skip_installation=False)
-            cluster.configure()
+            if self.is_premium_installed():
+                cluster = Cluster(skip_installation=False)
+                cluster.configure()
             self._deploy_mgmtworker_config()
             systemd.configure(MGMTWORKER)
             self._prepare_snapshot_permissions()
