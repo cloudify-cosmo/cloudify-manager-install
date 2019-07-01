@@ -20,9 +20,9 @@ import uuid
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
-from ..components_constants import SOURCES, PRIVATE_IP, ACTIVE_MANAGER_IP
+from ..components_constants import SOURCES, PRIVATE_IP, CLUSTER_JOIN
 from ..base_component import BaseComponent
-from ..service_names import SANITY, MANAGER, CLUSTER
+from ..service_names import SANITY, MANAGER
 from ...config import config
 from ...logger import get_logger
 from ...constants import CLOUDIFY_HOME_DIR
@@ -149,7 +149,7 @@ class Sanity(BaseComponent):
         pass
 
     def configure(self):
-        if config[SANITY]['skip_sanity'] or config[CLUSTER][ACTIVE_MANAGER_IP]:
+        if config[SANITY]['skip_sanity'] or config[CLUSTER_JOIN]:
             logger.info('Skipping sanity check...')
             return
         try:

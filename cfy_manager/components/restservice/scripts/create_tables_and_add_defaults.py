@@ -24,7 +24,7 @@ from datetime import datetime
 
 from flask_migrate import upgrade
 
-from manager_rest import config, version
+from manager_rest import config, manager_exceptions, version
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
@@ -37,12 +37,6 @@ logger = \
 
 def _init_db_tables(db_migrate_dir):
     print 'Setting up a Flask app'
-    setup_flask_app(
-        manager_ip=config.instance.postgresql_host,
-        hash_salt=config.instance.security_hash_salt,
-        secret_key=config.instance.security_secret_key
-    )
-
     # Clean up the DB, in case it's not a clean install
     db.drop_all()
     db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
@@ -94,8 +88,23 @@ def _insert_rabbitmq_broker(brokers, ca_id):
         sm.put(inst)
 
 
-def _insert_manager(config, ca_id):
+def _insert_manager(config):
     sm = get_storage_manager()
+    ca_cert = config.get('ca_cert')
+    try:
+        stored_cert = sm.get(models.Manager, None, filters=None).ca_cert
+    except manager_exceptions.NotFoundError:
+        stored_cert = None
+
+    if not stored_cert and not ca_cert:
+        raise RuntimeError('No manager certs found, and ca_cert not given')
+    elif not stored_cert:
+        ca = _insert_cert(ca_cert, '{0}-ca'.format(config['hostname']))
+    else:
+        if stored_cert.value.strip() != ca_cert.strip():
+            raise RuntimeError('ca_cert differs from existing manager CA')
+        ca = stored_cert.id
+
     version_data = version.get_version_data()
     inst = models.Manager(
         public_ip=config['public_ip'],
@@ -106,7 +115,7 @@ def _insert_manager(config, ca_id):
         version=version_data['version'],
         distribution=version_data['distribution'],
         distro_release=version_data['distro_release'],
-        _ca_cert_id=ca_id
+        _ca_cert_id=ca
     )
     sm.put(inst)
 
@@ -144,18 +153,30 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     config.instance.load_configuration(from_db=False)
+    setup_flask_app(
+        manager_ip=config.instance.postgresql_host,
+        hash_salt=config.instance.security_hash_salt,
+        secret_key=config.instance.security_secret_key
+    )
 
     with open(args.config_path, 'r') as f:
         script_config = json.load(f)
-    _init_db_tables(script_config['db_migrate_dir'])
-    amqp_manager = _get_amqp_manager(script_config)
-    _add_default_user_and_tenant(amqp_manager, script_config)
-    _insert_config(script_config['config'])
-    rabbitmq_ca_id = _insert_cert(script_config['rabbitmq_ca_cert'],
-                                  'rabbitmq-ca')
-    rest_ca_id = _insert_cert(script_config['ca_cert'],
-                              '{0}-ca'.format(script_config['hostname']))
-    _insert_manager(script_config, rest_ca_id)
-    _insert_rabbitmq_broker(script_config['rabbitmq_brokers'], rabbitmq_ca_id)
-    _add_provider_context(script_config['provider_context'])
+
+    if script_config.get('db_migrate_dir'):
+        _init_db_tables(script_config['db_migrate_dir'])
+    if script_config.get('admin_username') and \
+            script_config.get('admin_password'):
+        amqp_manager = _get_amqp_manager(script_config)
+        _add_default_user_and_tenant(amqp_manager, script_config)
+    if script_config.get('config'):
+        _insert_config(script_config['config'])
+    if script_config.get('rabbitmq_brokers'):
+        rabbitmq_ca_id = _insert_cert(script_config['rabbitmq_ca_cert'],
+                                      'rabbitmq-ca')
+        _insert_rabbitmq_broker(
+            script_config['rabbitmq_brokers'], rabbitmq_ca_id)
+    if script_config.get('manager'):
+        _insert_manager(script_config['manager'])
+    if script_config.get('provider_context'):
+        _add_provider_context(script_config['provider_context'])
     print 'Finished creating bootstrap admin, default tenant and provider ctx'

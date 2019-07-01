@@ -24,7 +24,8 @@ from ..components_constants import (
     HOME_DIR_KEY,
     SSL_INPUTS,
     SSL_ENABLED,
-    SSL_CLIENT_VERIFICATION
+    SSL_CLIENT_VERIFICATION,
+    PREMIUM_EDITION
 )
 from ..base_component import BaseComponent
 from ..service_names import STAGE, MANAGER, POSTGRESQL_CLIENT
@@ -71,7 +72,7 @@ class Stage(BaseComponent):
         common.mkdir(RESOURCES_DIR)
 
     def _set_community_mode(self):
-        premium_edition = config[MANAGER]['premium_edition']
+        premium_edition = config[MANAGER][PREMIUM_EDITION]
         community_mode = '' if premium_edition else '-mode community'
 
         # This is used in the stage systemd service file

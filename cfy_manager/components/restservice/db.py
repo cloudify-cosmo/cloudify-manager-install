@@ -112,10 +112,6 @@ def _create_args_dict():
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
-        'networks': config['networks'],
-        'hostname': config[MANAGER][HOSTNAME],
-        'public_ip': config['manager']['public_ip'],
-        'private_ip': config['manager']['private_ip'],
         'premium': config[MANAGER][PREMIUM_EDITION],
         'rabbitmq_brokers': [
             {
@@ -133,8 +129,6 @@ def _create_args_dict():
             for name, broker in config[RABBITMQ]['cluster_members'].items()
         ],
     }
-    with open(constants.CA_CERT_PATH) as f:
-        args_dict['ca_cert'] = f.read()
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
@@ -178,11 +172,26 @@ def _run_script(script_name, args_dict=None, configs=None):
     _log_results(result)
 
 
-def populate_db(configs=None):
+def populate_db(configs):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_args_dict()
     _run_script('create_tables_and_add_defaults.py', args_dict, configs)
     logger.notice('DB populated and AMQP resources successfully created')
+
+
+def insert_manager(configs):
+    logger.notice('Registering manager in the DB...')
+    args = {
+        'manager': {
+            'public_ip': config['manager']['public_ip'],
+            'hostname': config[MANAGER][HOSTNAME],
+            'private_ip': config['manager']['private_ip'],
+            'networks': config['networks'],
+        }
+    }
+    with open(constants.CA_CERT_PATH) as f:
+        args['manager']['ca_cert'] = f.read()
+    _run_script('create_tables_and_add_defaults.py', args, configs)
 
 
 def create_amqp_resources(configs=None):

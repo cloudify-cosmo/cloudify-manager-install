@@ -189,9 +189,12 @@ jobs:
 
             docker cp license.yaml ${MANAGER1_NAME}:/etc/cloudify/license.yaml
             docker cp ca.crt ${MANAGER1_NAME}:/etc/cloudify/ca.pem
+            docker cp ca.key ${MANAGER1_NAME}:/etc/cloudify/ca_key.pem
+            docker cp external_cert_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_cert.pem
+            docker cp external_key_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_key.pem
             docker cp db_client_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_key.pem
             docker cp db_client_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_cert.pem
-            docker exec ${MANAGER1_NAME} cfy_manager install
+            docker exec ${MANAGER1_NAME} cfy_manager install --verbose
       - run:
           name: install manager2
           command: |
@@ -204,9 +207,12 @@ jobs:
             docker cp manager2_config.yaml ${MANAGER2_NAME}:/etc/cloudify/config.yaml
 
             docker cp ca.crt ${MANAGER2_NAME}:/etc/cloudify/ca.pem
+            docker cp ca.key ${MANAGER2_NAME}:/etc/cloudify/ca_key.pem
+            docker cp external_cert_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_cert.pem
+            docker cp external_key_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_key.pem
             docker cp db_client_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_key.pem
             docker cp db_client_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_cert.pem
-            docker exec ${MANAGER2_NAME} cfy_manager install
+            docker exec ${MANAGER2_NAME} cfy_manager install --verbose
       - run:
           name: status
           command: |
