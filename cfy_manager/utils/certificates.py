@@ -21,7 +21,7 @@ import tempfile
 from os.path import join
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown, copy, move
+from .common import sudo, remove, chown, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
@@ -492,9 +492,9 @@ def use_supplied_certificates(component_name,
     logger.info('Ensuring files are in correct locations.')
 
     if cert_destination and cert_src != cert_destination:
-        move(cert_src, cert_destination)
+        copy(cert_src, cert_destination)
     if key_destination and key_src != key_destination:
-        move(key_src, key_destination)
+        copy(key_src, key_destination)
     if ca_src != ca_destination:
         if ca_src:
             copy(ca_src, ca_destination)
