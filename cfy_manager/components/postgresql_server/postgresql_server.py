@@ -84,9 +84,6 @@ class PostgresqlServer(BaseComponent):
         yum_install(sources['ps_server_rpm_url'])
         yum_install(sources['ps_devel_rpm_url'])
 
-        files.copy_notice(POSTGRESQL_SERVER)
-        self._init_postgresql_server()
-
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
@@ -98,6 +95,7 @@ class PostgresqlServer(BaseComponent):
 
         logger.debug('Installing PostgreSQL Server service...')
         systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
         logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
@@ -106,6 +104,7 @@ class PostgresqlServer(BaseComponent):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
 
         logger.info('Starting PostgreSQL Server service...')
+        systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
@@ -218,7 +217,8 @@ class PostgresqlServer(BaseComponent):
         logger.notice('postgres password successfully updated')
 
     def _configure(self):
-        systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        files.copy_notice(POSTGRESQL_SERVER)
+        self._init_postgresql_server()
         enable_remote_connections = \
             config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
         self._update_configuration(enable_remote_connections)
