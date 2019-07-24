@@ -56,7 +56,7 @@ setup(
         'argh==0.26.2',
         'netifaces==0.10.6',
         'ipaddress==1.0.19',
-        'PyYAML==3.10',
+        'PyYAML==3.12',
         'requests==2.7.0',
         'retrying==1.3.3',
         'SQLAlchemy==1.2.14',
