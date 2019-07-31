@@ -513,6 +513,39 @@ def validate_config_access(write_required):
                     USER_CONFIG_PATH, label))
 
 
+def _validate_not_reusing_removed_passwords():
+    # Passwords that we remove after use should not accept the 'removed' value
+    # as a password, as that may result in a remove+reinstall of the manager
+    # changing the password to a publically known value.
+    removed_value = '<removed>'
+    check_keys = {
+        '{}.{}'.format(POSTGRESQL_CLIENT, POSTGRES_PASSWORD): (
+            config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]
+        ),
+        '{}.{}'.format(POSTGRESQL_SERVER, POSTGRES_PASSWORD): (
+            config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
+        ),
+        '{}.external_ca_key_password'.format(SSL_INPUTS): (
+            config[SSL_INPUTS]['external_ca_key_password']
+        ),
+    }
+
+    problem_locations = []
+    for location, value in check_keys.items():
+        if value == removed_value:
+            problem_locations.append(location)
+
+    if problem_locations:
+        raise ValidationError(
+            'Previously removed password(s) detected. Password values '
+            'must be changed to something other than "{removed}". '
+            'Locations: {locations}'.format(
+                removed=removed_value,
+                locations=problem_locations,
+            )
+        )
+
+
 def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         # Inputs always need to be validated, otherwise the install won't work
@@ -528,6 +561,7 @@ def validate(components, skip_validations=False, only_install=False):
     logger.notice('Validating local machine...')
 
     if not only_install:
+        _validate_not_reusing_removed_passwords()
         _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
