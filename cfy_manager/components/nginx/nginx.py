@@ -99,7 +99,7 @@ class Nginx(BaseComponent):
         if config[SSL_INPUTS]['external_ca_key_password']:
             config[SSL_INPUTS]['external_ca_key_password'] = '<removed>'
 
-    def _handle_internal_cert(self, has_ca_key):
+    def _handle_internal_cert(self):
         """
         The user might provide the internal cert and the internal key, or
         neither. It is an error to only provide one of them. If the user did
@@ -107,7 +107,6 @@ class Nginx(BaseComponent):
         generate it if we have a CA key (either provided or generated).
         So it is an error to provide only the CA cert, and then not provide
         the internal cert+key.
-        :param has_ca_key: True if there's a CA key available
         """
         logger.info('Handling internal certificate...')
         cert_deployed, key_deployed = certificates.deploy_cert_and_key(
@@ -137,8 +136,7 @@ class Nginx(BaseComponent):
 
     def _handle_certs(self):
         if config[UNCONFIGURED_INSTALL] or config[CLEAN_DB]:
-            has_ca_key = certificates.handle_ca_cert()
-            self._handle_internal_cert(has_ca_key)
+            self._handle_internal_cert()
             self._handle_external_cert()
         else:
             logger.info('Skipping certificate handling. '

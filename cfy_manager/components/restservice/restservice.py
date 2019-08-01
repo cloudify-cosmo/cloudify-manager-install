@@ -50,7 +50,7 @@ from ...logger import (
     get_logger,
 )
 from ...exceptions import BootstrapError, NetworkError, InputError
-from ...utils import common
+from ...utils import certificates, common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
@@ -247,9 +247,11 @@ class RestService(BaseComponent):
             # configured
             logger.info('Manager not in DB, will join the cluster...')
             config[CLUSTER_JOIN] = True
+            certificates.handle_ca_cert(generate_if_missing=False)
             db.insert_manager(configs)
         elif result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
             logger.info('DB not initialized, creating DB...')
+            certificates.handle_ca_cert()
             db.prepare_db()
             db.populate_db(configs)
             db.insert_manager(configs)

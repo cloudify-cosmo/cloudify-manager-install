@@ -189,7 +189,10 @@ jobs:
 
             docker cp license.yaml ${MANAGER1_NAME}:/etc/cloudify/license.yaml
             docker cp ca.crt ${MANAGER1_NAME}:/etc/cloudify/ca.pem
-            docker cp ca.key ${MANAGER1_NAME}:/etc/cloudify/ca_key.pem
+            docker cp manager_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/cert.pem
+            docker cp manager_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/key.pem
+
+
             docker cp external_cert_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_cert.pem
             docker cp external_key_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_key.pem
             docker cp db_client_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_key.pem
@@ -205,9 +208,10 @@ jobs:
               -e "s/ACTIVE_MANAGER_IP/${MANAGER1_IP}/g" \
               .circleci/cluster/manager2_config.yaml > manager2_config.yaml
             docker cp manager2_config.yaml ${MANAGER2_NAME}:/etc/cloudify/config.yaml
-
             docker cp ca.crt ${MANAGER2_NAME}:/etc/cloudify/ca.pem
-            docker cp ca.key ${MANAGER2_NAME}:/etc/cloudify/ca_key.pem
+            docker cp manager_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/cert.pem
+            docker cp manager_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/key.pem
+
             docker cp external_cert_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_cert.pem
             docker cp external_key_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_key.pem
             docker cp db_client_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_key.pem

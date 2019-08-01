@@ -189,8 +189,11 @@ def insert_manager(configs):
             'networks': config['networks'],
         }
     }
-    with open(constants.CA_CERT_PATH) as f:
-        args['manager']['ca_cert'] = f.read()
+    try:
+        with open(constants.CA_CERT_PATH) as f:
+            args['manager']['ca_cert'] = f.read()
+    except IOError:
+        args['manager']['ca_cert'] = None
     _run_script('create_tables_and_add_defaults.py', args, configs)
 
 

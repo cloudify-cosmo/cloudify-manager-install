@@ -6,12 +6,6 @@ manager:
     ssl_enabled: true
     admin_password: admin
 
-rabbitmq:
-  ca_path: /etc/cloudify/ca.pem
-  cluster_members:
-    rabbit1:
-      default: QUEUE_IP
-
 postgresql_client:
   ssl_enabled: true
   postgres_password: postgres
@@ -22,8 +16,8 @@ ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
   postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem
   postgresql_ca_cert_path: /etc/cloudify/ca.pem
-  ca_cert_path: /etc/cloudify/ca.pem
-  ca_key_path: /etc/cloudify/ca_key.pem
+  internal_cert_path: /etc/cloudify/cert.pem
+  internal_key_path: /etc/cloudify/key.pem
   external_cert_path: /etc/cloudify/external_cert.pem
   external_key_path: /etc/cloudify/external_key.pem
   external_ca_cert_path: /etc/cloudify/ca.pem
