@@ -28,3 +28,11 @@ mv $MANAGER1_IP.key external_key_1.pem
 generate_test_cert $MANAGER2_IP
 mv $MANAGER2_IP.crt external_cert_2.pem
 mv $MANAGER2_IP.key external_key_2.pem
+
+generate_test_cert $MANAGER1_IP
+mv $MANAGER1_IP.crt manager_1_cert.pem
+mv $MANAGER1_IP.key manager_1_key.pem
+
+generate_test_cert $MANAGER2_IP
+mv $MANAGER2_IP.crt manager_2_cert.pem
+mv $MANAGER2_IP.key manager_2_key.pem
