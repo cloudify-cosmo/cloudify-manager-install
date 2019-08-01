@@ -35,7 +35,7 @@ from .. import constants as const
 logger = get_logger('Certificates')
 
 
-def handle_ca_cert():
+def handle_ca_cert(generate_if_missing=True):
     """
     The user might provide both the CA key and the CA cert, or just the
     CA cert, or nothing. It is an error to only provide the CA key.
@@ -57,7 +57,7 @@ def handle_ca_cert():
 
     if cert_deployed:
         logger.info('Deployed user provided CA cert')
-    else:
+    elif generate_if_missing:
         logger.info('Generating CA certificate...')
         generate_ca_cert()
         has_ca_key = True
