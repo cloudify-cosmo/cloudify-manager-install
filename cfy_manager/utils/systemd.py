@@ -72,35 +72,45 @@ class SystemD(object):
 
         self.systemctl('daemon-reload')
 
-    def remove(self, service_name, service_file=True):
+    def remove(self, service_name, service_file=True, append_prefix=True):
         """Stop and disable the service, and then delete its data
         """
-        self.stop(service_name, ignore_failure=True)
-        self.disable(service_name, ignore_failure=True)
+        self.stop(service_name,
+                  ignore_failure=True, append_prefix=append_prefix)
+        self.disable(service_name,
+                     ignore_failure=True, append_prefix=append_prefix)
 
         # components that have had their unit file moved to the RPM, will
         # also remove it during RPM uninstall
         # TODO: remove this after all components have been changed to use RPMs
         if service_file:
-            remove(self.get_service_file_path(service_name))
+            remove(self.get_service_file_path(service_name,
+                                              append_prefix=append_prefix))
 
-        remove(self.get_vars_file_path(service_name))
+        remove(self.get_vars_file_path(service_name,
+                                       append_prefix=append_prefix))
 
     @staticmethod
-    def get_vars_file_path(service_name):
+    def get_vars_file_path(service_name, append_prefix=True):
         """Returns the path to a systemd environment variables file
         for a given service_name. (e.g. /etc/sysconfig/cloudify-rabbitmq)
         """
-        sid = 'cloudify-{0}'.format(service_name)
+        if append_prefix:
+            sid = 'cloudify-{0}'.format(service_name)
+        else:
+            sid = service_name
         return '/etc/sysconfig/{0}'.format(sid)
 
     @staticmethod
-    def get_service_file_path(service_name):
+    def get_service_file_path(service_name, append_prefix=True):
         """Returns the path to a systemd service file
         for a given service_name.
         (e.g. /usr/lib/systemd/system/cloudify-rabbitmq.service)
         """
-        sid = 'cloudify-{0}'.format(service_name)
+        if append_prefix:
+            sid = 'cloudify-{0}'.format(service_name)
+        else:
+            sid = service_name
         return "/usr/lib/systemd/system/{0}.service".format(sid)
 
     def enable(self, service_name, retries=0, append_prefix=True):

@@ -467,7 +467,9 @@ def use_supplied_certificates(component_name,
                               key_destination=None,
                               ca_destination=None,
                               owner=CLOUDIFY_USER,
-                              group=CLOUDIFY_GROUP):
+                              group=CLOUDIFY_GROUP,
+                              key_perms='440',
+                              cert_perms='444'):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -495,7 +497,7 @@ def use_supplied_certificates(component_name,
         copy(cert_src, cert_destination)
     if key_destination and key_src != key_destination:
         copy(key_src, key_destination)
-    if ca_src != ca_destination:
+    if ca_destination and ca_src != ca_destination:
         if ca_src:
             copy(ca_src, ca_destination)
         else:
@@ -514,11 +516,11 @@ def use_supplied_certificates(component_name,
                   path])
     # Make key only readable by user and group
     if key_destination:
-        sudo(['chmod', '440', key_destination])
+        sudo(['chmod', key_perms, key_destination])
     # Make certs readable by anyone
     for path in cert_destination, ca_destination:
         if path:
-            sudo(['chmod', '444', path])
+            sudo(['chmod', cert_perms, path])
 
     logger.info('Updating configured certification locations.')
     if cert_destination:

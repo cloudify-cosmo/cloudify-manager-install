@@ -215,6 +215,64 @@ rabbitmq:
       ha-sync-batch-size: 50
 
 postgresql_server:
+  # Password to set for the postgres user
+  # This is relevant for external postgres installations including clusters
+  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
+  postgres_password: ''
+
+  # Postgres server or cluster public certificate, private key, and CA certificate
+  # paths. All will be copied to the appropriate location and have permissions and
+  # ownership set appropriately.
+  cert_path: ''
+  key_path: ''
+  ca_path: ''
+
+  cluster:
+    # List of 3 nodes that will be members of the postgres cluster
+    # If this is populated, the postgres cluster components will be installed.
+    # The nodes must be provided as IPs, e.g.
+    # nodes:
+    #   - 192.0.2.1
+    #   - 192.0.2.2
+    #   - 192.0.2.3
+    nodes: []
+
+    # If nodes are populated then all of the following cluster config entries
+    # must be populated
+
+    etcd:
+      # etcd shared secret for clustering
+      # Note that single quotes in this string will be replaced with double,
+      # and backslashes with forward slashes
+      cluster_token: ''
+      root_password: ''
+      patroni_password: ''
+
+    patroni:
+      # These are credentials for accessing the configuration REST interface for
+      # patroni. They are not needed for regular operation such as querying
+      # status.
+      rest_user: patroni
+      rest_password: ''
+
+    postgres:
+      replicator_password: ''
+
+  # For external single-node postgres installation, set to true.
+  # For clusters this will be treated as true and the actual setting ignored
+  enable_remote_connections: false
+
+  # SSL must be enabled for external databases - provide proper certificates
+  # For clusters this will be treated as true and the actual setting ignored
+  ssl_enabled: false
+  # If true only SSL connections will be permitted, use with caution
+  # For clusters this will be treated as true and the actual setting ignored
+  ssl_only_connections: false
+
+  # If true, clientcert=1 will be added to the hostssl lines in pg_hba.conf
+  # forcing client certificate verification
+  ssl_client_verification: false
+
   sources:
     libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
     ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
@@ -222,22 +280,8 @@ postgresql_server:
     ps_contrib_rpm_url: postgresql95-contrib-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_server_rpm_url: postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_devel_rpm_url: postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
-
-  # For external postgres installation, set to true
-  enable_remote_connections: false
-  # Password to set for the postgres user
-  # This is only relevant for external postgres installations when you enable
-  # remote connections
-  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
-  postgres_password: ''
-
-  # SSL must be enabled for external databases - provide proper certificates
-  ssl_enabled: false
-  # If true, clientcert=1 will be added to the hostssl lines in pg_hba.conf
-  # forcing client certificate verification
-  ssl_client_verification: false
-  # If try only SSL connections will be permitted, use with caution
-  ssl_only_connections: false
+    patroni_rpm_url: patroni-1.5.6-.dev1.el7.x86_64.rpm
+    etcd_rpm_url: etcd-3.3.11-2.el7.centos.x86_64.rpm
 
 postgresql_client:
   sources:
@@ -469,8 +513,6 @@ ssl_inputs:
   external_key_path: ''
   internal_cert_path: ''
   internal_key_path: ''
-  postgresql_server_cert_path: ''
-  postgresql_server_key_path: ''
   postgresql_client_cert_path: ''
   postgresql_client_key_path: ''
   postgresql_ca_cert_path: ''

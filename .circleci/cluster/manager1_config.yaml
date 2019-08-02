@@ -13,6 +13,9 @@ rabbitmq:
     rabbit1:
       default: QUEUE_IP
 
+postgresql_server:
+  ca_path: /etc/cloudify/ca.pem
+
 postgresql_client:
   ssl_enabled: true
   postgres_password: postgres
@@ -22,7 +25,6 @@ postgresql_client:
 ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
   postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem
-  postgresql_ca_cert_path: /etc/cloudify/ca.pem
   ca_cert_path: /etc/cloudify/ca.pem
   internal_cert_path: /etc/cloudify/cert.pem
   internal_key_path: /etc/cloudify/key.pem
