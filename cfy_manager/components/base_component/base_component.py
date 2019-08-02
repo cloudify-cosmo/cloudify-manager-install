@@ -97,7 +97,9 @@ class BaseComponent(object):
                                   key_destination=None,
                                   ca_destination=None,
                                   owner=CLOUDIFY_USER,
-                                  group=CLOUDIFY_GROUP):
+                                  group=CLOUDIFY_GROUP,
+                                  key_perms='440',
+                                  cert_perms='444'):
         return use_supplied_certificates(
             component_name=self.component_name,
             logger=self.logger,
@@ -106,6 +108,8 @@ class BaseComponent(object):
             ca_destination=ca_destination,
             owner=owner,
             group=group,
+            key_perms=key_perms,
+            cert_perms=cert_perms,
         )
 
     @staticmethod

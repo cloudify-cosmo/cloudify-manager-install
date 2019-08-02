@@ -423,8 +423,8 @@ def _validate_cert_inputs():
         else:
             _check_ssl_file(config[SSL_INPUTS]['external_ca_cert_path'],
                             kind='Cert')
-    if config[SSL_INPUTS]['postgresql_ca_cert_path']:
-        _check_ssl_file(config[SSL_INPUTS]['postgresql_ca_cert_path'],
+    if config[POSTGRESQL_SERVER]['ca_path']:
+        _check_ssl_file(config[POSTGRESQL_SERVER]['ca_path'],
                         kind='Cert')
 
 
@@ -438,7 +438,10 @@ def _validate_postgres_inputs():
     and, that a postgres password is set - needed for remote connections
     """
     if _is_installed(DATABASE_SERVICE) and not _is_installed(MANAGER_SERVICE):
-        if config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            # TODO: Validate inputs
+            pass
+        elif config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
             not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] \
             or \
             not config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
@@ -458,38 +461,81 @@ def _validate_postgres_inputs():
 def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
-                'config.yaml->ssl_inputs->{1}'
-    if not (config[SSL_INPUTS]['postgresql_server_cert_path'] and
-            config[SSL_INPUTS]['postgresql_server_key_path'] and
-            config[SSL_INPUTS]['postgresql_ca_cert_path']):
-        if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+                'config.yaml in {1}'
+    if not (config['postgresql_server']['cert_path'] and
+            config['postgresql_server']['key_path'] and
+            config['postgresql_server']['ca_path']):
+        if config[POSTGRESQL_SERVER][SSL_ENABLED] or \
+           config[POSTGRESQL_SERVER]['cluster']['nodes']:
             raise ValidationError(error_msg.format(
                 'a CA certificate, a certificate and a key',
-                'postgresql_server_cert_path, postgresql_server_key_path, '
-                'postgresql_ca_cert_path'))
+                'postgresql_server.cert_path, '
+                'postgresql_server.key_path, '
+                'and postgresql_server.ca_path'))
     elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
               config[SSL_INPUTS]['postgresql_client_key_path'] and
-              config[SSL_INPUTS]['postgresql_ca_cert_path']):
+              config['postgresql_server']['ca_path']):
         if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
             raise ValidationError(error_msg.format(
                 'with client verification, a CA certificate, '
                 'a certificate and a key ',
-                'postgresql_client_cert_path, postgresql_client_key_path, '
-                'postgresql_ca_cert_path'))
-    if not config[SSL_INPUTS]['postgresql_ca_cert_path'] and \
+                'ssl_inputs.postgresql_client_cert_path, '
+                'ssl_inputs.postgresql_client_key_path, '
+                'and postgresql_server.ca_path'))
+    if not config['postgresql_server']['ca_path'] and \
             config[POSTGRESQL_CLIENT][SSL_ENABLED]:
         raise ValidationError(error_msg.format('a CA certificate',
-                                               'postgresql_ca_cert_path'))
+                                               'postgresql_server.ca_path'))
 
 
-def _validate_external_postgres_ssl_enabled():
-    """For an external database, SSL for the DB must be enabled."""
+def _validate_external_postgres():
+    pg_conf = config[POSTGRESQL_SERVER]
+
     if _is_installed(DATABASE_SERVICE) and _is_installed(MANAGER_SERVICE):
-        return
-    if _is_installed(DATABASE_SERVICE) \
-            and not config[POSTGRESQL_SERVER][SSL_ENABLED]:
-        raise ValidationError('When installing an external database, SSL'
-                              ' must be enabled')
+        if pg_conf['cluster']['nodes']:
+            raise ValidationError('Postgres cluster nodes cannot be '
+                                  'installed on manager nodes.')
+        else:
+            # Local DB, no need to conduct external checks
+            return
+
+    if _is_installed(DATABASE_SERVICE):
+        if pg_conf['cluster']['nodes']:
+            problems = []
+
+            if len(pg_conf['cluster']['nodes']) != 3:
+                problems.append('There must be exactly three cluster nodes.')
+
+            etcd_conf = pg_conf['cluster']['etcd']
+            if not all(
+                etcd_conf.get(entry) for entry in
+                ('cluster_token', 'root_password', 'patroni_password')
+            ):
+                problems.append(
+                    'Etcd cluster token and passwords must be set.'
+                )
+
+            patroni_conf = pg_conf['cluster']['patroni']
+            if not all(patroni_conf.get(entry) for entry in
+                       ('rest_user', 'rest_password')):
+                problems.append(
+                    'Patroni rest username and password must be set.'
+                )
+
+            if not pg_conf['cluster']['postgres']['replicator_password']:
+                problems.append('Postgres replicator password must be set.')
+
+            if problems:
+                raise ValidationError(
+                    'Problems detected in postgresql_server.cluster '
+                    'configuration: {problems}'.format(
+                        problems=' '.join(problems),
+                    )
+                )
+        elif not pg_conf[SSL_ENABLED]:
+            raise ValidationError('When installing an external database, SSL'
+                                  ' must be enabled')
+
     if _is_installed(MANAGER_SERVICE) \
             and not config[POSTGRESQL_CLIENT][SSL_ENABLED]:
         raise ValidationError('When using an external database, SSL'
@@ -514,26 +560,26 @@ def validate_config_access(write_required):
 
 
 def _validate_not_reusing_removed_passwords():
-    # Passwords that we remove after use should not accept the 'removed' value
-    # as a password, as that may result in a remove+reinstall of the manager
-    # changing the password to a publically known value.
+    """Confirm we are not reusing removed passwords.
+    Passwords that we remove after use should not accept the 'removed'
+    value as a password, as that may result in a remove+reinstall of the
+    manager changing the password to a publically known value.
+    """
     removed_value = '<removed>'
-    check_keys = {
-        '{}.{}'.format(POSTGRESQL_CLIENT, POSTGRES_PASSWORD): (
-            config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]
-        ),
-        '{}.{}'.format(POSTGRESQL_SERVER, POSTGRES_PASSWORD): (
-            config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
-        ),
-        '{}.external_ca_key_password'.format(SSL_INPUTS): (
-            config[SSL_INPUTS]['external_ca_key_password']
-        ),
-    }
+    check_keys = (
+        (POSTGRESQL_CLIENT, POSTGRES_PASSWORD),
+        (POSTGRESQL_SERVER, POSTGRES_PASSWORD),
+        (SSL_INPUTS, 'external_ca_key_password'),
+    )
 
     problem_locations = []
-    for location, value in check_keys.items():
-        if value == removed_value:
-            problem_locations.append(location)
+    for path in check_keys:
+        target = config
+        # Descend to the appropriate key
+        for key in path:
+            target = target[key]
+        if target == removed_value:
+            problem_locations.append('.'.join(path))
 
     if problem_locations:
         raise ValidationError(
@@ -569,7 +615,7 @@ def validate(components, skip_validations=False, only_install=False):
         _validate_python_version()
         _validate_sufficient_memory()
         _validate_postgres_inputs()
-        _validate_external_postgres_ssl_enabled()
+        _validate_external_postgres()
         _validate_postgres_ssl_certificates_provided()
         _validate_cert_inputs()
 

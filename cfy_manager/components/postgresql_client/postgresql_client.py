@@ -23,10 +23,10 @@ from ..components_constants import (
     POSTGRES_PASSWORD,
     SSL_ENABLED,
     SSL_INPUTS,
-    SSL_CLIENT_VERIFICATION
+    SSL_CLIENT_VERIFICATION,
 )
 from ..base_component import BaseComponent
-from ..service_names import POSTGRESQL_CLIENT
+from ..service_names import POSTGRESQL_CLIENT, POSTGRESQL_SERVER
 from ...constants import (
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
@@ -180,8 +180,8 @@ class PostgresqlClient(BaseComponent):
                 common.chown(
                     CLOUDIFY_USER, CLOUDIFY_GROUP, POSTGRESQL_CLIENT_KEY_PATH)
                 common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
-            if config[SSL_INPUTS]['postgresql_ca_cert_path']:
-                common.copy(config[SSL_INPUTS]['postgresql_ca_cert_path'],
+            if config[POSTGRESQL_SERVER]['ca_path']:
+                common.copy(config[POSTGRESQL_SERVER]['ca_path'],
                             POSTGRESQL_CA_CERT_PATH)
                 common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                              POSTGRESQL_CA_CERT_PATH)

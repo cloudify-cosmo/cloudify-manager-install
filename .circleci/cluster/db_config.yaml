@@ -7,11 +7,9 @@ postgresql_server:
   enable_remote_connections: true
   postgres_password: postgres
   ssl_client_verification: true
-
-ssl_inputs:
-  postgresql_server_cert_path: /etc/cloudify/cert.pem
-  postgresql_server_key_path: /etc/cloudify/key.pem
-  postgresql_ca_cert_path: /etc/cloudify/ca.pem
+  cert_path: /etc/cloudify/cert.pem
+  key_path: /etc/cloudify/key.pem
+  ca_path: /etc/cloudify/ca.pem
 
 services_to_install:
 - database_service
