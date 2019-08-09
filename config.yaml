@@ -515,7 +515,6 @@ ssl_inputs:
   internal_key_path: ''
   postgresql_client_cert_path: ''
   postgresql_client_key_path: ''
-  postgresql_ca_cert_path: ''
   ca_cert_path: ''
   ca_key_path: ''
   ca_key_password: ''
