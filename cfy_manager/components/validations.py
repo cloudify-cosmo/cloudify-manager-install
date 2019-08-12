@@ -50,7 +50,7 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, sudo
+from ..utils.common import run, sudo, manager_using_db_cluster
 
 logger = get_logger(VALIDATIONS)
 
@@ -462,30 +462,34 @@ def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
                 'config.yaml in {1}'
-    if not (config['postgresql_server']['cert_path'] and
-            config['postgresql_server']['key_path'] and
-            config['postgresql_server']['ca_path']):
-        if config[POSTGRESQL_SERVER][SSL_ENABLED] or \
-           config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            raise ValidationError(error_msg.format(
-                'a CA certificate, a certificate and a key',
-                'postgresql_server.cert_path, '
-                'postgresql_server.key_path, '
-                'and postgresql_server.ca_path'))
-    elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
-              config[SSL_INPUTS]['postgresql_client_key_path'] and
-              config['postgresql_server']['ca_path']):
-        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-            raise ValidationError(error_msg.format(
-                'with client verification, a CA certificate, '
-                'a certificate and a key ',
-                'ssl_inputs.postgresql_client_cert_path, '
-                'ssl_inputs.postgresql_client_key_path, '
-                'and postgresql_server.ca_path'))
-    if not config['postgresql_server']['ca_path'] and \
-            config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-        raise ValidationError(error_msg.format('a CA certificate',
-                                               'postgresql_server.ca_path'))
+    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        if not (config['postgresql_server']['cert_path'] and
+                config['postgresql_server']['key_path'] and
+                config['postgresql_server']['ca_path']):
+            if config[POSTGRESQL_SERVER][SSL_ENABLED] or \
+               config[POSTGRESQL_SERVER]['cluster']['nodes']:
+                raise ValidationError(error_msg.format(
+                    'a CA certificate, a certificate and a key',
+                    'postgresql_server.cert_path, '
+                    'postgresql_server.key_path, '
+                    'and postgresql_server.ca_path'))
+        elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
+                  config[SSL_INPUTS]['postgresql_client_key_path'] and
+                  config['postgresql_server']['ca_path']):
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                raise ValidationError(error_msg.format(
+                    'with client verification, a CA certificate, '
+                    'a certificate and a key ',
+                    'ssl_inputs.postgresql_client_cert_path, '
+                    'ssl_inputs.postgresql_client_key_path, '
+                    'and postgresql_server.ca_path'))
+    elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        if not config['postgresql_server']['ca_path']:
+            # Do not allow external postgres without SSL
+            raise ValidationError(
+                error_msg.format('a CA certificate',
+                                 'postgresql_server.ca_path')
+            )
 
 
 def _validate_external_postgres():
@@ -532,14 +536,15 @@ def _validate_external_postgres():
                         problems=' '.join(problems),
                     )
                 )
-        elif not pg_conf[SSL_ENABLED]:
-            raise ValidationError('When installing an external database, SSL'
-                                  ' must be enabled')
 
-    if _is_installed(MANAGER_SERVICE) \
-            and not config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-        raise ValidationError('When using an external database, SSL'
-                              ' must be enabled')
+    if _is_installed(MANAGER_SERVICE) and not _is_installed(DATABASE_SERVICE):
+        if manager_using_db_cluster():
+            # We are accessing a DB cluster
+            if len(pg_conf['cluster']['nodes']) != 3:
+                raise ValidationError(
+                    'There must be exactly three cluster nodes in '
+                    'postgresql_server.cluster.nodes.'
+                )
 
 
 def validate_config_access(write_required):

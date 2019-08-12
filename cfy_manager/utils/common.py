@@ -24,6 +24,13 @@ from ..config import config
 from ..logger import get_logger
 from ..exceptions import ProcessExecutionError
 
+from cfy_manager.components.components_constants import SERVICES_TO_INSTALL
+from cfy_manager.components.service_components import DATABASE_SERVICE
+from cfy_manager.components.service_names import (
+    POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
+)
+
 from . import subprocess_preexec
 
 logger = get_logger('utils')
@@ -143,3 +150,14 @@ def can_lookup_hostname(hostname):
         return True
     except socket.gaierror:
         return False
+
+
+def manager_using_db_cluster():
+    """Is this manager using a clustered DB backend?"""
+    return (
+        DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]
+        and config[POSTGRESQL_CLIENT]['host'] in (
+            '127.0.0.1', 'localhost',
+        )
+        and config[POSTGRESQL_SERVER]['cluster']['nodes']
+    )

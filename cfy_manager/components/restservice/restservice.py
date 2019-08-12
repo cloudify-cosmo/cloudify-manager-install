@@ -13,11 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import csv
 import os
 import json
 import base64
 import random
 import string
+import time
 import urllib2
 import subprocess
 from os.path import join, exists
@@ -35,11 +37,13 @@ from ..components_constants import (
     LOG_DIR_KEY,
     SCRIPTS,
     SECURITY,
+    SERVICES_TO_INSTALL,
     SOURCES,
     VENV,
     CLUSTER_JOIN
 )
 from ..base_component import BaseComponent
+from ..service_components import DATABASE_SERVICE
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
@@ -56,8 +60,9 @@ from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import (
     deploy,
-    write_to_file,
+    remove_files,
     sudo_read,
+    write_to_file,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
@@ -78,14 +83,6 @@ REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
 class RestService(BaseComponent):
     def __init__(self, skip_installation=False):
         super(RestService, self).__init__(skip_installation)
-
-    def _install(self):
-        yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
-        yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
-
-        self._chown_resources_dir()
-
-        set_logrotate(RESTSERVICE)
 
     def _make_paths(self):
         # Used in the service templates
@@ -298,35 +295,87 @@ class RestService(BaseComponent):
                 )
             )
 
-    def _configure(self):
-        try:
-            if config[CLEAN_DB]:
-                self._set_admin_password()
-                self._generate_flask_security_config()
-            else:
-                self._validate_admin_password_and_security_config()
-            self._make_paths()
-            self._configure_restservice()
-            self._enter_sanity_mode()
-            self._configure_db()
-            systemd.configure(RESTSERVICE)
-            systemd.restart(RESTSERVICE)
-            if config[CLUSTER_JOIN]:
-                logger.info('Extra node in cluster, will verify rest-service '
-                            'after clustering configured')
-            else:
-                self._verify_restservice_alive()
-        finally:
-            self._exit_sanity_mode()
+    def _wait_for_haproxy_startup(self):
+        logger.info('Waiting for DB proxy startup to complete...')
+        healthy = False
+        for attempt in range(60):
+            # Get the haproxy status data
+            haproxy_csv = requests.get(
+                'http://localhost:7000/admin?stats;csv;norefresh'
+            ).text
 
-    def _remove_files(self):
-        """
-        Remove all files related to the REST service and uninstall the RPM,
-        """
-        yum_remove('cloudify-rest-service')
-        yum_remove('cloudify-agents')
+            # Example output (# noqas are not part of actual output):
+            # # pxname,svname,qcur,qmax,scur,smax,slim,stot,bin,bout,dreq,dresp,ereq,econ,eresp,wretr,wredis,status,weight,act,bck,chkfail,chkdown,lastchg,downtime,qlimit,pid,iid,sid,throttle,lbtot,tracked,type,rate,rate_lim,rate_max,check_status,check_code,check_duration,hrsp_1xx,hrsp_2xx,hrsp_3xx,hrsp_4xx,hrsp_5xx,hrsp_other,hanafail,req_rate,req_rate_max,req_tot,cli_abrt,srv_abrt,comp_in,comp_out,comp_byp,comp_rsp,lastsess,last_chk,last_agt,qtime,ctime,rtime,ttime,  # noqa
+            # stats,FRONTEND,,,1,1,2000,7,553,83778,0,0,0,,,,,OPEN,,,,,,,,,1,1,0,,,,0,1,0,1,,,,0,6,0,0,0,0,,1,1,7,,,0,0,0,0,,,,,,,,  # noqa
+            # stats,BACKEND,0,0,0,0,200,0,553,83778,0,0,,0,0,0,0,UP,0,0,0,,0,89,0,,1,1,0,,0,,1,0,,0,,,,0,0,0,0,0,0,,,,,0,0,0,0,0,0,0,,,0,0,0,0,  # noqa
+            # postgres,FRONTEND,,,0,0,2000,0,0,0,0,0,0,,,,,OPEN,,,,,,,,,1,2,0,,,,0,0,0,0,,,,,,,,,,,0,0,0,,,0,0,0,0,,,,,,,,  # noqa
+            # postgres,postgresql_192.0.2.46_5432,0,0,0,0,100,0,0,0,,0,,0,0,0,0,DOWN,1,1,0,1,1,89,89,,1,2,1,,0,,2,0,,0,L7STS,503,3,,,,,,,0,,,,0,0,,,,,-1,HTTP status check returned code <503>,,0,0,0,0,  # noqa
+            # postgres,postgresql_192.0.2.47_5432,0,0,0,0,100,0,0,0,,0,,0,0,0,0,UP,1,1,0,0,0,89,0,,1,2,2,,0,,2,0,,0,L7OK,200,3,,,,,,,0,,,,0,0,,,,,-1,HTTP status check returned code <200>,,0,0,0,0,  # noqa
+            # postgres,postgresql_192.0.2.48_5432,0,0,0,0,100,0,0,0,,0,,0,0,0,0,DOWN,1,1,0,1,1,87,87,,1,2,3,,0,,2,0,,0,L7STS,503,2,,,,,,,0,,,,0,0,,,,,-1,HTTP status check returned code <503>,,0,0,0,0,  # noqa
+            # postgres,BACKEND,0,0,0,0,200,0,0,0,0,0,,0,0,0,0,UP,1,1,0,,0,89,0,,1,2,0,,0,,1,0,,0,,,,,,,,,,,,,,0,0,0,0,0,0,-1,,,0,0,0,0,  # noqa
+            haproxy_status = list(csv.DictReader(
+                haproxy_csv.lstrip('# ').splitlines()
+            ))
 
-        common.remove('/opt/manager')
+            servers = [
+                row for row in haproxy_status
+                if row['svname'] not in ('BACKEND', 'FRONTEND')
+            ]
+
+            for server in servers:
+                logger.debug(
+                    'Server: {name}: {status} ({why}) - {detail}'.format(
+                        name=server['svname'],
+                        status=server['status'],
+                        why=server['check_status'],
+                        detail=server['last_chk'],
+                    )
+                )
+
+            if any(server['check_status'] == 'INI' for server in servers):
+                logger.info('DB healthchecks still initialising...')
+                time.sleep(1)
+                continue
+
+            healthy = True
+            # If we got here, haproxy is happy!
+            break
+
+        if not healthy:
+            raise RuntimeError(
+                'DB proxy startup failed.'
+            )
+
+        logger.info('DB proxy startup complete.')
+
+    def _set_haproxy_connect_any(self, enable):
+        """Make SELinux allow/disallow haproxy listening on any ports.
+        This is required so that it can listen on port 5432 for postgres.
+        The alternatives to make it only able to do that have much greater
+        complexity, so this approach was selected.
+        """
+        value = '--on' if enable else '--off'
+        common.sudo(
+            ['semanage', 'boolean', '-m', value, 'haproxy_connect_any']
+        )
+
+    def _configure_db_proxy(self):
+        self._set_haproxy_connect_any(True)
+
+        certificates.use_supplied_certificates(
+            component_name='postgresql_server',
+            logger=self.logger,
+            ca_destination='/etc/haproxy/ca.crt',
+            owner='haproxy',
+            group='haproxy',
+        )
+
+        deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
+               '/etc/haproxy/haproxy.cfg')
+
+        systemd.enable('haproxy', append_prefix=False)
+        systemd.restart('haproxy', append_prefix=False)
+        self._wait_for_haproxy_startup()
 
     @staticmethod
     def _upload_cloudify_license():
@@ -355,12 +404,42 @@ class RestService(BaseComponent):
 
     def install(self):
         logger.notice('Installing Rest Service...')
-        self._install()
+        yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
+        yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
+
+        self._chown_resources_dir()
+
+        set_logrotate(RESTSERVICE)
+
+        if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
+            yum_install(config[RESTSERVICE][SOURCES]['haproxy_rpm_url'])
         logger.notice('Rest Service successfully installed')
 
     def configure(self):
         logger.notice('Configuring Rest Service...')
-        self._configure()
+        if common.manager_using_db_cluster():
+            self._configure_db_proxy()
+
+        try:
+            if config[CLEAN_DB]:
+                self._set_admin_password()
+                self._generate_flask_security_config()
+            else:
+                self._validate_admin_password_and_security_config()
+            self._make_paths()
+            self._configure_restservice()
+            self._enter_sanity_mode()
+            self._configure_db()
+            systemd.configure(RESTSERVICE)
+            systemd.restart(RESTSERVICE)
+            if config[CLUSTER_JOIN]:
+                logger.info('Extra node in cluster, will verify rest-service '
+                            'after clustering configured')
+            else:
+                self._verify_restservice_alive()
+        finally:
+            self._exit_sanity_mode()
+
         self._upload_cloudify_license()
         logger.notice('Rest Service successfully configured')
 
@@ -368,7 +447,19 @@ class RestService(BaseComponent):
         logger.notice('Removing Restservice...')
         systemd.remove(RESTSERVICE, service_file=False)
         remove_logrotate(RESTSERVICE)
-        self._remove_files()
+
+        yum_remove('cloudify-rest-service')
+        yum_remove('cloudify-agents')
+
+        common.remove('/opt/manager')
+
+        if common.manager_using_db_cluster():
+            self._set_haproxy_connect_any(False)
+            common.remove('/etc/haproxy')
+
+        if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
+            yum_remove('haproxy')
+            remove_files(['/etc/haproxy'])
         logger.notice('Rest Service successfully removed')
 
     def start(self):
