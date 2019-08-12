@@ -24,12 +24,14 @@ from ..components_constants import (
     PROVIDER_CONTEXT,
     AGENT,
     SECURITY,
+    SERVICES_TO_INSTALL,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
     HOSTNAME,
-    PREMIUM_EDITION
+    PREMIUM_EDITION,
 )
 
+from ..service_components import DATABASE_SERVICE
 from ..service_names import (
     POSTGRESQL_CLIENT,
     MANAGER,
@@ -82,13 +84,22 @@ def prepare_db():
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
     common.chmod('o+rx', tmp_script_path)
+
+    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        # If we're connecting to the actual local db we don't need to supply a
+        # host
+        host = ""
+    else:
+        host = pg_config['host']
+
     common.sudo(
-        'su - postgres -c "{cmd} {db} {user} {password} {host}"'.format(
+        'sudo -upostgres {cmd} {db} {user} {password} "{host}"'.format(
             cmd=tmp_script_path,
             db=pg_config['db_name'],
             user=pg_config['username'],
             password=pg_config['password'],
-            host=pg_config['host'])
+            host=host,
+        )
     )
     logger.notice('SQL DB successfully configured')
 

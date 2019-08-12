@@ -18,11 +18,7 @@ host=$4
 function run_psql() {
     cmd=$1
     echo "Going to run: ${cmd}"
-    if [ "$host" = "localhost" ]; then
-        psql -c "${cmd}"
-    else
-        psql -h ${host} -c "${cmd}"
-    fi
+    psql -h "${host}" -c "${cmd}"
 }
 
 function clean_database_and_user() {
