@@ -193,14 +193,14 @@ class RestService(BaseComponent):
         self._deploy_security_configuration()
 
     def _verify_restservice(self):
-        """To verify that the REST service is working, GET the blueprints list.
+        """To verify that the REST service is working, check the status
 
-        There's nothing special about the blueprints endpoint, it's simply one
-        that also requires the storage backend to be up, so if it works,
-        there's a good chance everything is configured correctly.
+        Not everything will be green on the status, because not all
+        services are set up yet, but we are just checking that the REST
+        service responds.
         """
         rest_port = config[RESTSERVICE]['port']
-        url = REST_URL.format(port=rest_port, endpoint='blueprints')
+        url = REST_URL.format(port=rest_port, endpoint='status')
         wait_for_port(rest_port)
         req = urllib2.Request(url, headers=get_auth_headers())
 
@@ -420,25 +420,21 @@ class RestService(BaseComponent):
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 
-        try:
-            if config[CLEAN_DB]:
-                self._set_admin_password()
-                self._generate_flask_security_config()
-            else:
-                self._validate_admin_password_and_security_config()
-            self._make_paths()
-            self._configure_restservice()
-            self._enter_sanity_mode()
-            self._configure_db()
-            systemd.configure(RESTSERVICE)
-            systemd.restart(RESTSERVICE)
-            if config[CLUSTER_JOIN]:
-                logger.info('Extra node in cluster, will verify rest-service '
-                            'after clustering configured')
-            else:
-                self._verify_restservice_alive()
-        finally:
-            self._exit_sanity_mode()
+        if config[CLEAN_DB]:
+            self._set_admin_password()
+            self._generate_flask_security_config()
+        else:
+            self._validate_admin_password_and_security_config()
+        self._make_paths()
+        self._configure_restservice()
+        self._configure_db()
+        systemd.configure(RESTSERVICE)
+        systemd.restart(RESTSERVICE)
+        if config[CLUSTER_JOIN]:
+            logger.info('Extra node in cluster, will verify rest-service '
+                        'after clustering configured')
+        else:
+            self._verify_restservice_alive()
 
         self._upload_cloudify_license()
         logger.notice('Rest Service successfully configured')
