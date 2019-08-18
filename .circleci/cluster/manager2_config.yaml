@@ -7,12 +7,19 @@ manager:
     admin_password: admin
 
 postgresql_server:
+  ssl_enabled: true
   ca_path: /etc/cloudify/ca.pem
+
+  postgres_password: 'somesecretvalue123!'
+  cluster:
+    nodes:
+      - DB1_IP
+      - DB2_IP
+      - DB3_IP
 
 postgresql_client:
   ssl_enabled: true
-  postgres_password: postgres
-  host: DB_IP
+  postgres_password: 'somesecretvalue123!'
   ssl_client_verification: true
 
 ssl_inputs:
