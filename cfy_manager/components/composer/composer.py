@@ -27,7 +27,7 @@ from ..components_constants import (
     SSL_CLIENT_VERIFICATION
 )
 from ..base_component import BaseComponent
-from ..service_names import COMPOSER, POSTGRESQL_CLIENT
+from ..service_names import COMPOSER, POSTGRESQL_CLIENT, POSTGRESQL_SERVER
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -138,12 +138,25 @@ class Composer(BaseComponent):
         database_host = host_details[0]
         database_port = host_details[1] if 1 < len(host_details) else '5432'
 
-        composer_config['db']['postgres'] = \
+        composer_config['db']['url'] = \
             'postgres://{0}:{1}@{2}:{3}/composer'.format(
                 config[POSTGRESQL_CLIENT]['username'],
                 config[POSTGRESQL_CLIENT]['password'],
                 database_host,
                 database_port)
+
+        if config[POSTGRESQL_CLIENT]['ssl_enabled']:
+            composer_config['db']['options']['dialectOptions'] = {
+                'ssl': {
+                    'ca': config[POSTGRESQL_SERVER]['ca_path'],
+                    'checkServerIdentity': True,
+                    'rejectUnauthorized': True,
+                }
+            }
+        else:
+            composer_config['db']['options']['dialectOptions'] = {
+                'ssl': False
+            }
 
         pg_ca_cert_path = 'postgresql_ca_cert_path'
         pg_client_cert_path = 'postgresql_client_cert_path'
@@ -166,8 +179,8 @@ class Composer(BaseComponent):
             query = '&'.join('{0}={1}'.format(key, value)
                              for key, value in params.items()
                              if value)
-            composer_config['db']['postgres'] = '{0}?{1}'.format(
-                composer_config['db']['postgres'], query)
+            composer_config['db']['url'] = '{0}?{1}'.format(
+                composer_config['db']['url'], query)
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the composer
