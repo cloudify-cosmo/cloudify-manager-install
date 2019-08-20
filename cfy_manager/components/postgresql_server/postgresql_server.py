@@ -30,6 +30,7 @@ from ..components_constants import (
     SSL_CLIENT_VERIFICATION,
     SSL_ENABLED,
 )
+from cfy_manager.exceptions import FileError
 from ..base_component import BaseComponent
 from ..service_components import MANAGER_SERVICE
 from ..service_names import (
@@ -361,8 +362,13 @@ class PostgresqlServer(BaseComponent):
         # As we don't support installing community as anything other than AIO,
         # not having manager service installed means that this must be premium
         if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
-            yum_install(sources['etcd_rpm_url'])
-            yum_install(sources['patroni_rpm_url'])
+            try:
+                yum_install(sources['etcd_rpm_url'])
+                yum_install(sources['patroni_rpm_url'])
+            except FileError:
+                logger.info(
+                    'DB cluster component RPMs not available, skipping.'
+                )
         logger.notice('PostgreSQL Server successfully installed')
 
     def configure(self):
