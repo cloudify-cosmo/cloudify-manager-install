@@ -18,6 +18,7 @@ WorkingDirectory=/opt/cloudify-stage/backend
 ExecStart=/opt/nodejs/bin/npm run start
 ExecStop=/opt/nodejs/bin/npm run stop
 ExecReload=/opt/nodejs/bin/npm run restart
+UMask=0002
 
 [Install]
 WantedBy=multi-user.target

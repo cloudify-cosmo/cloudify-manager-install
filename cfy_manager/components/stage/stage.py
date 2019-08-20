@@ -115,7 +115,8 @@ class Stage(BaseComponent):
 
     def _create_user_and_set_permissions(self):
         create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
-
+        # stage user is in the cfyuser group for replication
+        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
         # For snapshot restore purposes
         common.sudo(['usermod', '-aG', STAGE_GROUP, CLOUDIFY_USER])
 
@@ -139,7 +140,6 @@ class Stage(BaseComponent):
             allow_as=sudo_as,
         )
         common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
 
     def _deploy_scripts(self):
         config[STAGE][HOME_DIR_KEY] = HOME_DIR
