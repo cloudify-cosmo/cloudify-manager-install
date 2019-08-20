@@ -31,7 +31,7 @@ from ..service_names import COMPOSER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
-from ...constants import BASE_LOG_DIR, CLOUDIFY_USER
+from ...constants import BASE_LOG_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common, files, sudoers
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
@@ -111,8 +111,10 @@ class Composer(BaseComponent):
 
     def _create_user_and_set_permissions(self):
         create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
+        # composer user is in the cfyuser group for replication
+        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, COMPOSER_USER])
         # adding cfyuser to the composer group so that its files are r/w for
-        # replication and snapshots
+        # snapshots
         common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
 
         logger.debug('Fixing permissions...')
