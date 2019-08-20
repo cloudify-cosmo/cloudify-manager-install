@@ -28,7 +28,12 @@ from ..components_constants import (
     PREMIUM_EDITION
 )
 from ..base_component import BaseComponent
-from ..service_names import STAGE, MANAGER, POSTGRESQL_CLIENT
+from ..service_names import (
+    MANAGER,
+    POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
+    STAGE,
+)
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -171,6 +176,19 @@ class Stage(BaseComponent):
                 config[POSTGRESQL_CLIENT]['password'],
                 database_host,
                 database_port)
+
+        if config[POSTGRESQL_CLIENT]['ssl_enabled']:
+            stage_config['db']['options']['dialectOptions'] = {
+                'ssl': {
+                    'ca': config[POSTGRESQL_SERVER]['ca_path'],
+                    'checkServerIdentity': True,
+                    'rejectUnauthorized': True,
+                }
+            }
+        else:
+            stage_config['db']['options']['dialectOptions'] = {
+                'ssl': False
+            }
 
         pg_ca_cert_path = 'postgresql_ca_cert_path'
         pg_client_cert_path = 'postgresql_client_cert_path'
