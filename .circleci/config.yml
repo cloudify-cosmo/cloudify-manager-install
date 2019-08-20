@@ -58,7 +58,7 @@ jobs:
       - run:
           command: |
             pushd /tmp/cloudify-manager-install/rpms
-              /tmp/cloudify-manager-install/packaging/fetch_requirements --edition premium -b ${CIRCLE_BRANCH} >/dev/null
+              /tmp/cloudify-manager-install/packaging/fetch_requirements --edition premium -b ${CIRCLE_BRANCH} >~/fetch_requirements.log
             popd
       - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
       - persist_to_workspace:
