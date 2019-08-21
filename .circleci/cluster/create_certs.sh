@@ -9,9 +9,17 @@ generate_test_cert $QUEUE_IP
 mv $QUEUE_IP.crt queue_cert.pem
 mv $QUEUE_IP.key queue_key.pem
 
-generate_test_cert $DB_IP
-mv $DB_IP.crt db_cert.pem
-mv $DB_IP.key db_key.pem
+generate_test_cert $DB1_IP
+mv $DB1_IP.crt db1_cert.pem
+mv $DB1_IP.key db1_key.pem
+
+generate_test_cert $DB2_IP
+mv $DB2_IP.crt db2_cert.pem
+mv $DB2_IP.key db2_key.pem
+
+generate_test_cert $DB3_IP
+mv $DB3_IP.crt db3_cert.pem
+mv $DB3_IP.key db3_key.pem
 
 generate_test_cert $MANAGER1_IP
 mv $MANAGER1_IP.crt db_client_1_cert.pem

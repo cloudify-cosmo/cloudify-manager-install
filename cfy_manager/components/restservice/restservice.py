@@ -369,7 +369,8 @@ class RestService(BaseComponent):
         """
         value = '--on' if enable else '--off'
         common.sudo(
-            ['semanage', 'boolean', '-m', value, 'haproxy_connect_any']
+            ['semanage', 'boolean', '-m', value, 'haproxy_connect_any'],
+            ignore_failures=True
         )
 
     def _configure_db_proxy(self):
