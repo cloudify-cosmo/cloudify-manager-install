@@ -47,6 +47,7 @@ from ..service_components import DATABASE_SERVICE
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
+    POSTGRESQL_CLIENT
 )
 from ... import constants
 from ...config import config
@@ -189,6 +190,12 @@ class RestService(BaseComponent):
 
     def _configure_restservice(self):
         self._calculate_worker_count()
+        if config[POSTGRESQL_CLIENT]['azure_domain']:
+            # Need to save the proper username for cloudify-rest.conf
+            config[POSTGRESQL_CLIENT]['username'] += \
+                '@' + config[POSTGRESQL_CLIENT]['azure_domain']
+            config[POSTGRESQL_CLIENT]['server_username'] += \
+                '@' + config[POSTGRESQL_CLIENT]['azure_domain']
         self._deploy_restservice_files()
         self._deploy_security_configuration()
 

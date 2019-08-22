@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from os.path import join
+from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -44,63 +45,101 @@ from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
-from ...utils.files import temp_copy, write_to_tempfile
+from ...utils.files import write_to_tempfile
 
 logger = get_logger('DB')
 
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
+STAGE_DB_NAME = 'stage'
+COMPOSER_DB_NAME = 'composer'
 
 
-def _connect_to_db(query_func):
-    def wrapper(*args, **kwargs):
-        pg_config = config[POSTGRESQL_CLIENT]
-        db_connection_string = \
-            'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
-                user=pg_config['username'],
-                password=pg_config['password'],
-                hostname_and_port=pg_config['host'],
-                db=pg_config['db_name']
-            )
-        try:
-            connection = create_engine(db_connection_string,
-                                       poolclass=NullPool).connect()
-
-            return_value = query_func(connection=connection, *args, **kwargs)
-
-            connection.close()
-            return return_value
-        except Exception as err:
-            logger.debug('{0} - Database not initialized yet, proceeding...'
-                         .format(err))
-            return constants.DB_NOT_INITIALIZED
-    return wrapper
+@contextmanager
+def _connect_to_db(cloudify_db=False):
+    pg_config = config[POSTGRESQL_CLIENT]
+    db_to_use = pg_config['db_name'] if cloudify_db \
+        else pg_config['server_db_name']
+    db_connection_string = \
+        'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
+            user=pg_config['server_username'],
+            password=pg_config['server_password'],
+            hostname_and_port=pg_config['host'],
+            db=db_to_use
+        )
+    # DROP and CREATE db queries are not permitted during a transaction
+    # so we AUTOCOMMIT
+    connection = create_engine(db_connection_string,
+                               poolclass=NullPool,
+                               isolation_level="AUTOCOMMIT").connect()
+    yield connection
+    connection.close()
 
 
 def prepare_db():
-    logger.notice('Configuring SQL DB...')
     pg_config = config[POSTGRESQL_CLIENT]
+    cloudify_db_name = pg_config['db_name']
+    server_username = pg_config['server_username'].split('@')[0]
+    username = pg_config['username'].split('@')[0]
+    password = pg_config['password']
 
-    script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
-    tmp_script_path = temp_copy(script_path)
-    common.chmod('o+rx', tmp_script_path)
+    drop_database_query = "DROP DATABASE IF EXISTS {db_name};"
+    drop_user_query = "DROP USER IF EXISTS {username};"
+    create_user_query = "CREATE USER {username} WITH PASSWORD '{password}';"
+    grant_role_query = "GRANT {username} TO {pg_server_username};"
+    create_db_query = "CREATE DATABASE {db_name};"
+    grant_all_privileges_query = \
+        "GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {username};"
+    alter_user_query = "ALTER USER {username} CREATEDB;"
+    alter_db_query = "ALTER DATABASE {db_name} OWNER TO {username};"
+    revoke_role_query = "REVOKE {username} FROM {pg_server_username};"
 
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-        # If we're connecting to the actual local db we don't need to supply a
-        # host
-        host = ""
-    else:
-        host = pg_config['host']
+    db_creation_queries = [
+        # Cleaning server of old DBs
+        drop_database_query.format(db_name=cloudify_db_name),
+        drop_database_query.format(db_name=STAGE_DB_NAME),
+        drop_database_query.format(db_name=COMPOSER_DB_NAME),
+        drop_user_query.format(username=username),
 
-    common.sudo(
-        'sudo -upostgres {cmd} {db} {user} {password} "{host}"'.format(
-            cmd=tmp_script_path,
-            db=pg_config['db_name'],
-            user=pg_config['username'],
-            password=pg_config['password'],
-            host=host,
-        )
-    )
+        # Creating Cloudify DB user
+        create_user_query.format(username=username, password=password),
+        # Adding the login user to be a member of the cloudify role since we
+        # are not always superuser
+        grant_role_query.format(
+            pg_server_username=server_username,
+            username=username),
+
+        # Creating Cloudify DB
+        create_db_query.format(db_name=cloudify_db_name),
+        grant_all_privileges_query.format(db_name=cloudify_db_name,
+                                          username=username),
+        alter_user_query.format(username=username),
+        alter_db_query.format(db_name=cloudify_db_name, username=username),
+
+        # Creating Stage DB
+        create_db_query.format(db_name=STAGE_DB_NAME),
+        grant_all_privileges_query.format(db_name=STAGE_DB_NAME,
+                                          username=username),
+        alter_db_query.format(db_name=STAGE_DB_NAME, username=username),
+
+        # Creating Composer DB
+        create_db_query.format(db_name=COMPOSER_DB_NAME),
+        grant_all_privileges_query.format(db_name=COMPOSER_DB_NAME,
+                                          username=username),
+        alter_db_query.format(db_name=COMPOSER_DB_NAME, username=username),
+
+        # Revoking the login user from the cloudify role
+        revoke_role_query.format(
+            pg_server_username=server_username,
+            username=username)
+    ]
+    logger.notice('Configuring SQL DB...')
+    with _connect_to_db() as connection:
+        for query in db_creation_queries:
+            try:
+                connection.execute(query)
+            except Exception as e:
+                logger.error(e.message)
     logger.notice('SQL DB successfully configured')
 
 
@@ -214,14 +253,14 @@ def create_amqp_resources(configs=None):
     logger.notice('AMQP resources successfully created')
 
 
-@_connect_to_db
-def check_manager_in_table(connection):
+def check_manager_in_table():
     try:
-        result = (
-            connection.execute(
-                "SELECT * FROM managers where hostname='{0}'".format(
-                    config[MANAGER][HOSTNAME])
-            ))
+        with _connect_to_db(cloudify_db=True) as connection:
+            result = (
+                connection.execute(
+                    "SELECT * FROM managers where hostname='{0}'".format(
+                        config[MANAGER][HOSTNAME])
+                ))
         return result.rowcount
     except Exception as err:
         logger.debug('{0} - Database not initialized yet, proceeding...'

@@ -52,7 +52,6 @@ POSTGRES_USER_HOME_DIR = '/var/lib/pgsql'
 HOST = 'host'
 
 CLOUDIFY_PGPASS_PATH = os.path.join(CLOUDIFY_HOME_DIR, '.pgpass')
-POSTGRES_PGPASS_PATH = os.path.join(POSTGRES_USER_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
 
@@ -74,9 +73,11 @@ class PostgresqlClient(BaseComponent):
         yum_install(sources['psycopg2_rpm_url'])
 
         files.copy_notice(POSTGRESQL_CLIENT)
-
-        self._create_postgres_group()
-        self._create_postgres_user()
+        db_server_username = \
+            config[POSTGRESQL_CLIENT].get('db_server_username', None)
+        if db_server_username == 'postgres' or not db_server_username:
+            self._create_postgres_group()
+            self._create_postgres_user()
 
     def _create_postgres_group(self):
         logger.notice('Creating postgres group')
@@ -134,20 +135,6 @@ class PostgresqlClient(BaseComponent):
         port = PG_PORT
 
         if pg_config[POSTGRES_PASSWORD]:
-            postgres_password = pg_config[POSTGRES_PASSWORD]
-
-            # Creating postgres .pgpass file
-            self._create_pgpass(
-                host=host,
-                port=port,
-                db_name='postgres',
-                user='postgres',
-                password=postgres_password,
-                pgpass_path=POSTGRES_PGPASS_PATH,
-                owning_user='postgres',
-                owning_group='postgres'
-            )
-
             logger.info('Removing postgres password from config.yaml')
             config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD] = '<removed>'
 
