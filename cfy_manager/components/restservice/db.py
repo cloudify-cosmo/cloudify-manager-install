@@ -25,14 +25,12 @@ from ..components_constants import (
     PROVIDER_CONTEXT,
     AGENT,
     SECURITY,
-    SERVICES_TO_INSTALL,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
     HOSTNAME,
     PREMIUM_EDITION,
 )
 
-from ..service_components import DATABASE_SERVICE
 from ..service_names import (
     POSTGRESQL_CLIENT,
     MANAGER,
@@ -136,10 +134,7 @@ def prepare_db():
     logger.notice('Configuring SQL DB...')
     with _connect_to_db() as connection:
         for query in db_creation_queries:
-            try:
-                connection.execute(query)
-            except Exception as e:
-                logger.error(e.message)
+            connection.execute(query)
     logger.notice('SQL DB successfully configured')
 
 

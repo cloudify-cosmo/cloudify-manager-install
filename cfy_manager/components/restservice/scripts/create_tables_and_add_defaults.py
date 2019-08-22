@@ -37,17 +37,17 @@ CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 
 def _init_db_tables(db_migrate_dir):
-    print 'Setting up a Flask app'
+    print('Setting up a Flask app')
     # Clean up the DB, in case it's not a clean install
     db.drop_all()
     db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
 
-    print 'Creating tables in the DB'
+    print('Creating tables in the DB')
     upgrade(directory=db_migrate_dir)
 
 
 def _add_default_user_and_tenant(amqp_manager, script_config):
-    print 'Creating bootstrap admin, default tenant and security roles'
+    print('Creating bootstrap admin, default tenant and security roles')
     create_default_user_tenant_and_roles(
         admin_username=script_config['admin_username'],
         admin_password=script_config['admin_password'],
@@ -184,4 +184,4 @@ if __name__ == '__main__':
         _insert_manager(script_config['manager'])
     if script_config.get('provider_context'):
         _add_provider_context(script_config['provider_context'])
-    print 'Finished creating bootstrap admin, default tenant and provider ctx'
+    print('Finished creating bootstrap admin, default tenant and provider ctx')
