@@ -89,52 +89,58 @@ def prepare_db():
     grant_all_privileges_query = \
         "GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {username};"
     alter_user_query = "ALTER USER {username} CREATEDB;"
-    alter_db_query = "ALTER DATABASE {db_name} OWNER TO {username};"
+    alter_db_owner_query = "ALTER DATABASE {db_name} OWNER TO {username};"
     revoke_role_query = "REVOKE {username} FROM {pg_server_username};"
 
-    db_creation_queries = [
-        # Cleaning server of old DBs
-        drop_database_query.format(db_name=cloudify_db_name),
-        drop_database_query.format(db_name=STAGE_DB_NAME),
-        drop_database_query.format(db_name=COMPOSER_DB_NAME),
-        drop_user_query.format(username=username),
-
-        # Creating Cloudify DB user
-        create_user_query.format(username=username, password=password),
-        # Adding the login user to be a member of the cloudify role since we
-        # are not always superuser
-        grant_role_query.format(
-            pg_server_username=server_username,
-            username=username),
-
-        # Creating Cloudify DB
-        create_db_query.format(db_name=cloudify_db_name),
-        grant_all_privileges_query.format(db_name=cloudify_db_name,
-                                          username=username),
-        alter_user_query.format(username=username),
-        alter_db_query.format(db_name=cloudify_db_name, username=username),
-
-        # Creating Stage DB
-        create_db_query.format(db_name=STAGE_DB_NAME),
-        grant_all_privileges_query.format(db_name=STAGE_DB_NAME,
-                                          username=username),
-        alter_db_query.format(db_name=STAGE_DB_NAME, username=username),
-
-        # Creating Composer DB
-        create_db_query.format(db_name=COMPOSER_DB_NAME),
-        grant_all_privileges_query.format(db_name=COMPOSER_DB_NAME,
-                                          username=username),
-        alter_db_query.format(db_name=COMPOSER_DB_NAME, username=username),
-
-        # Revoking the login user from the cloudify role
-        revoke_role_query.format(
-            pg_server_username=server_username,
-            username=username)
-    ]
     logger.notice('Configuring SQL DB...')
     with _connect_to_db() as connection:
-        for query in db_creation_queries:
-            connection.execute(query)
+        logger.debug('Cleaning server of old Cloudify data')
+        connection.execute(
+            drop_database_query.format(db_name=cloudify_db_name))
+        connection.execute(
+            drop_database_query.format(db_name=STAGE_DB_NAME))
+        connection.execute(
+            drop_database_query.format(db_name=COMPOSER_DB_NAME))
+        connection.execute(
+            drop_user_query.format(username=username))
+
+        logger.debug('Creating Cloudify DB user')
+        connection.execute(
+            create_user_query.format(username=username, password=password))
+        # Adding the login user to be a member of the cloudify role since we
+        # are not always superuser
+        logger.debug('Granting {0} membership of {1}'.format(server_username,
+                                                             username))
+        connection.execute(grant_role_query.format(
+            pg_server_username=server_username,
+            username=username))
+
+        logger.debug('Creating Cloudify DB')
+        connection.execute(create_db_query.format(db_name=cloudify_db_name))
+        connection.execute(grant_all_privileges_query.format(
+            db_name=cloudify_db_name, username=username))
+        connection.execute(alter_user_query.format(username=username))
+        connection.execute(alter_db_owner_query.format(
+            db_name=cloudify_db_name, username=username))
+
+        logger.debug('Creating Stage DB')
+        connection.execute(create_db_query.format(db_name=STAGE_DB_NAME))
+        connection.execute(grant_all_privileges_query.format(
+            db_name=STAGE_DB_NAME, username=username))
+        connection.execute(alter_db_owner_query.format(
+            db_name=STAGE_DB_NAME, username=username))
+
+        logger.debug('Creating Composer DB')
+        connection.execute(create_db_query.format(db_name=COMPOSER_DB_NAME))
+        connection.execute(grant_all_privileges_query.format(
+            db_name=COMPOSER_DB_NAME, username=username))
+        connection.execute(alter_db_owner_query.format(
+            db_name=COMPOSER_DB_NAME, username=username))
+
+        logger.debug('Revoking the login user from the cloudify role')
+        connection.execute(revoke_role_query.format(
+            pg_server_username=server_username, username=username))
+
     logger.notice('SQL DB successfully configured')
 
 

@@ -20,7 +20,6 @@ from ...exceptions import ProcessExecutionError
 
 from ..components_constants import (
     SOURCES,
-    POSTGRES_PASSWORD,
     SSL_ENABLED,
     SSL_INPUTS,
     SSL_CLIENT_VERIFICATION,
@@ -133,10 +132,6 @@ class PostgresqlClient(BaseComponent):
         pg_config = config[POSTGRESQL_CLIENT]
         host = pg_config['host']
         port = PG_PORT
-
-        if pg_config[POSTGRES_PASSWORD]:
-            logger.info('Removing postgres password from config.yaml')
-            config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD] = '<removed>'
 
         # Creating Cloudify .pgpass file
         db_name = '*'  # Allowing for the multiple DBs we have

@@ -306,6 +306,14 @@ postgresql_client:
   server_username: postgres
   server_password: ''
 
+  # SSL must be enabled for external databases - provide proper certificates
+  # This setting will be ignored (treated as true) if an external DB or
+  # cluster is used
+  ssl_enabled: false
+  # If true, client SSL certificates will need to be supplied and the Postgres
+  # server will verify each client connection
+  ssl_client_verification: false
+
   # Cloudify DB name, user name and password to be created
   db_name: cloudify_db
   username: cloudify

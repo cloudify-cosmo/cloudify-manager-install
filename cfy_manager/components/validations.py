@@ -33,7 +33,8 @@ from .components_constants import (
     SSL_CLIENT_VERIFICATION,
     SERVICES_TO_INSTALL,
     ENABLE_REMOTE_CONNECTIONS,
-    POSTGRES_PASSWORD
+    POSTGRES_PASSWORD,
+    SERVER_PASSWORD
 )
 from .service_components import (
     DATABASE_SERVICE,
@@ -453,7 +454,7 @@ def _validate_postgres_inputs():
     if _is_installed(MANAGER_SERVICE) and not _is_installed(DATABASE_SERVICE):
         postgres_host = config[POSTGRESQL_CLIENT]['host'].split(':')[0]
         if postgres_host in ('localhost', '127.0.0.1') and \
-                not config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD]:
+                not config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             raise ValidationError('When using an external database, '
                                   'postgres_password must be set')
 
@@ -572,7 +573,7 @@ def _validate_not_reusing_removed_passwords():
     """
     removed_value = '<removed>'
     check_keys = (
-        (POSTGRESQL_CLIENT, POSTGRES_PASSWORD),
+        (POSTGRESQL_CLIENT, SERVER_PASSWORD),
         (POSTGRESQL_SERVER, POSTGRES_PASSWORD),
         (SSL_INPUTS, 'external_ca_key_password'),
     )
