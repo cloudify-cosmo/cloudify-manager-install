@@ -60,7 +60,8 @@ LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
 PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
-PG_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
+PG_BASE_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
+PG_CONF_PATH = '/var/lib/pgsql/9.5/data/cloudify-postgresql.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_CA_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'root.crt')
@@ -141,27 +142,26 @@ class PostgresqlServer(BaseComponent):
             lines = f.readlines()
         return lines
 
-    def _write_new_pgconfig_file(self, lines):
-        """
-        Recreate the pgconfig file based on listening address and SSL
+    def _write_new_pgconfig_file(self):
+        """Create the postgres config override file.
         """
         fd, temp_pgconfig_path = mkstemp()
         os.close(fd)
-        with open(temp_pgconfig_path, 'a') as f:
-            for line in lines:
-                if line.startswith('#listen_addresses = \'localhost\''):
-                    line = line.replace('#listen_addresses = \'localhost\'',
-                                        'listen_addresses = \'{0}\''
-                                        .format(config[MANAGER][PRIVATE_IP]))
-                if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-                    if line.startswith('#ssl = off'):
-                        line = line.replace('#ssl = off', 'ssl = on')
-                    if line.startswith('#ssl_ca_file = \'\''):
-                        line = line.replace('#ssl_ca_file = \'\'',
-                                            'ssl_ca_file = \'{0}\''.format(
-                                                PG_CA_CERT_PATH
-                                            ))
-                f.write(line)
+        with open(temp_pgconfig_path, 'a') as conf_handle:
+            conf_handle.write('# Cloudify postgres config overrides\n')
+            if config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]:
+                conf_handle.write(
+                    "listen_addresses = '{address}'\n".format(
+                        address=config[MANAGER][PRIVATE_IP],
+                    )
+                )
+            if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+                conf_handle.write(
+                    "ssl = on\n"
+                    "ssl_ca_file = '{ca_path}'\n".format(
+                        ca_path=PG_CA_CERT_PATH,
+                    )
+                )
         return temp_pgconfig_path
 
     def _write_new_hba_file(self, lines, enable_remote_connections):
@@ -210,12 +210,16 @@ class PostgresqlServer(BaseComponent):
                                                  enable_remote_connections)
         common.move(temp_hba_path, PG_HBA_CONF)
         common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
-        if enable_remote_connections:
-            lines = self._read_old_file_lines(PG_CONF_PATH)
-            temp_pg_conf_path = self._write_new_pgconfig_file(lines)
-            common.move(temp_pg_conf_path, PG_CONF_PATH)
-            common.chown(POSTGRES_USER, POSTGRES_USER, PG_CONF_PATH)
-            self._configure_ssl()
+
+        common.sudo(
+            'tee -a {path}'.format(path=PG_BASE_CONF_PATH),
+            stdin="include = '{config}'".format(config=PG_CONF_PATH),
+        )
+
+        temp_pg_conf_path = self._write_new_pgconfig_file()
+        common.move(temp_pg_conf_path, PG_CONF_PATH)
+        common.chown(POSTGRES_USER, POSTGRES_USER, PG_CONF_PATH)
+        self._configure_ssl()
 
     def _update_postgres_password(self):
         logger.notice('Updating postgres password...')
