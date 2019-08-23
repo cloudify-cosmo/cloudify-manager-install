@@ -280,7 +280,8 @@ def _validate_dependencies(components):
 
 def _check_ssl_file(filename, kind='Key', password=None):
     """Does the cert/key file exist and is it valid?"""
-    if not os.path.isfile(filename):
+    file_exists_check = sudo(['test', '-f', filename], ignore_failures=True)
+    if file_exists_check.returncode != 0:
         raise ValidationError(
             '{0} file {1} does not exist'
             .format(kind, filename))
