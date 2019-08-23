@@ -458,6 +458,15 @@ def _validate_postgres_inputs():
             raise ValidationError('When using an external database, '
                                   'postgres_password must be set')
 
+    if (
+        config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]
+        and not config[POSTGRESQL_SERVER]['ssl_only_connections']
+    ):
+        raise ValidationError(
+            'When using ssl_client_verification, ssl_only_connections '
+            'must be enabled to ensure client verification takes place.'
+        )
+
 
 def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
