@@ -41,6 +41,7 @@ manager:
     admin_password: ''
 
   # A path to a Cloudify license to be uploaded on the Manager during installation
+  # For clusters this must be supplied, and will only be used, on the first manager
   cloudify_license_path: ''
 
 manager-ip-setter:

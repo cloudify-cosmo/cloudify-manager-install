@@ -449,8 +449,8 @@ class RestService(BaseComponent):
                         'after clustering configured')
         else:
             self._verify_restservice_alive()
+            self._upload_cloudify_license()
 
-        self._upload_cloudify_license()
         logger.notice('Rest Service successfully configured')
 
     def remove(self):
