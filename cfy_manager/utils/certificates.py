@@ -469,7 +469,10 @@ def use_supplied_certificates(component_name,
                               owner=CLOUDIFY_USER,
                               group=CLOUDIFY_GROUP,
                               key_perms='440',
-                              cert_perms='444'):
+                              cert_perms='444',
+                              cert_prefix='cert_',
+                              key_prefix='key_',
+                              ca_prefix='ca_'):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -482,6 +485,9 @@ def use_supplied_certificates(component_name,
     """
     cert_src, key_src, ca_src, key_pass = check_certificates(
         component_name,
+        cert_path=cert_prefix + 'path',
+        key_path=key_prefix + 'path',
+        ca_path=ca_prefix + 'path',
         require_non_ca_certs=False,
     )
 

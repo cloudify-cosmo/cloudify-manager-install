@@ -43,8 +43,12 @@ from ...constants import (
     CLOUDIFY_GROUP,
     CLOUDIFY_USER,
 )
-from ...utils import sudoers
-from ...utils import common, files
+from ...utils import (
+    certificates,
+    common,
+    files,
+    sudoers,
+)
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.users import create_service_user
@@ -62,6 +66,10 @@ NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
 RESOURCES_DIR = join(HOME_DIR, 'resources')
 STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
+
+DB_CLIENT_KEY_PATH = join(CONF_DIR, 'db_client.key')
+DB_CLIENT_CERT_PATH = join(CONF_DIR, 'db_client.crt')
+DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 NODE_EXECUTABLE_PATH = '/usr/bin/node'
 
@@ -177,35 +185,56 @@ class Stage(BaseComponent):
                 database_host,
                 database_port)
 
-        if config[POSTGRESQL_CLIENT]['ssl_enabled']:
-            stage_config['db']['options']['dialectOptions'] = {
+        # For node-postgres
+        dialect_options = stage_config['db']['options']['dialectOptions']
+        # For building URL string
+        params = {}
+
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            certificates.use_supplied_certificates(
+                component_name=POSTGRESQL_SERVER,
+                logger=self.logger,
+                ca_destination=DB_CA_PATH,
+                owner=STAGE_USER,
+                group=STAGE_GROUP,
+            )
+
+            params.update({
+                'sslmode': 'verify-full',
+                'sslrootcert': DB_CA_PATH,
+            })
+
+            dialect_options = {
                 'ssl': {
-                    'ca': config[POSTGRESQL_SERVER]['ca_path'],
+                    'ca': DB_CA_PATH,
                     'checkServerIdentity': True,
                     'rejectUnauthorized': True,
                 }
             }
+
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                certificates.use_supplied_certificates(
+                    component_name=POSTGRESQL_CLIENT,
+                    cert_prefix='postgresql_client_cert',
+                    key_prefix='postgresql_client_key',
+                    logger=self.logger,
+                    cert_destination=DB_CLIENT_CERT_PATH,
+                    key_destination=DB_CLIENT_KEY_PATH,
+                    owner=STAGE_USER,
+                    group=STAGE_GROUP,
+                )
+
+                params.update({
+                    'sslcert': DB_CLIENT_CERT_PATH,
+                    'sslkey': DB_CLIENT_KEY_PATH,
+                })
+
+                dialect_options['ssl']['key'] = DB_CLIENT_KEY_PATH
+                dialect_options['ssl']['cert'] = DB_CLIENT_CERT_PATH
         else:
-            stage_config['db']['options']['dialectOptions'] = {
+            dialect_options = {
                 'ssl': False
             }
-
-        pg_ca_cert_path = 'postgresql_ca_cert_path'
-        pg_client_cert_path = 'postgresql_client_cert_path'
-        pg_client_key_path = 'postgresql_client_key_path'
-        params = {}
-        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            ssl_mode = 'verify-ca'
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                ssl_mode = 'verify-full'
-                params.update({
-                    'sslcert': config['constants'][pg_client_cert_path],
-                    'sslkey': config['constants'][pg_client_key_path],
-                })
-            params.update({
-                'sslmode': ssl_mode,
-                'sslrootcert': config['constants'][pg_ca_cert_path]
-            })
 
         if any(params.values()):
             query = '&'.join('{0}={1}'.format(key, value)
