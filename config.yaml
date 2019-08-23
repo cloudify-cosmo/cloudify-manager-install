@@ -271,8 +271,8 @@ postgresql_server:
   # For clusters this will be treated as true and the actual setting ignored
   ssl_only_connections: false
 
-  # If true, clientcert=1 will be added to the hostssl lines in pg_hba.conf
-  # forcing client certificate verification
+  # If true, client certificate verification will be required for postgres clients
+  # If this is set, ssl_only_connections must be enabled
   ssl_client_verification: false
 
   sources:
@@ -300,8 +300,7 @@ postgresql_client:
   # This setting will be ignored (treated as true) if an external DB or
   # cluster is used
   ssl_enabled: false
-  # If true, client SSL certificates will need to be supplied and the Postgres
-  # server will verify each client connection
+  # If true, client SSL certificates will need to be supplied for database connections
   ssl_client_verification: false
 
   # DB name, user name and password to be created
