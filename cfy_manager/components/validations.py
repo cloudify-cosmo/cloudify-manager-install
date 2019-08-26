@@ -453,6 +453,11 @@ def _validate_postgres_inputs():
     Validating that an external DB will always listen to remote connections
     and, that a postgres password is set - needed for remote connections
     """
+    if _is_installed(DATABASE_SERVICE) and _is_installed(MANAGER_SERVICE) and \
+            config[POSTGRESQL_CLIENT]['host'] not in ('localhost',
+                                                      '127.0.0.1'):
+        raise ValidationError('Cannot install database_service when '
+                              'connecting to an external database')
     if _is_installed(DATABASE_SERVICE) and not _is_installed(MANAGER_SERVICE):
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             # TODO: Validate inputs

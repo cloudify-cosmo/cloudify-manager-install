@@ -40,7 +40,9 @@ function create_admin_user() {
     password=$3
     run_psql "CREATE USER $user WITH PASSWORD '$password';"
     if [ -n "$PGUSER" ]; then
-      run_psql "GRANT $user TO $PGUSER;"
+      IFS='@'
+      read -ra server_user <<< "$PGUSER"
+      run_psql "GRANT $user TO $server_user;"
     fi
     run_psql "GRANT ALL PRIVILEGES ON DATABASE $db TO $user;"
     run_psql "ALTER USER $user CREATEDB;"
@@ -66,7 +68,9 @@ function create_composer_database() {
 function possibly_revoke_role_from_user() {
     user=$1
     if [ -n "$PGUSER" ]; then
-      run_psql "REVOKE $user FROM $PGUSER"
+      IFS='@'
+      read -ra server_user <<< "$PGUSER"
+      run_psql "REVOKE $user FROM $server_user"
     fi
 }
 
