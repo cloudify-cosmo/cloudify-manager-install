@@ -15,28 +15,27 @@
 
 from os.path import join
 
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
-
 from .manager_config import make_manager_config
 from ..components_constants import (
-    SCRIPTS,
-    PROVIDER_CONTEXT,
-    AGENT,
-    SECURITY,
-    SERVICES_TO_INSTALL,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
+    AGENT,
     HOSTNAME,
     PREMIUM_EDITION,
+    PROVIDER_CONTEXT,
+    SCRIPTS,
+    SECURITY,
+    SERVICES_TO_INSTALL,
+    SSL_CLIENT_VERIFICATION,
+    SSL_ENABLED,
 )
 
 from ..service_components import DATABASE_SERVICE
 from ..service_names import (
-    POSTGRESQL_CLIENT,
     MANAGER,
+    POSTGRESQL_CLIENT,
+    RABBITMQ,
     RESTSERVICE,
-    RABBITMQ
 )
 
 from ... import constants
@@ -50,31 +49,6 @@ logger = get_logger('DB')
 
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
-
-
-def _connect_to_db(query_func):
-    def wrapper(*args, **kwargs):
-        pg_config = config[POSTGRESQL_CLIENT]
-        db_connection_string = \
-            'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
-                user=pg_config['username'],
-                password=pg_config['password'],
-                hostname_and_port=pg_config['host'],
-                db=pg_config['db_name']
-            )
-        try:
-            connection = create_engine(db_connection_string,
-                                       poolclass=NullPool).connect()
-
-            return_value = query_func(connection=connection, *args, **kwargs)
-
-            connection.close()
-            return return_value
-        except Exception as err:
-            logger.debug('{0} - Database not initialized yet, proceeding...'
-                         .format(err))
-            return constants.DB_NOT_INITIALIZED
-    return wrapper
 
 
 def prepare_db():
@@ -92,23 +66,45 @@ def prepare_db():
             user=username,
             password=pg_config['password']
         )
+
     if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-        # If we're connecting to the actual local db we don't need to supply a
-        # host
-        host = ""
         # In case the default user is postgres and we're in AIO installation,
         # "peer" authentication is used
         if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
             db_init_script_command = '-u postgres ' + db_init_script_command
+
+    db_init_env = _generate_db_env(database=pg_config['server_db_name'])
+
+    common.sudo(db_init_script_command, env=db_init_env)
+    logger.notice('SQL DB successfully configured')
+
+
+def _generate_db_env(database):
+    pg_config = config[POSTGRESQL_CLIENT]
+
+    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        # If we're connecting to the actual local db we don't need to supply a
+        # host
+        host = ""
     else:
         host = pg_config['host']
-    common.sudo(db_init_script_command, env={
+
+    db_env = {
         'PGHOST': host,
         'PGUSER': pg_config['server_username'],
         'PGPASSWORD': pg_config['server_password'],
-        'PGDATABASE': pg_config['server_db_name']
-    })
-    logger.notice('SQL DB successfully configured')
+        'PGDATABASE': database,
+    }
+
+    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        db_env['PGSSLMODE'] = 'verify-full'
+        db_env['PGSSLROOTCERT'] = '/etc/cloudify/ssl/postgresql_ca.crt'
+
+        # This only makes sense if SSL is used
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            db_env['PGSSLCERT'] = constants.POSTGRESQL_CLIENT_CERT_PATH
+            db_env['PGSSLKEY'] = constants.POSTGRESQL_CLIENT_KEY_PATH
+    return db_env
 
 
 def _get_provider_context():
@@ -221,15 +217,19 @@ def create_amqp_resources(configs=None):
     logger.notice('AMQP resources successfully created')
 
 
-@_connect_to_db
-def check_manager_in_table(connection):
+def check_manager_in_table():
+    check_command = [
+        'psql',
+        '-t',  # Just return the result
+        '-c', "SELECT COUNT(*) FROM managers where hostname='{0}'".format(
+            config[MANAGER][HOSTNAME],
+        ),
+    ]
+    db_env = _generate_db_env(database=config[POSTGRESQL_CLIENT]['db_name'])
+
     try:
-        result = (
-            connection.execute(
-                "SELECT * FROM managers where hostname='{0}'".format(
-                    config[MANAGER][HOSTNAME])
-            ))
-        return result.rowcount
+        result = common.sudo(check_command, env=db_env)
+        return int(result.aggr_stdout.strip())
     except Exception as err:
         logger.debug('{0} - Database not initialized yet, proceeding...'
                      .format(err))
