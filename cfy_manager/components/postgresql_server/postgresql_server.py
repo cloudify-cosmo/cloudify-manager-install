@@ -30,7 +30,7 @@ from ..components_constants import (
     SSL_CLIENT_VERIFICATION,
     SSL_ENABLED,
 )
-from cfy_manager.exceptions import FileError
+from cfy_manager.exceptions import FileError, ProcessExecutionError
 from ..base_component import BaseComponent
 from ..service_components import MANAGER_SERVICE
 from ..service_names import (
@@ -369,7 +369,7 @@ class PostgresqlServer(BaseComponent):
             try:
                 yum_install(sources['etcd_rpm_url'])
                 yum_install(sources['patroni_rpm_url'])
-            except FileError:
+            except (FileError, ProcessExecutionError):
                 logger.info(
                     'DB cluster component RPMs not available, skipping.'
                 )
