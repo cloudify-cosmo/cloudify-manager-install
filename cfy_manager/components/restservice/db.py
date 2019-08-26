@@ -84,7 +84,6 @@ def prepare_db():
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
     common.chmod('o+rx', tmp_script_path)
-    server_username = pg_config['server_username'].split('@')[0]
     username = pg_config['username'].split('@')[0]
     db_init_script_command = \
         '{cmd} {db} {user} {password}'.format(
@@ -105,7 +104,7 @@ def prepare_db():
         host = pg_config['host']
     common.sudo(db_init_script_command, env={
         'PGHOST': host,
-        'PGUSER': server_username,
+        'PGUSER': pg_config['server_username'],
         'PGPASSWORD': pg_config['server_password'],
         'PGDATABASE': pg_config['server_db_name']
     })
