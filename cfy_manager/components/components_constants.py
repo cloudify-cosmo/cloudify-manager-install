@@ -41,6 +41,7 @@ PREMIUM_EDITION = 'premium_edition'
 
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 POSTGRES_PASSWORD = 'postgres_password'
+SERVER_PASSWORD = 'server_password'
 
 SSL_ENABLED = 'ssl_enabled'
 SSL_CLIENT_VERIFICATION = 'ssl_client_verification'

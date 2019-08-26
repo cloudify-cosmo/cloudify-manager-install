@@ -19,7 +19,7 @@ postgresql_server:
 
 postgresql_client:
   ssl_enabled: true
-  postgres_password: 'somesecretvalue123!'
+  server_password: 'somesecretvalue123!'
   ssl_client_verification: true
 
 ssl_inputs:
