@@ -84,23 +84,31 @@ def prepare_db():
     script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
     tmp_script_path = temp_copy(script_path)
     common.chmod('o+rx', tmp_script_path)
-
+    server_username = pg_config['server_username'].split('@')[0]
+    username = pg_config['username'].split('@')[0]
+    db_init_script_command = \
+        '{cmd} {db} {user} {password}'.format(
+            cmd=tmp_script_path,
+            db=pg_config['db_name'],
+            user=username,
+            password=pg_config['password']
+        )
     if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
         # If we're connecting to the actual local db we don't need to supply a
         # host
         host = ""
+        # In case the default user is postgres and we're in AIO installation,
+        # "peer" authentication is used
+        if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
+            db_init_script_command = '-u postgres ' + db_init_script_command
     else:
         host = pg_config['host']
-
-    common.sudo(
-        'sudo -upostgres {cmd} {db} {user} {password} "{host}"'.format(
-            cmd=tmp_script_path,
-            db=pg_config['db_name'],
-            user=pg_config['username'],
-            password=pg_config['password'],
-            host=host,
-        )
-    )
+    common.sudo(db_init_script_command, env={
+        'PGHOST': host,
+        'PGUSER': server_username,
+        'PGPASSWORD': pg_config['server_password'],
+        'PGDATABASE': pg_config['server_db_name']
+    })
     logger.notice('SQL DB successfully configured')
 
 
