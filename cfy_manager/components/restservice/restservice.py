@@ -40,13 +40,15 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     SOURCES,
     VENV,
-    CLUSTER_JOIN
+    CLUSTER_JOIN,
+    SERVER_PASSWORD
 )
 from ..base_component import BaseComponent
 from ..service_components import DATABASE_SERVICE
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
+    POSTGRESQL_CLIENT
 )
 from ... import constants
 from ...config import config
@@ -442,6 +444,9 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         self._configure_db()
+        if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
+            logger.info('Removing postgres password from config.yaml')
+            config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
         systemd.configure(RESTSERVICE)
         systemd.restart(RESTSERVICE)
         if config[CLUSTER_JOIN]:

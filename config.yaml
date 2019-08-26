@@ -291,11 +291,19 @@ postgresql_client:
   # For external postgres installation, update accordingly
   host: localhost
 
-  # Password to use when connecting to the database with the postgres user
+  # Server user name, password, and DB to use when connecting to the database
+  # for Cloudify db initialization and population, postgres user and db are
+  # used by default.
   # This is only relevant for external postgres installations when you enable
   # remote connections
+  # Specifically for Azure DBaaS instances, make sure to put the
+  # username accordingly on `server_username`
+  # e.g:
+  #  server_username: azure_dbaas_username@azure_dbaas_domain
   # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
-  postgres_password: ''
+  server_db_name: postgres
+  server_username: postgres
+  server_password: ''
 
   # SSL must be enabled for external databases - provide proper certificates
   # This setting will be ignored (treated as true) if an external DB or
@@ -304,8 +312,11 @@ postgresql_client:
   # If true, client SSL certificates will need to be supplied for database connections
   ssl_client_verification: false
 
-  # DB name, user name and password to be created
-  # default postgres user is used for database initialization
+  # Cloudify DB name, user name and password to be created
+  # Specifically for Azure DBaaS instances, make sure to put the
+  # username accordingly on `username`
+  # e.g:
+  #  username: cloudify@azure_dbaas_domain
   db_name: cloudify_db
   username: cloudify
   password: cloudify
