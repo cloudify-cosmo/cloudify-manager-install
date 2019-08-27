@@ -61,6 +61,7 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import (
+    check_rpms_are_present,
     deploy,
     remove_files,
     sudo_read,
@@ -428,7 +429,13 @@ class RestService(BaseComponent):
         set_logrotate(RESTSERVICE)
 
         if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
-            yum_install(config[RESTSERVICE][SOURCES]['haproxy_rpm_url'])
+            rpm = config[RESTSERVICE][SOURCES]['haproxy_rpm_url']
+            if check_rpms_are_present([rpm]):
+                yum_install(rpm)
+            else:
+                logger.info(
+                    'DB proxy RPM not available, skipping.'
+                )
         logger.notice('Rest Service successfully installed')
 
     def configure(self):
