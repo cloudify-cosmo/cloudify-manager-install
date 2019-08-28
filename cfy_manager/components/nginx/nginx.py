@@ -116,8 +116,7 @@ class Nginx(BaseComponent):
         )
 
         if cert_deployed and key_deployed:
-            logger.info('Deployed user provided internal cert and key')
-            certificates.create_pkcs12()
+            logger.info('Deployed user provided external cert and key')
         else:
             self._generate_internal_certs()
 
