@@ -53,8 +53,9 @@ from .logger import (
     set_file_handlers_level,
 )
 from .utils import CFY_UMASK
-from .utils.common import run, can_lookup_hostname
+from .utils.common import run, sudo, can_lookup_hostname
 from .utils.files import (
+    replace_in_file,
     remove as _remove,
     remove_temp_files,
     touch
@@ -527,6 +528,21 @@ def _create_component_objects():
         )
 
 
+def _remove_rabbitmq_service_unit():
+    prefix = "/lib/systemd/system"
+    rabbitmq_pattern = "cloudify-rabbitmq.service"
+    mgmt_patterns = ["Wants={0}".format(rabbitmq_pattern),
+                     "After={0}".format(rabbitmq_pattern)]
+    services_and_patterns = \
+        [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
+         ("cloudify-mgmtworker.service", mgmt_patterns)]
+    for service, pattern_list in services_and_patterns:
+        path = os.path.join(prefix, service)
+        for pattern in pattern_list:
+            replace_in_file(pattern, "", path)
+    sudo("systemctl daemon-reload")
+
+
 def install_args(f):
     """Apply all the args that are used by `cfy_manager install`"""
     args = [
@@ -600,6 +616,10 @@ def install(verbose=False,
             # install then we shouldn't configure
             if not component.skip_installation:
                 component.configure()
+
+    if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+            QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
+        _remove_rabbitmq_service_unit()
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
