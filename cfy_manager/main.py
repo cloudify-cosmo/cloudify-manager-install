@@ -363,20 +363,20 @@ def _populate_and_validate_config_values(private_ip, public_ip,
                                          admin_password, clean_db):
     manager_config = config[MANAGER]
 
-    # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _are_components_configured()
+    config[CLEAN_DB] = clean_db
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
     if public_ip:
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
-        if config[CLEAN_DB]:
+        if config[CLEAN_DB] or not _are_components_configured():
             manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
         else:
             raise BootstrapError(
                 'The --admin-password argument can only be used in '
-                'conjunction with the --clean-db flag.'
+                'conjunction with the --clean-db flag or on a first '
+                'install.'
             )
 
 
