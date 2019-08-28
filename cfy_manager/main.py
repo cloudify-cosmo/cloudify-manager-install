@@ -620,7 +620,8 @@ def install(verbose=False,
             if not component.skip_installation:
                 component.configure()
 
-    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
+    if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+            QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
         _remove_rabbitmq_service_unit()
 
     config[UNCONFIGURED_INSTALL] = only_install
