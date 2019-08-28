@@ -54,8 +54,9 @@ from .logger import (
     set_file_handlers_level,
 )
 from .utils import CFY_UMASK
-from .utils.common import run, can_lookup_hostname
+from .utils.common import run, sudo, can_lookup_hostname
 from .utils.files import (
+    replace_in_file,
     remove as _remove,
     remove_temp_files,
     touch
@@ -534,7 +535,7 @@ def _delete_patterns_from_file(path, patterns_list):
             for line in (fileinput.input(path, inplace=1)):
                 sys.stdout.write(line.replace(pattern, ""))
     except OSError:
-        logger.error("The unit file `{0}` could not be found".format(path))
+        logger.error("The file `{0}` could not be found".format(path))
 
 
 def _remove_rabbitmq_service_unit():
@@ -547,9 +548,11 @@ def _remove_rabbitmq_service_unit():
                      "After=cloudify-rabbitmq.service"]
     for service in services:
         path = os.path.join(prefix, service)
-        _delete_patterns_from_file(path, basic_pattern)
+        replace_in_file(basic_pattern, "", path)
     path = os.path.join(prefix, mgmt_service)
-    _delete_patterns_from_file(path, mgmt_patterns)
+    for pattern in mgmt_patterns:
+        replace_in_file(pattern, "", path)
+    sudo("systemctl daemon-reload")
 
 
 def install_args(f):
