@@ -20,15 +20,6 @@ function run_psql() {
     psql -c "${cmd}"
 }
 
-function clean_database_and_user() {
-    db_name=$1
-    user=$2
-    run_psql "DROP DATABASE IF EXISTS $db_name;"
-    run_psql "DROP DATABASE IF EXISTS $stage_db_name;"
-    run_psql "DROP DATABASE IF EXISTS $composer_db_name;"
-    run_psql "DROP USER IF EXISTS $user;"
-}
-
 function create_database() {
     db_name=$1
     run_psql "CREATE DATABASE $db_name"
@@ -74,7 +65,6 @@ function possibly_revoke_role_from_user() {
     fi
 }
 
-clean_database_and_user ${db_name} ${user}
 create_database ${db_name}
 create_admin_user ${db_name} ${user} ${password}
 create_stage_database ${stage_db_name} ${user}

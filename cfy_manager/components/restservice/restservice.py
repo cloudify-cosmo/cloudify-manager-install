@@ -55,7 +55,7 @@ from ...config import config
 from ...logger import (
     get_logger,
 )
-from ...exceptions import BootstrapError, NetworkError, InputError
+from ...exceptions import BootstrapError, NetworkError
 from ...utils import certificates, common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -117,14 +117,15 @@ class RestService(BaseComponent):
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
-        config[FLASK_SECURITY] = {
-            'hash_salt': base64.b64encode(os.urandom(32)),
-            'secret_key': base64.b64encode(os.urandom(32)),
-            'encoding_alphabet': self._random_alphanumeric(),
-            'encoding_block_size': 24,
-            'encoding_min_length': 5,
-            'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
-        }
+        if not config.get(FLASK_SECURITY):
+            config[FLASK_SECURITY] = {
+                'hash_salt': base64.b64encode(os.urandom(32)),
+                'secret_key': base64.b64encode(os.urandom(32)),
+                'encoding_alphabet': self._random_alphanumeric(),
+                'encoding_block_size': 24,
+                'encoding_min_length': 5,
+                'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
+            }
 
     def _pre_create_snapshot_paths(self):
         for resource_dir in (
@@ -191,6 +192,7 @@ class RestService(BaseComponent):
         )
 
     def _configure_restservice(self):
+        self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
@@ -241,30 +243,41 @@ class RestService(BaseComponent):
             'security_config': REST_SECURITY_CONFIG_PATH
         }
         config[CLUSTER_JOIN] = False
-        result = db.check_manager_in_table()
-        if result == constants.MANAGER_NOT_IN_DB:
-            # Adding a manager to the cluster - external RabbitMQ already
-            # configured
-            logger.info('Manager not in DB, will join the cluster...')
-            config[CLUSTER_JOIN] = True
-            certificates.handle_ca_cert(generate_if_missing=False)
-            db.insert_manager(configs)
-        elif result == constants.DB_NOT_INITIALIZED or config[CLEAN_DB]:
-            logger.info('DB not initialized, creating DB...')
-            certificates.handle_ca_cert()
-            db.prepare_db()
-            db.populate_db(configs)
-            db.insert_manager(configs)
-        elif not config[CLEAN_DB]:
-            # Reinstalling the manager with the old DB
-            db.create_amqp_resources(configs)
+
+        if config[CLEAN_DB]:
+            db.drop_db()
+
+        if not db.check_db_exists():
+            self._initialize_db(configs)
+        else:
+            if db.manager_is_in_db():
+                raise BootstrapError(
+                    'Manager found in DB. Old managers must be removed from '
+                    'the cluster using cfy_manager before reinstalling them.'
+                )
+            else:
+                self._join_cluster(configs)
+
+    def _initialize_db(self, configs):
+        logger.info('DB not initialized, creating DB...')
+        self._generate_admin_password_if_empty()
+        certificates.handle_ca_cert()
+        db.prepare_db()
+        db.populate_db(configs)
+        db.insert_manager(configs)
+
+    def _join_cluster(self, configs):
+        logger.info('Manager not in DB, will join the cluster...')
+        config[CLUSTER_JOIN] = True
+        certificates.handle_ca_cert(generate_if_missing=False)
+        db.insert_manager(configs)
 
     def _generate_password(self, length=12):
         chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
         password = ''.join(random.choice(chars) for _ in range(length))
         return password
 
-    def _set_admin_password(self):
+    def _generate_admin_password_if_empty(self):
         if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
             config[MANAGER][SECURITY][ADMIN_PASSWORD] = \
                 self._generate_password()
@@ -277,26 +290,6 @@ class RestService(BaseComponent):
         return ''.join(
             random.SystemRandom().sample(ascii_alphanumeric, result_len)
         )
-
-    def _validate_admin_password_and_security_config(self):
-        if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
-            raise InputError(
-                'Admin password not found in {config_path} and '
-                'was not provided as an argument.\n'
-                'The password was not generated because the `--clean-db` flag '
-                'was not passed cfy_manager install/configure'.format(
-                    config_path=constants.USER_CONFIG_PATH
-                )
-            )
-        if not config[FLASK_SECURITY]:
-            raise InputError(
-                'Flask security configuration not found in {config_path}.\n'
-                'The Flask security configuration was not generated because '
-                'the `--clean-db` flag was not passed cfy_manager '
-                'install/configure'.format(
-                    config_path=constants.USER_CONFIG_PATH
-                )
-            )
 
     def _wait_for_haproxy_startup(self):
         logger.info('Waiting for DB proxy startup to complete...')
@@ -443,11 +436,6 @@ class RestService(BaseComponent):
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 
-        if config[CLEAN_DB]:
-            self._set_admin_password()
-            self._generate_flask_security_config()
-        else:
-            self._validate_admin_password_and_security_config()
         self._make_paths()
         self._configure_restservice()
         self._configure_db()

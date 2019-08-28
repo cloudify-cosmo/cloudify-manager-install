@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
+from os.path import join, exists
 from collections import namedtuple
 
 from ..components_constants import (
@@ -23,7 +23,6 @@ from ..components_constants import (
     PUBLIC_IP,
     SSL_INPUTS,
     CLEAN_DB,
-    UNCONFIGURED_INSTALL,
     HOSTNAME
 )
 from ..base_component import BaseComponent
@@ -120,6 +119,12 @@ class Nginx(BaseComponent):
         else:
             self._generate_internal_certs()
 
+    def _internal_certs_exist(self):
+        return (
+            exists(constants.INTERNAL_CERT_PATH)
+            and exists(constants.INTERNAL_KEY_PATH)
+        )
+
     def _handle_external_cert(self):
         logger.info('Handling external certificate...')
         cert_deployed, key_deployed = certificates.deploy_cert_and_key(
@@ -133,15 +138,25 @@ class Nginx(BaseComponent):
         else:
             self._generate_external_certs()
 
+    def _external_certs_exist(self):
+        return (
+            exists(constants.EXTERNAL_CERT_PATH)
+            and exists(constants.EXTERNAL_KEY_PATH)
+        )
+
     def _handle_certs(self):
-        if config[UNCONFIGURED_INSTALL] or config[CLEAN_DB]:
+        certs_handled = False
+        if config[CLEAN_DB] or not self._internal_certs_exist():
+            certs_handled = True
             self._handle_internal_cert()
+        if config[CLEAN_DB] or not self._external_certs_exist():
+            certs_handled = True
             self._handle_external_cert()
-        else:
+
+        if not certs_handled:
             logger.info('Skipping certificate handling. '
                         'Pass the `--clean-db` flag in order to recreate '
                         'all certificates')
-            return
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')

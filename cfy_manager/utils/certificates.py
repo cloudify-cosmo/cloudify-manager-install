@@ -17,8 +17,6 @@ import os
 import argh
 import json
 import socket
-import tempfile
-from os.path import join
 from contextlib import contextmanager
 
 from .common import sudo, remove, chown, copy
