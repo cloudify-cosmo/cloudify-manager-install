@@ -529,15 +529,6 @@ def _create_component_objects():
         )
 
 
-def _delete_patterns_from_file(path, patterns_list):
-    try:
-        for pattern in patterns_list:
-            for line in (fileinput.input(path, inplace=1)):
-                sys.stdout.write(line.replace(pattern, ""))
-    except OSError:
-        logger.error("The file `{0}` could not be found".format(path))
-
-
 def _remove_rabbitmq_service_unit():
     prefix = "/lib/systemd/system"
     basic_pattern = "cloudify-rabbitmq.service"
