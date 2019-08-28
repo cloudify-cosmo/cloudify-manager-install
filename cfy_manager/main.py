@@ -528,9 +528,18 @@ def _create_component_objects():
         )
 
 
+def _delete_patterns_from_file(path, patterns_list):
+    try:
+        for pattern in patterns_list:
+            for line in (fileinput.input(path, inplace=1)):
+                sys.stdout.write(line.replace(pattern, ""))
+    except OSError:
+        logger.error("The unit file `{0}` could not be found".format(path))
+
+
 def _remove_rabbitmq_service_unit():
     prefix = "/lib/systemd/system"
-    basic_pattern = "cloudify-rabbitmq.service"
+    basic_pattern = ["cloudify-rabbitmq.service"]
     services = ["cloudify-amqp-postgres.service",
                 "cloudify-manager-ip-setter.service"]
     mgmt_service = "cloudify-mgmtworker.service"
@@ -538,12 +547,9 @@ def _remove_rabbitmq_service_unit():
                      "After=cloudify-rabbitmq.service"]
     for service in services:
         path = os.path.join(prefix, service)
-        for line in (fileinput.input(path, inplace=1)):
-            sys.stdout.write(line.replace(basic_pattern, ""))
+        _delete_patterns_from_file(path, basic_pattern)
     path = os.path.join(prefix, mgmt_service)
-    for line in (fileinput.input(path, inplace=1)):
-        for pattern in mgmt_patterns:
-            sys.stdout.write(line.replace(pattern, ""))
+    _delete_patterns_from_file(path, mgmt_patterns)
 
 
 def install_args(f):
