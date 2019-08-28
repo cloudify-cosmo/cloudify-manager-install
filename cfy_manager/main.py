@@ -531,11 +531,11 @@ def _create_component_objects():
 def _remove_rabbitmq_service_unit():
     prefix = "/lib/systemd/system"
     rabbitmq_pattern = "cloudify-rabbitmq.service"
+    mgmt_patterns = ["Wants={0}".format(rabbitmq_pattern),
+                     "After={0}".format(rabbitmq_pattern)]
     services_and_patterns = \
         [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
-         ("cloudify-mgmtworker.service",
-          ["Wants={0}".format(rabbitmq_pattern),
-           "After={0}".format(rabbitmq_pattern)])]
+         ("cloudify-mgmtworker.service", mgmt_patterns)]
     for service, pattern_list in services_and_patterns:
         path = os.path.join(prefix, service)
         for pattern in pattern_list:
