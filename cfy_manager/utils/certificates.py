@@ -308,7 +308,6 @@ def generate_internal_ssl_cert(ips, cn):
         sign_cert=const.CA_CERT_PATH,
         sign_key=const.CA_KEY_PATH
     )
-    create_pkcs12()
     return cert_path, key_path
 
 
@@ -339,39 +338,6 @@ def generate_ca_cert(cert_path=const.CA_CERT_PATH,
             '-keyout', key_path,
             '-config', conf_path,
         ])
-
-
-def create_pkcs12():
-    # PKCS12 file required for riemann due to JVM
-    # While we don't really want the private key in there, not having it
-    # causes failures
-    # The password is also a bit pointless here since it's in the same place
-    # as a readable copy of the certificate and if this path can be written to
-    # maliciously then all is lost already.
-    pkcs12_path = join(
-        const.SSL_CERTS_TARGET_DIR,
-        const.INTERNAL_PKCS12_FILENAME
-    )
-    # extract the cert from the file: in case internal cert is a bundle,
-    # we must only get the first cert from it (the server cert)
-    fh, temp_cert_file = tempfile.mkstemp()
-    sudo([
-        'openssl', 'x509',
-        '-in', const.INTERNAL_CERT_PATH,
-        '-out', temp_cert_file
-    ])
-    sudo([
-        'openssl', 'pkcs12', '-export',
-        '-out', pkcs12_path,
-        '-in', temp_cert_file,
-        '-inkey', const.INTERNAL_KEY_PATH,
-        '-password', 'pass:cloudify',
-    ])
-    remove(temp_cert_file)
-    logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
-                 'and key: {2}'
-                 .format(pkcs12_path, const.INTERNAL_CERT_PATH,
-                         const.INTERNAL_KEY_PATH))
 
 
 def remove_key_encryption(src_key_path,

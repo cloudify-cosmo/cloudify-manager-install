@@ -63,7 +63,6 @@ from .utils.files import (
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
-    create_pkcs12,
     generate_ca_cert,
     _generate_ssl_certificate,
 )
@@ -740,7 +739,6 @@ def main():
         restart,
         create_internal_certs,
         create_external_certs,
-        create_pkcs12,
         sanity_check,
         add_networks,
         update_encryption_key,
