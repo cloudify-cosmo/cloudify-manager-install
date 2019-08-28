@@ -530,18 +530,16 @@ def _create_component_objects():
 
 def _remove_rabbitmq_service_unit():
     prefix = "/lib/systemd/system"
-    basic_pattern = "cloudify-rabbitmq.service"
-    services = ["cloudify-amqp-postgres.service",
-                "cloudify-manager-ip-setter.service"]
-    mgmt_service = "cloudify-mgmtworker.service"
-    mgmt_patterns = ["Wants=cloudify-rabbitmq.service",
-                     "After=cloudify-rabbitmq.service"]
-    for service in services:
+    rabbitmq_pattern = "cloudify-rabbitmq.service"
+    services_and_patterns = \
+        [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
+         ("cloudify-mgmtworker.service",
+          ["Wants={0}".format(rabbitmq_pattern),
+           "After={0}".format(rabbitmq_pattern)])]
+    for service, pattern_list in services_and_patterns:
         path = os.path.join(prefix, service)
-        replace_in_file(basic_pattern, "", path)
-    path = os.path.join(prefix, mgmt_service)
-    for pattern in mgmt_patterns:
-        replace_in_file(pattern, "", path)
+        for pattern in pattern_list:
+            replace_in_file(pattern, "", path)
     sudo("systemctl daemon-reload")
 
 
