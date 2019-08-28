@@ -540,7 +540,7 @@ def _delete_patterns_from_file(path, patterns_list):
 
 def _remove_rabbitmq_service_unit():
     prefix = "/lib/systemd/system"
-    basic_pattern = ["cloudify-rabbitmq.service"]
+    basic_pattern = "cloudify-rabbitmq.service"
     services = ["cloudify-amqp-postgres.service",
                 "cloudify-manager-ip-setter.service"]
     mgmt_service = "cloudify-mgmtworker.service"
