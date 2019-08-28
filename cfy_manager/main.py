@@ -17,6 +17,7 @@
 import logging
 import os
 import sys
+import fileinput
 from time import time
 from traceback import format_exception
 
@@ -536,13 +537,13 @@ def _remove_rabbitmq_service_unit():
     mgmt_patterns = ["Wants=cloudify-rabbitmq.service",
                      "After=cloudify-rabbitmq.service"]
     for service in services:
-        with open(os.path.join(prefix, service), "w+") as unit_file:
-            for line in unit_file:
-                line.replace(basic_pattern, "")
-    with open(os.path.join(prefix, mgmt_service), "w+") as unit_file:
-        for line in unit_file:
-            for pattern in mgmt_patterns:
-                line.replace(pattern, "")
+        path = os.path.join(prefix, service)
+        for line in (fileinput.input(path, inplace=1)):
+            sys.stdout.write(line.replace(basic_pattern, ""))
+    path = os.path.join(prefix, mgmt_service)
+    for line in (fileinput.input(path, inplace=1)):
+        for pattern in mgmt_patterns:
+            sys.stdout.write(line.replace(pattern, ""))
 
 
 def install_args(f):
