@@ -527,6 +527,24 @@ def _create_component_objects():
         )
 
 
+def _remove_rabbitmq_service_unit():
+    prefix = "/lib/systemd/system"
+    services = ["cloudify-amqp-postgres.service",
+                "cloudify-manager-ip-setter.service"]
+    mgmt_service = "cloudify-mgmtworker.service"
+    basic_pattern = "cloudify-rabbitmq.service"
+    mgmt_patterns = ["Wants=cloudify-rabbitmq.service",
+                     "After=cloudify-rabbitmq.service"]
+    for service in services:
+        with open(os.path.join(prefix, service), "w+") as unit_file:
+            for line in unit_file:
+                line.replace(basic_pattern, "")
+    with open(os.path.join(prefix, mgmt_service), "w+") as unit_file:
+        for line in unit_file:
+            for pattern in mgmt_patterns:
+                line.replace(pattern, "")
+
+
 def install_args(f):
     """Apply all the args that are used by `cfy_manager install`"""
     args = [
@@ -600,6 +618,9 @@ def install(verbose=False,
             # install then we shouldn't configure
             if not component.skip_installation:
                 component.configure()
+
+    if QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+        _remove_rabbitmq_service_unit()
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
