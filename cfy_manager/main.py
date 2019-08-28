@@ -529,10 +529,10 @@ def _create_component_objects():
 
 def _remove_rabbitmq_service_unit():
     prefix = "/lib/systemd/system"
+    basic_pattern = "cloudify-rabbitmq.service"
     services = ["cloudify-amqp-postgres.service",
                 "cloudify-manager-ip-setter.service"]
     mgmt_service = "cloudify-mgmtworker.service"
-    basic_pattern = "cloudify-rabbitmq.service"
     mgmt_patterns = ["Wants=cloudify-rabbitmq.service",
                      "After=cloudify-rabbitmq.service"]
     for service in services:
@@ -619,7 +619,7 @@ def install(verbose=False,
             if not component.skip_installation:
                 component.configure()
 
-    if QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
         _remove_rabbitmq_service_unit()
 
     config[UNCONFIGURED_INSTALL] = only_install
