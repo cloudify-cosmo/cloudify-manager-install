@@ -17,7 +17,6 @@
 import logging
 import os
 import sys
-import fileinput
 from time import time
 from traceback import format_exception
 
