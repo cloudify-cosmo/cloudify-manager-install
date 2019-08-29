@@ -261,7 +261,7 @@ class RestService(BaseComponent):
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
         self._generate_admin_password_if_empty()
-        certificates.handle_ca_cert()
+        certificates.handle_ca_cert(self.logger)
         db.prepare_db()
         db.populate_db(configs)
         db.insert_manager(configs)
@@ -269,7 +269,7 @@ class RestService(BaseComponent):
     def _join_cluster(self, configs):
         logger.info('Manager not in DB, will join the cluster...')
         config[CLUSTER_JOIN] = True
-        certificates.handle_ca_cert(generate_if_missing=False)
+        certificates.handle_ca_cert(self.logger, generate_if_missing=False)
         db.insert_manager(configs)
 
     def _generate_password(self, length=12):

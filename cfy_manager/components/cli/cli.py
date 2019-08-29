@@ -25,7 +25,7 @@ from ...config import config
 from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
-from ...utils import common
+from ...utils import common, certificates
 from ...constants import EXTERNAL_CERT_PATH, EXTERNAL_CA_CERT_PATH
 from ...utils.install import yum_install, yum_remove
 
@@ -144,9 +144,12 @@ class Cli(BaseComponent):
         Otherwise, just return the external cert path.
         """
         if exists(config[SSL_INPUTS]['external_ca_cert_path']):
-            common.copy(
-                config[SSL_INPUTS]['external_ca_cert_path'],
-                EXTERNAL_CA_CERT_PATH)
+            certificates.use_supplied_certificates(
+                SSL_INPUTS,
+                self.logger,
+                ca_destination=EXTERNAL_CA_CERT_PATH,
+                ca_prefix='external_ca_cert_',
+            )
             return EXTERNAL_CA_CERT_PATH
         else:
             return EXTERNAL_CERT_PATH

@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, dirname
+from os.path import join
 
 from .cluster.cluster import Cluster
 
@@ -128,16 +128,6 @@ class MgmtWorker(BaseComponent):
         # TODO: See if all of this is necessary
         common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
         common.sudo(['chmod', 'g+rw', '/opt/manager'])
-        common.sudo(
-            ['chgrp', '-R', const.CLOUDIFY_GROUP, const.SSL_CERTS_TARGET_DIR]
-        )
-        common.sudo(
-            ['chgrp',
-             const.CLOUDIFY_GROUP,
-             dirname(const.SSL_CERTS_TARGET_DIR)]
-        )
-        common.sudo(['chmod', '-R', 'g+rw', const.SSL_CERTS_TARGET_DIR])
-        common.sudo(['chmod', 'g+rw', dirname(const.SSL_CERTS_TARGET_DIR)])
 
     def _verify_mgmtworker_alive(self):
         systemd.verify_alive(MGMTWORKER)
