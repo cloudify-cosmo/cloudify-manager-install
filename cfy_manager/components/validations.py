@@ -401,7 +401,8 @@ def _check_internal_ca_cert():
 
 
 def _validate_ssl_and_external_certificates_match():
-    external_certificate = config[SSL_INPUTS].get('external_ca_cert_path')
+    logger.info('Validating ssl_enabled and external certificates')
+    external_certificate = config[SSL_INPUTS]['external_cert_path']
     if external_certificate and not config[MANAGER][SECURITY]['ssl_enabled']:
         raise ValidationError("`ssl_enabled` was set to false and an external"
                               " certificate was given. If you wish to supply "
