@@ -191,15 +191,9 @@ jobs:
               .circleci/cluster/manager1_config.yaml > manager1_config.yaml
             docker cp manager1_config.yaml ${CONTAINER_NAME}_1:/etc/cloudify/config.yaml
 
-            set +x
-            echo ${TEST_LICENSE} | sed -e 's/\\n/\n/g' > license.yaml
-            set -x
-
-            docker cp license.yaml ${MANAGER1_NAME}:/etc/cloudify/license.yaml
             docker cp ca.crt ${MANAGER1_NAME}:/etc/cloudify/ca.pem
             docker cp manager_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/cert.pem
             docker cp manager_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/key.pem
-
 
             docker cp external_cert_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_cert.pem
             docker cp external_key_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_key.pem
