@@ -460,8 +460,11 @@ def _validate_postgres_inputs():
                               'connecting to an external database')
     if _is_installed(DATABASE_SERVICE) and not _is_installed(MANAGER_SERVICE):
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            # TODO: Validate inputs
-            pass
+            if not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
+                raise ValidationError('When using an external database with '
+                                      'a Postgres Cluster, postgres_password '
+                                      'must be set to a non-empty value')
+
         elif config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] and \
             not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] \
             or \
