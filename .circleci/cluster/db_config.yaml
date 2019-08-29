@@ -22,7 +22,7 @@ postgresql_server:
       root_password: 'somesecretvalue123!'
       patroni_password: '1234q'
     patroni:
-      rest_password: '1234'
+      rest_password: '1234q'
     postgres:
       replicator_password: 'somesecretvalue123!'
 
