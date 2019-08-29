@@ -11,7 +11,7 @@ postgresql_server:
   key_path: /etc/cloudify/key.pem
   ca_path: /etc/cloudify/ca.pem
 
-  postgres_password: '1234'
+  postgres_password: '1234q'
   cluster:
     nodes:
       - DB1_IP
@@ -20,7 +20,7 @@ postgresql_server:
     etcd:
       cluster_token: 'somesecretvalue123!'
       root_password: 'somesecretvalue123!'
-      patroni_password: 'somesecretvalue123!'
+      patroni_password: ''
     patroni:
       rest_password: 'somesecretvalue123!'
     postgres:
