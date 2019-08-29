@@ -36,7 +36,11 @@ from ...constants import (
 )
 from ...config import config
 from ...logger import get_logger
-from ...utils import common, files
+from ...utils import (
+    certificates,
+    common,
+    files,
+)
 from ...utils.install import (
     yum_install,
     yum_remove,
@@ -154,21 +158,21 @@ class PostgresqlClient(BaseComponent):
         Copy the relevant SSL certificates to the cloudify SSL directory
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            if config[SSL_INPUTS]['postgresql_client_cert_path'] and \
-                    config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                common.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
-                            POSTGRESQL_CLIENT_CERT_PATH)
-                common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
-                            POSTGRESQL_CLIENT_KEY_PATH)
-                common.chown(
-                    CLOUDIFY_USER, CLOUDIFY_GROUP, POSTGRESQL_CLIENT_KEY_PATH)
-                common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
-            if config[POSTGRESQL_SERVER]['ca_path']:
-                common.copy(config[POSTGRESQL_SERVER]['ca_path'],
-                            POSTGRESQL_CA_CERT_PATH)
-                common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
-                             POSTGRESQL_CA_CERT_PATH)
-                common.chmod('444', POSTGRESQL_CA_CERT_PATH)
+            certificates.use_supplied_certificates(
+                POSTGRESQL_SERVER,
+                self.logger,
+                ca_destination=POSTGRESQL_CA_CERT_PATH,
+            )
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                certificates.use_supplied_certificates(
+                    SSL_INPUTS,
+                    self.logger,
+                    cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
+                    key_destination=POSTGRESQL_CLIENT_KEY_PATH,
+                    cert_prefix='postgresql_client_cert_',
+                    key_prefix='postgresql_client_key_',
+                    key_perms='400',
+                )
 
     def _configure(self):
         self._create_postgres_pgpass_files()

@@ -14,12 +14,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import argparse
 import atexit
 import json
-import argparse
 import logging
-import tempfile
 import os
+import subprocess
+import tempfile
 from datetime import datetime
 
 from flask_migrate import upgrade
@@ -102,6 +103,8 @@ def _insert_manager(config):
     elif stored_cert and not ca_cert:
         with open(CA_CERT_PATH, 'w') as f:
             f.write(stored_cert.value)
+        subprocess.check_call(['sudo', 'chown', 'cfyuser.', CA_CERT_PATH])
+        subprocess.check_call(['sudo', 'chmod', '444', CA_CERT_PATH])
         ca = stored_cert.id
     elif ca_cert and not stored_cert:
         ca = _insert_cert(ca_cert, '{0}-ca'.format(config['hostname']))

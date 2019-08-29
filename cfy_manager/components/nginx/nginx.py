@@ -108,13 +108,16 @@ class Nginx(BaseComponent):
         the internal cert+key.
         """
         logger.info('Handling internal certificate...')
-        cert_deployed, key_deployed = certificates.deploy_cert_and_key(
-            prefix='internal',
-            cert_dst_path=constants.INTERNAL_CERT_PATH,
-            key_dst_path=constants.INTERNAL_KEY_PATH
+        deployed = certificates.use_supplied_certificates(
+            SSL_INPUTS,
+            self.logger,
+            cert_destination=constants.INTERNAL_CERT_PATH,
+            key_destination=constants.INTERNAL_KEY_PATH,
+            cert_prefix='internal_cert_',
+            key_prefix='internal_key_',
         )
 
-        if cert_deployed and key_deployed:
+        if deployed:
             logger.info('Deployed user provided external cert and key')
         else:
             self._generate_internal_certs()
@@ -127,13 +130,16 @@ class Nginx(BaseComponent):
 
     def _handle_external_cert(self):
         logger.info('Handling external certificate...')
-        cert_deployed, key_deployed = certificates.deploy_cert_and_key(
-            prefix='external',
-            cert_dst_path=constants.EXTERNAL_CERT_PATH,
-            key_dst_path=constants.EXTERNAL_KEY_PATH
+        deployed = certificates.use_supplied_certificates(
+            SSL_INPUTS,
+            self.logger,
+            cert_destination=constants.EXTERNAL_CERT_PATH,
+            key_destination=constants.EXTERNAL_KEY_PATH,
+            cert_prefix='external_cert_',
+            key_prefix='external_key_',
         )
 
-        if cert_deployed and key_deployed:
+        if deployed:
             logger.info('Deployed user provided external cert and key')
         else:
             self._generate_external_certs()

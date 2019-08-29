@@ -33,7 +33,7 @@ from .. import constants as const
 logger = get_logger('Certificates')
 
 
-def handle_ca_cert(generate_if_missing=True):
+def handle_ca_cert(logger, generate_if_missing=True):
     """
     The user might provide both the CA key and the CA cert, or just the
     CA cert, or nothing. It is an error to only provide the CA key.
@@ -45,49 +45,42 @@ def handle_ca_cert(generate_if_missing=True):
         # CA certificate already deployed, no action required
         return os.path.exists(const.CA_KEY_PATH)
     logger.info('Handling CA certificate...')
-    cert_deployed, key_deployed = deploy_cert_and_key(
-        prefix='ca',
-        cert_dst_path=const.CA_CERT_PATH,
-        key_dst_path=const.CA_KEY_PATH
-    )
+    if config[SSL_INPUTS]['ca_cert_path']:
+        cert_deployed = use_supplied_certificates(
+            SSL_INPUTS,
+            logger,
+            ca_prefix='ca_cert_',
+            ca_destination=const.CA_CERT_PATH,
+        )
+    else:
+        cert_deployed = False
 
-    has_ca_key = key_deployed
+    has_ca_key = False
 
     if cert_deployed:
         logger.info('Deployed user provided CA cert')
+
+        key_source = config[SSL_INPUTS]['ca_key_path']
+
+        if key_source:
+            key_deployed = use_supplied_certificates(
+                SSL_INPUTS,
+                logger,
+                key_prefix='ca_key_',
+                key_destination=const.CA_KEY_PATH,
+                key_password_prefix='ca_key_',
+            )
+            if key_deployed:
+                has_ca_key = True
+                logger.info('Deployed user provided CA key')
     elif generate_if_missing:
         logger.info('Generating CA certificate...')
+        if not os.path.exists(SSL_CERTS_TARGET_DIR):
+            sudo(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
         generate_ca_cert()
         has_ca_key = True
 
     return has_ca_key
-
-
-def deploy_cert_and_key(prefix, cert_dst_path, key_dst_path):
-    if not os.path.exists(SSL_CERTS_TARGET_DIR):
-        sudo(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
-
-    cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
-    key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
-    key_password = \
-        config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
-
-    cert_deployed = False
-    key_deployed = False
-
-    if os.path.isfile(cert_path):
-        copy(cert_path, cert_dst_path)
-        cert_deployed = True
-    if os.path.isfile(key_path):
-        if key_password:
-            remove_key_encryption(key_path,
-                                  key_dst_path,
-                                  key_password)
-        else:
-            copy(key_path, key_dst_path)
-        key_deployed = True
-
-    return cert_deployed, key_deployed
 
 
 def _format_ips(ips, cn=None):
@@ -436,7 +429,8 @@ def use_supplied_certificates(component_name,
                               cert_perms='444',
                               cert_prefix='cert_',
                               key_prefix='key_',
-                              ca_prefix='ca_'):
+                              ca_prefix='ca_',
+                              key_password_prefix='key_'):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -452,6 +446,7 @@ def use_supplied_certificates(component_name,
         cert_path=cert_prefix + 'path',
         key_path=key_prefix + 'path',
         ca_path=ca_prefix + 'path',
+        key_password=key_password_prefix + 'password',
         require_non_ca_certs=False,
     )
 
