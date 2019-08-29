@@ -20,9 +20,9 @@ postgresql_server:
     etcd:
       cluster_token: 'somesecretvalue123!'
       root_password: 'somesecretvalue123!'
-      patroni_password: ''
+      patroni_password: '1234'
     patroni:
-      rest_password: 'somesecretvalue123!'
+      rest_password: '1234'
     postgres:
       replicator_password: 'somesecretvalue123!'
 
