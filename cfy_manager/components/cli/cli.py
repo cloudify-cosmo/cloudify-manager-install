@@ -148,7 +148,8 @@ class Cli(BaseComponent):
                 SSL_INPUTS,
                 self.logger,
                 ca_destination=EXTERNAL_CA_CERT_PATH,
-                ca_prefix='external_ca_cert_',
+                prefix='external_ca_',
+                just_ca_cert=True,
             )
             return EXTERNAL_CA_CERT_PATH
         else:

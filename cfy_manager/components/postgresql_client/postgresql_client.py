@@ -169,8 +169,7 @@ class PostgresqlClient(BaseComponent):
                     self.logger,
                     cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
                     key_destination=POSTGRESQL_CLIENT_KEY_PATH,
-                    cert_prefix='postgresql_client_cert_',
-                    key_prefix='postgresql_client_key_',
+                    prefix='postgresql_client_',
                     key_perms='400',
                 )
 

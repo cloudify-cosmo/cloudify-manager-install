@@ -331,8 +331,12 @@ def _check_cert_key_match(cert_filename, key_filename, password=None):
     key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
     cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
     if cert_modulus != key_modulus:
-        raise ValidationError('Key {0} does not match the cert {3}'
-                              .format(key_filename, cert_filename))
+        raise ValidationError(
+            'Key {key_path} does not match the cert {cert_path}'.format(
+                key_path=key_filename,
+                cert_path=cert_filename,
+            )
+        )
 
 
 def check_certificates(component,
