@@ -210,10 +210,16 @@ class PostgresqlServer(BaseComponent):
         common.move(temp_hba_path, PG_HBA_CONF)
         common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
-        common.sudo(
-            'tee -a {path}'.format(path=PG_BASE_CONF_PATH),
-            stdin="include = '{config}'".format(config=PG_CONF_PATH),
-        )
+        include_line = "include = '{config}'".format(config=PG_CONF_PATH)
+        already_included = common.sudo(
+            ['grep', include_line, PG_BASE_CONF_PATH],
+            ignore_failures=True,
+        ).returncode == 0
+        if not already_included:
+            common.sudo(
+                ['tee', '-a', PG_BASE_CONF_PATH],
+                stdin="{include}\n".format(include=include_line),
+            )
 
         temp_pg_conf_path = self._write_new_pgconfig_file()
         common.move(temp_pg_conf_path, PG_CONF_PATH)

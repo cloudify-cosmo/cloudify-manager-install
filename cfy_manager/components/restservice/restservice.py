@@ -251,10 +251,10 @@ class RestService(BaseComponent):
             self._initialize_db(configs)
         else:
             if db.manager_is_in_db():
-                raise BootstrapError(
-                    'Manager found in DB. Old managers must be removed from '
-                    'the cluster using cfy_manager before reinstalling them.'
+                logger.warn(
+                    'Manager found in DB. Skipping DB configuration.'
                 )
+                db.create_amqp_resources(configs)
             else:
                 self._join_cluster(configs)
 
