@@ -113,8 +113,7 @@ class Nginx(BaseComponent):
             self.logger,
             cert_destination=constants.INTERNAL_CERT_PATH,
             key_destination=constants.INTERNAL_KEY_PATH,
-            cert_prefix='internal_cert_',
-            key_prefix='internal_key_',
+            prefix='internal_',
         )
 
         if deployed:
@@ -135,8 +134,7 @@ class Nginx(BaseComponent):
             self.logger,
             cert_destination=constants.EXTERNAL_CERT_PATH,
             key_destination=constants.EXTERNAL_KEY_PATH,
-            cert_prefix='external_cert_',
-            key_prefix='external_key_',
+            prefix='external_',
         )
 
         if deployed:

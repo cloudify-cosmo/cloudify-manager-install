@@ -45,34 +45,38 @@ def handle_ca_cert(logger, generate_if_missing=True):
         # CA certificate already deployed, no action required
         return os.path.exists(const.CA_KEY_PATH)
     logger.info('Handling CA certificate...')
-    if config[SSL_INPUTS]['ca_cert_path']:
-        cert_deployed = use_supplied_certificates(
-            SSL_INPUTS,
-            logger,
-            ca_prefix='ca_cert_',
-            ca_destination=const.CA_CERT_PATH,
-        )
-    else:
-        cert_deployed = False
+
+    ca_cert_source = config[SSL_INPUTS]['ca_cert_path']
+    ca_key_source = config[SSL_INPUTS]['ca_key_path']
+    ca_deploy_kwargs = {'prefix': 'ca_'}
 
     has_ca_key = False
 
-    if cert_deployed:
+    if ca_key_source:
+        ca_deploy_kwargs['key_destination'] = const.CA_KEY_PATH
+
+    if ca_cert_source:
+        if ca_key_source:
+            kwarg = 'cert_destination'
+        else:
+            kwarg = 'ca_destination'
+            ca_deploy_kwargs['just_ca_cert'] = True
+        ca_deploy_kwargs[kwarg] = const.CA_CERT_PATH
+
+        # We only try to install these if the cert was supplied
+        use_supplied_certificates(
+            SSL_INPUTS,
+            logger,
+            **ca_deploy_kwargs
+        )
+
         logger.info('Deployed user provided CA cert')
-
-        key_source = config[SSL_INPUTS]['ca_key_path']
-
-        if key_source:
-            key_deployed = use_supplied_certificates(
-                SSL_INPUTS,
-                logger,
-                key_prefix='ca_key_',
-                key_destination=const.CA_KEY_PATH,
-                key_password_prefix='ca_key_',
-            )
-            if key_deployed:
-                has_ca_key = True
-                logger.info('Deployed user provided CA key')
+        if ca_key_source:
+            # If a ca key source was provided and we deployed the cert, we
+            # must also have deployed the key or use_supplied_certs would've
+            # failed
+            has_ca_key = True
+            logger.info('Deployed user provided CA key')
     elif generate_if_missing:
         logger.info('Generating CA certificate...')
         if not os.path.exists(SSL_CERTS_TARGET_DIR):
@@ -427,10 +431,8 @@ def use_supplied_certificates(component_name,
                               group=CLOUDIFY_GROUP,
                               key_perms='440',
                               cert_perms='444',
-                              cert_prefix='cert_',
-                              key_prefix='key_',
-                              ca_prefix='ca_',
-                              key_password_prefix='key_'):
+                              prefix='',
+                              just_ca_cert=False):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -441,12 +443,22 @@ def use_supplied_certificates(component_name,
 
     Returns True if supplied certificates were used.
     """
+    key_path = prefix + 'key_path'
+    cert_path = prefix + 'cert_path'
+    ca_path = prefix + 'ca_path'
+    key_password = prefix + 'key_password'
+
+    if just_ca_cert:
+        ca_path = cert_path
+        key_path = None
+        cert_path = None
+
     cert_src, key_src, ca_src, key_pass = check_certificates(
         component_name,
-        cert_path=cert_prefix + 'path',
-        key_path=key_prefix + 'path',
-        ca_path=ca_prefix + 'path',
-        key_password=key_password_prefix + 'password',
+        cert_path=cert_path,
+        key_path=key_path,
+        ca_path=ca_path,
+        key_password=key_password,
         require_non_ca_certs=False,
     )
 
@@ -489,13 +501,13 @@ def use_supplied_certificates(component_name,
 
     logger.info('Updating configured certification locations.')
     if cert_destination:
-        config[component_name]['cert_path'] = cert_destination
+        config[component_name][cert_path] = cert_destination
     if key_destination:
-        config[component_name]['key_path'] = key_destination
+        config[component_name][key_path] = key_destination
     if ca_destination:
-        config[component_name]['ca_path'] = ca_destination
+        config[component_name][ca_path] = ca_destination
         # If there was a password, we've now removed it
-        config[component_name]['key_password'] = ''
+        config[component_name][key_password] = ''
 
     # Supplied certificates were used
     return True

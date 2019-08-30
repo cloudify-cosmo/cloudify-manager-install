@@ -177,8 +177,7 @@ class Composer(BaseComponent):
             if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
                 certificates.use_supplied_certificates(
                     component_name=SSL_INPUTS,
-                    cert_prefix='postgresql_client_cert_',
-                    key_prefix='postgresql_client_key_',
+                    prefix='postgresql_client_',
                     logger=self.logger,
                     cert_destination=DB_CLIENT_CERT_PATH,
                     key_destination=DB_CLIENT_KEY_PATH,
