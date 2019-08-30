@@ -133,18 +133,14 @@ class MgmtWorker(BaseComponent):
         systemd.verify_alive(MGMTWORKER)
 
     def _configure(self):
-        try:
-            self._enter_sanity_mode()
-            if self.is_premium_installed():
-                cluster = Cluster(skip_installation=False)
-                cluster.configure()
-            self._deploy_mgmtworker_config()
-            systemd.configure(MGMTWORKER)
-            self._prepare_snapshot_permissions()
-            systemd.restart(MGMTWORKER)
-            self._verify_mgmtworker_alive()
-        finally:
-            self._exit_sanity_mode()
+        if self.is_premium_installed():
+            cluster = Cluster(skip_installation=False)
+            cluster.configure()
+        self._deploy_mgmtworker_config()
+        systemd.configure(MGMTWORKER)
+        self._prepare_snapshot_permissions()
+        systemd.restart(MGMTWORKER)
+        self._verify_mgmtworker_alive()
 
     def install(self):
         logger.notice('Installing Management Worker...')
