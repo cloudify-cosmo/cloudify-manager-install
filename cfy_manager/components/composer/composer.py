@@ -45,8 +45,10 @@ CONF_DIR = join(HOME_DIR, 'backend', 'conf')
 NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 
-DB_CLIENT_KEY_PATH = join(CONF_DIR, 'db_client.key')
-DB_CLIENT_CERT_PATH = join(CONF_DIR, 'db_client.crt')
+# These are all the same key as the other db keys, but postgres is very strict
+# about permissions (no group or other permissions allowed)
+DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/composer_db.key'
+DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/composer_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 COMPOSER_USER = '{0}_user'.format(COMPOSER)
@@ -161,6 +163,7 @@ class Composer(BaseComponent):
                 ca_destination=DB_CA_PATH,
                 owner=COMPOSER_USER,
                 group=COMPOSER_GROUP,
+                update_config=False,
             )
 
             params.update({
@@ -183,6 +186,8 @@ class Composer(BaseComponent):
                     key_destination=DB_CLIENT_KEY_PATH,
                     owner=COMPOSER_USER,
                     group=COMPOSER_GROUP,
+                    key_perms='400',
+                    update_config=False,
                 )
 
                 params.update({

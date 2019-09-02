@@ -54,21 +54,33 @@ class MgmtWorker(BaseComponent):
     def __init__(self, skip_installation):
         super(MgmtWorker, self).__init__(skip_installation)
 
-    def _install(self):
-        source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
-        yum_install(source_url)
+    def _add_snapshot_restore_sudo_commands(self):
+        sudoers.allow_user_to_sudo_command(
+            '/opt/nodejs/bin/npm',
+            description='Allow web UI DB migrations during snapshot restore.',
+            allow_as='stage_user',
+        )
 
-        premium_source_url = config[PREMIUM][SOURCES]['premium_source_url']
-        try:
-            get_local_source_path(premium_source_url)
-        except FileError:
-            logger.info(
-                'premium package not found in manager resources package')
-            logger.notice('premium will not be installed.')
-        else:
-            logger.notice('Installing Cloudify Premium...')
-            cluster = Cluster(skip_installation=False)
-            cluster.install()
+        scripts = [
+            (
+                'allow-snapshot-ssl-client-cert-access',
+                'Allow cfyuser to access ssl client certs for snapshots.'
+            ),
+            (
+                'deny-snapshot-ssl-client-cert-access',
+                'Restore ownership on ssl client certs after snapshot.'
+            ),
+        ]
+        for script, description in scripts:
+            sudoers.deploy_sudo_command_script(
+                script,
+                description,
+                component=MGMTWORKER,
+                allow_as='root',
+            )
+            script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script)
+            common.chown('root', 'root', script_path)
+            common.chmod('0500', script_path)
 
     @staticmethod
     def is_premium_installed():
@@ -125,7 +137,8 @@ class MgmtWorker(BaseComponent):
                      hooks_config_dst)
 
     def _prepare_snapshot_permissions(self):
-        # TODO: See if all of this is necessary
+        self._add_snapshot_restore_sudo_commands()
+        # TODO: See if these are necessary
         common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
         common.sudo(['chmod', 'g+rw', '/opt/manager'])
 
@@ -144,7 +157,20 @@ class MgmtWorker(BaseComponent):
 
     def install(self):
         logger.notice('Installing Management Worker...')
-        self._install()
+        source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
+        yum_install(source_url)
+
+        premium_source_url = config[PREMIUM][SOURCES]['premium_source_url']
+        try:
+            get_local_source_path(premium_source_url)
+        except FileError:
+            logger.info(
+                'premium package not found in manager resources package')
+            logger.notice('premium will not be installed.')
+        else:
+            logger.notice('Installing Cloudify Premium...')
+            cluster = Cluster(skip_installation=False)
+            cluster.install()
         logger.notice('Management Worker successfully installed')
 
     def configure(self):
