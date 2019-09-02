@@ -18,3 +18,7 @@ CLUSTER_SERVICE_QUEUE="{{ mgmtworker.cluster_service_queue }}"
 {% for key, value in mgmtworker.extra_env.iteritems() %}
 {{ key }}="{{ value }}"
 {% endfor %}
+{% if postgresql_client.ssl_client_verification -%}
+PGSSLCERT={{ ssl_inputs.postgresql_client_cert_path }}
+PGSSLKEY={{ ssl_inputs.postgresql_client_key_path }}
+{% endif %}

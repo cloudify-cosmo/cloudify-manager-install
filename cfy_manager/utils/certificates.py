@@ -432,7 +432,8 @@ def use_supplied_certificates(component_name,
                               key_perms='440',
                               cert_perms='444',
                               prefix='',
-                              just_ca_cert=False):
+                              just_ca_cert=False,
+                              update_config=True):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -499,15 +500,16 @@ def use_supplied_certificates(component_name,
         if path:
             sudo(['chmod', cert_perms, path])
 
-    logger.info('Updating configured certification locations.')
-    if cert_destination:
-        config[component_name][cert_path] = cert_destination
-    if key_destination:
-        config[component_name][key_path] = key_destination
-    if ca_destination:
-        config[component_name][ca_path] = ca_destination
-        # If there was a password, we've now removed it
-        config[component_name][key_password] = ''
+    if update_config:
+        logger.info('Updating configured certification locations.')
+        if cert_destination:
+            config[component_name][cert_path] = cert_destination
+        if key_destination:
+            config[component_name][key_path] = key_destination
+        if ca_destination:
+            config[component_name][ca_path] = ca_destination
+            # If there was a password, we've now removed it
+            config[component_name][key_password] = ''
 
     # Supplied certificates were used
     return True

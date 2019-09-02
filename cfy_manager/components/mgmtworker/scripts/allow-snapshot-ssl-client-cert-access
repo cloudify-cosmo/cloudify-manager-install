@@ -1,0 +1,10 @@
+#! /usr/bin/env bash
+set -e
+for component in stage composer; do
+  for cert_type in crt key; do
+    file_path=/etc/cloudify/ssl/${component}_db.${cert_type}
+    if [[ -f ${file_path} ]]; then
+        chown cfyuser. ${file_path}
+    fi
+  done
+done
