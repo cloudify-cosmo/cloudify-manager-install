@@ -27,7 +27,7 @@ from ..components_constants import (
     SSL_CLIENT_VERIFICATION
 )
 from ..base_component import BaseComponent
-from ..service_names import COMPOSER, POSTGRESQL_CLIENT, POSTGRESQL_SERVER
+from ..service_names import COMPOSER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -146,8 +146,8 @@ class Composer(BaseComponent):
 
         composer_config['db']['url'] = \
             'postgres://{0}:{1}@{2}:{3}/composer'.format(
-                config[POSTGRESQL_CLIENT]['username'],
-                config[POSTGRESQL_CLIENT]['password'],
+                config[POSTGRESQL_CLIENT]['cloudify_username'],
+                config[POSTGRESQL_CLIENT]['cloudify_password'],
                 database_host,
                 database_port)
 
@@ -158,7 +158,7 @@ class Composer(BaseComponent):
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             certificates.use_supplied_certificates(
-                component_name=POSTGRESQL_SERVER,
+                component_name=POSTGRESQL_CLIENT,
                 logger=self.logger,
                 ca_destination=DB_CA_PATH,
                 owner=COMPOSER_USER,

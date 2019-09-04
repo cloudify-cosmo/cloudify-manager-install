@@ -373,7 +373,7 @@ class RestService(BaseComponent):
         self._set_haproxy_connect_any(True)
 
         certificates.use_supplied_certificates(
-            component_name='postgresql_server',
+            component_name='postgresql_client',
             logger=self.logger,
             ca_destination='/etc/haproxy/ca.crt',
             owner='haproxy',

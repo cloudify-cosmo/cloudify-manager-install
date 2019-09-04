@@ -8,7 +8,6 @@ manager:
 
 postgresql_server:
   ssl_enabled: true
-  ca_path: /etc/cloudify/ca.pem
 
   postgres_password: 'somesecretvalue123!'
   cluster:
@@ -21,6 +20,7 @@ postgresql_client:
   ssl_enabled: true
   server_password: 'somesecretvalue123!'
   ssl_client_verification: true
+  ca_path: /etc/cloudify/ca.pem
 
 ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
