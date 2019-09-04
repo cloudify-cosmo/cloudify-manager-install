@@ -149,7 +149,6 @@ class Cluster(BaseComponent):
         try:
             self._remove_manager_from_cluster()
             logger.notice('Manager removed successfully')
-            # sudo('systemctl stop cloudify-syncthing.service')
         except Exception:
             logger.error('Manager was not able to be removed, make sure the'
                          'hostname in config.yaml is correct')
