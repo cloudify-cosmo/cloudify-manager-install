@@ -59,7 +59,6 @@ setup(
         'PyYAML==3.10',
         'requests==2.7.0',
         'retrying==1.3.3',
-        'SQLAlchemy==1.2.14',
         'psycopg2==2.7.4'
     ]
 )
