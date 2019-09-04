@@ -26,6 +26,7 @@ from distutils.version import LooseVersion
 from .components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
+    SECURITY,
     VALIDATIONS,
     SKIP_VALIDATIONS,
     SSL_INPUTS,
@@ -399,6 +400,16 @@ def _check_internal_ca_cert():
                               'provided.')
 
 
+def _validate_ssl_and_external_certificates_match():
+    logger.info('Validating ssl_enabled and external certificate...')
+    external_certificate = config[SSL_INPUTS]['external_cert_path']
+    if external_certificate and not config[MANAGER][SECURITY]['ssl_enabled']:
+        raise ValidationError("`ssl_enabled` was set to false and an external"
+                              " certificate was given. If you wish to supply "
+                              "an external certificate, please set "
+                              "`ssl_enabled` to true.")
+
+
 def _validate_cert_inputs():
     _check_internal_ca_cert()
     for ssl_input in (
@@ -660,6 +671,7 @@ def validate(components, skip_validations=False, only_install=False):
         _validate_postgres_inputs()
         _validate_external_postgres()
         _validate_postgres_ssl_certificates_provided()
+        _validate_ssl_and_external_certificates_match()
         _validate_cert_inputs()
 
     _validate_supported_distros()
