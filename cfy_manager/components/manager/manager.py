@@ -63,6 +63,11 @@ class Manager(BaseComponent):
             home=constants.CLOUDIFY_HOME_DIR
         )
         common.mkdir(constants.CLOUDIFY_HOME_DIR)
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            constants.CLOUDIFY_HOME_DIR,
+        )
 
     def _create_sudoers_file_and_disable_sudo_requiretty(self):
         common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
