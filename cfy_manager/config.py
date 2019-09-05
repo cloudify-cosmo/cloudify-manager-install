@@ -13,15 +13,17 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import collections
+from getpass import getuser
+from os.path import isfile
+import subprocess
+
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from ruamel.yaml.comments import CommentedMap
 
-import collections
-from os.path import isfile
-
 from .exceptions import InputError, BootstrapError
-from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH
+from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH, CLOUDIFY_USER
 from cfy_manager.components.components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     SERVICES_TO_INSTALL,
@@ -84,15 +86,25 @@ class Config(CommentedMap):
 
     def dump_config(self):
         self.pop(self.TEMP_PATHS, None)
-        with open(USER_CONFIG_PATH, 'w') as f:
-            try:
+        if MANAGER_SERVICE in self[SERVICES_TO_INSTALL]:
+            # Not using common module because of circular import issues
+            subprocess.check_call([
+                'sudo', 'chown', getuser() + '.', USER_CONFIG_PATH
+            ])
+        try:
+            with open(USER_CONFIG_PATH, 'w') as f:
                 yaml.dump(CommentedMap(self, relax=True), f)
-            except YAMLError as e:
-                raise BootstrapError(
-                    'Could not dump config to {0}:\n{1}'.format(
-                        USER_CONFIG_PATH, e
-                    )
+        except (IOError, YAMLError) as e:
+            raise BootstrapError(
+                'Could not dump config to {0}:\n{1}'.format(
+                    USER_CONFIG_PATH, e
                 )
+            )
+        finally:
+            if MANAGER_SERVICE in self[SERVICES_TO_INSTALL]:
+                subprocess.check_call([
+                    'sudo', 'chown', CLOUDIFY_USER + '.', USER_CONFIG_PATH
+                ])
 
     def _apply_forced_settings(self):
         if (
