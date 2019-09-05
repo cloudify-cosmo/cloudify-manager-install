@@ -14,8 +14,10 @@
 #  * limitations under the License.
 
 import collections
+from contextlib import contextmanager
 from getpass import getuser
 from os.path import isfile
+import pwd
 import subprocess
 
 from ruamel.yaml import YAML
@@ -73,38 +75,55 @@ class Config(CommentedMap):
             user_config = self._load_yaml(USER_CONFIG_PATH)
             dict_merge(self, user_config)
 
-    @staticmethod
-    def _load_yaml(path_to_yaml):
-        with open(path_to_yaml, 'r') as f:
-            try:
-                return yaml.load(f)
-            except YAMLError as e:
-                raise InputError(
-                    'User config file {0} is not a properly formatted '
-                    'YAML file:\n{1}'.format(path_to_yaml, e)
-                )
-
-    def dump_config(self):
-        self.pop(self.TEMP_PATHS, None)
-        if MANAGER_SERVICE in self[SERVICES_TO_INSTALL]:
+    @contextmanager
+    def _own_config_file(self):
+        try:
             # Not using common module because of circular import issues
             subprocess.check_call([
                 'sudo', 'chown', getuser() + '.', USER_CONFIG_PATH
             ])
+            yield
+        finally:
+            try:
+                pwd.getpwnam('cfyuser')
+                subprocess.check_call([
+                    'sudo', 'chown', CLOUDIFY_USER + '.', USER_CONFIG_PATH
+                ])
+            except KeyError:
+                # No cfyuser, don't pass ownnership back (this is probably a
+                # DB or rabbit node)
+                pass
+
+    def _load_yaml(self, path_to_yaml):
         try:
-            with open(USER_CONFIG_PATH, 'w') as f:
-                yaml.dump(CommentedMap(self, relax=True), f)
+            with self._own_config_file():
+                with open(path_to_yaml, 'r') as f:
+                    return yaml.load(f)
+        except YAMLError as e:
+            raise InputError(
+                'User config file {0} is not a properly formatted '
+                'YAML file:\n{1}'.format(path_to_yaml, e)
+            )
+        except IOError as e:
+            raise RuntimeError(
+                'Cannot access {config}: {error}'.format(
+                    config=path_to_yaml,
+                    error=e
+                )
+            )
+
+    def dump_config(self):
+        self.pop(self.TEMP_PATHS, None)
+        try:
+            with self._own_config_file():
+                with open(USER_CONFIG_PATH, 'w') as f:
+                    yaml.dump(CommentedMap(self, relax=True), f)
         except (IOError, YAMLError) as e:
             raise BootstrapError(
                 'Could not dump config to {0}:\n{1}'.format(
                     USER_CONFIG_PATH, e
                 )
             )
-        finally:
-            if MANAGER_SERVICE in self[SERVICES_TO_INSTALL]:
-                subprocess.check_call([
-                    'sudo', 'chown', CLOUDIFY_USER + '.', USER_CONFIG_PATH
-                ])
 
     def _apply_forced_settings(self):
         if (

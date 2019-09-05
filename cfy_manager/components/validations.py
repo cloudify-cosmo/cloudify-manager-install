@@ -596,23 +596,6 @@ def _validate_external_postgres():
                 )
 
 
-def validate_config_access(write_required):
-    # It's OK if file doesn't exist.
-    if os.path.isfile(USER_CONFIG_PATH):
-        if write_required:
-            mode = os.R_OK | os.W_OK
-            label = 'readable and writable'
-        else:
-            mode = os.R_OK
-            label = 'readable'
-
-        if not os.access(USER_CONFIG_PATH, mode):
-            raise ValidationError(
-                'Configuration file ({0}) must be {1} '
-                'by the current user'.format(
-                    USER_CONFIG_PATH, label))
-
-
 def _validate_not_reusing_removed_passwords():
     """Confirm we are not reusing removed passwords.
     Passwords that we remove after use should not accept the 'removed'

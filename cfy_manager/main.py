@@ -30,7 +30,7 @@ from .components import (
     SERVICE_INSTALLATION_ORDER
 )
 from .components.globals import set_globals
-from .components.validations import validate, validate_config_access
+from .components.validations import validate
 from .components.service_names import MANAGER
 from .components.components_constants import (
     SERVICES_TO_INSTALL,
@@ -382,7 +382,6 @@ def _populate_and_validate_config_values(private_ip, public_ip,
 
 def _prepare_component_management(component, verbose):
     setup_console_logger(verbose=verbose)
-    validate_config_access(write_required=False)
     config.load_config()
     return ComponentsFactory.create_component(component,
                                               skip_installation=True)
@@ -397,7 +396,6 @@ def _prepare_execution(verbose=False,
                        only_install=False):
     setup_console_logger(verbose)
 
-    validate_config_access(config_write_required)
     config.load_config()
     if not only_install:
         # We don't validate anything that applies to the install anyway,
