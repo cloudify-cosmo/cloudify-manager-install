@@ -31,7 +31,6 @@ from ..base_component import BaseComponent
 from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER,
     STAGE,
 )
 from ...config import config
@@ -182,8 +181,8 @@ class Stage(BaseComponent):
 
         stage_config['db']['url'] = \
             'postgres://{0}:{1}@{2}:{3}/stage'.format(
-                config[POSTGRESQL_CLIENT]['username'],
-                config[POSTGRESQL_CLIENT]['password'],
+                config[POSTGRESQL_CLIENT]['cloudify_username'],
+                config[POSTGRESQL_CLIENT]['cloudify_password'],
                 database_host,
                 database_port)
 
@@ -194,7 +193,7 @@ class Stage(BaseComponent):
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             certificates.use_supplied_certificates(
-                component_name=POSTGRESQL_SERVER,
+                component_name=POSTGRESQL_CLIENT,
                 logger=self.logger,
                 ca_destination=DB_CA_PATH,
                 owner=STAGE_USER,

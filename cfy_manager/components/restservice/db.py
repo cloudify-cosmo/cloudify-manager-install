@@ -74,13 +74,13 @@ def _execute_db_script(script_name):
     script_path = join(SCRIPTS_PATH, script_name)
     tmp_script_path = temp_copy(script_path)
     common.chmod('o+rx', tmp_script_path)
-    username = pg_config['username'].split('@')[0]
+    username = pg_config['cloudify_username'].split('@')[0]
     db_script_command = \
         '{cmd} {db} {user} {password}'.format(
             cmd=tmp_script_path,
-            db=pg_config['db_name'],
+            db=pg_config['cloudify_db_name'],
             user=username,
-            password=pg_config['password']
+            password=pg_config['cloudify_password']
         )
 
     if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
@@ -278,7 +278,7 @@ def check_db_exists():
     dbs = [db.split('|')[0].strip() for db in result]
     dbs = [db for db in dbs if db]  # Clear out empty strings
 
-    return config[POSTGRESQL_CLIENT]['db_name'] in dbs
+    return config[POSTGRESQL_CLIENT]['cloudify_db_name'] in dbs
 
 
 def manager_is_in_db():
@@ -288,7 +288,7 @@ def manager_is_in_db():
                 config[MANAGER][HOSTNAME],
             ),
         ],
-        db_key='db_name',
+        db_key='cloudify_db_name',
     )
 
     # As the name is unique, there can only ever be at most 1 entry with the
