@@ -25,7 +25,8 @@ from ..components_constants import (
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
-    PREMIUM_EDITION
+    PREMIUM_EDITION,
+    CLUSTER_JOIN
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -159,6 +160,9 @@ class Stage(BaseComponent):
         )
 
     def _run_db_migrate(self):
+        if config[CLUSTER_JOIN]:
+            logger.debug('Joining cluster - not creating the stage db')
+            return
         backend_dir = join(HOME_DIR, 'backend')
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
         common.run(
