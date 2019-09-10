@@ -20,13 +20,6 @@ from ...exceptions import ValidationError
 from ...utils.install import RpmPackageHandler
 from ...utils.certificates import use_supplied_certificates
 from ...logger import get_logger
-from ...utils.common import chown
-from ...utils.files import (
-    write_to_file,
-    remove_files
-)
-
-SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 
 
 class BaseComponent(object):
@@ -97,7 +90,9 @@ class BaseComponent(object):
                                   key_destination=None,
                                   ca_destination=None,
                                   owner=CLOUDIFY_USER,
-                                  group=CLOUDIFY_GROUP):
+                                  group=CLOUDIFY_GROUP,
+                                  key_perms='440',
+                                  cert_perms='444'):
         return use_supplied_certificates(
             component_name=self.component_name,
             logger=self.logger,
@@ -106,13 +101,6 @@ class BaseComponent(object):
             ca_destination=ca_destination,
             owner=owner,
             group=group,
+            key_perms=key_perms,
+            cert_perms=cert_perms,
         )
-
-    @staticmethod
-    def _enter_sanity_mode():
-        write_to_file('sanity: True', SANITY_MODE_FILE_PATH)
-        chown(CLOUDIFY_USER, CLOUDIFY_GROUP, SANITY_MODE_FILE_PATH)
-
-    @staticmethod
-    def _exit_sanity_mode():
-        remove_files([SANITY_MODE_FILE_PATH])

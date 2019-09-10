@@ -41,6 +41,7 @@ manager:
     admin_password: ''
 
   # A path to a Cloudify license to be uploaded on the Manager during installation
+  # For clusters this must be supplied, and will only be used, on the first manager
   cloudify_license_path: ''
 
 manager-ip-setter:
@@ -214,7 +215,76 @@ rabbitmq:
       ha-sync-mode: automatic
       ha-sync-batch-size: 50
 
+# IMPORTANT: some of the configuration keys in the "postgresql_server" and
+# "postgresql_client" sections are only applicable for certain use cases.
+#
+# If "services_to_install" includes "database_service", you should consider
+# the "postgresql_server" section in its entirety.
+#
+# If "services_to_install" includes "manager_service":
+#
+#   * You should consider the "postgresql_client" section in its entirety.
+#   * If "database_service" is NOT included, then you must populate
+#     the "ca_path" field under "postgresql_server".
 postgresql_server:
+  # Password to set for the PostgreSQL user.
+  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
+  postgres_password: ''
+
+  # PostgreSQL server's or cluster's public certificate, private key, and CA certificate
+  # paths. All will be copied to the appropriate location and have permissions and
+  # ownership set appropriately.
+  cert_path: ''
+  key_path: ''
+  ca_path: ''
+
+  cluster:
+    # List of 3 nodes that will be members of the PostgreSQL cluster.
+    # If this is populated during a DB service install, the PostgreSQL cluster.
+    # components will be installed.
+    # The nodes must be provided as IPs, e.g.
+    # nodes:
+    #   - 192.0.2.1
+    #   - 192.0.2.2
+    #   - 192.0.2.3
+    nodes: []
+
+    # During DB cluster installation, all of the following cluster config
+    # entries must be populated
+    etcd:
+      # etcd shared secret for clustering
+      # Note that single quotes in this string will be replaced with double,
+      # and backslashes with forward slashes
+      cluster_token: ''
+      root_password: ''
+      patroni_password: ''
+
+    patroni:
+      # These are credentials for accessing the configuration REST interface for
+      # patroni. They are not needed for regular operation such as querying
+      # status.
+      rest_user: patroni
+      rest_password: ''
+
+    postgres:
+      replicator_password: ''
+
+  # For external single-node postgres installation, set to true.
+  # For clusters this will be treated as true and the actual setting ignored
+  enable_remote_connections: false
+
+  # SSL must be enabled for external databases - provide proper certificates.
+  # For external DB servers and clusters this will be treated as true and
+  # the actual setting ignored.
+  ssl_enabled: false
+  # If true only SSL connections will be permitted, use with caution
+  # For clusters this will be treated as true and the actual setting ignored
+  ssl_only_connections: false
+
+  # If true, client certificate verification will be required for postgres clients
+  # If this is set, ssl_only_connections must be enabled
+  ssl_client_verification: false
+
   sources:
     libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
     ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
@@ -222,48 +292,57 @@ postgresql_server:
     ps_contrib_rpm_url: postgresql95-contrib-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_server_rpm_url: postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_devel_rpm_url: postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
-
-  # For external postgres installation, set to true
-  enable_remote_connections: false
-  # Password to set for the postgres user
-  # This is only relevant for external postgres installations when you enable
-  # remote connections
-  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
-  postgres_password: ''
-
-  # SSL must be enabled for external databases - provide proper certificates
-  ssl_enabled: false
-  # If true, clientcert=1 will be added to the hostssl lines in pg_hba.conf
-  # forcing client certificate verification
-  ssl_client_verification: false
-  # If try only SSL connections will be permitted, use with caution
-  ssl_only_connections: false
+    patroni_rpm_url: patroni-1.5.6-.dev1.el7.x86_64.rpm
+    etcd_rpm_url: etcd-3.3.11-2.el7.centos.x86_64.rpm
 
 postgresql_client:
+  # Host name (or IP address) of the database. If you are using an external
+  # database, update accordingly; otherwise use the default.
+  host: localhost
+  # The CA certificate to connect to the server with.
+  # If left blank postgresql_server.ca_path will be used
+  ca_path: ''
+
+  # Server user name (server_username), password (server_password),
+  # and DB (server_db_name) to use when connecting to the database for Cloudify
+  # DB initialization and population.
+  # This is only relevant for external postgres installations when you enable
+  # remote connections
+  #
+  # If your database is an Azure DBaaS instance, you must set 'server_username'
+  # so it includes the database name as a suffix. For example, if your database
+  # name is "mycfydb" and your username is "test", then "server_username"
+  # should be "mycfydb@test".
+  #
+  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES.
+  server_db_name: postgres
+  server_username: postgres
+  server_password: ''
+
+  # Cloudify DB name, user name and password to be created.
+  #
+  # The following apply if your database is an Azure DBaaS instance:
+  #
+  #   * "cloudify_username" must include the database name as a suffix. For example,
+  #     if your desired database username is "cloudify" and your database name is
+  #     "test", then "cloudify_username" should be "cloudify@test".
+  #
+  #  * "cloudify_username" must be different from "server_username".
+  cloudify_db_name: cloudify_db
+  cloudify_username: cloudify
+  cloudify_password: cloudify
+
+  # SSL must be enabled for external databases - provide proper certificates
+  # This setting will be ignored (treated as true) if an external DB or
+  # cluster is used
+  ssl_enabled: false
+  # If true, client SSL certificates will need to be supplied for database connections
+  ssl_client_verification: false
+
   sources:
     ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
     ps_rpm_url: postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
     psycopg2_rpm_url: python-psycopg2-2.5.1-3.el7.x86_64.rpm
-
-  # Default values for the Postgres DB name, host, username and password
-  # For external postgres installation, update accordingly
-  host: localhost
-  # DB name, user name and password to be created
-  # default postgres user is used for database initialization
-  db_name: cloudify_db
-  username: cloudify
-  password: cloudify
-  # SSL must be enabled for external databases - provide proper certificates
-  ssl_enabled: false
-  # If true, client SSL certificates will need to be supplied and the Postgres
-  # server will verify each client connection
-  ssl_client_verification: false
-
-  # Password to use when connecting to the database with the postgres user
-  # This is only relevant for external postgres installations when you enable
-  # remote connections
-  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
-  postgres_password: ''
 
 stage:
   # If set to true, Cloudify UI will not be installed
@@ -340,6 +419,7 @@ restservice:
   sources:
     agents_source_url: cloudify-agents-*.rpm
     restservice_source_url: cloudify-rest-service-*.x86_64.rpm
+    haproxy_rpm_url: haproxy-*.x86_64.rpm
 
   # Minimum available memory for running list query on Manager host in MB.
   min_available_memory_mb: 100
@@ -469,11 +549,8 @@ ssl_inputs:
   external_key_path: ''
   internal_cert_path: ''
   internal_key_path: ''
-  postgresql_server_cert_path: ''
-  postgresql_server_key_path: ''
   postgresql_client_cert_path: ''
   postgresql_client_key_path: ''
-  postgresql_ca_cert_path: ''
   ca_cert_path: ''
   ca_key_path: ''
   ca_key_password: ''

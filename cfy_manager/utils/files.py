@@ -81,7 +81,12 @@ def get_local_source_path(source_url):
 
     # Otherwise, it's a relative `sources` path
     path = join(CLOUDIFY_SOURCES_PATH, source_url)
-    return get_glob_path(path)
+    path = get_glob_path(path)
+    if not os.path.exists(path):
+        raise FileError(
+            'File {path} not found.'.format(path=path)
+        )
+    return path
 
 
 def get_glob_path(path):
@@ -165,3 +170,15 @@ def temp_copy(source):
 def touch(file_path):
     """ Create an empty file in the provided path """
     sudo(['touch', file_path])
+
+
+def check_rpms_are_present(rpm_list):
+    if not isinstance(rpm_list, list):
+        rpm_list = [rpm_list]
+
+    for rpm in rpm_list:
+        try:
+            get_local_source_path(rpm)
+        except FileError:
+            return False
+    return True

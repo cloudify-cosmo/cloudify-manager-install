@@ -3,15 +3,28 @@ manager:
   public_ip: CONTAINER_IP
 
 postgresql_server:
-  ssl_enabled: true
   enable_remote_connections: true
-  postgres_password: postgres
-  ssl_client_verification: true
+  ssl_enabled: true
+  ssl_client_verification: false
 
-ssl_inputs:
-  postgresql_server_cert_path: /etc/cloudify/cert.pem
-  postgresql_server_key_path: /etc/cloudify/key.pem
-  postgresql_ca_cert_path: /etc/cloudify/ca.pem
+  cert_path: /etc/cloudify/cert.pem
+  key_path: /etc/cloudify/key.pem
+  ca_path: /etc/cloudify/ca.pem
+
+  postgres_password: 'somesecretvalue123!'
+  cluster:
+    nodes:
+      - DB1_IP
+      - DB2_IP
+      - DB3_IP
+    etcd:
+      cluster_token: 'somesecretvalue123!'
+      root_password: 'somesecretvalue123!'
+      patroni_password: 'somesecretvalue123!'
+    patroni:
+      rest_password: 'somesecretvalue123!'
+    postgres:
+      replicator_password: 'somesecretvalue123!'
 
 services_to_install:
 - database_service

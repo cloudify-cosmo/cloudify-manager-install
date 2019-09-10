@@ -17,6 +17,7 @@ import sys
 import getpass
 import time
 import uuid
+from contextlib import contextmanager
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
@@ -25,10 +26,10 @@ from ..base_component import BaseComponent
 from ..service_names import SANITY, MANAGER
 from ...config import config
 from ...logger import get_logger
-from ...constants import CLOUDIFY_HOME_DIR
+from ...constants import CLOUDIFY_HOME_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common
 from ...utils.network import wait_for_port
-from ...utils.files import get_local_source_path
+from ...utils.files import get_local_source_path, write_to_file, remove_files
 
 
 logger = get_logger(SANITY)
@@ -152,11 +153,15 @@ class Sanity(BaseComponent):
         if config[SANITY]['skip_sanity'] or config[CLUSTER_JOIN]:
             logger.info('Skipping sanity check...')
             return
-        try:
-            self._enter_sanity_mode()
+        with self._sanity_check_mode():
             self.run_sanity_check()
-        finally:
-            self._exit_sanity_mode()
 
-    def remove(self):
-        pass
+    @contextmanager
+    def _sanity_check_mode(self):
+        marker_file = '/opt/manager/sanity_mode'
+        try:
+            write_to_file('sanity: True', marker_file)
+            common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, marker_file)
+            yield
+        finally:
+            remove_files([marker_file])

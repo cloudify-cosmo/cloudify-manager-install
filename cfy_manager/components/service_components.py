@@ -28,11 +28,11 @@ SERVICE_COMPONENTS = {
     ],
     "manager_service": [
         "manager",
+        "postgresql_client",
+        "restservice",
         "manager_ip_setter",
         "nginx",
         "python",
-        "postgresql_client",
-        "restservice",
         "amqp_postgres",
         "stage",
         "composer",

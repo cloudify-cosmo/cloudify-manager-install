@@ -28,7 +28,11 @@ from ..components_constants import (
     PREMIUM_EDITION
 )
 from ..base_component import BaseComponent
-from ..service_names import STAGE, MANAGER, POSTGRESQL_CLIENT
+from ..service_names import (
+    MANAGER,
+    POSTGRESQL_CLIENT,
+    STAGE,
+)
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
@@ -38,8 +42,12 @@ from ...constants import (
     CLOUDIFY_GROUP,
     CLOUDIFY_USER,
 )
-from ...utils import sudoers
-from ...utils import common, files
+from ...utils import (
+    certificates,
+    common,
+    files,
+    sudoers,
+)
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.users import create_service_user
@@ -57,6 +65,12 @@ NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
 RESOURCES_DIR = join(HOME_DIR, 'resources')
 STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
+
+# These are all the same key as the other db keys, but postgres is very strict
+# about permissions (no group or other permissions allowed)
+DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/stage_db.key'
+DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/stage_db.crt'
+DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 NODE_EXECUTABLE_PATH = '/usr/bin/node'
 
@@ -110,7 +124,8 @@ class Stage(BaseComponent):
 
     def _create_user_and_set_permissions(self):
         create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
-
+        # stage user is in the cfyuser group for replication
+        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
         # For snapshot restore purposes
         common.sudo(['usermod', '-aG', STAGE_GROUP, CLOUDIFY_USER])
 
@@ -134,7 +149,6 @@ class Stage(BaseComponent):
             allow_as=sudo_as,
         )
         common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
 
     def _deploy_scripts(self):
         config[STAGE][HOME_DIR_KEY] = HOME_DIR
@@ -167,27 +181,61 @@ class Stage(BaseComponent):
 
         stage_config['db']['url'] = \
             'postgres://{0}:{1}@{2}:{3}/stage'.format(
-                config[POSTGRESQL_CLIENT]['username'],
-                config[POSTGRESQL_CLIENT]['password'],
+                config[POSTGRESQL_CLIENT]['cloudify_username'],
+                config[POSTGRESQL_CLIENT]['cloudify_password'],
                 database_host,
                 database_port)
 
-        pg_ca_cert_path = 'postgresql_ca_cert_path'
-        pg_client_cert_path = 'postgresql_client_cert_path'
-        pg_client_key_path = 'postgresql_client_key_path'
+        # For node-postgres
+        dialect_options = stage_config['db']['options']['dialectOptions']
+        # For building URL string
         params = {}
+
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            ssl_mode = 'verify-ca'
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                ssl_mode = 'verify-full'
-                params.update({
-                    'sslcert': config['constants'][pg_client_cert_path],
-                    'sslkey': config['constants'][pg_client_key_path],
-                })
+            certificates.use_supplied_certificates(
+                component_name=POSTGRESQL_CLIENT,
+                logger=self.logger,
+                ca_destination=DB_CA_PATH,
+                owner=STAGE_USER,
+                group=STAGE_GROUP,
+                update_config=False,
+            )
+
             params.update({
-                'sslmode': ssl_mode,
-                'sslrootcert': config['constants'][pg_ca_cert_path]
+                'sslmode': 'verify-full',
+                'sslrootcert': DB_CA_PATH,
             })
+
+            dialect_options['ssl'] = {
+                'ca': DB_CA_PATH,
+                'checkServerIdentity': True,
+                'rejectUnauthorized': True,
+            }
+
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                certificates.use_supplied_certificates(
+                    component_name=SSL_INPUTS,
+                    prefix='postgresql_client_',
+                    logger=self.logger,
+                    cert_destination=DB_CLIENT_CERT_PATH,
+                    key_destination=DB_CLIENT_KEY_PATH,
+                    owner=STAGE_USER,
+                    group=STAGE_GROUP,
+                    key_perms='400',
+                    update_config=False,
+                )
+
+                params.update({
+                    'sslcert': DB_CLIENT_CERT_PATH,
+                    'sslkey': DB_CLIENT_KEY_PATH,
+                })
+
+                dialect_options['ssl']['key'] = DB_CLIENT_KEY_PATH
+                dialect_options['ssl']['cert'] = DB_CLIENT_CERT_PATH
+        else:
+            dialect_options = {
+                'ssl': False
+            }
 
         if any(params.values()):
             query = '&'.join('{0}={1}'.format(key, value)

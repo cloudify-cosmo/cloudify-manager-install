@@ -63,6 +63,11 @@ class Manager(BaseComponent):
             home=constants.CLOUDIFY_HOME_DIR
         )
         common.mkdir(constants.CLOUDIFY_HOME_DIR)
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            constants.CLOUDIFY_HOME_DIR,
+        )
 
     def _create_sudoers_file_and_disable_sudo_requiretty(self):
         common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
@@ -107,6 +112,13 @@ class Manager(BaseComponent):
         common.mkdir(join(resources_root, 'packages', 'templates'))
 
     def _prepare_certificates(self):
+        if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):
+            common.mkdir(constants.SSL_CERTS_TARGET_DIR)
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            constants.SSL_CERTS_TARGET_DIR,
+        )
         # Move the broker certificate if we're not installing it locally
         if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
             # ...but only if one was provided.
@@ -136,7 +148,7 @@ class Manager(BaseComponent):
             join(self._get_exec_tempdir(), 'cloudify-ctx'),
         ])
         # Remove syncthing so a reinstall of a cluster node can work
-        systemd.remove('cloudify-syncthing')
+        systemd.remove('syncthing')
         remove_files([
             '/opt/syncthing',
         ])

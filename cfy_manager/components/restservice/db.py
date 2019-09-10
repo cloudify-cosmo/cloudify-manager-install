@@ -14,27 +14,29 @@
 #  * limitations under the License.
 
 from os.path import join
-
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
+import time
 
 from .manager_config import make_manager_config
 from ..components_constants import (
-    SCRIPTS,
-    PROVIDER_CONTEXT,
-    AGENT,
-    SECURITY,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
+    AGENT,
     HOSTNAME,
-    PREMIUM_EDITION
+    PREMIUM_EDITION,
+    PROVIDER_CONTEXT,
+    SCRIPTS,
+    SECURITY,
+    SERVICES_TO_INSTALL,
+    SSL_CLIENT_VERIFICATION,
+    SSL_ENABLED,
 )
 
+from ..service_components import DATABASE_SERVICE
 from ..service_names import (
-    POSTGRESQL_CLIENT,
     MANAGER,
+    POSTGRESQL_CLIENT,
+    RABBITMQ,
     RESTSERVICE,
-    RABBITMQ
 )
 
 from ... import constants
@@ -50,47 +52,74 @@ SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
 
 
-def _connect_to_db(query_func):
-    def wrapper(*args, **kwargs):
-        pg_config = config[POSTGRESQL_CLIENT]
-        db_connection_string = \
-            'postgres://{user}:{password}@{hostname_and_port}/{db}'.format(
-                user=pg_config['username'],
-                password=pg_config['password'],
-                hostname_and_port=pg_config['host'],
-                db=pg_config['db_name']
-            )
-        try:
-            connection = create_engine(db_connection_string,
-                                       poolclass=NullPool).connect()
-
-            return_value = query_func(connection=connection, *args, **kwargs)
-
-            connection.close()
-            return return_value
-        except Exception as err:
-            logger.debug('{0} - Database not initialized yet, proceeding...'
-                         .format(err))
-            return constants.DB_NOT_INITIALIZED
-    return wrapper
+def drop_db():
+    logger.notice('PREPARING TO DROP CLOUDIFY DATABASE...')
+    logger.notice(
+        'You have 10 seconds to press Ctrl+C if this was a mistake.'
+    )
+    time.sleep(10)
+    _execute_db_script('drop_db.sh')
+    logger.info('Cloudify database successfully dropped.')
 
 
 def prepare_db():
     logger.notice('Configuring SQL DB...')
+    _execute_db_script('create_default_db.sh')
+    logger.notice('SQL DB successfully configured')
+
+
+def _execute_db_script(script_name):
     pg_config = config[POSTGRESQL_CLIENT]
 
-    script_path = join(SCRIPTS_PATH, 'create_default_db.sh')
+    script_path = join(SCRIPTS_PATH, script_name)
     tmp_script_path = temp_copy(script_path)
     common.chmod('o+rx', tmp_script_path)
-    common.sudo(
-        'su - postgres -c "{cmd} {db} {user} {password} {host}"'.format(
+    username = pg_config['cloudify_username'].split('@')[0]
+    db_script_command = \
+        '{cmd} {db} {user} {password}'.format(
             cmd=tmp_script_path,
-            db=pg_config['db_name'],
-            user=pg_config['username'],
-            password=pg_config['password'],
-            host=pg_config['host'])
-    )
-    logger.notice('SQL DB successfully configured')
+            db=pg_config['cloudify_db_name'],
+            user=username,
+            password=pg_config['cloudify_password']
+        )
+
+    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        # In case the default user is postgres and we're in AIO installation,
+        # "peer" authentication is used
+        if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
+            db_script_command = '-u postgres ' + db_script_command
+
+    db_env = _generate_db_env(database=pg_config['server_db_name'])
+
+    common.sudo(db_script_command, env=db_env)
+
+
+def _generate_db_env(database):
+    pg_config = config[POSTGRESQL_CLIENT]
+
+    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        # If we're connecting to the actual local db we don't need to supply a
+        # host
+        host = ""
+    else:
+        host = pg_config['host']
+
+    db_env = {
+        'PGHOST': host,
+        'PGUSER': pg_config['server_username'],
+        'PGPASSWORD': pg_config['server_password'],
+        'PGDATABASE': database,
+    }
+
+    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        db_env['PGSSLMODE'] = 'verify-full'
+        db_env['PGSSLROOTCERT'] = '/etc/cloudify/ssl/postgresql_ca.crt'
+
+        # This only makes sense if SSL is used
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            db_env['PGSSLCERT'] = constants.POSTGRESQL_CLIENT_CERT_PATH
+            db_env['PGSSLKEY'] = constants.POSTGRESQL_CLIENT_KEY_PATH
+    return db_env
 
 
 def _get_provider_context():
@@ -189,8 +218,11 @@ def insert_manager(configs):
             'networks': config['networks'],
         }
     }
-    with open(constants.CA_CERT_PATH) as f:
-        args['manager']['ca_cert'] = f.read()
+    try:
+        with open(constants.CA_CERT_PATH) as f:
+            args['manager']['ca_cert'] = f.read()
+    except IOError:
+        args['manager']['ca_cert'] = None
     _run_script('create_tables_and_add_defaults.py', args, configs)
 
 
@@ -200,19 +232,68 @@ def create_amqp_resources(configs=None):
     logger.notice('AMQP resources successfully created')
 
 
-@_connect_to_db
-def check_manager_in_table(connection):
-    try:
-        result = (
-            connection.execute(
-                "SELECT * FROM managers where hostname='{0}'".format(
-                    config[MANAGER][HOSTNAME])
-            ))
-        return result.rowcount
-    except Exception as err:
-        logger.debug('{0} - Database not initialized yet, proceeding...'
-                     .format(err))
-        return constants.DB_NOT_INITIALIZED
+def _run_psql_command(command, db_key):
+    base_command = []
+    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        # In case the default user is postgres and we're in AIO installation,
+        # "peer" authentication is used
+        if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
+            base_command.extend(['-u', 'postgres'])
+
+    # Run psql with just the results output without headers (-t),
+    # and no psqlrc (-X)
+    base_command.extend(['psql', '-t', '-X'])
+
+    command = base_command + command
+
+    db_env = _generate_db_env(database=config[POSTGRESQL_CLIENT][db_key])
+
+    result = common.sudo(command, env=db_env)
+
+    return result.aggr_stdout.strip()
+
+
+def check_db_exists():
+    # Get the list of databases
+    result = _run_psql_command(
+        command=['-l'],
+        db_key='server_db_name',
+    )
+
+    # Example of expected output:
+    # cloudify_db | cloudify | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =Tc/cloudify         +  # noqa
+    #             |          |          |             |             | cloudify=CTc/cloudify   # noqa
+    # composer    | cloudify | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =Tc/cloudify         +  # noqa
+    #             |          |          |             |             | cloudify=CTc/cloudify   # noqa
+    # postgres    | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 |                         # noqa
+    # stage       | cloudify | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =Tc/cloudify         +  # noqa
+    #             |          |          |             |             | cloudify=CTc/cloudify   # noqa
+    # template0   | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres          +  # noqa
+    #             |          |          |             |             | postgres=CTc/postgres   # noqa
+    # template1   | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres          +  # noqa
+    #             |          |          |             |             | postgres=CTc/postgres   # noqa
+    #                                                                                         # noqa
+
+    result = result.splitlines()
+    dbs = [db.split('|')[0].strip() for db in result]
+    dbs = [db for db in dbs if db]  # Clear out empty strings
+
+    return config[POSTGRESQL_CLIENT]['cloudify_db_name'] in dbs
+
+
+def manager_is_in_db():
+    result = _run_psql_command(
+        command=[
+            '-c', "SELECT COUNT(*) FROM managers where hostname='{0}'".format(
+                config[MANAGER][HOSTNAME],
+            ),
+        ],
+        db_key='cloudify_db_name',
+    )
+
+    # As the name is unique, there can only ever be at most 1 entry with the
+    # expected name, and if there is then the manager is in the db.
+    return int(result) == 1
 
 
 def _log_results(result):

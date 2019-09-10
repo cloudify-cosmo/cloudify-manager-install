@@ -17,11 +17,9 @@ import os
 import argh
 import json
 import socket
-import tempfile
-from os.path import join
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown, copy, move
+from .common import sudo, remove, chown, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
@@ -35,7 +33,7 @@ from .. import constants as const
 logger = get_logger('Certificates')
 
 
-def handle_ca_cert():
+def handle_ca_cert(logger, generate_if_missing=True):
     """
     The user might provide both the CA key and the CA cert, or just the
     CA cert, or nothing. It is an error to only provide the CA key.
@@ -47,49 +45,46 @@ def handle_ca_cert():
         # CA certificate already deployed, no action required
         return os.path.exists(const.CA_KEY_PATH)
     logger.info('Handling CA certificate...')
-    cert_deployed, key_deployed = deploy_cert_and_key(
-        prefix='ca',
-        cert_dst_path=const.CA_CERT_PATH,
-        key_dst_path=const.CA_KEY_PATH
-    )
 
-    has_ca_key = key_deployed
+    ca_cert_source = config[SSL_INPUTS]['ca_cert_path']
+    ca_key_source = config[SSL_INPUTS]['ca_key_path']
+    ca_deploy_kwargs = {'prefix': 'ca_'}
 
-    if cert_deployed:
+    has_ca_key = False
+
+    if ca_key_source:
+        ca_deploy_kwargs['key_destination'] = const.CA_KEY_PATH
+
+    if ca_cert_source:
+        if ca_key_source:
+            kwarg = 'cert_destination'
+        else:
+            kwarg = 'ca_destination'
+            ca_deploy_kwargs['just_ca_cert'] = True
+        ca_deploy_kwargs[kwarg] = const.CA_CERT_PATH
+
+        # We only try to install these if the cert was supplied
+        use_supplied_certificates(
+            SSL_INPUTS,
+            logger,
+            **ca_deploy_kwargs
+        )
+
         logger.info('Deployed user provided CA cert')
-    else:
+        if ca_key_source:
+            # If a ca key source was provided and we deployed the cert, we
+            # must also have deployed the key or use_supplied_certs would've
+            # failed
+            has_ca_key = True
+            logger.info('Deployed user provided CA key')
+    elif generate_if_missing:
         logger.info('Generating CA certificate...')
+        if not os.path.exists(SSL_CERTS_TARGET_DIR):
+            sudo(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
         generate_ca_cert()
         has_ca_key = True
 
     return has_ca_key
-
-
-def deploy_cert_and_key(prefix, cert_dst_path, key_dst_path):
-    if not os.path.exists(SSL_CERTS_TARGET_DIR):
-        sudo(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
-
-    cert_path = config[SSL_INPUTS]['{0}_cert_path'.format(prefix)]
-    key_path = config[SSL_INPUTS]['{0}_key_path'.format(prefix)]
-    key_password = \
-        config[SSL_INPUTS].get('{0}_key_password'.format(prefix))
-
-    cert_deployed = False
-    key_deployed = False
-
-    if os.path.isfile(cert_path):
-        copy(cert_path, cert_dst_path)
-        cert_deployed = True
-    if os.path.isfile(key_path):
-        if key_password:
-            remove_key_encryption(key_path,
-                                  key_dst_path,
-                                  key_password)
-        else:
-            copy(key_path, key_dst_path)
-        key_deployed = True
-
-    return cert_deployed, key_deployed
 
 
 def _format_ips(ips, cn=None):
@@ -308,7 +303,6 @@ def generate_internal_ssl_cert(ips, cn):
         sign_cert=const.CA_CERT_PATH,
         sign_key=const.CA_KEY_PATH
     )
-    create_pkcs12()
     return cert_path, key_path
 
 
@@ -339,39 +333,6 @@ def generate_ca_cert(cert_path=const.CA_CERT_PATH,
             '-keyout', key_path,
             '-config', conf_path,
         ])
-
-
-def create_pkcs12():
-    # PKCS12 file required for riemann due to JVM
-    # While we don't really want the private key in there, not having it
-    # causes failures
-    # The password is also a bit pointless here since it's in the same place
-    # as a readable copy of the certificate and if this path can be written to
-    # maliciously then all is lost already.
-    pkcs12_path = join(
-        const.SSL_CERTS_TARGET_DIR,
-        const.INTERNAL_PKCS12_FILENAME
-    )
-    # extract the cert from the file: in case internal cert is a bundle,
-    # we must only get the first cert from it (the server cert)
-    fh, temp_cert_file = tempfile.mkstemp()
-    sudo([
-        'openssl', 'x509',
-        '-in', const.INTERNAL_CERT_PATH,
-        '-out', temp_cert_file
-    ])
-    sudo([
-        'openssl', 'pkcs12', '-export',
-        '-out', pkcs12_path,
-        '-in', temp_cert_file,
-        '-inkey', const.INTERNAL_KEY_PATH,
-        '-password', 'pass:cloudify',
-    ])
-    remove(temp_cert_file)
-    logger.debug('Generated PKCS12 bundle {0} using certificate: {1} '
-                 'and key: {2}'
-                 .format(pkcs12_path, const.INTERNAL_CERT_PATH,
-                         const.INTERNAL_KEY_PATH))
 
 
 def remove_key_encryption(src_key_path,
@@ -467,7 +428,12 @@ def use_supplied_certificates(component_name,
                               key_destination=None,
                               ca_destination=None,
                               owner=CLOUDIFY_USER,
-                              group=CLOUDIFY_GROUP):
+                              group=CLOUDIFY_GROUP,
+                              key_perms='440',
+                              cert_perms='444',
+                              prefix='',
+                              just_ca_cert=False,
+                              update_config=True):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -478,8 +444,22 @@ def use_supplied_certificates(component_name,
 
     Returns True if supplied certificates were used.
     """
+    key_path = prefix + 'key_path'
+    cert_path = prefix + 'cert_path'
+    ca_path = prefix + 'ca_path'
+    key_password = prefix + 'key_password'
+
+    if just_ca_cert:
+        ca_path = cert_path
+        key_path = None
+        cert_path = None
+
     cert_src, key_src, ca_src, key_pass = check_certificates(
         component_name,
+        cert_path=cert_path,
+        key_path=key_path,
+        ca_path=ca_path,
+        key_password=key_password,
         require_non_ca_certs=False,
     )
 
@@ -492,10 +472,10 @@ def use_supplied_certificates(component_name,
     logger.info('Ensuring files are in correct locations.')
 
     if cert_destination and cert_src != cert_destination:
-        move(cert_src, cert_destination)
+        copy(cert_src, cert_destination)
     if key_destination and key_src != key_destination:
-        move(key_src, key_destination)
-    if ca_src != ca_destination:
+        copy(key_src, key_destination)
+    if ca_destination and ca_src != ca_destination:
         if ca_src:
             copy(ca_src, ca_destination)
         else:
@@ -514,21 +494,22 @@ def use_supplied_certificates(component_name,
                   path])
     # Make key only readable by user and group
     if key_destination:
-        sudo(['chmod', '440', key_destination])
+        sudo(['chmod', key_perms, key_destination])
     # Make certs readable by anyone
     for path in cert_destination, ca_destination:
         if path:
-            sudo(['chmod', '444', path])
+            sudo(['chmod', cert_perms, path])
 
-    logger.info('Updating configured certification locations.')
-    if cert_destination:
-        config[component_name]['cert_path'] = cert_destination
-    if key_destination:
-        config[component_name]['key_path'] = key_destination
-    if ca_destination:
-        config[component_name]['ca_path'] = ca_destination
-        # If there was a password, we've now removed it
-        config[component_name]['key_password'] = ''
+    if update_config:
+        logger.info('Updating configured certification locations.')
+        if cert_destination:
+            config[component_name][cert_path] = cert_destination
+        if key_destination:
+            config[component_name][key_path] = key_destination
+        if ca_destination:
+            config[component_name][ca_path] = ca_destination
+            # If there was a password, we've now removed it
+            config[component_name][key_password] = ''
 
     # Supplied certificates were used
     return True

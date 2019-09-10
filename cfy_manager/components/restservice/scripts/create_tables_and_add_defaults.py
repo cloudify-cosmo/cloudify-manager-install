@@ -14,17 +14,18 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import argparse
 import atexit
 import json
-import argparse
 import logging
-import tempfile
 import os
+import subprocess
+import tempfile
 from datetime import datetime
 
 from flask_migrate import upgrade
 
-from manager_rest import config, manager_exceptions, version
+from manager_rest import config, version
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
@@ -33,20 +34,21 @@ from manager_rest.storage.storage_utils import \
 
 logger = \
     logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper()))
+CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 
 def _init_db_tables(db_migrate_dir):
-    print 'Setting up a Flask app'
+    logger.info('Setting up a Flask app')
     # Clean up the DB, in case it's not a clean install
     db.drop_all()
     db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
 
-    print 'Creating tables in the DB'
+    logger.info('Creating tables in the DB')
     upgrade(directory=db_migrate_dir)
 
 
 def _add_default_user_and_tenant(amqp_manager, script_config):
-    print 'Creating bootstrap admin, default tenant and security roles'
+    logger.info('Creating bootstrap admin, default tenant and security roles')
     create_default_user_tenant_and_roles(
         admin_username=script_config['admin_username'],
         admin_password=script_config['admin_password'],
@@ -92,13 +94,19 @@ def _insert_manager(config):
     sm = get_storage_manager()
     ca_cert = config.get('ca_cert')
     try:
-        stored_cert = sm.get(models.Manager, None, filters=None).ca_cert
-    except manager_exceptions.NotFoundError:
+        stored_cert = sm.list(models.Manager)[0].ca_cert
+    except IndexError:
         stored_cert = None
 
     if not stored_cert and not ca_cert:
         raise RuntimeError('No manager certs found, and ca_cert not given')
-    elif not stored_cert:
+    elif stored_cert and not ca_cert:
+        with open(CA_CERT_PATH, 'w') as f:
+            f.write(stored_cert.value)
+        subprocess.check_call(['sudo', 'chown', 'cfyuser.', CA_CERT_PATH])
+        subprocess.check_call(['sudo', 'chmod', '444', CA_CERT_PATH])
+        ca = stored_cert.id
+    elif ca_cert and not stored_cert:
         ca = _insert_cert(ca_cert, '{0}-ca'.format(config['hostname']))
     else:
         if stored_cert.value.strip() != ca_cert.strip():
@@ -179,4 +187,5 @@ if __name__ == '__main__':
         _insert_manager(script_config['manager'])
     if script_config.get('provider_context'):
         _add_provider_context(script_config['provider_context'])
-    print 'Finished creating bootstrap admin, default tenant and provider ctx'
+    logger.info('Finished creating bootstrap admin, default tenant and '
+                'provider ctx')

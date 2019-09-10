@@ -385,7 +385,7 @@ class RabbitMQ(BaseComponent):
         logger.info('Generating rabbitmq certificate...')
 
         if self._installing_manager():
-            has_ca_key = certificates.handle_ca_cert()
+            has_ca_key = certificates.handle_ca_cert(self.logger)
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         else:
             has_ca_key = False

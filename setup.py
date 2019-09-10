@@ -37,7 +37,7 @@ extra_files.append(join('..', 'config.yaml'))
 
 setup(
     name='cloudify-manager-install',
-    version='5.0.0',
+    version='5.0.5.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
@@ -59,7 +59,6 @@ setup(
         'PyYAML==3.10',
         'requests==2.7.0',
         'retrying==1.3.3',
-        'SQLAlchemy==1.2.14',
         'psycopg2==2.7.4'
     ]
 )

@@ -30,11 +30,8 @@ from .components import (
     SERVICE_INSTALLATION_ORDER
 )
 from .components.globals import set_globals
-from .components.validations import validate, validate_config_access
-from .components.service_names import (
-    MANAGER,
-    POSTGRESQL_CLIENT
-)
+from .components.validations import validate
+from .components.service_names import MANAGER
 from .components.components_constants import (
     SERVICES_TO_INSTALL,
     SECURITY,
@@ -56,8 +53,9 @@ from .logger import (
     set_file_handlers_level,
 )
 from .utils import CFY_UMASK
-from .utils.common import run, can_lookup_hostname
+from .utils.common import run, sudo, can_lookup_hostname
 from .utils.files import (
+    replace_in_file,
     remove as _remove,
     remove_temp_files,
     touch
@@ -65,7 +63,6 @@ from .utils.files import (
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
-    create_pkcs12,
     generate_ca_cert,
     _generate_ssl_certificate,
 )
@@ -110,22 +107,6 @@ PUBLIC_IP_HELP_MSG = (
     'connect to the manager via the CLI, the UI or the REST API. '
     'If your environment does not require a public IP, you can enter the '
     'private IP here.'
-)
-JOIN_CLUSTER_HELP_MSG = (
-    "In case this machine will join an existing cluster with an external DB."
-    "To join to a cluster, use the --join-cluster flag with the "
-    "--admin-password flag supplying the master manager's password, the "
-    "--database-ip supplying the external database's IP, and the"
-    "--postgres-password supplying the external database's postgres user "
-    "password."
-)
-DATABASE_IP_HELP_MSG = (
-    "Used together with --join-cluster flag when joining to an existing "
-    "cluster with an external database."
-)
-POSTGRES_PASSWORD_HELP_MSG = (
-    "Used together with --join-cluster flag when joining to an existing "
-    "cluster with an external database."
 )
 BROKER_ADD_JOIN_NODE_HELP_MSG = (
     "The hostname of the node you are joining to the rabbit cluster. "
@@ -379,50 +360,28 @@ sys.excepthook = _exception_handler
 
 
 def _populate_and_validate_config_values(private_ip, public_ip,
-                                         admin_password, clean_db,
-                                         join_cluster=None, database_ip=None,
-                                         postgres_password=None):
+                                         admin_password, clean_db):
     manager_config = config[MANAGER]
 
-    # If the DB wasn't initiated even once yet, always set clean_db to True
-    config[CLEAN_DB] = clean_db or not _are_components_configured()
+    config[CLEAN_DB] = clean_db
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
     if public_ip:
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
-        if config[CLEAN_DB]:
+        if config[CLEAN_DB] or not _are_components_configured():
             manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-            if all([database_ip, postgres_password]):
-                config[POSTGRESQL_CLIENT]['host'] = str(database_ip)
-                config[POSTGRESQL_CLIENT]['postgres_password'] = \
-                    str(postgres_password)
-                config[POSTGRESQL_CLIENT]['ssl_enabled'] = True
-                config[SERVICES_TO_INSTALL] = [
-                    QUEUE_SERVICE,
-                    MANAGER_SERVICE
-                ]
-            elif any([database_ip, postgres_password]):
-                raise BootstrapError(
-                    'The --database-ip, --admin-password '
-                    'and --postgres-password flags must be used together'
-                )
         else:
             raise BootstrapError(
                 'The --admin-password argument can only be used in '
-                'conjunction with the --clean-db flag.'
+                'conjunction with the --clean-db flag or on a first '
+                'install.'
             )
-    elif any([join_cluster, database_ip]):
-        raise BootstrapError(
-            'The --join-cluster, --database-ip and --admin-password'
-            'flags must be used together'
-        )
 
 
 def _prepare_component_management(component, verbose):
     setup_console_logger(verbose=verbose)
-    validate_config_access(write_required=False)
     config.load_config()
     return ComponentsFactory.create_component(component,
                                               skip_installation=True)
@@ -434,21 +393,15 @@ def _prepare_execution(verbose=False,
                        admin_password=None,
                        clean_db=False,
                        config_write_required=False,
-                       join_cluster=None,
-                       database_ip=None,
-                       postgres_password=None,
                        only_install=False):
     setup_console_logger(verbose)
 
-    validate_config_access(config_write_required)
     config.load_config()
     if not only_install:
         # We don't validate anything that applies to the install anyway,
         # but we do populate things that are not relevant.
         _populate_and_validate_config_values(private_ip, public_ip,
-                                             admin_password, clean_db,
-                                             join_cluster, database_ip,
-                                             postgres_password)
+                                             admin_password, clean_db)
     _create_component_objects()
 
 
@@ -572,16 +525,28 @@ def _create_component_objects():
         )
 
 
+def _remove_rabbitmq_service_unit():
+    prefix = "/lib/systemd/system"
+    rabbitmq_pattern = "cloudify-rabbitmq.service"
+    mgmt_patterns = ["Wants={0}".format(rabbitmq_pattern),
+                     "After={0}".format(rabbitmq_pattern)]
+    services_and_patterns = \
+        [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
+         ("cloudify-mgmtworker.service", mgmt_patterns)]
+    for service, pattern_list in services_and_patterns:
+        path = os.path.join(prefix, service)
+        for pattern in pattern_list:
+            replace_in_file(pattern, "", path)
+    sudo("systemctl daemon-reload")
+
+
 def install_args(f):
     """Apply all the args that are used by `cfy_manager install`"""
     args = [
         argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
         argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
-        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
-        argh.arg('--join-cluster', help=JOIN_CLUSTER_HELP_MSG),
-        argh.arg('--database-ip', help=DATABASE_IP_HELP_MSG),
-        argh.arg('--postgres-password', help=POSTGRES_PASSWORD_HELP_MSG)
+        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
     ]
     for arg in args:
         f = arg(f)
@@ -594,19 +559,13 @@ def validate_command(verbose=False,
                      private_ip=None,
                      public_ip=None,
                      admin_password=None,
-                     clean_db=False,
-                     join_cluster=None,
-                     database_ip=None,
-                     postgres_password=None):
+                     clean_db=False):
     _prepare_execution(
         verbose,
         private_ip,
         public_ip,
         admin_password,
         clean_db,
-        join_cluster=join_cluster,
-        database_ip=database_ip,
-        postgres_password=postgres_password,
         config_write_required=False
     )
     validate(components=components)
@@ -627,9 +586,6 @@ def install(verbose=False,
             public_ip=None,
             admin_password=None,
             clean_db=False,
-            join_cluster=None,
-            database_ip=None,
-            postgres_password=None,
             only_install=None):
     """ Install Cloudify Manager """
 
@@ -639,9 +595,6 @@ def install(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        join_cluster=join_cluster,
-        database_ip=database_ip,
-        postgres_password=postgres_password,
         config_write_required=True,
         only_install=only_install,
     )
@@ -661,6 +614,10 @@ def install(verbose=False,
             if not component.skip_installation:
                 component.configure()
 
+    if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+            QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
+        _remove_rabbitmq_service_unit()
+
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
     _finish_configuration(only_install)
@@ -671,10 +628,7 @@ def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
-              clean_db=False,
-              join_cluster=None,
-              database_ip=None,
-              postgres_password=None):
+              clean_db=False):
     """ Configure Cloudify Manager """
 
     _prepare_execution(
@@ -783,7 +737,6 @@ def main():
         restart,
         create_internal_certs,
         create_external_certs,
-        create_pkcs12,
         sanity_check,
         add_networks,
         update_encryption_key,

@@ -50,7 +50,6 @@ INTERNAL_KEY_FILENAME = 'cloudify_internal_key.pem'
 CA_CERT_FILENAME = 'cloudify_internal_ca_cert.pem'
 CA_KEY_FILENAME = 'cloudify_internal_ca_key.pem'
 EXTERNAL_CA_CERT_FILENAME = 'cloudify_external_ca_cert.pem'
-INTERNAL_PKCS12_FILENAME = 'cloudify_internal.p12'
 EXTERNAL_CERT_FILENAME = 'cloudify_external_cert.pem'
 EXTERNAL_KEY_FILENAME = 'cloudify_external_key.pem'
 POSTGRESQL_CLIENT_CERT_FILENAME = 'postgresql.crt'
@@ -76,5 +75,3 @@ POSTGRESQL_CA_CERT_PATH = \
 CERT_METADATA_FILE_PATH = join(SSL_CERTS_TARGET_DIR, 'certificate_metadata')
 
 CFY_EXEC_TEMPDIR_ENVVAR = 'CFY_EXEC_TEMP'
-
-DB_NOT_INITIALIZED, MANAGER_NOT_IN_DB = -1, 0

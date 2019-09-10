@@ -20,10 +20,9 @@ from ...exceptions import ProcessExecutionError
 
 from ..components_constants import (
     SOURCES,
-    POSTGRES_PASSWORD,
     SSL_ENABLED,
     SSL_INPUTS,
-    SSL_CLIENT_VERIFICATION
+    SSL_CLIENT_VERIFICATION,
 )
 from ..base_component import BaseComponent
 from ..service_names import POSTGRESQL_CLIENT
@@ -37,7 +36,11 @@ from ...constants import (
 )
 from ...config import config
 from ...logger import get_logger
-from ...utils import common, files
+from ...utils import (
+    certificates,
+    common,
+    files,
+)
 from ...utils.install import (
     yum_install,
     yum_remove,
@@ -52,7 +55,6 @@ POSTGRES_USER_HOME_DIR = '/var/lib/pgsql'
 HOST = 'host'
 
 CLOUDIFY_PGPASS_PATH = os.path.join(CLOUDIFY_HOME_DIR, '.pgpass')
-POSTGRES_PGPASS_PATH = os.path.join(POSTGRES_USER_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
 
@@ -75,8 +77,11 @@ class PostgresqlClient(BaseComponent):
 
         files.copy_notice(POSTGRESQL_CLIENT)
 
-        self._create_postgres_group()
-        self._create_postgres_user()
+        db_server_username = config[POSTGRESQL_CLIENT]['server_username']
+        if db_server_username == 'postgres' or not db_server_username:
+            config[POSTGRESQL_CLIENT]['server_username'] = 'postgres'
+            self._create_postgres_group()
+            self._create_postgres_user()
 
     def _create_postgres_group(self):
         logger.notice('Creating postgres group')
@@ -133,28 +138,10 @@ class PostgresqlClient(BaseComponent):
         host = pg_config['host']
         port = PG_PORT
 
-        if pg_config[POSTGRES_PASSWORD]:
-            postgres_password = pg_config[POSTGRES_PASSWORD]
-
-            # Creating postgres .pgpass file
-            self._create_pgpass(
-                host=host,
-                port=port,
-                db_name='postgres',
-                user='postgres',
-                password=postgres_password,
-                pgpass_path=POSTGRES_PGPASS_PATH,
-                owning_user='postgres',
-                owning_group='postgres'
-            )
-
-            logger.info('Removing postgres password from config.yaml')
-            config[POSTGRESQL_CLIENT][POSTGRES_PASSWORD] = '<removed>'
-
         # Creating Cloudify .pgpass file
         db_name = '*'  # Allowing for the multiple DBs we have
-        user = pg_config['username']
-        password = pg_config['password']
+        user = pg_config['cloudify_username']
+        password = pg_config['cloudify_password']
         self._create_pgpass(
             host=host,
             port=port,
@@ -171,21 +158,20 @@ class PostgresqlClient(BaseComponent):
         Copy the relevant SSL certificates to the cloudify SSL directory
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            if config[SSL_INPUTS]['postgresql_client_cert_path'] and \
-                    config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                common.copy(config[SSL_INPUTS]['postgresql_client_cert_path'],
-                            POSTGRESQL_CLIENT_CERT_PATH)
-                common.copy(config[SSL_INPUTS]['postgresql_client_key_path'],
-                            POSTGRESQL_CLIENT_KEY_PATH)
-                common.chown(
-                    CLOUDIFY_USER, CLOUDIFY_GROUP, POSTGRESQL_CLIENT_KEY_PATH)
-                common.chmod('600', POSTGRESQL_CLIENT_KEY_PATH)
-            if config[SSL_INPUTS]['postgresql_ca_cert_path']:
-                common.copy(config[SSL_INPUTS]['postgresql_ca_cert_path'],
-                            POSTGRESQL_CA_CERT_PATH)
-                common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
-                             POSTGRESQL_CA_CERT_PATH)
-                common.chmod('444', POSTGRESQL_CA_CERT_PATH)
+            certificates.use_supplied_certificates(
+                POSTGRESQL_CLIENT,
+                self.logger,
+                ca_destination=POSTGRESQL_CA_CERT_PATH,
+            )
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                certificates.use_supplied_certificates(
+                    SSL_INPUTS,
+                    self.logger,
+                    cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
+                    key_destination=POSTGRESQL_CLIENT_KEY_PATH,
+                    prefix='postgresql_client_',
+                    key_perms='400',
+                )
 
     def _configure(self):
         self._create_postgres_pgpass_files()
