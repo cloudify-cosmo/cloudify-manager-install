@@ -13,12 +13,16 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import os
 import re
 import time
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
+import requests
+
+from cfy_manager.exceptions import DBNodeListError
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
@@ -31,7 +35,7 @@ from ..components_constants import (
     SSL_ENABLED,
 )
 from ..base_component import BaseComponent
-from ..service_components import MANAGER_SERVICE
+from ..service_components import MANAGER_SERVICE, DATABASE_SERVICE
 from ..service_names import (
     POSTGRESQL_SERVER,
     MANAGER
@@ -107,6 +111,11 @@ logger = get_logger(POSTGRESQL_SERVER)
 
 class PostgresqlServer(BaseComponent):
     component_name = 'postgresql_server'
+
+    # Status codes for listing nodes
+    HEALTHY = 0
+    DEGRADED = 1
+    DOWN = 2
 
     def __init__(self, skip_installation):
         super(PostgresqlServer, self).__init__(skip_installation)
@@ -259,6 +268,24 @@ class PostgresqlServer(BaseComponent):
             time.sleep(1)
         logger.info('etcd has started')
 
+    def _etcd_conf_command(self, command, ignore_failures=False, stdin=None):
+        """Execute an etcdctl command at configure time.
+        Not to be used for day 2 operations as config.yaml may be out of date.
+        """
+        endpoints = ','.join(
+            'https://{addr}:2379'.format(addr=addr)
+            for addr in config[POSTGRESQL_SERVER]['cluster']['nodes']
+        )
+        etcdctl_base_command = [
+            'etcdctl', '--endpoints', endpoints,
+            '--ca-file', ETCD_CA_PATH,
+        ]
+        return common.run(
+            etcdctl_base_command + command,
+            ignore_failures=ignore_failures,
+            stdin=stdin,
+        )
+
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
@@ -312,18 +339,8 @@ class PostgresqlServer(BaseComponent):
         logger.info('Configuring etcd')
         systemd.enable('etcd', append_prefix=False)
         self._start_etcd()
-        endpoints = ','.join(
-            'https://{addr}:2379'.format(addr=addr)
-            for addr in config[POSTGRESQL_SERVER]['cluster']['nodes']
-        )
-        etcdctl_base_command = [
-            'etcdctl', '--endpoints', endpoints,
-            '--ca-file', ETCD_CA_PATH,
-        ]
-        cluster_auth_check = common.run(
-            etcdctl_base_command + ['ls', '/'],
-            ignore_failures=True,
-        )
+        cluster_auth_check = self._etcd_conf_command(['ls', '/'],
+                                                     ignore_failures=True)
         # This command will only succeed if the cluster is up and auth is not
         # yet enabled
         if cluster_auth_check.returncode == 0:
@@ -333,35 +350,23 @@ class PostgresqlServer(BaseComponent):
             logger.info('Configuring etcd authentication')
             # Note that, per the etcd documentation, the root user must exist
             # if authentication is to be enabled for etcd
-            common.run(
-                etcdctl_base_command + ['user', 'add', 'root'],
+            self._etcd_conf_command(
+                ['user', 'add', 'root'],
                 stdin=cluster_config['etcd']['root_password'],
             )
-            common.run(
-                etcdctl_base_command + ['user', 'add', 'patroni'],
+            self._etcd_conf_command(
+                ['user', 'add', 'patroni'],
                 stdin=cluster_config['etcd']['patroni_password'],
             )
-            common.run(
-                etcdctl_base_command +
-                ['role', 'add', 'patroni']
-            )
-            common.run(
-                etcdctl_base_command +
-                ['role', 'grant', 'patroni', '--path', '/db/*', '--readwrite']
-            )
-            common.run(
-                etcdctl_base_command +
-                ['user', 'grant', 'patroni', '--roles', 'patroni']
-            )
-            common.run(
-                etcdctl_base_command +
-                ['role', 'add', 'guest']
-            )
-            common.run(
-                etcdctl_base_command +
-                ['role', 'revoke', 'guest', '--path', '/*', '--readwrite']
-            )
-            common.run(etcdctl_base_command + ['auth', 'enable'])
+            self._etcd_conf_command(['role', 'add', 'patroni'])
+            self._etcd_conf_command(['role', 'grant', 'patroni',
+                                     '--path', '/db/*', '--readwrite'])
+            self._etcd_conf_command(['user', 'grant', 'patroni',
+                                     '--roles', 'patroni'])
+            self._etcd_conf_command(['role', 'add', 'guest'])
+            self._etcd_conf_command(['role', 'revoke', 'guest',
+                                     '--path', '/*', '--readwrite'])
+            self._etcd_conf_command(['auth', 'enable'])
 
         logger.info('Creating postgres bin links for patroni')
         for pg_bin in PG_BINS:
@@ -376,6 +381,242 @@ class PostgresqlServer(BaseComponent):
         )
         systemd.enable('patroni', append_prefix=False)
         systemd.start('patroni', append_prefix=False)
+
+    def _get_cluster_addresses(self):
+        master = None
+        replicas = []
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            etcd_cluster_health = common.run(
+                [
+                    'etcdctl',
+                    '--endpoint', 'https://127.0.0.1:2379',
+                    '--ca-file', ETCD_CA_PATH,
+                    'cluster-health',
+                ],
+                ignore_failures=True
+            ).aggr_stdout
+            if (
+                'cluster is unavailable' in etcd_cluster_health
+                or 'failed to list members' in etcd_cluster_health
+            ):
+                raise DBNodeListError(
+                    'Etcd is not responding on this node. '
+                    'Please retry this command on another DB cluster node.'
+                )
+
+            nodes = json.loads(common.sudo([
+                '/opt/patroni/bin/patronictl', '-c', '/etc/patroni.conf',
+                'list', '--format', 'json'
+            ]).aggr_stdout)
+            for node in nodes:
+                server_name = node['Host']
+                if node['Role'] == 'Leader':
+                    master = server_name
+                else:
+                    replicas.append(server_name)
+        elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            backends = common.get_haproxy_servers(self.logger)
+            for backend in backends:
+                # svname will be in the form postgresql_192.0.2.48_5432
+                server_name = backend['svname'].split('_')[1]
+                if backend['status'] == 'UP':
+                    master = server_name
+                else:
+                    replicas.append(server_name)
+        else:
+            raise DBNodeListError(
+                'Can only list DB nodes from a manager or DB node.'
+            )
+        return master, replicas
+
+    def _get_raw_node_status(self, address, target_type):
+        url = {
+            'etcd': 'https://{address}:2379/v2/stats/self',
+            'DB': 'https://{address}:8008',
+        }[target_type].format(address=address)
+
+        dead_node_exceptions = (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+        )
+
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            # Using the etcd CA cert as it's the same, and the permissions
+            # to its directory are more permissive than postgres', which does
+            # not allow access even to the CA cert
+            ca_path = ETCD_CA_PATH
+        else:
+            ca_path = constants.POSTGRESQL_CA_CERT_PATH
+
+        try:
+            return requests.get(
+                url,
+                verify=ca_path,
+                timeout=5,
+            ).json()
+        except dead_node_exceptions as err:
+            logger.warning(
+                'Failed to get status of {target_type} node from {url}. '
+                'Error was: {err}'.format(
+                    target_type=target_type,
+                    address=address,
+                    url=url,
+                    err=err,
+                )
+            )
+            return {}
+
+    def _get_node_status(self, address,
+                         sync_replica=False, master=False):
+        status = self._get_raw_node_status(address, 'DB')
+        etcd_status = self._get_raw_node_status(address, 'etcd')
+
+        node = {
+            'node_ip': address,
+            'alive': False,
+            'errors': [],
+            'raw_status': status,
+        }
+
+        if status:
+            xlog = status.get('xlog', {})
+            if master:
+                node['log_location'] = xlog.get('location')
+                node['state'] = 'leader'
+            elif sync_replica:
+                node['log_location'] = xlog.get('replayed_location')
+                node['state'] = 'sync_replica'
+            else:
+                node['log_location'] = xlog.get('replayed_location')
+                node['state'] = 'async_replica'
+
+            if status.get('state') == 'running':
+                node['alive'] = True
+            else:
+                node['errors'].append('Node not running')
+
+            node['timeline'] = status.get('timeline')
+        else:
+            node['state'] = 'dead'
+            node['errors'].append('Could not retrieve DB status')
+
+        if etcd_status:
+            node['etcd_state'] = etcd_status['state']
+        else:
+            node['etcd_state'] = 'dead'
+            node['errors'].append('Could not retrieve etcd status')
+
+        return node
+
+    def _get_sync_replicas(self, master_status):
+        sync_ips = []
+        master_replication = master_status.get('replication', [])
+        if master_replication:
+            for replica in master_replication:
+                if replica['sync_state'] == 'sync':
+                    sync_ips.append(replica['client_addr'])
+        return sync_ips
+
+    def _determine_cluster_status(self, db_nodes):
+        status = self.HEALTHY
+        master = db_nodes[0]
+        replicas = db_nodes[1:]
+
+        master_log_location = master['raw_status'].get('log_location')
+        master_timeline = master['raw_status'].get('timeline')
+        sync_ips = self._get_sync_replicas(master['raw_status'])
+
+        # Master checks
+        if not master['alive']:
+            status = max(status, self.DOWN)
+        if not sync_ips:
+            # The cluster is down if there are no sync replicas, because
+            # writes will not be allowed
+            status = max(status, self.DOWN)
+
+        # Etcd checks
+        etcd_followers = 0
+        etcd_leaders = 0
+        for node in db_nodes:
+            if node['etcd_state'] == 'StateFollower':
+                etcd_followers += 1
+            elif node['etcd_state'] == 'StateLeader':
+                etcd_leaders += 1
+        if etcd_leaders != 1:
+            logger.error(
+                'Expected to find 1 etcd leader, but found {num}, '
+                'cluster consensus lost.'.format(
+                    num=etcd_leaders,
+                )
+            )
+            status = max(status, self.DOWN)
+        if etcd_followers < 1:
+            logger.error(
+                'No etcd followers found, cluster consensus lost.'
+            )
+            status = max(status, self.DOWN)
+        elif etcd_followers < 2:
+            logger.warning(
+                'Missing one etcd follower.'
+            )
+            status = max(status, self.DEGRADED)
+
+        for replica in replicas:
+            if replica['state'] == 'sync_replica':
+                if (
+                    master_log_location
+                    and replica.get('log_location') < master_log_location
+                ):
+                    logger.error(
+                        'Synchronous replica not in sync with master. '
+                        'Writes will be blocked until replica is in sync.'
+                    )
+                    replica['errors'].append('Out of sync')
+                    status = max(status, self.DOWN)
+            else:
+                if (
+                    master_timeline
+                    and replica.get('timeline') != master_timeline
+                ):
+                    logger.warning(
+                        'Asynchronous replica not on same timeline as '
+                        'master.'
+                    )
+                    replica['errors'].append('Out of sync')
+                    status = max(status, self.DEGRADED)
+
+            if replica['raw_status'].get('state') == 'master':
+                # This should only happen if a failover happened literally as
+                # the status check was taking place
+                logger.error(
+                    'MULTIPLE MASTERS DETECTED! '
+                    'PLEASE RUN THIS STATUS COMMAND AGAIN. '
+                    'IF THIS ERROR OCCURS AGAIN THEN STOP ALL USERS OF '
+                    'CLOUDIFY MANAGERS IN THIS CLUSTER AND CONTACT SUPPORT!'
+                )
+                replica['errors'].append('EXTRA MASTER')
+
+        return status, db_nodes
+
+    def get_cluster_status(self):
+        master_address, replica_addresses = self._get_cluster_addresses()
+
+        master = self._get_node_status(master_address, master=True)
+        replicas = []
+        for address in replica_addresses:
+            replicas.append(
+                self._get_node_status(
+                    address,
+                    sync_replica=address in self._get_sync_replicas(
+                        master['raw_status'],
+                    ),
+                )
+            )
+        db_nodes = [master] + replicas
+
+        status, db_nodes = self._determine_cluster_status(db_nodes)
+
+        return status, db_nodes
 
     def install(self):
         logger.notice('Installing PostgreSQL Server...')
