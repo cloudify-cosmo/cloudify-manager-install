@@ -21,10 +21,12 @@ SERVICE_COMPONENTS = {
     # Please do not change the order in which the components of each service
     # will be installed
     "database_service": [
-        "postgresql_server"
+        "postgresql_server",
+        "postgresql_status_reporter"
     ],
     "queue_service": [
         "rabbitmq",
+        "rabbitmq_status_reporter"
     ],
     "manager_service": [
         "manager",
@@ -40,7 +42,8 @@ SERVICE_COMPONENTS = {
         "cli",
         "usage_collector",
         "patch",
-        "sanity"
+        "sanity",
+        "manager_status_reporter"
     ]
 }
 

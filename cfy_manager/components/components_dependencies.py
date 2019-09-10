@@ -46,5 +46,8 @@ COMPONENTS_DEPENDENCIES = {
     'Sanity': ['openssh-server'],
     'Stage': ['systemd-sysv'],
     'UsageCollector': [],
-    'Patch': []
+    'Patch': [],
+    'ManagerStatusReporter': [],
+    'RabbitmqStatusReporter': [],
+    'PostgresqlStatusReporter': []
 }
