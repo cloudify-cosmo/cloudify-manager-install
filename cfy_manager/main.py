@@ -31,7 +31,7 @@ from .components import (
 )
 from .components.globals import set_globals
 from .components.validations import validate
-from .components.service_names import MANAGER
+from .components.service_names import MANAGER, POSTGRESQL_SERVER
 from .components.components_constants import (
     SERVICES_TO_INSTALL,
     SECURITY,
@@ -288,6 +288,28 @@ def complain_about_dead_broker_cluster(nodes):
             'If this is not possible, please contact support.'
         )
         sys.exit(1)
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+def db_cluster_list(**kwargs):
+    """List DB cluster members and DB cluster health."""
+    _validate_components_prepared('db_cluster_list')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        state, db_nodes = db.get_cluster_status()
+        if state == db.HEALTHY:
+            logger.info('DB cluster is healthy.')
+        elif state == db.DEGRADED:
+            logger.warning('DB cluster is unhealthy.')
+        else:
+            logger.error('DB cluster is down.')
+        output_table(db_nodes,
+                     ('node_ip', 'state', 'alive', 'etcd_state', 'errors'))
+        sys.exit(state)
+    else:
+        logger.info('There is no database cluster associated with this node.')
 
 
 def output_table(data, fields):
@@ -744,6 +766,7 @@ def main():
         brokers_add,
         brokers_list,
         brokers_remove,
+        db_cluster_list,
     ])
     os.umask(current_umask)
 
