@@ -312,15 +312,21 @@ class PostgresqlServer(BaseComponent):
         logger.info('Configuring etcd')
         systemd.enable('etcd', append_prefix=False)
         self._start_etcd()
+        endpoints = ','.join(
+            'https://{addr}:2379'.format(addr=addr)
+            for addr in config[POSTGRESQL_SERVER]['cluster']['nodes']
+        )
         etcdctl_base_command = [
-            'etcdctl', '--endpoints', 'https://127.0.0.1:2379',
+            'etcdctl', '--endpoints', endpoints,
             '--ca-file', ETCD_CA_PATH,
         ]
-        cluster_state = common.run(
-            etcdctl_base_command + ['cluster-health'],
+        cluster_auth_check = common.run(
+            etcdctl_base_command + ['ls', '/'],
             ignore_failures=True,
-        ).aggr_stdout
-        if 'cluster is degraded' in cluster_state:
+        )
+        # This command will only succeed if the cluster is up and auth is not
+        # yet enabled
+        if cluster_auth_check.returncode == 0:
             cluster_config = config[POSTGRESQL_SERVER]['cluster']
             # We want to configure etcd auth when the second node joins
             # because that's the earliest we can do so.
@@ -337,7 +343,23 @@ class PostgresqlServer(BaseComponent):
             )
             common.run(
                 etcdctl_base_command +
-                ['user', 'grant', 'patroni', '--roles', 'guest']
+                ['role', 'add', 'patroni']
+            )
+            common.run(
+                etcdctl_base_command +
+                ['role', 'grant', 'patroni', '--path', '/db/*', '--readwrite']
+            )
+            common.run(
+                etcdctl_base_command +
+                ['user', 'grant', 'patroni', '--roles', 'patroni']
+            )
+            common.run(
+                etcdctl_base_command +
+                ['role', 'add', 'guest']
+            )
+            common.run(
+                etcdctl_base_command +
+                ['role', 'revoke', 'guest', '--path', '/*', '--readwrite']
             )
             common.run(etcdctl_base_command + ['auth', 'enable'])
 
