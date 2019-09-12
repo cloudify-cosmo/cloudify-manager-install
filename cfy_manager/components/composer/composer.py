@@ -173,7 +173,6 @@ class Composer(BaseComponent):
 
             dialect_options['ssl'] = {
                 'ca': DB_CA_PATH,
-                'checkServerIdentity': True,
                 'rejectUnauthorized': True,
             }
 
