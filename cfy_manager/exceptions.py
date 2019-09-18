@@ -52,3 +52,7 @@ class RabbitNodeListError(StandardError):
 
 class DBNodeListError(Exception):
     """Raised when there is an error listing DB cluster nodes."""
+
+
+class DBManagementError(Exception):
+    """Raised when there is an error managing DB cluster nodes."""
