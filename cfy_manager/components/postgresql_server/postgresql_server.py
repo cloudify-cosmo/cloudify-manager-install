@@ -22,7 +22,7 @@ from os.path import join, isdir, islink
 
 import requests
 
-from cfy_manager.exceptions import DBNodeListError
+from cfy_manager.exceptions import DBNodeListError, DBManagementError
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
@@ -84,6 +84,11 @@ PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'
 # Cluster file locations
 ETCD_CONFIG_PATH = '/etc/etcd/etcd.conf'
 PATRONI_CONFIG_PATH = '/etc/patroni.conf'
+
+HAPROXY_NODE_ENTRY = (
+    '    server postgresql_{addr}_5432 {addr}:5432 '
+    'maxconn 100 check check-ssl port 8008 ca-file /etc/haproxy/ca.crt'
+)
 
 # Postgres bin files needing symlinking for patroni
 PG_BIN_DIR = '/usr/pgsql-9.5/bin'
@@ -617,6 +622,68 @@ class PostgresqlServer(BaseComponent):
         status, db_nodes = self._determine_cluster_status(db_nodes)
 
         return status, db_nodes
+
+    def add_cluster_node(self, address):
+        master, replicas = self._get_cluster_addresses()
+
+        if address in [master] + replicas:
+            raise DBManagementError(
+                'Cannot add DB node {addr} to cluster, as it is already '
+                'part of the cluster.'.format(addr=address)
+            )
+
+        node_status = self._get_raw_node_status(address, 'DB')
+
+        if not node_status:
+            raise DBManagementError(
+                'DB cluster node {address} does not appear to be '
+                'operational. Please ensure DB cluster management '
+                'software is installed and running before trying to '
+                'add the node.'.format(address=address)
+            )
+
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            raise NotImplementedError('Coming soon.')
+        else:
+            common.sudo(
+                ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
+                stdin=HAPROXY_NODE_ENTRY.format(addr=address),
+            )
+
+            logger.info('Restarting DB proxy service.')
+            common.sudo(['systemctl', 'restart', 'haproxy'])
+
+    def remove_cluster_node(self, address, force=False):
+        master, replicas = self._get_cluster_addresses()
+
+        if address == master and not force:
+            raise DBManagementError(
+                'The currently active DB master node cannot be removed '
+                "without the '--force' flag."
+            )
+
+        if address not in [master] + replicas:
+            raise DBManagementError(
+                'Cannot remove DB node {addr} from cluster, as it is not '
+                'part of the cluster.'.format(addr=address)
+            )
+
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            raise NotImplementedError('Coming soon.')
+        else:
+            entry = HAPROXY_NODE_ENTRY.format(addr=address).replace(
+                '/', '\\/',
+            )
+            common.sudo(
+                [
+                    'sed', '-i',
+                    '/{entry}/d'.format(entry=entry),
+                    '/etc/haproxy/haproxy.cfg',
+                ]
+            )
+
+            logger.info('Restarting DB proxy service.')
+            common.sudo(['systemctl', 'restart', 'haproxy'])
 
     def install(self):
         logger.notice('Installing PostgreSQL Server...')

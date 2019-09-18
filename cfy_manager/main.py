@@ -121,6 +121,12 @@ BROKER_REMOVE_NODE_HELP_MSG = (
 VERBOSE_HELP_MSG = (
     "Used to give more verbose output."
 )
+DB_NODE_ADDRESS_HELP_MSG = (
+    "Address of target DB cluster node."
+)
+DB_NODE_FORCE_HELP_MSG = (
+    "Force removal of cluster node even if it is the master."
+)
 
 components = []
 
@@ -308,6 +314,36 @@ def db_cluster_list(**kwargs):
         output_table(db_nodes,
                      ('node_ip', 'state', 'alive', 'etcd_state', 'errors'))
         sys.exit(state)
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_cluster_node_add(**kwargs):
+    """Add a DB cluster node."""
+    _validate_components_prepared('db_cluster_node_add')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.add_cluster_node(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-f', '--force', help=DB_NODE_FORCE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_cluster_node_remove(**kwargs):
+    """Remove a DB cluster node."""
+    _validate_components_prepared('db_cluster_node_remove')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.remove_cluster_node(kwargs['address'], force=kwargs['force'])
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -767,6 +803,8 @@ def main():
         brokers_list,
         brokers_remove,
         db_cluster_list,
+        db_cluster_node_add,
+        db_cluster_node_remove,
     ])
     os.umask(current_umask)
 
