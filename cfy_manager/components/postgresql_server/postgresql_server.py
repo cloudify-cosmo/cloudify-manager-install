@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from copy import copy
 import json
 import os
 import re
@@ -82,6 +83,7 @@ PATRONI_DB_KEY_PATH = '/var/lib/patroni/db.key'
 PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'
 
 # Cluster file locations
+ETCD_DATA_DIR = '/var/lib/etcd'
 ETCD_CONFIG_PATH = '/etc/etcd/etcd.conf'
 PATRONI_CONFIG_PATH = '/etc/patroni.conf'
 
@@ -273,23 +275,57 @@ class PostgresqlServer(BaseComponent):
             time.sleep(1)
         logger.info('etcd has started')
 
-    def _etcd_conf_command(self, command, ignore_failures=False, stdin=None):
-        """Execute an etcdctl command at configure time.
-        Not to be used for day 2 operations as config.yaml may be out of date.
-        """
+    def _etcd_command(self, command, ignore_failures=False, stdin=None,
+                      local_only=False, username=None):
+        """Execute an etcdctl command."""
+        supported_etcd_users = ['root', 'patroni']
+        if username and username not in supported_etcd_users:
+            raise ValueError(
+                'Cluster configuration only supports these etcd users: '
+                '{users}'.format(users=', '.join(supported_etcd_users))
+            )
+
+        if local_only:
+            addresses = [config[MANAGER][PRIVATE_IP]]
+        else:
+            addresses = config[POSTGRESQL_SERVER]['cluster']['nodes']
+
         endpoints = ','.join(
             'https://{addr}:2379'.format(addr=addr)
-            for addr in config[POSTGRESQL_SERVER]['cluster']['nodes']
+            for addr in addresses
         )
         etcdctl_base_command = [
             'etcdctl', '--endpoints', endpoints,
             '--ca-file', ETCD_CA_PATH,
         ]
+        env = copy(os.environ)
+        if username:
+            pg_conf = config[POSTGRESQL_SERVER]
+            password = pg_conf['cluster']['etcd'][username + '_password']
+            env['ETCDCTL_USERNAME'] = username + ':' + password
         return common.run(
             etcdctl_base_command + command,
             ignore_failures=ignore_failures,
             stdin=stdin,
+            env=env,
         )
+
+    def _set_patroni_dcs_conf(self, patroni_config, local_only=True):
+        self._etcd_command(
+            ['set', '/db/postgres/config', json.dumps(patroni_config)],
+            username='root',
+            local_only=local_only,
+        )
+
+    def _get_patroni_dcs_conf(self, local_only=True):
+        return json.loads(self._etcd_command(
+            ['get', '/db/postgres/config'],
+            username='root',
+            local_only=local_only,
+        ).aggr_stdout)
+
+    def _get_etcd_id(self, ip):
+        return 'etcd' + ip.replace('.', '_')
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
@@ -344,8 +380,8 @@ class PostgresqlServer(BaseComponent):
         logger.info('Configuring etcd')
         systemd.enable('etcd', append_prefix=False)
         self._start_etcd()
-        cluster_auth_check = self._etcd_conf_command(['ls', '/'],
-                                                     ignore_failures=True)
+        cluster_auth_check = self._etcd_command(['ls', '/'],
+                                                ignore_failures=True)
         # This command will only succeed if the cluster is up and auth is not
         # yet enabled
         if cluster_auth_check.returncode == 0:
@@ -355,23 +391,72 @@ class PostgresqlServer(BaseComponent):
             logger.info('Configuring etcd authentication')
             # Note that, per the etcd documentation, the root user must exist
             # if authentication is to be enabled for etcd
-            self._etcd_conf_command(
+            self._etcd_command(
                 ['user', 'add', 'root'],
                 stdin=cluster_config['etcd']['root_password'],
             )
-            self._etcd_conf_command(
+            self._etcd_command(
                 ['user', 'add', 'patroni'],
                 stdin=cluster_config['etcd']['patroni_password'],
             )
-            self._etcd_conf_command(['role', 'add', 'patroni'])
-            self._etcd_conf_command(['role', 'grant', 'patroni',
-                                     '--path', '/db/*', '--readwrite'])
-            self._etcd_conf_command(['user', 'grant', 'patroni',
-                                     '--roles', 'patroni'])
-            self._etcd_conf_command(['role', 'add', 'guest'])
-            self._etcd_conf_command(['role', 'revoke', 'guest',
-                                     '--path', '/*', '--readwrite'])
-            self._etcd_conf_command(['auth', 'enable'])
+            self._etcd_command(['role', 'add', 'patroni'])
+            self._etcd_command(['role', 'grant', 'patroni',
+                                '--path', '/db/*', '--readwrite'])
+            self._etcd_command(['user', 'grant', 'patroni',
+                                '--roles', 'patroni'])
+            self._etcd_command(['role', 'add', 'guest'])
+            self._etcd_command(['role', 'revoke', 'guest',
+                                '--path', '/*', '--readwrite'])
+            self._etcd_command(['auth', 'enable'])
+        else:
+            # Check whether the cluster has auth enabled (e.g. this will fail
+            # on the first node before other nodes are started)
+            auth_enabled_check = self._etcd_command(
+                ['ls', '/'],
+                username='root',
+                ignore_failures=True,
+            )
+            if auth_enabled_check.returncode == 0:
+                # Authentication is enabled, we should add this node to the
+                # pg_hba in case this is being added to an existing cluster
+                patroni_conf = self._get_patroni_dcs_conf(local_only=False)
+                node_ip = config[MANAGER][PRIVATE_IP]
+                if not any(
+                    ' {ip}/32 '.format(ip=node_ip) in entry
+                    for entry in patroni_conf['postgresql']['pg_hba']
+                ):
+                    patroni_conf['postgresql']['pg_hba'].extend([
+                        'hostssl replication replicator {ip}/32 md5'.format(
+                            ip=node_ip,
+                        ),
+                        'hostssl all postgres {ip}/32 md5'.format(ip=node_ip),
+                    ])
+                    self._set_patroni_dcs_conf(patroni_conf, local_only=False)
+
+                # Handle joining a new node to an existing cluster
+                # (post-install)
+                etcd_members = self._etcd_command(
+                    ['cluster-health'],
+                ).aggr_stdout
+                # Cluster health command queries on 2379...
+                if 'https://{ip}:2379'.format(ip=node_ip) not in etcd_members:
+                    # ...but node should be added on 2380
+                    etcd_node_address = 'https://{ip}:2380'.format(ip=node_ip)
+                    etcd_node_id = self._get_etcd_id(node_ip)
+                    self._etcd_command(
+                        ['member', 'add', etcd_node_id, etcd_node_address],
+                        username='root',
+                    )
+                    common.sudo([
+                        'sed', '-i',
+                        's/ETCD_INITIAL_CLUSTER_STATE.*/'
+                        "ETCD_INITIAL_CLUSTER_STATE='existing'/",
+                        ETCD_CONFIG_PATH,
+                    ])
+                    common.remove(ETCD_DATA_DIR)
+                    common.mkdir(ETCD_DATA_DIR)
+                    common.chown('etcd', 'etcd', ETCD_DATA_DIR)
+                    common.sudo(['systemctl', 'restart', 'etcd'])
 
         logger.info('Creating postgres bin links for patroni')
         for pg_bin in PG_BINS:
@@ -624,6 +709,13 @@ class PostgresqlServer(BaseComponent):
         return status, db_nodes
 
     def add_cluster_node(self, address):
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            raise DBManagementError(
+                'Database cluster nodes should be added to the cluster '
+                'during install, by setting the appropriate entries in the '
+                'config.yaml.'
+            )
+
         master, replicas = self._get_cluster_addresses()
 
         if address in [master] + replicas:
@@ -642,16 +734,13 @@ class PostgresqlServer(BaseComponent):
                 'add the node.'.format(address=address)
             )
 
-        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-            raise NotImplementedError('Coming soon.')
-        else:
-            common.sudo(
-                ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
-                stdin=HAPROXY_NODE_ENTRY.format(addr=address),
-            )
+        common.sudo(
+            ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
+            stdin=HAPROXY_NODE_ENTRY.format(addr=address),
+        )
 
-            logger.info('Restarting DB proxy service.')
-            common.sudo(['systemctl', 'restart', 'haproxy'])
+        logger.info('Restarting DB proxy service.')
+        common.sudo(['systemctl', 'restart', 'haproxy'])
 
     def remove_cluster_node(self, address, force=False):
         master, replicas = self._get_cluster_addresses()
@@ -662,14 +751,49 @@ class PostgresqlServer(BaseComponent):
                 "without the '--force' flag."
             )
 
-        if address not in [master] + replicas:
-            raise DBManagementError(
-                'Cannot remove DB node {addr} from cluster, as it is not '
-                'part of the cluster.'.format(addr=address)
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            etcd_id_list = self._etcd_command(
+                ['member', 'list'],
+            ).aggr_stdout
+            # Expected output style:
+            # abc123def: name=etcd192_0_2_1 peerURLs=https://192.0.2.1:2380 clientURLs=https://192.0.2.1:2379 isLeader=false  # noqa
+            # abc223def: name=etcd192_0_2_2 peerURLs=https://192.0.2.2:2380 clientURLs=https://192.0.2.2:2379 isLeader=false  # noqa
+            # abc323def: name=etcd192_0_2_3 peerURLs=https://192.0.2.3:2380 clientURLs=https://192.0.2.3:2379 isLeader=false  # noqa
+
+            node_name = self._get_etcd_id(address)
+            search_string = 'name=' + node_name + ' '
+            node_id = None
+            for line in etcd_id_list.splitlines():
+                if search_string in line:
+                    node_id = line.split(':')[0]
+                    break
+
+            if not node_id:
+                raise DBManagementError(
+                    'Cannot find node with address {addr} for '
+                    'removal.'.format(addr=address)
+                )
+
+            self.logger.info(
+                'Removing etcd node {name}'.format(name=node_name)
+            )
+            self._etcd_command(
+                ['member', 'remove', node_id],
+                username='root',
+                local_only=True,
             )
 
-        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-            raise NotImplementedError('Coming soon.')
+            self.logger.info(
+                'Updating pg_hba to remove {address}'.format(address=address)
+            )
+            patroni_config = self._get_patroni_dcs_conf()
+            exclusion_string = ' {addr}/32 '.format(addr=address)
+            patroni_config['postgresql']['pg_hba'] = [
+                entry for entry in patroni_config['postgresql']['pg_hba']
+                if exclusion_string not in entry
+            ]
+            self._set_patroni_dcs_conf(patroni_config)
+            self.logger.info('Node {addr} removed.'.format(addr=address))
         else:
             entry = HAPROXY_NODE_ENTRY.format(addr=address).replace(
                 '/', '\\/',
@@ -682,7 +806,7 @@ class PostgresqlServer(BaseComponent):
                 ]
             )
 
-            logger.info('Restarting DB proxy service.')
+            self.logger.info('Restarting DB proxy service.')
             common.sudo(['systemctl', 'restart', 'haproxy'])
 
     def install(self):
