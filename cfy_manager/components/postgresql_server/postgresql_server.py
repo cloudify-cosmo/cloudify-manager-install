@@ -204,7 +204,7 @@ class PostgresqlServer(BaseComponent):
         """Copy SSL certificates to postgres data directory.
         postgresql.conf and pg_hba.conf configurations are handled in
         the update_configuration step.
-        Cluster certificates are7 handled in _configure_cluster.
+        Cluster certificates are handled in _configure_cluster.
         """
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
             self.use_supplied_certificates(
@@ -873,6 +873,8 @@ class PostgresqlServer(BaseComponent):
         files.remove_notice(POSTGRESQL_SERVER)
         systemd.remove(SYSTEMD_SERVICE_NAME)
         files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
+        for pg_bin in PG_BINS:
+            files.remove(os.path.join('/usr/sbin', pg_bin))
         yum_remove('postgresql95')
         yum_remove('postgresql95-libs')
         logger.notice('PostgreSQL successfully removed')
