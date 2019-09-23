@@ -348,6 +348,33 @@ def db_node_remove(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_reinit(**kwargs):
+    """Re-initialise an unhealthy DB cluster node."""
+    _validate_components_prepared('db_node_reinit')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.reinit_cluster_node(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_set_master(**kwargs):
+    _validate_components_prepared('db_node_set_master')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.set_master(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
 def output_table(data, fields):
     field_lengths = []
     for field in fields:
@@ -805,6 +832,8 @@ def main():
         db_node_list,
         db_node_add,
         db_node_remove,
+        db_node_reinit,
+        db_node_set_master,
     ])
     os.umask(current_umask)
 
