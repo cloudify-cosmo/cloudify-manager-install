@@ -280,6 +280,13 @@ class PostgresqlServer(BaseComponent):
             time.sleep(1)
         logger.info('etcd has started')
 
+    def _patronictl_command(self, command):
+        """Execute a patronictl command."""
+        patronictl_base_command = [
+            '/opt/patroni/bin/patronictl', '-c', PATRONI_CONFIG_PATH,
+        ]
+        return common.sudo(patronictl_base_command + command)
+
     def _etcd_command(self, command, ignore_failures=False, stdin=None,
                       local_only=False, username=None):
         """Execute an etcdctl command."""
@@ -331,6 +338,9 @@ class PostgresqlServer(BaseComponent):
 
     def _get_etcd_id(self, ip):
         return 'etcd' + ip.replace('.', '_')
+
+    def _get_patroni_id(self, ip):
+        return 'pg' + ip.replace('.', '_')
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
@@ -520,8 +530,7 @@ class PostgresqlServer(BaseComponent):
                     'Please retry this command on another DB cluster node.'
                 )
 
-            nodes = json.loads(common.sudo([
-                '/opt/patroni/bin/patronictl', '-c', '/etc/patroni.conf',
+            nodes = json.loads(self._patronictl_command([
                 'list', '--format', 'json'
             ]).aggr_stdout)
             for node in nodes:
@@ -834,6 +843,58 @@ class PostgresqlServer(BaseComponent):
 
             self.logger.info('Restarting DB proxy service.')
             common.sudo(['systemctl', 'restart', 'haproxy'])
+
+    def reinit_cluster_node(self, address):
+        master, replicas = self._get_cluster_addresses()
+
+        if address == master:
+            raise DBManagementError(
+                'The currently active DB master node cannot be reinitialised.'
+            )
+
+        if address not in [master] + replicas:
+            raise DBManagementError(
+                'Cannot reinitialise DB node {addr}, as it is '
+                'not part of the cluster.'.format(addr=address)
+            )
+
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            logger.info('Reinitialising DB node {addr}'.format(addr=address))
+            self._patronictl_command([
+                'reinit', '--force',
+                'postgres', self._get_patroni_id(address),
+            ])
+            logger.info('DB node {addr} reinitialised.'.format(addr=address))
+        else:
+            raise DBManagementError(
+                'Reinitialise can only be run from a DB node.'
+            )
+
+    def set_master(self, address):
+        master, replicas = self._get_cluster_addresses()
+
+        if address == master:
+            raise DBManagementError(
+                'The selected node is the current master.'
+            )
+
+        if address not in [master] + replicas:
+            raise DBManagementError(
+                'Cannot make DB node {addr} master, as it is '
+                'not part of the cluster.'.format(addr=address)
+            )
+
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            logger.info('Changing master to {addr}'.format(addr=address))
+            self._patronictl_command([
+                'switchover', '--force',
+                '--candidate', self._get_patroni_id(address),
+            ])
+            logger.info('Master changed to {addr}'.format(addr=address))
+        else:
+            raise DBManagementError(
+                'Set master can only be run from a DB node.'
+            )
 
     def install(self):
         logger.notice('Installing PostgreSQL Server...')
