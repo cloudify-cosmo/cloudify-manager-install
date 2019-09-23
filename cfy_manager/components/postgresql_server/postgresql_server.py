@@ -23,7 +23,12 @@ from os.path import join, isdir, islink
 
 import requests
 
-from cfy_manager.exceptions import DBNodeListError, DBManagementError
+from cfy_manager.exceptions import (
+    BootstrapError,
+    DBNodeListError,
+    DBManagementError,
+    ProcessExecutionError,
+)
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
@@ -451,10 +456,23 @@ class PostgresqlServer(BaseComponent):
                     # ...but node should be added on 2380
                     etcd_node_address = 'https://{ip}:2380'.format(ip=node_ip)
                     etcd_node_id = self._get_etcd_id(node_ip)
-                    self._etcd_command(
-                        ['member', 'add', etcd_node_id, etcd_node_address],
-                        username='root',
-                    )
+                    try:
+                        self._etcd_command(
+                            [
+                                'member', 'add',
+                                etcd_node_id, etcd_node_address,
+                            ],
+                            username='root',
+                        )
+                    except ProcessExecutionError as err:
+                        raise BootstrapError(
+                            'Error was: {err}\n'
+                            'Failed to join etcd cluster. '
+                            'If this node is being reinstalled you may need '
+                            'to uninstall it then run the DB node '
+                            'removal command on a healthy DB node before '
+                            'attempting to install again.'.format(err=err)
+                        )
                     common.sudo([
                         'sed', '-i',
                         's/ETCD_INITIAL_CLUSTER_STATE.*/'
