@@ -298,7 +298,7 @@ def complain_about_dead_broker_cluster(nodes):
 
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
-def db_cluster_list(**kwargs):
+def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     _validate_components_prepared('db_cluster_list')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
@@ -322,9 +322,9 @@ def db_cluster_list(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
-def db_cluster_node_add(**kwargs):
+def db_node_add(**kwargs):
     """Add a DB cluster node."""
-    _validate_components_prepared('db_cluster_node_add')
+    _validate_components_prepared('db_node_add')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.add_cluster_node(kwargs['address'])
@@ -338,9 +338,9 @@ def db_cluster_node_add(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
-def db_cluster_node_remove(**kwargs):
+def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
-    _validate_components_prepared('db_cluster_node_remove')
+    _validate_components_prepared('db_node_remove')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.remove_cluster_node(kwargs['address'], force=kwargs['force'])
@@ -802,9 +802,9 @@ def main():
         brokers_add,
         brokers_list,
         brokers_remove,
-        db_cluster_list,
-        db_cluster_node_add,
-        db_cluster_node_remove,
+        db_node_list,
+        db_node_add,
+        db_node_remove,
     ])
     os.umask(current_umask)
 
