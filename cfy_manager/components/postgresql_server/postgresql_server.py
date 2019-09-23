@@ -441,9 +441,13 @@ class PostgresqlServer(BaseComponent):
                 # (post-install)
                 etcd_members = self._etcd_command(
                     ['cluster-health'],
+                    ignore_failures=True,
                 ).aggr_stdout
                 # Cluster health command queries on 2379...
-                if 'https://{ip}:2379'.format(ip=node_ip) not in etcd_members:
+                healthy_result = (
+                    'healthy result from https://{ip}:2379'.format(ip=node_ip)
+                )
+                if healthy_result not in etcd_members:
                     # ...but node should be added on 2380
                     etcd_node_address = 'https://{ip}:2380'.format(ip=node_ip)
                     etcd_node_id = self._get_etcd_id(node_ip)
