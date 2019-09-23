@@ -425,12 +425,16 @@ class PostgresqlServer(BaseComponent):
                     ' {ip}/32 '.format(ip=node_ip) in entry
                     for entry in patroni_conf['postgresql']['pg_hba']
                 ):
-                    patroni_conf['postgresql']['pg_hba'].extend([
+                    patroni_conf['postgresql']['pg_hba'].insert(
+                        0,
                         'hostssl replication replicator {ip}/32 md5'.format(
                             ip=node_ip,
                         ),
+                    )
+                    patroni_conf['postgresql']['pg_hba'].insert(
+                        0,
                         'hostssl all postgres {ip}/32 md5'.format(ip=node_ip),
-                    ])
+                    )
                     self._set_patroni_dcs_conf(patroni_conf, local_only=False)
 
                 # Handle joining a new node to an existing cluster
