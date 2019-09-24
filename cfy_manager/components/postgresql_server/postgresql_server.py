@@ -743,6 +743,13 @@ class PostgresqlServer(BaseComponent):
 
         return status, db_nodes
 
+    def _restart_manager_db_dependent_services(self):
+        logger.info('Restarting DB proxy service.')
+        common.sudo(['systemctl', 'restart', 'haproxy'])
+        self.logger.info('Restarting DB-dependent services.')
+        common.sudo(['systemctl', 'restart', 'cloudify-amqp-postgres'])
+        common.sudo(['systemctl', 'restart', 'cloudify-restservice'])
+
     def add_cluster_node(self, address):
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             raise DBManagementError(
@@ -769,13 +776,13 @@ class PostgresqlServer(BaseComponent):
                 'add the node.'.format(address=address)
             )
 
+        self.logger.info('Updating DB proxy configuration.')
         common.sudo(
             ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
             stdin=HAPROXY_NODE_ENTRY.format(addr=address),
         )
 
-        logger.info('Restarting DB proxy service.')
-        common.sudo(['systemctl', 'restart', 'haproxy'])
+        self._restart_manager_db_dependent_services()
 
     def remove_cluster_node(self, address, force=False):
         master, replicas = self._get_cluster_addresses()
@@ -830,6 +837,7 @@ class PostgresqlServer(BaseComponent):
             self._set_patroni_dcs_conf(patroni_config)
             self.logger.info('Node {addr} removed.'.format(addr=address))
         else:
+            self.logger.info('Updating DB proxy configuration.')
             entry = HAPROXY_NODE_ENTRY.format(addr=address).replace(
                 '/', '\\/',
             )
@@ -841,8 +849,7 @@ class PostgresqlServer(BaseComponent):
                 ]
             )
 
-            self.logger.info('Restarting DB proxy service.')
-            common.sudo(['systemctl', 'restart', 'haproxy'])
+            self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
