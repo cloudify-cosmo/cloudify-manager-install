@@ -52,7 +52,7 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, sudo, manager_using_db_cluster
+from ..utils.common import run, sudo
 
 logger = get_logger(VALIDATIONS)
 
@@ -576,8 +576,12 @@ def _validate_external_postgres():
         if pg_conf['cluster']['nodes']:
             problems = []
 
-            if len(pg_conf['cluster']['nodes']) != 3:
-                problems.append('There must be exactly three cluster nodes.')
+            if len(pg_conf['cluster']['nodes']) < 2:
+                problems.append('There must be at least 2 DB cluster nodes.')
+            elif len(pg_conf['cluster']['nodes']) < 3:
+                logger.warning(
+                    'At least 3 nodes are recommended for DB clusters.'
+                )
 
             etcd_conf = pg_conf['cluster']['etcd']
             if not all(
@@ -604,15 +608,6 @@ def _validate_external_postgres():
                     'configuration: {problems}'.format(
                         problems=' '.join(problems),
                     )
-                )
-
-    if _is_installed(MANAGER_SERVICE) and not _is_installed(DATABASE_SERVICE):
-        if manager_using_db_cluster():
-            # We are accessing a DB cluster
-            if len(pg_conf['cluster']['nodes']) != 3:
-                raise ValidationError(
-                    'There must be exactly three cluster nodes in '
-                    'postgresql_server.cluster.nodes.'
                 )
 
 
