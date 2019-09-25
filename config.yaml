@@ -239,7 +239,9 @@ postgresql_server:
   ca_path: ''
 
   cluster:
-    # List of 3 nodes that will be members of the PostgreSQL cluster.
+    # List of nodes that will be members of the PostgreSQL cluster.
+    # 3 nodes are recommended for maintaining safe levels of redundancy without
+    # excessive resource usage.
     # If this is populated during a DB service install, the PostgreSQL cluster.
     # components will be installed.
     # The nodes must be provided as IPs, e.g.

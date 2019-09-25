@@ -25,6 +25,7 @@ import requests
 
 from cfy_manager.exceptions import (
     BootstrapError,
+    ClusteringError,
     DBNodeListError,
     DBManagementError,
     ProcessExecutionError,
@@ -342,6 +343,40 @@ class PostgresqlServer(BaseComponent):
     def _get_patroni_id(self, ip):
         return 'pg' + ip.replace('.', '_')
 
+    def _etcd_requires_auth(self):
+        self.logger.info('Checking whether etcd requires auth.')
+        # This allows ~15 seconds for the etcd cluster to become available
+        # It shouldn't wait too long because this will always timeout before
+        # a majority of the nodes are installed.
+        # Using a longer sleep and fewer attempts because when the cluster is
+        # not up it causes delaysto the queries meaning that more attempts add
+        # more delay.
+        attempts = 5
+        wait_time = 3
+
+        for attempt in range(attempts):
+            cluster_auth_check = self._etcd_command(['ls', '/'],
+                                                    ignore_failures=True)
+            # This command will only succeed if the cluster is up and auth is
+            # not yet enabled
+            if cluster_auth_check.returncode == 0:
+                self.logger.info('Etcd does not require auth.')
+                return False
+            elif cluster_auth_check.returncode == 4:
+                # This will be insufficient if etcdctl starts localising error
+                # messages
+                if 'user authentication' in cluster_auth_check.aggr_stderr:
+                    self.logger.info('Etcd requires auth.')
+                    return True
+
+            self.logger.debug('Etcd connection error: {err}'.format(
+                err=cluster_auth_check.aggr_stderr,
+            ))
+            time.sleep(wait_time)
+        raise ClusteringError(
+            'Etcd not up yet, this is likely the first node.'
+        )
+
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
@@ -395,43 +430,9 @@ class PostgresqlServer(BaseComponent):
         logger.info('Configuring etcd')
         systemd.enable('etcd', append_prefix=False)
         self._start_etcd()
-        cluster_auth_check = self._etcd_command(['ls', '/'],
-                                                ignore_failures=True)
-        # This command will only succeed if the cluster is up and auth is not
-        # yet enabled
-        if cluster_auth_check.returncode == 0:
-            cluster_config = config[POSTGRESQL_SERVER]['cluster']
-            # We want to configure etcd auth when the second node joins
-            # because that's the earliest we can do so.
-            logger.info('Configuring etcd authentication')
-            # Note that, per the etcd documentation, the root user must exist
-            # if authentication is to be enabled for etcd
-            self._etcd_command(
-                ['user', 'add', 'root'],
-                stdin=cluster_config['etcd']['root_password'],
-            )
-            self._etcd_command(
-                ['user', 'add', 'patroni'],
-                stdin=cluster_config['etcd']['patroni_password'],
-            )
-            self._etcd_command(['role', 'add', 'patroni'])
-            self._etcd_command(['role', 'grant', 'patroni',
-                                '--path', '/db/*', '--readwrite'])
-            self._etcd_command(['user', 'grant', 'patroni',
-                                '--roles', 'patroni'])
-            self._etcd_command(['role', 'add', 'guest'])
-            self._etcd_command(['role', 'revoke', 'guest',
-                                '--path', '/*', '--readwrite'])
-            self._etcd_command(['auth', 'enable'])
-        else:
-            # Check whether the cluster has auth enabled (e.g. this will fail
-            # on the first node before other nodes are started)
-            auth_enabled_check = self._etcd_command(
-                ['ls', '/'],
-                username='root',
-                ignore_failures=True,
-            )
-            if auth_enabled_check.returncode == 0:
+
+        try:
+            if self._etcd_requires_auth():
                 # Authentication is enabled, we should add this node to the
                 # pg_hba in case this is being added to an existing cluster
                 patroni_conf = self._get_patroni_dcs_conf(local_only=False)
@@ -493,6 +494,36 @@ class PostgresqlServer(BaseComponent):
                     common.mkdir(ETCD_DATA_DIR)
                     common.chown('etcd', 'etcd', ETCD_DATA_DIR)
                     common.sudo(['systemctl', 'restart', 'etcd'])
+            else:
+                cluster_config = config[POSTGRESQL_SERVER]['cluster']
+                # We want to configure etcd auth when the second node joins
+                # because that's the earliest we can do so.
+                logger.info('Configuring etcd authentication')
+                # Note that, per the etcd documentation, the root user must
+                # exist if authentication is to be enabled for etcd
+                self._etcd_command(
+                    ['user', 'add', 'root'],
+                    stdin=cluster_config['etcd']['root_password'],
+                )
+                self._etcd_command(
+                    ['user', 'add', 'patroni'],
+                    stdin=cluster_config['etcd']['patroni_password'],
+                )
+                self._etcd_command(['role', 'add', 'patroni'])
+                self._etcd_command(['role', 'grant', 'patroni',
+                                    '--path', '/db/*', '--readwrite'])
+                self._etcd_command(['user', 'grant', 'patroni',
+                                    '--roles', 'patroni'])
+                self._etcd_command(['role', 'add', 'guest'])
+                self._etcd_command(['role', 'revoke', 'guest',
+                                    '--path', '/*', '--readwrite'])
+                self._etcd_command(['auth', 'enable'])
+        except ClusteringError:
+            logger.warning(
+                'Could not finish etcd configuration. '
+                'If the majority of cluster nodes are not yet installed then '
+                'this warning can be ignored.'
+            )
 
         logger.info('Creating postgres bin links for patroni')
         for pg_bin in PG_BINS:
@@ -647,6 +678,9 @@ class PostgresqlServer(BaseComponent):
         master = db_nodes[0]
         replicas = db_nodes[1:]
 
+        member_count = 1 + len(replicas)
+        majority_requirement = member_count // 2
+
         master_log_location = master['raw_status'].get('log_location')
         master_timeline = master['raw_status'].get('timeline')
         sync_ips = self._get_sync_replicas(master['raw_status'])
@@ -655,6 +689,7 @@ class PostgresqlServer(BaseComponent):
         if not master['alive']:
             status = max(status, self.DOWN)
         if not sync_ips:
+            logger.error('No synchronous replicas found.')
             # The cluster is down if there are no sync replicas, because
             # writes will not be allowed
             status = max(status, self.DOWN)
@@ -675,14 +710,14 @@ class PostgresqlServer(BaseComponent):
                 )
             )
             status = max(status, self.DOWN)
-        if etcd_followers < 1:
+        if etcd_followers < majority_requirement:
             logger.error(
-                'No etcd followers found, cluster consensus lost.'
+                'Insufficient etcd followers found, cluster consensus lost.'
             )
             status = max(status, self.DOWN)
-        elif etcd_followers < 2:
+        elif etcd_followers < len(replicas):
             logger.warning(
-                'Missing one etcd follower.'
+                'Missing one or more etcd followers.'
             )
             status = max(status, self.DEGRADED)
 
