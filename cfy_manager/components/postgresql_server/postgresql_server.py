@@ -814,7 +814,7 @@ class PostgresqlServer(BaseComponent):
         self.logger.info('Updating DB proxy configuration.')
         common.sudo(
             ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
-            stdin=HAPROXY_NODE_ENTRY.format(addr=address),
+            stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
         )
 
         self._restart_manager_db_dependent_services()
