@@ -334,8 +334,6 @@ def db_node_add(**kwargs):
 
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
-@argh.decorators.arg('-f', '--force', help=DB_NODE_FORCE_HELP_MSG,
-                     default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
 def db_node_remove(**kwargs):
@@ -343,7 +341,7 @@ def db_node_remove(**kwargs):
     _validate_components_prepared('db_node_remove')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.remove_cluster_node(kwargs['address'], force=kwargs['force'])
+        db.remove_cluster_node(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
 
