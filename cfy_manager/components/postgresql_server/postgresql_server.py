@@ -624,6 +624,9 @@ class PostgresqlServer(BaseComponent):
         return master, replicas
 
     def _get_raw_node_status(self, address, target_type):
+        if address is None:
+            return
+
         url = {
             'etcd': 'https://{address}:2379/v2/stats/self',
             'DB': 'https://{address}:8008',
@@ -669,7 +672,7 @@ class PostgresqlServer(BaseComponent):
             'node_ip': address,
             'alive': False,
             'errors': [],
-            'raw_status': status,
+            'raw_status': status or {},
         }
 
         if status:
@@ -722,6 +725,11 @@ class PostgresqlServer(BaseComponent):
         master_log_location = master['raw_status'].get('log_location')
         master_timeline = master['raw_status'].get('timeline')
         sync_ips = self._get_sync_replicas(master['raw_status'])
+
+        if master['node_ip'] is None:
+            logger.error('No master found.')
+            status = max(status, self.DOWN)
+            db_nodes = replicas
 
         # Master checks
         if not master['alive']:
