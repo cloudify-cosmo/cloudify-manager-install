@@ -970,7 +970,31 @@ class PostgresqlServer(BaseComponent):
                 'switchover', '--force',
                 '--candidate', self._get_patroni_id(address),
             ])
-            logger.info('Master changed to {addr}'.format(addr=address))
+            for i in range(30):
+                master, _ = self._get_cluster_addresses()
+                if master != address:
+                    logger.info(
+                        'Waiting for master to change to {addr}. '
+                        'Current master is {master}.'.format(
+                            addr=address,
+                            master=master,
+                        )
+                    )
+                    time.sleep(1)
+            if master == address:
+                logger.info('Master changed to {addr}'.format(addr=address))
+            else:
+                logger.warning(
+                    'Master has not changed to {addr}. '
+                    'Master is currently {master}. '
+                    'This may indicate the master changed to the specified '
+                    'node and then changed again, or that the change did not '
+                    'occur. Please check cluster health before retrying this '
+                    'operation.'.format(
+                        addr=address,
+                        master=master,
+                    )
+                )
         else:
             raise DBManagementError(
                 'Set master can only be run from a DB node.'
