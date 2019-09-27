@@ -877,13 +877,20 @@ class PostgresqlServer(BaseComponent):
 
         self._restart_manager_db_dependent_services()
 
-    def remove_cluster_node(self, address, force=False):
+    def remove_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
 
-        if address == master and not force:
+        if len(replicas) < 2:
             raise DBManagementError(
-                'The currently active DB master node cannot be removed '
-                "without the '--force' flag."
+                'The last replica cannot be removed. A new replica must be '
+                'added before removing the target node.'
+            )
+
+        if address == master:
+            raise DBManagementError(
+                'The currently active DB master node cannot be removed. '
+                'Please set the master to a different node before retrying '
+                'this command.'
             )
 
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
@@ -976,7 +983,31 @@ class PostgresqlServer(BaseComponent):
                 'switchover', '--force',
                 '--candidate', self._get_patroni_id(address),
             ])
-            logger.info('Master changed to {addr}'.format(addr=address))
+            for i in range(30):
+                master, _ = self._get_cluster_addresses()
+                if master != address:
+                    logger.info(
+                        'Waiting for master to change to {addr}. '
+                        'Current master is {master}.'.format(
+                            addr=address,
+                            master=master,
+                        )
+                    )
+                    time.sleep(1)
+            if master == address:
+                logger.info('Master changed to {addr}'.format(addr=address))
+            else:
+                logger.warning(
+                    'Master has not changed to {addr}. '
+                    'Master is currently {master}. '
+                    'This may indicate the master changed to the specified '
+                    'node and then changed again, or that the change did not '
+                    'occur. Please check cluster health before retrying this '
+                    'operation.'.format(
+                        addr=address,
+                        master=master,
+                    )
+                )
         else:
             raise DBManagementError(
                 'Set master can only be run from a DB node.'
