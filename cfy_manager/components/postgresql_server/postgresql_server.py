@@ -539,6 +539,41 @@ class PostgresqlServer(BaseComponent):
         systemd.enable('patroni', append_prefix=False)
         systemd.start('patroni', append_prefix=False)
 
+    def _get_etcd_members(self):
+        """Get a dict mapping etcd member IPs to their IDs."""
+        etcd_members = {}
+
+        etcd_id_list = self._etcd_command(
+            ['member', 'list'],
+        ).aggr_stdout
+        # Expected output style:
+        # abc123def: name=etcd192_0_2_1 peerURLs=https://192.0.2.1:2380 clientURLs=https://192.0.2.1:2379 isLeader=false  # noqa
+        # abc223def: name=etcd192_0_2_2 peerURLs=https://192.0.2.2:2380 clientURLs=https://192.0.2.2:2379 isLeader=false  # noqa
+        # abc323def: name=etcd192_0_2_3 peerURLs=https://192.0.2.3:2380 clientURLs=https://192.0.2.3:2379 isLeader=false  # noqa
+        member_regex = re.compile(
+            # The ID is everything from the start of the line until the
+            # first colon
+            '^(?P<id>[^:]+):'
+            '.*peerURLs=https://'
+            # Then we just want to get the IP address from the peerURLs,
+            # but we should support IPv6 addresses as well so we can't
+            # just get everything until the next colon
+            '(?P<ip>.+)'
+            # Match on ':2380 clientURLs' to avoid greedily consuming too
+            # much if someone manages to make the client listen on 2380 too
+            ':2380 clientURLs'
+        )
+        # It would be much nicer to do this without ugly parsing, but etcdctl
+        # on the version we're using now ignores the request for json output
+        # when listing members
+
+        for line in etcd_id_list.splitlines():
+            line = line.strip()
+            result = member_regex.match(line).groupdict()
+            etcd_members[result['ip']] = result['id']
+
+        return etcd_members
+
     def _get_cluster_addresses(self):
         master = None
         replicas = []
@@ -561,15 +596,18 @@ class PostgresqlServer(BaseComponent):
                     'Please retry this command on another DB cluster node.'
                 )
 
-            nodes = json.loads(self._patronictl_command([
-                'list', '--format', 'json'
-            ]).aggr_stdout)
-            for node in nodes:
-                server_name = node['Host']
-                if node['Role'] == 'Leader':
-                    master = server_name
-                else:
-                    replicas.append(server_name)
+            nodes = self._get_etcd_members()
+
+            master_dsn = self._patronictl_command(['dsn']).aggr_stdout
+            # Expected response form:
+            # host=192.0.2.1 port=5432
+            master_finder = re.compile('host=(.*) port=5432')
+            try:
+                master = master_finder.findall(master_dsn)[0]
+            except IndexError:
+                master = None
+
+            replicas = [node for node in nodes if node != master]
         elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
             backends = common.get_haproxy_servers(self.logger)
             for backend in backends:
@@ -829,21 +867,7 @@ class PostgresqlServer(BaseComponent):
             )
 
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-            etcd_id_list = self._etcd_command(
-                ['member', 'list'],
-            ).aggr_stdout
-            # Expected output style:
-            # abc123def: name=etcd192_0_2_1 peerURLs=https://192.0.2.1:2380 clientURLs=https://192.0.2.1:2379 isLeader=false  # noqa
-            # abc223def: name=etcd192_0_2_2 peerURLs=https://192.0.2.2:2380 clientURLs=https://192.0.2.2:2379 isLeader=false  # noqa
-            # abc323def: name=etcd192_0_2_3 peerURLs=https://192.0.2.3:2380 clientURLs=https://192.0.2.3:2379 isLeader=false  # noqa
-
-            node_name = self._get_etcd_id(address)
-            search_string = 'name=' + node_name + ' '
-            node_id = None
-            for line in etcd_id_list.splitlines():
-                if search_string in line:
-                    node_id = line.split(':')[0]
-                    break
+            node_id = self._get_etcd_members().get(address)
 
             if not node_id:
                 raise DBManagementError(
@@ -852,7 +876,7 @@ class PostgresqlServer(BaseComponent):
                 )
 
             self.logger.info(
-                'Removing etcd node {name}'.format(name=node_name)
+                'Removing etcd node {name}'.format(name=address)
             )
             self._etcd_command(
                 ['member', 'remove', node_id],
