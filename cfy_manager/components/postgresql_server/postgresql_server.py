@@ -868,6 +868,12 @@ class PostgresqlServer(BaseComponent):
     def remove_cluster_node(self, address, force=False):
         master, replicas = self._get_cluster_addresses()
 
+        if len(replicas) < 2:
+            raise DBManagementError(
+                'The last replica cannot be removed. A new replica must be '
+                'added before removing the target node.'
+            )
+
         if address == master and not force:
             raise DBManagementError(
                 'The currently active DB master node cannot be removed '
