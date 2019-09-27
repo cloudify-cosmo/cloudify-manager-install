@@ -865,7 +865,7 @@ class PostgresqlServer(BaseComponent):
 
         self._restart_manager_db_dependent_services()
 
-    def remove_cluster_node(self, address, force=False):
+    def remove_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
 
         if len(replicas) < 2:
@@ -874,10 +874,11 @@ class PostgresqlServer(BaseComponent):
                 'added before removing the target node.'
             )
 
-        if address == master and not force:
+        if address == master:
             raise DBManagementError(
-                'The currently active DB master node cannot be removed '
-                "without the '--force' flag."
+                'The currently active DB master node cannot be removed. '
+                'Please set the master to a different node before retrying '
+                'this command.'
             )
 
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
