@@ -722,7 +722,9 @@ class PostgresqlServer(BaseComponent):
         member_count = 1 + len(replicas)
         majority_requirement = member_count // 2
 
-        master_log_location = master['raw_status'].get('log_location')
+        master_log_location = master['raw_status'].get(
+            'xlog', {}
+        ).get('location')
         master_timeline = master['raw_status'].get('timeline')
         sync_ips = self._get_sync_replicas(master['raw_status'])
 
@@ -790,6 +792,16 @@ class PostgresqlServer(BaseComponent):
                     )
                     replica['errors'].append('Out of sync')
                     status = max(status, self.DEGRADED)
+                lag_bytes = master_log_location - replica.get('log_location')
+                lag_mb = lag_bytes / 1024.0 / 1024.0
+                if lag_mb > 2:
+                    logger.warning(
+                        'Asynchronous replica appears to be lagging '
+                        'excessively.'
+                    )
+                    replica['errors'].append('Lag: {amount:.2f}MiB'.format(
+                        amount=lag_mb,
+                    ))
 
             if replica['raw_status'].get('state') == 'master':
                 # This should only happen if a failover happened literally as
