@@ -25,7 +25,7 @@ from ..components_constants import (
     SSL_CLIENT_VERIFICATION,
 )
 from ..base_component import BaseComponent
-from ..service_names import POSTGRESQL_CLIENT, POSTGRESQL_SERVER
+from ..service_names import POSTGRESQL_CLIENT
 from ...constants import (
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
@@ -140,8 +140,8 @@ class PostgresqlClient(BaseComponent):
 
         # Creating Cloudify .pgpass file
         db_name = '*'  # Allowing for the multiple DBs we have
-        user = pg_config['username']
-        password = pg_config['password']
+        user = pg_config['cloudify_username']
+        password = pg_config['cloudify_password']
         self._create_pgpass(
             host=host,
             port=port,
@@ -159,7 +159,7 @@ class PostgresqlClient(BaseComponent):
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             certificates.use_supplied_certificates(
-                POSTGRESQL_SERVER,
+                POSTGRESQL_CLIENT,
                 self.logger,
                 ca_destination=POSTGRESQL_CA_CERT_PATH,
             )

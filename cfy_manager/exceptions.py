@@ -48,3 +48,11 @@ class ClusteringError(BootstrapError):
 class RabbitNodeListError(StandardError):
     """Raised when there is an error listing rabbit nodes."""
     pass
+
+
+class DBNodeListError(Exception):
+    """Raised when there is an error listing DB cluster nodes."""
+
+
+class DBManagementError(Exception):
+    """Raised when there is an error managing DB cluster nodes."""

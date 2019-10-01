@@ -113,6 +113,11 @@ def setup_console_logger(verbose=False, init=[]):
     else:
         # it is enough to init the logger only once for cfy_manager execution
         return
+    # Requests is fairly verbose at INFO level; make it verbose only when
+    # requested
+    logging.getLogger('requests').setLevel(
+        logging.DEBUG if verbose else logging.ERROR
+    )
     logger = logging.getLogger()
     log_level = logging.DEBUG if verbose else logging.INFO
     sh = logging.StreamHandler(sys.stdout)

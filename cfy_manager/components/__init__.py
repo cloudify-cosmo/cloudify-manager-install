@@ -21,7 +21,7 @@ from .manager_ip_setter import ManagerIpSetter  # NOQA
 from .mgmtworker import MgmtWorker  # NOQA
 from .nginx import Nginx  # NOQA
 from .postgresql_server import PostgresqlServer  # NOQA
-from .postgresql_client import PostgresqlClient # NOQA
+from .postgresql_client import PostgresqlClient  # NOQA
 from .python import Python  # NOQA
 from .rabbitmq import RabbitMQ  # NOQA
 from .restservice import RestService  # NOQA

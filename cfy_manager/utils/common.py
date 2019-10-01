@@ -13,12 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import csv
 import glob
 import os
 import shlex
 import socket
 import subprocess
 import tempfile
+
+import requests
 
 from ..config import config
 from ..logger import get_logger
@@ -161,3 +164,46 @@ def manager_using_db_cluster():
         )
         and config[POSTGRESQL_SERVER]['cluster']['nodes']
     )
+
+
+def get_haproxy_servers(logger):
+    # Get the haproxy status data
+    try:
+        haproxy_csv = requests.get(
+            'http://localhost:7000/admin?stats;csv;norefresh'
+        ).text
+    except requests.ConnectionError as err:
+        logger.info(
+            'Could not connect to DB proxy ({err}), '.format(err=err)
+        )
+        return None
+
+    # Example output (# noqas are not part of actual output):
+    # # pxname,svname,qcur,qmax,scur,smax,slim,stot,bin,bout,dreq,dresp,ereq,econ,eresp,wretr,wredis,status,weight,act,bck,chkfail,chkdown,lastchg,downtime,qlimit,pid,iid,sid,throttle,lbtot,tracked,type,rate,rate_lim,rate_max,check_status,check_code,check_duration,hrsp_1xx,hrsp_2xx,hrsp_3xx,hrsp_4xx,hrsp_5xx,hrsp_other,hanafail,req_rate,req_rate_max,req_tot,cli_abrt,srv_abrt,comp_in,comp_out,comp_byp,comp_rsp,lastsess,last_chk,last_agt,qtime,ctime,rtime,ttime,  # noqa
+    # stats,FRONTEND,,,1,1,2000,7,553,83778,0,0,0,,,,,OPEN,,,,,,,,,1,1,0,,,,0,1,0,1,,,,0,6,0,0,0,0,,1,1,7,,,0,0,0,0,,,,,,,,  # noqa
+    # stats,BACKEND,0,0,0,0,200,0,553,83778,0,0,,0,0,0,0,UP,0,0,0,,0,89,0,,1,1,0,,0,,1,0,,0,,,,0,0,0,0,0,0,,,,,0,0,0,0,0,0,0,,,0,0,0,0,  # noqa
+    # postgres,FRONTEND,,,0,0,2000,0,0,0,0,0,0,,,,,OPEN,,,,,,,,,1,2,0,,,,0,0,0,0,,,,,,,,,,,0,0,0,,,0,0,0,0,,,,,,,,  # noqa
+    # postgres,postgresql_192.0.2.46_5432,0,0,0,0,100,0,0,0,,0,,0,0,0,0,DOWN,1,1,0,1,1,89,89,,1,2,1,,0,,2,0,,0,L7STS,503,3,,,,,,,0,,,,0,0,,,,,-1,HTTP status check returned code <503>,,0,0,0,0,  # noqa
+    # postgres,postgresql_192.0.2.47_5432,0,0,0,0,100,0,0,0,,0,,0,0,0,0,UP,1,1,0,0,0,89,0,,1,2,2,,0,,2,0,,0,L7OK,200,3,,,,,,,0,,,,0,0,,,,,-1,HTTP status check returned code <200>,,0,0,0,0,  # noqa
+    # postgres,postgresql_192.0.2.48_5432,0,0,0,0,100,0,0,0,,0,,0,0,0,0,DOWN,1,1,0,1,1,87,87,,1,2,3,,0,,2,0,,0,L7STS,503,2,,,,,,,0,,,,0,0,,,,,-1,HTTP status check returned code <503>,,0,0,0,0,  # noqa
+    # postgres,BACKEND,0,0,0,0,200,0,0,0,0,0,,0,0,0,0,UP,1,1,0,,0,89,0,,1,2,0,,0,,1,0,,0,,,,,,,,,,,,,,0,0,0,0,0,0,-1,,,0,0,0,0,  # noqa
+    haproxy_status = list(csv.DictReader(
+        haproxy_csv.lstrip('# ').splitlines()
+    ))
+
+    servers = [
+        row for row in haproxy_status
+        if row['svname'] not in ('BACKEND', 'FRONTEND')
+    ]
+
+    for server in servers:
+        logger.debug(
+            'Server: {name}: {status} ({why}) - {detail}'.format(
+                name=server['svname'],
+                status=server['status'],
+                why=server['check_status'],
+                detail=server['last_chk'],
+            )
+        )
+
+    return servers

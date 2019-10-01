@@ -31,7 +31,7 @@ from .components import (
 )
 from .components.globals import set_globals
 from .components.validations import validate
-from .components.service_names import MANAGER
+from .components.service_names import MANAGER, POSTGRESQL_SERVER
 from .components.components_constants import (
     SERVICES_TO_INSTALL,
     SECURITY,
@@ -120,6 +120,12 @@ BROKER_REMOVE_NODE_HELP_MSG = (
 )
 VERBOSE_HELP_MSG = (
     "Used to give more verbose output."
+)
+DB_NODE_ADDRESS_HELP_MSG = (
+    "Address of target DB cluster node."
+)
+DB_NODE_FORCE_HELP_MSG = (
+    "Force removal of cluster node even if it is the master."
 )
 
 components = []
@@ -288,6 +294,83 @@ def complain_about_dead_broker_cluster(nodes):
             'If this is not possible, please contact support.'
         )
         sys.exit(1)
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+def db_node_list(**kwargs):
+    """List DB cluster members and DB cluster health."""
+    _validate_components_prepared('db_cluster_list')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        state, db_nodes = db.get_cluster_status()
+        if state == db.HEALTHY:
+            logger.info('DB cluster is healthy.')
+        elif state == db.DEGRADED:
+            logger.warning('DB cluster is unhealthy.')
+        else:
+            logger.error('DB cluster is down.')
+        output_table(db_nodes,
+                     ('node_ip', 'state', 'alive', 'etcd_state', 'errors'))
+        sys.exit(state)
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_add(**kwargs):
+    """Add a DB cluster node."""
+    _validate_components_prepared('db_node_add')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.add_cluster_node(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_remove(**kwargs):
+    """Remove a DB cluster node."""
+    _validate_components_prepared('db_node_remove')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.remove_cluster_node(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_reinit(**kwargs):
+    """Re-initialise an unhealthy DB cluster node."""
+    _validate_components_prepared('db_node_reinit')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.reinit_cluster_node(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_set_master(**kwargs):
+    _validate_components_prepared('db_node_set_master')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.set_master(kwargs['address'])
+    else:
+        logger.info('There is no database cluster associated with this node.')
 
 
 def output_table(data, fields):
@@ -744,6 +827,11 @@ def main():
         brokers_add,
         brokers_list,
         brokers_remove,
+        db_node_list,
+        db_node_add,
+        db_node_remove,
+        db_node_reinit,
+        db_node_set_master,
     ])
     os.umask(current_umask)
 

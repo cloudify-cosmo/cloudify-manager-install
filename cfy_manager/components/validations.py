@@ -52,7 +52,7 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, sudo, manager_using_db_cluster
+from ..utils.common import run, sudo
 
 logger = get_logger(VALIDATIONS)
 
@@ -443,17 +443,34 @@ def _validate_cert_inputs():
     if config[POSTGRESQL_SERVER]['ca_path']:
         _check_ssl_file(config[POSTGRESQL_SERVER]['ca_path'],
                         kind='Cert')
+        config[POSTGRESQL_CLIENT]['ca_path'] = \
+            config[POSTGRESQL_SERVER]['ca_path']
+    elif config[POSTGRESQL_CLIENT]['ca_path']:
+        _check_ssl_file(config[POSTGRESQL_CLIENT]['ca_path'],
+                        kind='Cert')
 
 
 def _is_installed(service):
     return service in config[SERVICES_TO_INSTALL]
 
 
+def _validate_postgres_server_and_cloudify_input_difference():
+    pg_conf = config[POSTGRESQL_CLIENT]
+    condition = [
+        pg_conf['server_username'] == pg_conf['cloudify_username'],
+        pg_conf['server_db_name'] == pg_conf['cloudify_db_name']
+    ]
+    if any(condition):
+        raise ValidationError('The server_username and server_db_name values '
+                              'must be different than the cloudify_username '
+                              'and cloudify_db_name values respectively')
+
+
 def _validate_postgres_azure_configuration():
     condition = [
         '@' in entry for entry in [
             config[POSTGRESQL_CLIENT]['server_username'],
-            config[POSTGRESQL_CLIENT]['username']]
+            config[POSTGRESQL_CLIENT]['cloudify_username']]
     ]
     if any(condition) and not all(condition):
         raise ValidationError(
@@ -505,13 +522,14 @@ def _validate_postgres_inputs():
             'must be enabled to ensure client verification takes place.'
         )
     _validate_postgres_azure_configuration()
+    _validate_postgres_server_and_cloudify_input_difference()
 
 
 def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
                 'config.yaml in {1}'
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+    if _is_installed(DATABASE_SERVICE):
         if not (config['postgresql_server']['cert_path'] and
                 config['postgresql_server']['key_path'] and
                 config['postgresql_server']['ca_path']):
@@ -532,12 +550,14 @@ def _validate_postgres_ssl_certificates_provided():
                     'ssl_inputs.postgresql_client_cert_path, '
                     'ssl_inputs.postgresql_client_key_path, '
                     'and postgresql_server.ca_path'))
-    elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-        if not config['postgresql_server']['ca_path']:
+    elif _is_installed(MANAGER_SERVICE):
+        if not config['postgresql_server']['ca_path'] and not \
+                config['postgresql_client']['ca_path']:
             # Do not allow external postgres without SSL
             raise ValidationError(
                 error_msg.format('a CA certificate',
-                                 'postgresql_server.ca_path')
+                                 'postgresql_server.ca_path or '
+                                 'postgresql_client.ca_path')
             )
 
 
@@ -556,8 +576,12 @@ def _validate_external_postgres():
         if pg_conf['cluster']['nodes']:
             problems = []
 
-            if len(pg_conf['cluster']['nodes']) != 3:
-                problems.append('There must be exactly three cluster nodes.')
+            if len(pg_conf['cluster']['nodes']) < 2:
+                problems.append('There must be at least 2 DB cluster nodes.')
+            elif len(pg_conf['cluster']['nodes']) < 3:
+                logger.warning(
+                    'At least 3 nodes are recommended for DB clusters.'
+                )
 
             etcd_conf = pg_conf['cluster']['etcd']
             if not all(
@@ -584,15 +608,6 @@ def _validate_external_postgres():
                     'configuration: {problems}'.format(
                         problems=' '.join(problems),
                     )
-                )
-
-    if _is_installed(MANAGER_SERVICE) and not _is_installed(DATABASE_SERVICE):
-        if manager_using_db_cluster():
-            # We are accessing a DB cluster
-            if len(pg_conf['cluster']['nodes']) != 3:
-                raise ValidationError(
-                    'There must be exactly three cluster nodes in '
-                    'postgresql_server.cluster.nodes.'
                 )
 
 
