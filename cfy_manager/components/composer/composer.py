@@ -24,7 +24,8 @@ from ..components_constants import (
     SERVICE_GROUP,
     SSL_INPUTS,
     SSL_ENABLED,
-    SSL_CLIENT_VERIFICATION
+    SSL_CLIENT_VERIFICATION,
+    CLUSTER_JOIN
 )
 from ..base_component import BaseComponent
 from ..service_names import COMPOSER, POSTGRESQL_CLIENT
@@ -104,6 +105,9 @@ class Composer(BaseComponent):
         self._verify_composer_alive()
 
     def _run_db_migrate(self):
+        if config[CLUSTER_JOIN]:
+            logger.debug('Joining cluster - not creating the composer db')
+            return
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
         common.run(
             [
