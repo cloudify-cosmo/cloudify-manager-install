@@ -326,7 +326,7 @@ def _check_cert_key_match(cert_filename, key_filename, password=None):
     key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
                            '-in', key_filename]
     if password:
-        key_filename += ['-passin', 'pass:{0}'.format(password)]
+        key_modulus_command += ['-passin', 'pass:{0}'.format(password)]
     cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
                             '-in', cert_filename]
     key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
