@@ -279,7 +279,8 @@ def _generate_ssl_certificate(ips,
             ]
             if sign_key_password:
                 x509_command += [
-                    '-passin', 'pass:{0}'.format(sign_key_password)
+                    '-passin',
+                    u'pass:{0}'.format(sign_key_password).encode('utf-8')
                 ]
         else:
             x509_command += [
@@ -342,7 +343,7 @@ def remove_key_encryption(src_key_path,
         'openssl', 'rsa',
         '-in', src_key_path,
         '-out', dst_key_path,
-        '-passin', 'pass:' + key_password
+        '-passin', u'pass:{0}'.format(key_password).encode('utf-8')
     ])
 
 
