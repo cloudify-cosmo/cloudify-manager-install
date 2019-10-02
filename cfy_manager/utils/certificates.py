@@ -484,7 +484,7 @@ def use_supplied_certificates(component_name,
 
     if key_pass:
         remove_key_encryption(
-            ca_destination, ca_destination, key_pass
+            key_destination, key_destination, key_pass
         )
 
     logger.info('Setting certificate ownership and permissions.')
