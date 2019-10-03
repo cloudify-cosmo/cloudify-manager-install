@@ -13,11 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from copy import copy
-import json
 import os
 import re
 import time
+import json
+import yaml
+from copy import copy
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
@@ -87,10 +88,12 @@ PATRONI_REST_KEY_PATH = '/var/lib/patroni/rest.key'
 PATRONI_DB_CERT_PATH = '/var/lib/patroni/db.crt'
 PATRONI_DB_KEY_PATH = '/var/lib/patroni/db.key'
 PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'
+PATRONI_PGPASS_PATH = '/var/lib/patroni/pgpass'
 
 # Cluster file locations
 ETCD_DATA_DIR = '/var/lib/etcd'
 ETCD_CONFIG_PATH = '/etc/etcd/etcd.conf'
+PATRONI_DATA_DIR = '/var/lib/patroni/data'
 PATRONI_CONFIG_PATH = '/etc/patroni.conf'
 
 HAPROXY_NODE_ENTRY = (
@@ -416,8 +419,7 @@ class PostgresqlServer(BaseComponent):
         common.sudo(['chmod', 'a-x', '/var/lib/patroni'])
 
         logger.info('Deploying cluster config files.')
-        files.deploy(os.path.join(CONFIG_PATH, 'patroni.conf'),
-                     PATRONI_CONFIG_PATH)
+        self._create_patroni_config(PATRONI_CONFIG_PATH)
         common.sudo(['chown', 'root.postgres', PATRONI_CONFIG_PATH])
         common.sudo(['chmod', '640', PATRONI_CONFIG_PATH])
         files.deploy(os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH)
@@ -441,15 +443,9 @@ class PostgresqlServer(BaseComponent):
                     ' {ip}/32 '.format(ip=node_ip) in entry
                     for entry in patroni_conf['postgresql']['pg_hba']
                 ):
-                    patroni_conf['postgresql']['pg_hba'].insert(
-                        0,
-                        'hostssl replication replicator {ip}/32 md5'.format(
-                            ip=node_ip,
-                        ),
-                    )
-                    patroni_conf['postgresql']['pg_hba'].insert(
-                        0,
-                        'hostssl all postgres {ip}/32 md5'.format(ip=node_ip),
+                    self._add_node_to_pg_hba(
+                        pg_hba=patroni_conf['postgresql']['pg_hba'],
+                        node=node_ip
                     )
                     self._set_patroni_dcs_conf(patroni_conf, local_only=False)
 
@@ -573,6 +569,102 @@ class PostgresqlServer(BaseComponent):
             etcd_members[result['ip']] = result['id']
 
         return etcd_members
+
+    def _create_patroni_config(self, patroni_config_path):
+        manager_ip = config['manager'][PRIVATE_IP]
+        pgsrv = config[POSTGRESQL_SERVER]
+
+        patroni_conf = {
+            'scope': 'postgres',
+            'namespace': '/db/',
+            'name': 'pg{0}'.format(manager_ip.replace('.', '_')),
+            'restapi': {
+                'listen': '{0}:8008'.format(manager_ip),
+                'connect_address': '{0}:8008'.format(manager_ip),
+                'authentication': {
+                    'username': pgsrv['cluster']['patroni']['rest_user'],
+                    'password': pgsrv['cluster']['patroni']['rest_password']
+                },
+                'cacert': PATRONI_DB_CA_PATH,
+                'certfile': PATRONI_REST_CERT_PATH,
+                'keyfile': PATRONI_REST_KEY_PATH,
+            },
+            'bootstrap': {
+                'dcs': {
+                    'ttl': 30,
+                    'loop_wait': 10,
+                    'retry_timeout': 10,
+                    'maximum_lag_on_failover': 0,
+                    'synchronous_mode_strict': True,
+                    'check_timeline': True,
+                    'postgresql': {
+                        'use_pg_rewind': True,
+                        'remove_data_directory_on_rewind_failure': True,
+                        'remove_data_directory_on_diverged_timelines': True,
+                        'pg_hba': [
+                            'hostssl replication replicator 127.0.0.1/32 md5',
+                            'hostssl all all 0.0.0.0/0 md5{0}'.format(
+                                ' clientcert=1'
+                                if pgsrv['ssl_client_verification'] else '')
+                        ],
+                    },
+                },
+                'initdb': [{'encoding': 'UTF8'}, 'data-checksums']
+            },
+            'postgresql': {
+                'listen': '{0}:5432'.format(manager_ip),
+                'connect_address': '{0}:5432'.format(manager_ip),
+                'data_dir': PATRONI_DATA_DIR,
+                'pgpass': PATRONI_PGPASS_PATH,
+                'authentication': {
+                    'replication': {
+                        'username': 'replicator',
+                        'password':
+                            pgsrv['cluster']['postgres']['replicator_password']
+                    },
+                    'superuser': {
+                        'username': 'postgres',
+                        'password': pgsrv['postgres_password']
+                    }
+                },
+                'parameters': {
+                    'unix_socket_directories': '.',
+                    'synchronous_commit': 'on',
+                    'synchronous_standby_names': '*',
+                    'ssl': 'on',
+                    'ssl_ca_file': PATRONI_DB_CA_PATH,
+                    'ssl_cert_file': PATRONI_DB_CERT_PATH,
+                    'ssl_key_file': PATRONI_DB_KEY_PATH,
+                    'ssl_ciphers': 'HIGH',
+                },
+            },
+            'tags': {
+                'nofailover': False,
+                'noloadbalance': False,
+                'clonefrom': False,
+                'nosync': False
+            },
+            'etcd': {
+                'hosts': ['{0}:2379'.format(manager_ip)],
+                'protocol': 'https',
+                'cacert': ETCD_CA_PATH,
+                'username': 'patroni',
+                'password': pgsrv['cluster']['etcd']['patroni_password']
+            },
+        }
+        for node in pgsrv['cluster']['nodes']:
+            self._add_node_to_pg_hba(
+                patroni_conf['bootstrap']['dcs']['postgresql']['pg_hba'],
+                node
+            )
+        with open(patroni_config_path, 'w') as f:
+            f.write(yaml.dump(patroni_conf, default_flow_style=False))
+
+    def _add_node_to_pg_hba(self, pg_hba, node):
+        pg_hba[:0] = [
+            'hostssl all postgres {ip}/32 md5'.format(ip=node),
+            'hostssl replication replicator {ip}/32 md5'.format(ip=node)
+        ]
 
     def _get_cluster_addresses(self):
         master = None
