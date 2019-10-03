@@ -434,7 +434,8 @@ def use_supplied_certificates(component_name,
                               cert_perms='444',
                               prefix='',
                               just_ca_cert=False,
-                              update_config=True):
+                              update_config=True,
+                              sub_component=None):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -455,8 +456,15 @@ def use_supplied_certificates(component_name,
         key_path = None
         cert_path = None
 
+    config_section = config[component_name]
+    section_path = component_name
+    if sub_component:
+        config_section = config_section[sub_component]
+        section_path = section_path + '.' + sub_component
+
     cert_src, key_src, ca_src, key_pass = check_certificates(
-        component_name,
+        config_section,
+        section_path,
         cert_path=cert_path,
         key_path=key_path,
         ca_path=ca_path,
@@ -504,13 +512,13 @@ def use_supplied_certificates(component_name,
     if update_config:
         logger.info('Updating configured certification locations.')
         if cert_destination:
-            config[component_name][cert_path] = cert_destination
+            config_section[cert_path] = cert_destination
         if key_destination:
-            config[component_name][key_path] = key_destination
+            config_section[key_path] = key_destination
         if ca_destination:
-            config[component_name][ca_path] = ca_destination
+            config_section[ca_path] = ca_destination
             # If there was a password, we've now removed it
-            config[component_name][key_password] = ''
+            config_section[key_password] = ''
 
     # Supplied certificates were used
     return True

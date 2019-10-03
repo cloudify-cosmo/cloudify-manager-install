@@ -406,14 +406,23 @@ restservice:
     max_requests: 1000
 
   ldap:
-    # LDAP server, admin username, admin password and domain
+    # This should include the protocol and port,
+    # e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636
     server: ''
-    username: ''
-    password: ''
+
+    # The domain, e.g. example.local
     domain: ''
 
     # True if Active Directory will be used as the LDAP authenticator
     is_active_directory: true
+
+    # This must be provided if the server is using ldaps://
+    ca_cert: ''
+
+    # Username and password should only be entered if absolutely required
+    # by the ldap service.
+    username: ''
+    password: ''
 
     # Any extra LDAP information (separated by the `;` sign. e.g. a=1;b=2)
     dn_extra: ''
