@@ -346,16 +346,17 @@ def _check_cert_key_match(cert_filename, key_filename, password=None):
         )
 
 
-def check_certificates(component,
+def check_certificates(config_section, section_path,
                        cert_path='cert_path', key_path='key_path',
                        ca_path='ca_path', key_password='key_password',
-                       require_non_ca_certs=True):
+                       require_non_ca_certs=True,
+                       ):
     """Check that the provided cert, key, and CA actally match"""
-    cert_filename = config[component].get(cert_path)
-    key_filename = config[component].get(key_path)
+    cert_filename = config_section.get(cert_path)
+    key_filename = config_section.get(key_path)
 
-    ca_filename = config[component].get(ca_path)
-    password = config[component].get(key_password)
+    ca_filename = config_section.get(ca_path)
+    password = config_section.get(key_password)
 
     if not cert_filename and not key_filename and require_non_ca_certs:
         failing = []
@@ -369,7 +370,7 @@ def check_certificates(component,
                 'If {failing} was provided, both cert_path and key_path '
                 'must be provided in {component}'.format(
                     failing=failing,
-                    component=component,
+                    component=section_path,
                 )
             )
     elif cert_filename and key_filename:
@@ -430,6 +431,7 @@ def _validate_cert_inputs():
         key_password = '{0}_key_password'.format(ssl_input)
         # These should all be moved to their respective components- see Rabbit
         check_certificates(
+            config[SSL_INPUTS],
             SSL_INPUTS,
             cert_path=cert_path,
             key_path=key_path,
@@ -647,6 +649,21 @@ def _validate_not_reusing_removed_passwords():
                 removed=removed_value,
                 locations=problem_locations,
             )
+        )
+
+
+def _validate_ldap_certificate_setting():
+    """Confirm that if using ldaps we have the required ca cert."""
+    ldaps = config['restservice']['ldap']['server'].startswith('ldaps://')
+    ca_cert = config['restservice']['ldap']['ca_cert']
+
+    if ldaps and not ca_cert:
+        raise ValidationError(
+            'When using ldaps a CA certificate must be provided.'
+        )
+    elif ca_cert and not ldaps:
+        raise ValidationError(
+            'When not using ldaps a CA certificate must not be provided.'
         )
 
 

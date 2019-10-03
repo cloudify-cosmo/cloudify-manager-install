@@ -80,6 +80,7 @@ REST_SECURITY_CONFIG_PATH = join(HOME_DIR, 'rest-security.conf')
 logger = get_logger(RESTSERVICE)
 CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(HOME_DIR, 'license_key.pem.pub')
 REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
+LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
 
 
 class RestService(BaseComponent):
@@ -399,6 +400,16 @@ class RestService(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Rest Service...')
+
+        logger.info('Checking for ldaps CA cert to deploy.')
+        certificates.use_supplied_certificates(
+            RESTSERVICE,
+            logger,
+            sub_component='ldap',
+            just_ca_cert=True,
+            ca_destination=LDAP_CA_CERT_PATH,
+        )
+
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 

@@ -29,6 +29,7 @@ def make_manager_config():
             config['restservice']['ldap']['is_active_directory'],
         'ldap_dn_extra': config['restservice']['ldap']['dn_extra'],
         'ldap_timeout': 5.0,
+        'ldap_ca_path': config['restservice']['ldap']['ca_cert'],
         'file_server_root': config['manager']['file_server_root'],
         'file_server_url': config['manager']['file_server_url'],
         'insecure_endpoints_disabled':
