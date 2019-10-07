@@ -682,6 +682,7 @@ def validate(components, skip_validations=False, only_install=False):
     logger.notice('Validating local machine...')
 
     if not only_install:
+        _validate_ldap_certificate_setting()
         _validate_not_reusing_removed_passwords()
         _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
