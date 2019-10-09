@@ -19,6 +19,7 @@ import time
 import json
 import yaml
 from copy import copy
+from getpass import getuser
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
@@ -387,7 +388,7 @@ class PostgresqlServer(BaseComponent):
 
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
-        common.sudo(['chmod', 'a+x', '/var/lib/patroni'])
+        common.chmod('a+x', '/var/lib/patroni')
         # We currently use the same certificates for etcd, patroni,
         # and postgres. This should be a reasonable starting approach as
         # these reside on the same machine and all have the same impact if
@@ -416,18 +417,18 @@ class PostgresqlServer(BaseComponent):
             group=POSTGRES_GROUP,
             key_perms='400',
         )
-        common.sudo(['chmod', 'a-x', '/var/lib/patroni'])
+        common.chmod('a-x', '/var/lib/patroni')
 
         logger.info('Deploying cluster config files.')
         self._create_patroni_config(PATRONI_CONFIG_PATH)
-        common.sudo(['chown', 'root.postgres', PATRONI_CONFIG_PATH])
-        common.sudo(['chmod', '640', PATRONI_CONFIG_PATH])
+        common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
+        common.chmod('640', PATRONI_CONFIG_PATH)
         files.deploy(os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH)
-        common.sudo(['chown', 'etcd.', ETCD_CONFIG_PATH])
-        common.sudo(['chmod', '440', ETCD_CONFIG_PATH])
-        common.sudo(['chown', 'postgres.', '/var/lib/patroni'])
-        common.sudo(['chmod', '700', '/var/lib/patroni'])
-        common.sudo(['chmod', '700', '/var/lib/patroni/data'])
+        common.chown('etcd', '', ETCD_CONFIG_PATH)
+        common.chmod('440', ETCD_CONFIG_PATH)
+        common.chown('postgres', '', '/var/lib/patroni')
+        common.chmod('700', '/var/lib/patroni')
+        common.chmod('700', '/var/lib/patroni/data')
 
         logger.info('Configuring etcd')
         systemd.enable('etcd', append_prefix=False)
@@ -619,8 +620,9 @@ class PostgresqlServer(BaseComponent):
                 'authentication': {
                     'replication': {
                         'username': 'replicator',
-                        'password':
+                        'password': (
                             pgsrv['cluster']['postgres']['replicator_password']
+                        ),
                     },
                     'superuser': {
                         'username': 'postgres',
@@ -657,6 +659,10 @@ class PostgresqlServer(BaseComponent):
                 patroni_conf['bootstrap']['dcs']['postgresql']['pg_hba'],
                 node
             )
+        common.sudo([
+            'touch', patroni_config_path,
+        ])
+        common.chown(getuser(), '', patroni_config_path)
         with open(patroni_config_path, 'w') as f:
             f.write(yaml.dump(patroni_conf, default_flow_style=False))
 
