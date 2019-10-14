@@ -24,6 +24,7 @@ from tempfile import mkstemp
 from os.path import join, isdir, islink
 
 import requests
+from retrying import retry
 
 from cfy_manager.exceptions import (
     BootstrapError,
@@ -35,6 +36,7 @@ from cfy_manager.exceptions import (
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
+    HOSTNAME,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
     SCRIPTS,
@@ -334,6 +336,10 @@ class PostgresqlServer(BaseComponent):
             local_only=local_only,
         )
 
+    # We retry on this for up to six seconds so that an install of several
+    # cluster nodes at once won't suffer from a race condition
+    # (e.g. we install like this in the tests)
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
     def _get_patroni_dcs_conf(self, local_only=True):
         return json.loads(self._etcd_command(
             ['get', '/db/postgres/config'],
@@ -492,29 +498,61 @@ class PostgresqlServer(BaseComponent):
                     common.chown('etcd', 'etcd', ETCD_DATA_DIR)
                     common.sudo(['systemctl', 'restart', 'etcd'])
             else:
-                cluster_config = config[POSTGRESQL_SERVER]['cluster']
-                # We want to configure etcd auth when the second node joins
-                # because that's the earliest we can do so.
-                logger.info('Configuring etcd authentication')
-                # Note that, per the etcd documentation, the root user must
-                # exist if authentication is to be enabled for etcd
-                self._etcd_command(
-                    ['user', 'add', 'root'],
-                    stdin=cluster_config['etcd']['root_password'],
+                # In case multiple nodes are being installed at the same time,
+                # check whether we should be setting up auth
+                should_configure_auth = False
+                auth_setup_key = 'cloudifyauthsetup'
+                # The auth setup check commands have credentials provided,
+                # because they'll then work both with and without auth
+                # (unless etcd change their behaviour in a future release)
+                setup_key_exists = self._etcd_command(
+                    ['get', auth_setup_key], ignore_failures=True,
+                    username='root',
                 )
-                self._etcd_command(
-                    ['user', 'add', 'patroni'],
-                    stdin=cluster_config['etcd']['patroni_password'],
-                )
-                self._etcd_command(['role', 'add', 'patroni'])
-                self._etcd_command(['role', 'grant', 'patroni',
-                                    '--path', '/db/*', '--readwrite'])
-                self._etcd_command(['user', 'grant', 'patroni',
-                                    '--roles', 'patroni'])
-                self._etcd_command(['role', 'add', 'guest'])
-                self._etcd_command(['role', 'revoke', 'guest',
-                                    '--path', '/*', '--readwrite'])
-                self._etcd_command(['auth', 'enable'])
+                # If the key does exist, another node is setting up auth
+                if setup_key_exists.returncode != 0:
+                    this_host = config[MANAGER][HOSTNAME]
+                    self._etcd_command(
+                        ['set', auth_setup_key, this_host],
+                        username='root',
+                    )
+
+                    # We retrieve this with ignore_failures in case this node
+                    # takes long enough that the other node finishes setting
+                    # up auth and deletes it again before we check (unlikely
+                    # though that may be)
+                    setup_key_contents = self._etcd_command(
+                        ['get', auth_setup_key], ignore_failures=True,
+                        username='root',
+                    )
+                    if setup_key_contents.aggr_stdout.strip() == this_host:
+                        should_configure_auth = True
+
+                if should_configure_auth:
+                    cluster_config = config[POSTGRESQL_SERVER]['cluster']
+                    # We want to configure etcd auth when the second node
+                    # joins because that's the earliest we can do so.
+                    logger.info('Configuring etcd authentication')
+                    # Note that, per the etcd documentation, the root user
+                    # must exist if authentication is to be enabled for etcd
+                    self._etcd_command(
+                        ['user', 'add', 'root'],
+                        stdin=cluster_config['etcd']['root_password'],
+                    )
+                    self._etcd_command(
+                        ['user', 'add', 'patroni'],
+                        stdin=cluster_config['etcd']['patroni_password'],
+                    )
+                    self._etcd_command(['role', 'add', 'patroni'])
+                    self._etcd_command(['role', 'grant', 'patroni',
+                                        '--path', '/db/*', '--readwrite'])
+                    self._etcd_command(['user', 'grant', 'patroni',
+                                        '--roles', 'patroni'])
+                    self._etcd_command(['role', 'add', 'guest'])
+                    self._etcd_command(['role', 'revoke', 'guest',
+                                        '--path', '/*', '--readwrite'])
+                    self._etcd_command(['auth', 'enable'])
+                    self._etcd_command(['rm', auth_setup_key])
         except ClusteringError:
             logger.warning(
                 'Could not finish etcd configuration. '
