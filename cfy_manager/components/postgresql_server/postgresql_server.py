@@ -96,8 +96,12 @@ PATRONI_PGPASS_PATH = '/var/lib/patroni/pgpass'
 # Cluster file locations
 ETCD_DATA_DIR = '/var/lib/etcd'
 ETCD_CONFIG_PATH = '/etc/etcd/etcd.conf'
+ETCD_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/etcd')
 PATRONI_DATA_DIR = '/var/lib/patroni/data'
 PATRONI_CONFIG_PATH = '/etc/patroni.conf'
+PATRONI_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/patroni')
+POSTGRES_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/postgres')
+POSTGRES_PATRONI_CONFIG_PATH = '/var/lib/pgsql/9.5/data/pg_patroni_base.conf'
 
 HAPROXY_NODE_ENTRY = (
     '    server postgresql_{addr}_5432 {addr}:5432 '
@@ -436,6 +440,44 @@ class PostgresqlServer(BaseComponent):
         common.chmod('700', '/var/lib/patroni')
         common.chmod('700', '/var/lib/patroni/data')
 
+        logger.info('Configuring logs')
+        common.mkdir(PATRONI_LOG_PATH)
+        common.mkdir(ETCD_LOG_PATH)
+        common.mkdir(POSTGRES_LOG_PATH)
+        common.sudo(['chown', 'postgres.', PATRONI_LOG_PATH])
+        common.sudo(['chown', 'postgres.', POSTGRES_LOG_PATH])
+
+        # create rsyslog rule for for etcd
+        fd, tmp_path = mkstemp()
+        os.close(fd)
+        with open(tmp_path, 'w') as etcd_rsyslog:
+            etcd_rsyslog.write(
+                "if $programname == 'systemd' and $rawmsg contains 'Etcd'"
+                " then {logpath}\n"
+                "if $programname == 'etcd' then {logpath}\n& stop\n".format(
+                    logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log')
+                ))
+        common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
+        common.sudo(['service', 'rsyslog', 'restart'])
+
+        # create custom postgresql conf file with log settings
+        fd, tmp_path = mkstemp()
+        os.close(fd)
+        with open(tmp_path, 'w') as pg_conf:
+            pg_conf.write(
+                "log_destination = 'stderr'\nlogging_collector = on\n"
+                "log_directory = '{0}'\nlog_filename = 'postgresql-%a.log'\n"
+                "log_truncate_on_rotation = on\nlog_rotation_age = 1d\n"
+                "log_rotation_size = 0\nlog_line_prefix = '< %m >'\n"
+                "log_timezone = 'UCT'\ndatestyle = 'iso, mdy'\n"
+                "timezone = 'UCT'\nlc_messages = 'en_US.UTF-8'\n"
+                "lc_monetary = 'en_US.UTF-8'\nlc_numeric = 'en_US.UTF-8'\n"
+                "lc_time = 'en_US.UTF-8'\nshared_buffers = 128MB\n"
+                "default_text_search_config = 'pg_catalog.english'\n".format(
+                    POSTGRES_LOG_PATH))
+        common.sudo(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
+        common.sudo(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
+
         logger.info('Configuring etcd')
         systemd.enable('etcd', append_prefix=False)
         self._start_etcd()
@@ -616,6 +658,7 @@ class PostgresqlServer(BaseComponent):
         patroni_conf = {
             'scope': 'postgres',
             'namespace': '/db/',
+            'log': {'dir': PATRONI_LOG_PATH},
             'name': 'pg{0}'.format(manager_ip.replace('.', '_')),
             'restapi': {
                 'listen': '{0}:8008'.format(manager_ip),
@@ -677,6 +720,7 @@ class PostgresqlServer(BaseComponent):
                     'ssl_key_file': PATRONI_DB_KEY_PATH,
                     'ssl_ciphers': 'HIGH',
                 },
+                'custom_conf': POSTGRES_PATRONI_CONFIG_PATH
             },
             'tags': {
                 'nofailover': False,
@@ -1162,6 +1206,9 @@ class PostgresqlServer(BaseComponent):
         yum_install(sources['ps_contrib_rpm_url'])
         yum_install(sources['ps_server_rpm_url'])
         yum_install(sources['ps_devel_rpm_url'])
+        yum_install(sources['log_libestr_rpm_url'], remove_existing=False)
+        yum_install(sources['log_libfastjson_rpm_url'], remove_existing=False)
+        yum_install(sources['log_rsyslog_rpm_url'], remove_existing=False)
         # As we don't support installing community as anything other than AIO,
         # not having manager service installed means that this must be premium
         if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:

@@ -296,6 +296,9 @@ postgresql_server:
     ps_devel_rpm_url: postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
     patroni_rpm_url: patroni-1.5.6-.dev1.el7.x86_64.rpm
     etcd_rpm_url: etcd-3.3.11-2.el7.centos.x86_64.rpm
+    log_libestr_rpm_url: libestr-0.1.9-2.el7.x86_64.rpm
+    log_libfastjson_rpm_url: libfastjson-0.99.4-3.el7.x86_64.rpm
+    log_rsyslog_rpm_url: rsyslog-8.24.0-41.el7_7.x86_64.rpm
 
 postgresql_client:
   # Host name (or IP address) of the database. If you are using an external
