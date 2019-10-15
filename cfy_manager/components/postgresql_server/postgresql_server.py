@@ -1206,15 +1206,15 @@ class PostgresqlServer(BaseComponent):
         yum_install(sources['ps_contrib_rpm_url'])
         yum_install(sources['ps_server_rpm_url'])
         yum_install(sources['ps_devel_rpm_url'])
-        yum_install(sources['log_libestr_rpm_url'], remove_existing=False)
-        yum_install(sources['log_libfastjson_rpm_url'], remove_existing=False)
-        yum_install(sources['log_rsyslog_rpm_url'], remove_existing=False)
         # As we don't support installing community as anything other than AIO,
         # not having manager service installed means that this must be premium
         if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
             rpms = [
                 sources['etcd_rpm_url'],
                 sources['patroni_rpm_url'],
+                sources['log_libestr_rpm_url'],
+                sources['log_libfastjson_rpm_url'],
+                sources['log_rsyslog_rpm_url']
             ]
             if files.check_rpms_are_present(rpms):
                 for rpm in rpms:
