@@ -72,7 +72,11 @@ def _update_metadata_file(metadata, networks):
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: `{"<network-name>": "<ip>"}`',
           required=True)
-def add_networks(networks=None):
+@argh.arg('--skip-generating-certificates',
+          help='Specify whether we skip generating certificates, so the user '
+               'can provide their own, e.g. signed by a public CA',
+          default=False)
+def add_networks(networks=None, skip_generating_certificates=False):
     """
     Add new networks to a running Cloudify Manager
     """
@@ -82,7 +86,8 @@ def add_networks(networks=None):
     metadata = load_cert_metadata()
 
     _update_metadata_file(metadata, networks)
-    create_internal_certs()
+    if not skip_generating_certificates:
+        create_internal_certs()
 
     cmd = [
         join(REST_HOME_DIR, 'env', 'bin', 'python'),
