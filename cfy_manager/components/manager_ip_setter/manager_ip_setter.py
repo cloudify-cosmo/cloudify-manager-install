@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from ..components_constants import SOURCES
+from cfy_manager.components import sources
 from ..base_component import BaseComponent
 from ..service_names import MANAGER, MANAGER_IP_SETTER
 from ...config import config
@@ -34,25 +34,17 @@ class ManagerIpSetter(BaseComponent):
     def __init__(self, skip_installation):
         super(ManagerIpSetter, self).__init__(skip_installation)
 
-    def _install(self):
-        sources = config[MANAGER_IP_SETTER][SOURCES]
-        for source in sources.values():
-            yum_install(source)
-
-    def _configure(self):
-        if config[MANAGER]['set_manager_ip_on_boot']:
-            systemd.configure(MANAGER_IP_SETTER)
-        else:
-            logger.info('Set manager ip on boot is disabled.')
-
     def install(self):
         logger.notice('Installing Manager IP Setter...')
-        self._install()
+        yum_install(sources.manager_ip_setter)
         logger.notice('Manager IP Setter successfully installed')
 
     def configure(self):
         logger.notice('Configuring Manager IP Setter...')
-        self._configure()
+        if config[MANAGER]['set_manager_ip_on_boot']:
+            systemd.configure(MANAGER_IP_SETTER)
+        else:
+            logger.info('Set manager ip on boot is disabled.')
         logger.notice('Manager IP Setter successfully configured')
 
     def remove(self):

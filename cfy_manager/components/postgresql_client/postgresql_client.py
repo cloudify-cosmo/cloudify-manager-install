@@ -18,8 +18,8 @@ import os
 from ...exceptions import ProcessExecutionError
 
 
+from cfy_manager.components import sources
 from ..components_constants import (
-    SOURCES,
     SSL_ENABLED,
     SSL_INPUTS,
     SSL_CLIENT_VERIFICATION,
@@ -66,14 +66,12 @@ class PostgresqlClient(BaseComponent):
         super(PostgresqlClient, self).__init__(skip_installation)
 
     def _install(self):
-        sources = config[POSTGRESQL_CLIENT][SOURCES]
-
         logger.debug('Installing PostgreSQL Client libraries...')
-        yum_install(sources['ps_libs_rpm_url'])
-        yum_install(sources['ps_rpm_url'])
+        yum_install(sources.ps_libs)
+        yum_install(sources.ps)
 
         logger.debug('Installing python libs for PostgreSQL...')
-        yum_install(sources['psycopg2_rpm_url'])
+        yum_install(sources.psycopg2)
 
         files.copy_notice(POSTGRESQL_CLIENT)
 

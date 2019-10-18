@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .components_constants import SOURCES, VENV
+from .components_constants import VENV
 
 from .service_names import DEV, RESTSERVICE, MGMTWORKER
 
@@ -32,7 +32,7 @@ logger = get_logger(DEV)
 
 
 def _install_packages(packages, venv, pip_constraints):
-    sources = config[DEV][SOURCES]
+    sources = config[DEV]['sources']
     # this allows to upgrade modules if necessary.
     logger.info(
         'Installing Optional Packages in {0} venv...'.format(venv)
@@ -47,7 +47,7 @@ def _install_cloudify_manager_pip_packages(pip_constraints):
     rest_venv = config[RESTSERVICE][VENV]
     mgmtworker_venv = config[MGMTWORKER][VENV]
 
-    cloudify_manager_url = config[DEV][SOURCES]['cloudify_resources_url']
+    cloudify_manager_url = config[DEV]['sources']['cloudify_resources_url']
     if not cloudify_manager_url:
         return
 
