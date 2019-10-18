@@ -21,7 +21,8 @@ from contextlib import contextmanager
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
-from ..components_constants import SOURCES, PRIVATE_IP, CLUSTER_JOIN
+from cfy_manager.components import sources
+from ..components_constants import PRIVATE_IP, CLUSTER_JOIN
 from ..base_component import BaseComponent
 from ..service_names import SANITY, MANAGER
 from ...config import config
@@ -85,8 +86,7 @@ class Sanity(BaseComponent):
 
     def _upload_blueprint(self):
         logger.info('Uploading sanity blueprint...')
-        sanity_source_url = config[SANITY][SOURCES]['sanity_source_url']
-        sanity_blueprint = get_local_source_path(sanity_source_url)
+        sanity_blueprint = get_local_source_path(sources.sanity)
         common.run(['cfy', 'blueprints', 'upload', sanity_blueprint, '-n',
                     'no-monitoring-singlehost-blueprint.yaml', '-b',
                     self.blueprint_name],

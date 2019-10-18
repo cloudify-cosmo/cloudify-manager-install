@@ -18,7 +18,8 @@ import logging
 from os.path import join, exists, expanduser
 from getpass import getuser
 
-from ..components_constants import SOURCES, SECURITY, SSL_INPUTS
+from cfy_manager.components import sources
+from ..components_constants import SECURITY, SSL_INPUTS
 from ..base_component import BaseComponent
 from ..service_names import CLI, MANAGER
 from ...config import config
@@ -38,8 +39,7 @@ class Cli(BaseComponent):
         super(Cli, self).__init__(skip_installation)
 
     def _install(self):
-        source_url = config[CLI][SOURCES]['cli_source_url']
-        yum_install(source_url)
+        yum_install(sources.cli)
 
     def _set_colors(self, is_root):
         """

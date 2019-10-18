@@ -44,10 +44,6 @@ manager:
   # For clusters this must be supplied, and will only be used, on the first manager
   cloudify_license_path: ''
 
-manager-ip-setter:
-  sources:
-    manager_ip_setter_rpm: cloudify-manager-ip-setter-*.rpm
-
 provider_context:
   policy_engine:
     start_timeout: 30
@@ -158,12 +154,6 @@ rabbitmq:
   # If this is a cluster then this value must be the same on all rabbitmq nodes.
   # If left blank, it will be auto-generated.
   erlang_cookie:
-
-  sources:
-    erlang_rpm_source_url: erlang-21.0.2-1.el7.centos.x86_64.rpm
-    socat_rpm_source_url: socat-1.7.3.2-2.el7.x86_64.rpm
-    rabbitmq_rpm_source_url: rabbitmq-server-3.7.7-1.el7.noarch.rpm
-    cloudify_rabbitmq_package: cloudify-rabbitmq-*.noarch.rpm
 
   # Sets the File Descriptor limit for the rabbitmq user.
   fd_limit: 102400
@@ -287,19 +277,6 @@ postgresql_server:
   # If this is set, ssl_only_connections must be enabled
   ssl_client_verification: false
 
-  sources:
-    libxslt_rpm_url: libxslt-1.1.28-5.el7.x86_64.rpm
-    ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
-    ps_rpm_url: postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
-    ps_contrib_rpm_url: postgresql95-contrib-9.5.3-2PGDG.rhel7.x86_64.rpm
-    ps_server_rpm_url: postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm
-    ps_devel_rpm_url: postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
-    patroni_rpm_url: patroni-1.5.6-.dev1.el7.x86_64.rpm
-    etcd_rpm_url: etcd-3.3.11-2.el7.centos.x86_64.rpm
-    log_libestr_rpm_url: libestr-0.1.9-2.el7.x86_64.rpm
-    log_libfastjson_rpm_url: libfastjson-0.99.4-3.el7.x86_64.rpm
-    log_rsyslog_rpm_url: rsyslog-8.24.0-41.el7_7.x86_64.rpm
-
 postgresql_client:
   # Host name (or IP address) of the database. If you are using an external
   # database, update accordingly; otherwise use the default.
@@ -344,17 +321,9 @@ postgresql_client:
   # If true, client SSL certificates will need to be supplied for database connections
   ssl_client_verification: false
 
-  sources:
-    ps_libs_rpm_url: postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
-    ps_rpm_url: postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
-    psycopg2_rpm_url: python-psycopg2-2.5.1-3.el7.x86_64.rpm
-
 stage:
   # If set to true, Cloudify UI will not be installed
   skip_installation: false
-  sources:
-    nodejs_source_url: node-v10.15.1-linux-x64.tar.xz
-    stage_source_url: cloudify-stage-*.tgz
 
   # Number of Cloudify Stage processes to be started
   #   0/max  - to spread the app across all CPUs
@@ -365,8 +334,6 @@ stage:
 composer:
   # If set to true, Cloudify Composer will not be installed
   skip_installation: false
-  sources:
-    composer_source_url: cloudify-blueprint-composer-*.tgz
 
 python:
   # Some plugins installed from sources require compilation - installs a
@@ -377,10 +344,6 @@ python:
   # uninstalling the Cloudify Manager. NOTE: only set to true if those
   # dependencies weren't available before Cloudify Manager installation
   remove_on_teardown: false
-
-premium:
-  sources:
-    premium_source_url: cloudify-premium-*.x86_64.rpm
 
 restservice:
   log:
@@ -430,11 +393,6 @@ restservice:
     # Any extra LDAP information (separated by the `;` sign. e.g. a=1;b=2)
     dn_extra: ''
 
-  sources:
-    agents_source_url: cloudify-agents-*.rpm
-    restservice_source_url: cloudify-rest-service-*.x86_64.rpm
-    haproxy_rpm_url: haproxy-*.x86_64.rpm
-
   # Minimum available memory for running list query on Manager host in MB.
   min_available_memory_mb: 100
 
@@ -471,13 +429,7 @@ nginx:
   # is allowed to have.
   max_open_fds: 102400
 
-  sources:
-    nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm
-
 mgmtworker:
-  sources:
-    mgmtworker_source_url: cloudify-management-worker-*.x86_64.rpm
-
   # Sets the logging level to use for the management workers. This affects the
   # logging performed by the manager during the execution of management tasks,
   # such as deployment creation and deployment deletion. NOTE: specifying
@@ -506,20 +458,10 @@ mgmtworker:
     # Sets the interval between retry attempts in seconds.
     task_retry_interval: 15
 
-patch:
-  sources:
-    patch_source_url: patch-2.7.1-10.el7_5.x86_64.rpm
-
-cli:
-  sources:
-    cli_source_url: cloudify-cli-*.x86_64.rpm
-
 sanity:
   # If set to true, the sanity blueprint install/uninstall will not be
   # performed during Cloudify Manager installation
   skip_sanity: false
-  sources:
-    sanity_source_url: cloudify-hello-world-example-*.tar.gz
 
 dev:
   # Constraints (in standard `pip` constraints format) to pass on to `pip`

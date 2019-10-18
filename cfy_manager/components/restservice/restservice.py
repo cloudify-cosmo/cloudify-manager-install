@@ -26,6 +26,7 @@ from collections import namedtuple
 
 import requests
 
+from cfy_manager.components import sources
 from . import db
 from ..components_constants import (
     ADMIN_PASSWORD,
@@ -37,7 +38,6 @@ from ..components_constants import (
     SCRIPTS,
     SECURITY,
     SERVICES_TO_INSTALL,
-    SOURCES,
     VENV,
     CLUSTER_JOIN,
     SERVER_PASSWORD
@@ -381,15 +381,15 @@ class RestService(BaseComponent):
 
     def install(self):
         logger.notice('Installing Rest Service...')
-        yum_install(config[RESTSERVICE][SOURCES]['restservice_source_url'])
-        yum_install(config[RESTSERVICE][SOURCES]['agents_source_url'])
+        yum_install(sources.restservice)
+        yum_install(sources.agents)
 
         self._chown_resources_dir()
 
         set_logrotate(RESTSERVICE)
 
         if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
-            rpm = config[RESTSERVICE][SOURCES]['haproxy_rpm_url']
+            rpm = sources.haproxy
             if check_rpms_are_present([rpm]):
                 yum_install(rpm)
             else:

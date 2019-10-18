@@ -17,8 +17,8 @@ import os
 import json
 from os.path import join
 
+from cfy_manager.components import sources
 from ..components_constants import (
-    SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
     HOME_DIR_KEY,
@@ -94,9 +94,8 @@ class Stage(BaseComponent):
         config[STAGE]['community_mode'] = community_mode
 
     def _install(self):
-        stage_source_url = config[STAGE][SOURCES]['stage_source_url']
         try:
-            stage_tar = files.get_local_source_path(stage_source_url)
+            stage_tar = files.get_local_source_path(sources.stage)
         except FileError:
             logger.info('Stage package not found in manager resources package')
             logger.notice('Stage will not be installed.')
@@ -138,8 +137,7 @@ class Stage(BaseComponent):
 
     def _install_nodejs(self):
         logger.info('Installing NodeJS...')
-        nodejs_source_url = config[STAGE][SOURCES]['nodejs_source_url']
-        nodejs = files.get_local_source_path(nodejs_source_url)
+        nodejs = files.get_local_source_path(sources.nodejs)
         common.untar(nodejs, NODEJS_DIR)
 
     def _deploy_script(self, script_name, description, sudo_as=STAGE_USER):

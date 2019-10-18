@@ -17,8 +17,6 @@
 
 SERVICES_TO_INSTALL = 'services_to_install'
 
-SOURCES = 'sources'
-
 SERVICE_USER = 'service_user'
 SERVICE_GROUP = 'service_group'
 

@@ -18,8 +18,8 @@ import json
 
 from os.path import join, dirname
 
+from cfy_manager.components import sources
 from ..components_constants import (
-    SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
     SSL_INPUTS,
@@ -68,9 +68,8 @@ class Composer(BaseComponent):
         common.mkdir(LOG_DIR)
 
     def _install(self):
-        composer_source_url = config[COMPOSER][SOURCES]['composer_source_url']
         try:
-            composer_tar = files.get_local_source_path(composer_source_url)
+            composer_tar = files.get_local_source_path(sources.composer)
         except FileError:
             logger.info(
                 'Composer package not found in manager resources package')

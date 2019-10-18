@@ -19,10 +19,15 @@ import time
 
 import requests
 
+from cfy_manager.components.sources import (
+    erlang,
+    socat,
+    rabbitmq,
+    cloudify_rabbitmq,
+)
 from ..components_constants import (
     CONFIG,
     SERVICES_TO_INSTALL,
-    SOURCES,
     HOSTNAME
 )
 from ..service_components import MANAGER_SERVICE
@@ -62,8 +67,7 @@ class RabbitMQ(BaseComponent):
         super(RabbitMQ, self).__init__(skip_installation)
 
     def _install(self):
-        sources = config[RABBITMQ][SOURCES]
-        for source in sources.values():
+        for source in erlang, socat, rabbitmq, cloudify_rabbitmq:
             yum_install(source)
 
     def _installing_manager(self):
