@@ -32,7 +32,7 @@ server {
   # We don't want to automatically redirect API requests which
   # may contain sensitive info.
   location ~ ^/api/ {
-    return 400;
+    return 400 '{"message": "SSL must be used for API access on SSL-enabled managers.", "error_code": "SSL_REQUIRED"}';
   }
 
   # Other than API requests, and unless otherwise noted: redirect
