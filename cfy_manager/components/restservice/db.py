@@ -242,7 +242,7 @@ def _run_psql_command(command, db_key):
 
     # Run psql with just the results output without headers (-t),
     # and no psqlrc (-X)
-    base_command.extend(['psql', '-t', '-X'])
+    base_command.extend(['/usr/bin/psql', '-t', '-X'])
 
     command = base_command + command
 
