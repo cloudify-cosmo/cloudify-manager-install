@@ -26,6 +26,7 @@ from os.path import join, isdir, islink
 import requests
 from retrying import retry
 
+from cfy_manager.components import sources
 from cfy_manager.exceptions import (
     BootstrapError,
     ClusteringError,
@@ -41,7 +42,6 @@ from ..components_constants import (
     PRIVATE_IP,
     SCRIPTS,
     SERVICES_TO_INSTALL,
-    SOURCES,
     SSL_CLIENT_VERIFICATION,
     SSL_ENABLED,
 )
@@ -1195,28 +1195,27 @@ class PostgresqlServer(BaseComponent):
 
     def install(self):
         logger.notice('Installing PostgreSQL Server...')
-        sources = config[POSTGRESQL_SERVER][SOURCES]
 
         logger.debug('Installing PostgreSQL Server dependencies...')
-        yum_install(sources['libxslt_rpm_url'])
+        yum_install(sources.libxslt)
 
         logger.debug('Installing PostgreSQL Server...')
-        yum_install(sources['ps_libs_rpm_url'])
-        yum_install(sources['ps_rpm_url'])
-        yum_install(sources['ps_contrib_rpm_url'])
-        yum_install(sources['ps_server_rpm_url'])
-        yum_install(sources['ps_devel_rpm_url'])
+        yum_install(sources.ps_libs)
+        yum_install(sources.ps)
+        yum_install(sources.ps_contrib)
+        yum_install(sources.ps_server)
+        yum_install(sources.ps_devel)
         # As we don't support installing community as anything other than AIO,
         # not having manager service installed means that this must be premium
         if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
             rpms = [
-                sources['etcd_rpm_url'],
-                sources['patroni_rpm_url'],
+                sources.etcd,
+                sources.patroni,
             ]
             log_rpms = [
-                sources['log_libestr_rpm_url'],
-                sources['log_libfastjson_rpm_url'],
-                sources['log_rsyslog_rpm_url']
+                sources.log_libestr,
+                sources.log_libfastjson,
+                sources.log_rsyslog
             ]
             if files.check_rpms_are_present(rpms + log_rpms):
                 for rpm in rpms:

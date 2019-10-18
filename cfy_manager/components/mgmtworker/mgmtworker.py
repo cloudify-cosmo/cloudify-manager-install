@@ -17,8 +17,8 @@ from os.path import join
 
 from .cluster.cluster import Cluster
 
+from cfy_manager.components import sources
 from ..components_constants import (
-    SOURCES,
     CONFIG,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
@@ -27,7 +27,7 @@ from ..components_constants import (
     HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..service_names import MGMTWORKER, MANAGER, PREMIUM
+from ..service_names import MGMTWORKER, MANAGER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
@@ -157,12 +157,10 @@ class MgmtWorker(BaseComponent):
 
     def install(self):
         logger.notice('Installing Management Worker...')
-        source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
-        yum_install(source_url)
+        yum_install(sources.mgmtworker)
 
-        premium_source_url = config[PREMIUM][SOURCES]['premium_source_url']
         try:
-            get_local_source_path(premium_source_url)
+            get_local_source_path(sources.premium)
         except FileError:
             logger.info(
                 'premium package not found in manager resources package')

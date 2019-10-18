@@ -13,9 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from ...config import config
+from cfy_manager.components.sources import patch
 from ...logger import get_logger
-from ..components_constants import SOURCES
 from ..base_component import BaseComponent
 from ...utils.install import yum_install, yum_remove
 
@@ -28,8 +27,7 @@ class Patch(BaseComponent):
 
     def install(self):
         logger.notice('Installing Patch...')
-        source_url = config['patch'][SOURCES]['patch_source_url']
-        yum_install(source_url)
+        yum_install(patch)
         logger.notice('Patch successfully installed')
 
     def remove(self):

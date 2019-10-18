@@ -16,8 +16,8 @@
 from os.path import join, exists
 from collections import namedtuple
 
+from cfy_manager.components import sources
 from ..components_constants import (
-    SOURCES,
     CONFIG,
     PRIVATE_IP,
     PUBLIC_IP,
@@ -51,8 +51,7 @@ class Nginx(BaseComponent):
         super(Nginx, self).__init__(skip_installation)
 
     def _install(self):
-        nginx_source_url = config[NGINX][SOURCES]['nginx_source_url']
-        yum_install(nginx_source_url)
+        yum_install(sources.nginx)
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
         self._deploy_unit_override()
