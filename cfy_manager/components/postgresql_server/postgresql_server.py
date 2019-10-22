@@ -1224,11 +1224,13 @@ class PostgresqlServer(BaseComponent):
                 sources.etcd,
                 sources.patroni,
             ]
+
             log_rpms = [
                 sources.log_libestr,
                 sources.log_libfastjson,
                 sources.log_rsyslog
             ]
+
             if files.check_rpms_are_present(rpms + log_rpms):
                 for rpm in rpms:
                     yum_install(rpm)
