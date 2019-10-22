@@ -270,7 +270,7 @@ class PostgresqlServer(BaseComponent):
 
         common.sudo([
             '-u', 'postgres',
-            '/usr/bin/psql', '-n'  # -n disables history
+            '/usr/bin/psql', '-n',  # -n disables history
             '-c',
             'ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim}'.format(
                 delim=delimiter,
