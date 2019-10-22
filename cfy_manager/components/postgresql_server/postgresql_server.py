@@ -263,15 +263,20 @@ class PostgresqlServer(BaseComponent):
         postgres_password = \
             config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
 
-        update_password_script_path = join(POSTGRESQL_SCRIPTS_PATH,
-                                           'update_postgres_password.sh')
-        tmp_script_path = files.temp_copy(update_password_script_path)
-        common.chmod('o+rx', tmp_script_path)
-        common.sudo(
-            'su - postgres -c "{cmd} {postgres_password}"'.format(
-                cmd=tmp_script_path,
-                postgres_password=postgres_password)
-        )
+        delimiter = '$password$'
+        while delimiter in postgres_password:
+            delimiter = delimiter.rstrip('$')
+            delimiter = delimiter + 'a$'
+
+        common.sudo([
+            '-u', 'postgres',
+            '/usr/bin/psql', '-n'  # -n disables history
+            '-c',
+            'ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim}'.format(
+                delim=delimiter,
+                pwd=postgres_password,
+            )
+        ])
         logger.info('Removing postgres password from config.yaml')
         config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] = '<removed>'
         logger.notice('postgres password successfully updated')
