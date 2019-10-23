@@ -177,6 +177,15 @@ def generate_test_cert(**kwargs):
     )
 
 
+def _only_on_brokers():
+    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
+        logger.error(
+            'Broker management tasks must be performed on nodes with '
+            'installed brokers.'
+        )
+        sys.exit(1)
+
+
 @argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -187,6 +196,7 @@ def brokers_add(**kwargs):
     Use the cfy command afterwards to register it with the manager cluster.
     """
     _validate_components_prepared('brokers_add')
+    _only_on_brokers()
     join_node = kwargs['join_node']
 
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
@@ -201,22 +211,15 @@ def brokers_add(**kwargs):
         )
         sys.exit(1)
 
-    if QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
-        if not can_lookup_hostname(join_node):
-            logger.error(
-                'Could not get address for "{node}".\n'
-                'Node must be resolvable by DNS or as a hosts entry.'.format(
-                    node=join_node,
-                )
-            )
-            sys.exit(1)
-        rabbitmq.join_cluster(join_node, restore_users_on_fail=True)
-    else:
+    if not can_lookup_hostname(join_node):
         logger.error(
-            'Broker management tasks must be performed on nodes with '
-            'installed brokers.'
+            'Could not get address for "{node}".\n'
+            'Node must be resolvable by DNS or as a hosts entry.'.format(
+                node=join_node,
+            )
         )
         sys.exit(1)
+    rabbitmq.join_cluster(join_node, restore_users_on_fail=True)
 
 
 @argh.decorators.arg('-r', '--remove-node', help=BROKER_REMOVE_NODE_HELP_MSG,
@@ -231,6 +234,7 @@ def brokers_remove(**kwargs):
     Use the cfy command afterwards to unregister it from the manager cluster.
     """
     _validate_components_prepared('brokers_remove')
+    _only_on_brokers()
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
 
     remove_node = rabbitmq.add_missing_nodename_prefix(kwargs['remove_node'])
@@ -268,6 +272,7 @@ def brokers_list(**kwargs):
     Use the cfy command to list brokers registered with the manager cluster.
     """
     _validate_components_prepared('brokers_list')
+    _only_on_brokers()
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
 
     brokers = rabbitmq.list_rabbit_nodes()
