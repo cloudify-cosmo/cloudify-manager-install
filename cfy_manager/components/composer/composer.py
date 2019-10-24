@@ -52,8 +52,8 @@ DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/composer_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/composer_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
-COMPOSER_USER = '{0}_user'.format(COMPOSER)
-COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
+COMPOSER_USER = CLOUDIFY_USER
+COMPOSER_GROUP = CLOUDIFY_GROUP
 COMPOSER_PORT = 3000
 
 
@@ -132,7 +132,6 @@ class Composer(BaseComponent):
 
         common.chmod('g+w', CONF_DIR)
         common.chmod('g+w', dirname(CONF_DIR))
-        common.chown(CLOUDIFY_USER, CLOUDIFY_USER, CONF_DIR)
 
     def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')

@@ -42,6 +42,8 @@ from ...constants import (
     BASE_RESOURCES_PATH,
     CLOUDIFY_GROUP,
     CLOUDIFY_USER,
+    STAGE_USER,
+    STAGE_GROUP
 )
 from ...utils import (
     certificates,
@@ -56,9 +58,6 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
 logger = get_logger(STAGE)
-
-STAGE_USER = '{0}_user'.format(STAGE)
-STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 CONF_DIR = join(HOME_DIR, 'conf')
@@ -133,7 +132,6 @@ class Stage(BaseComponent):
         common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
         common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
         common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CONF_DIR)
 
     def _install_nodejs(self):
         logger.info('Installing NodeJS...')

@@ -58,7 +58,7 @@ class MgmtWorker(BaseComponent):
         sudoers.allow_user_to_sudo_command(
             '/opt/nodejs/bin/npm',
             description='Allow web UI DB migrations during snapshot restore.',
-            allow_as='stage_user',
+            allow_as=const.STAGE_USER,
         )
 
         scripts = [
