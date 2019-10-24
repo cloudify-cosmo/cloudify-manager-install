@@ -52,8 +52,8 @@ DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/composer_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/composer_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
-COMPOSER_USER = '{0}_user'.format(COMPOSER)
-COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
+COMPOSER_USER = CLOUDIFY_USER
+COMPOSER_GROUP = CLOUDIFY_GROUP
 COMPOSER_PORT = 3000
 
 

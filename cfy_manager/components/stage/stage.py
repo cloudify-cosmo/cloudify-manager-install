@@ -57,8 +57,8 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 
 logger = get_logger(STAGE)
 
-STAGE_USER = '{0}_user'.format(STAGE)
-STAGE_GROUP = '{0}_group'.format(STAGE)
+STAGE_USER = CLOUDIFY_USER
+STAGE_GROUP = CLOUDIFY_GROUP
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 CONF_DIR = join(HOME_DIR, 'conf')
