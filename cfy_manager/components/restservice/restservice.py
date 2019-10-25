@@ -285,6 +285,13 @@ class RestService(BaseComponent):
                 'and ssl_inputs.internal_key_path; or '
                 'ssl_inputs.ca_cert_path and ssl_inputs.ca_key_path.'
             )
+
+        if not config[MANAGER][SECURITY]['admin_password']:
+            issues.append(
+                'manager.security.admin_password must be set to the current '
+                'admin password for the cluster.'
+            )
+
         if issues:
             raise BootstrapError(
                 'Existing cluster could not be joined due to configuration '
