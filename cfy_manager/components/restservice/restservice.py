@@ -40,7 +40,8 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     VENV,
     CLUSTER_JOIN,
-    SERVER_PASSWORD
+    SERVER_PASSWORD,
+    SSL_INPUTS,
 )
 from ..base_component import BaseComponent
 from ..service_components import DATABASE_SERVICE
@@ -266,8 +267,44 @@ class RestService(BaseComponent):
         db.populate_db(configs)
         db.insert_manager(configs)
 
+    def _validate_cluster_join(self):
+        issues = []
+
+        certs = config[SSL_INPUTS]
+        internal_certs_provided = (
+            certs['internal_cert_path'] and certs['internal_key_path']
+        )
+        ca_certs_provided = (
+            certs['ca_key_path'] and certs['ca_cert_path']
+        )
+        if not internal_certs_provided and not ca_certs_provided:
+            issues.append(
+                'Internal cert and key or CA cert and key must be provided '
+                'to join an existing cluster. '
+                'These should be set in either ssl_inputs.internal_cert_path '
+                'and ssl_inputs.internal_key_path; or '
+                'ssl_inputs.ca_cert_path and ssl_inputs.ca_key_path.'
+            )
+
+        if not config[MANAGER][SECURITY]['admin_password']:
+            issues.append(
+                'manager.security.admin_password must be set to the current '
+                'admin password for the cluster.'
+            )
+
+        if issues:
+            raise BootstrapError(
+                'Existing cluster could not be joined due to configuration '
+                'issues. Please run cfy_manager remove --force, then fix the '
+                'configuration issues before reinstalling. Issues were:\n'
+                '{issues}'.format(
+                    issues='\n'.join(issues),
+                )
+            )
+
     def _join_cluster(self, configs):
         logger.info('Manager not in DB, will join the cluster...')
+        self._validate_cluster_join()
         config[CLUSTER_JOIN] = True
         certificates.handle_ca_cert(self.logger, generate_if_missing=False)
         db.insert_manager(configs)
