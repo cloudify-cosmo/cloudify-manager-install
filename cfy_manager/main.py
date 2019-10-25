@@ -196,10 +196,10 @@ def brokers_add(**kwargs):
     Use the cfy command afterwards to register it with the manager cluster.
     """
     _validate_components_prepared('brokers_add')
-    _only_on_brokers()
     join_node = kwargs['join_node']
 
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    _only_on_brokers()
 
     nodes = rabbitmq.list_rabbit_nodes()
     complain_about_dead_broker_cluster(nodes)
@@ -234,8 +234,8 @@ def brokers_remove(**kwargs):
     Use the cfy command afterwards to unregister it from the manager cluster.
     """
     _validate_components_prepared('brokers_remove')
-    _only_on_brokers()
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    _only_on_brokers()
 
     remove_node = rabbitmq.add_missing_nodename_prefix(kwargs['remove_node'])
     nodes = rabbitmq.list_rabbit_nodes()
@@ -272,8 +272,8 @@ def brokers_list(**kwargs):
     Use the cfy command to list brokers registered with the manager cluster.
     """
     _validate_components_prepared('brokers_list')
-    _only_on_brokers()
     rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    _only_on_brokers()
 
     brokers = rabbitmq.list_rabbit_nodes()
     complain_about_dead_broker_cluster(brokers)
