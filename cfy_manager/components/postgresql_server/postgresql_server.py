@@ -315,7 +315,10 @@ class PostgresqlServer(BaseComponent):
         if local_only:
             addresses = [config[MANAGER][PRIVATE_IP]]
         else:
-            addresses = config[POSTGRESQL_SERVER]['cluster']['nodes']
+            addresses = [
+                node['ip'] for node in
+                config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+            ]
 
         endpoints = ','.join(
             'https://{addr}:2379'.format(addr=addr)
@@ -741,10 +744,10 @@ class PostgresqlServer(BaseComponent):
                 'password': pgsrv['cluster']['etcd']['patroni_password']
             },
         }
-        for node in pgsrv['cluster']['nodes']:
+        for node in pgsrv['cluster']['nodes'].values():
             self._add_node_to_pg_hba(
                 patroni_conf['bootstrap']['dcs']['postgresql']['pg_hba'],
-                node
+                node['ip']
             )
         common.sudo([
             'touch', patroni_config_path,

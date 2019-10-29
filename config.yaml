@@ -92,16 +92,20 @@ rabbitmq:
 
   # A list of cluster members, including network-specific IPs.
   # The 'default' network IP must be set for each member.
-  # If installing a single external rabbit (not intended to be part of a cluster),
-  # or an all-in-one manager this section can be left blank.
+  # If installing an all-in-one manager this section can be left blank.
   # Example:
   # cluster_members:
   #   <hostname of rabbit node>:
-  #     default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
-  #     <other network name>: <ip for this node on 'other network'>
+  #     node_id: <Cloudify's auto-generated id of the rabbit node> (only needed on
+  #              the first manager installed in a cluster)
+  #     networks:
+  #       default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
+  #       <other network name>: <ip for this node on 'other network'>
   #     ...
   #   <name of second rabbit node>:
-  #     default: ...
+  #     node_id: ...
+  #     networks:
+  #       default: ...
   #     ...
   #   ...
   # All nodes must have a 'default' entry.
@@ -234,12 +238,19 @@ postgresql_server:
     # excessive resource usage.
     # If this is populated during a DB service install, the PostgreSQL cluster.
     # components will be installed.
-    # The nodes must be provided as IPs, e.g.
+    # The nodes must be provided with IPs, e.g.
     # nodes:
-    #   - 192.0.2.1
-    #   - 192.0.2.2
-    #   - 192.0.2.3
-    nodes: []
+    #   <hostname of postgres node>:
+    #     ip: <ip of postgres node>
+    #     node_id: <Cloudify's auto-generated id of the postgres node> (only needed on
+    #              the first manager installed in a cluster)
+    #   postgres_2:
+    #     ip: 192.0.2.2
+    #     node_id: c5c39913-b8d5-4130-99be-c29a2c970605
+    #   postgres_3:
+    #     ip: 192.0.2.3
+    #     node_id: 9e20bb07-0521-4b04-b675-d14a6995fa6d
+    nodes: {}
 
     # During DB cluster installation, all of the following cluster config
     # entries must be populated

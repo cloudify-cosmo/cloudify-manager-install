@@ -56,3 +56,7 @@ class DBNodeListError(Exception):
 
 class DBManagementError(Exception):
     """Raised when there is an error managing DB cluster nodes."""
+
+
+class InitializationError(Exception):
+    pass

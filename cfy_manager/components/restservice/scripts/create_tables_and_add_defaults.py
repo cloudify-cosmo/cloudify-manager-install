@@ -90,6 +90,12 @@ def _insert_rabbitmq_broker(brokers, ca_id):
         sm.put(inst)
 
 
+def _insert_db_nodes(db_nodes):
+    sm = get_storage_manager()
+    for node in db_nodes:
+        sm.put(models.DBNodes(**node))
+
+
 def _insert_manager(config):
     sm = get_storage_manager()
     ca_cert = config.get('ca_cert')
@@ -188,5 +194,8 @@ if __name__ == '__main__':
         _insert_manager(script_config['manager'])
     if script_config.get('provider_context'):
         _add_provider_context(script_config['provider_context'])
+    if script_config.get('db_nodes'):
+        _insert_db_nodes(script_config['db_nodes'])
+
     logger.info('Finished creating bootstrap admin, default tenant and '
                 'provider ctx')

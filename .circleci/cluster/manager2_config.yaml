@@ -12,9 +12,15 @@ postgresql_server:
   postgres_password: 'somesecretvalue123!'
   cluster:
     nodes:
-      - DB1_IP
-      - DB2_IP
-      - DB3_IP
+      db_1:
+        ip: DB1_IP
+        node_id: 'db1_node_id'
+      db_2:
+        ip: DB2_IP
+        node_id: 'db2_node_id'
+      db_3:
+        ip: DB3_IP
+        node_id: 'db3_node_id'
 
 postgresql_client:
   ssl_enabled: true

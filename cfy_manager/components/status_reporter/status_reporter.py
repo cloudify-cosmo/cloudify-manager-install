@@ -21,6 +21,7 @@ from ..base_component import BaseComponent
 
 from ...logger import get_logger
 from ...components import sources
+from ...exceptions import InitializationError
 from ...utils.common import remove, move, chown
 from ...utils.files import write_to_tempfile
 from ...utils.systemd import systemd
@@ -28,10 +29,6 @@ from ...utils.install import yum_install, yum_remove
 from ...constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
 
 logger = get_logger(STATUS_REPORTER)
-
-
-class InitializationError(Exception):
-    pass
 
 
 class StatusReporter(BaseComponent):
