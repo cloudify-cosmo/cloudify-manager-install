@@ -302,8 +302,8 @@ def _check_ssl_file(filename, kind='Key', password=None):
     if proc.returncode != 0:
         password_err = ''
         if password:
-            password_err = '(or the provided password is incorrect)'
-        raise ValidationError('{0} file {1} password is invalid {2}'
+            password_err = ' (or the provided password is incorrect)'
+        raise ValidationError('{0} file {1} is invalid{2}'
                               .format(kind, filename, password_err))
 
 
