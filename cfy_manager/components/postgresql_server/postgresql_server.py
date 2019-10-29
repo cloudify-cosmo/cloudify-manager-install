@@ -37,7 +37,6 @@ from cfy_manager.exceptions import (
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
-    HOSTNAME,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
     SCRIPTS,
@@ -548,32 +547,30 @@ class PostgresqlServer(BaseComponent):
                 # In case multiple nodes are being installed at the same time,
                 # check whether we should be setting up auth
                 should_configure_auth = False
-                auth_setup_key = 'cloudifyauthsetup'
-                # The auth setup check commands have credentials provided,
-                # because they'll then work both with and without auth
-                # (unless etcd change their behaviour in a future release)
-                setup_key_exists = self._etcd_command(
-                    ['get', auth_setup_key], ignore_failures=True,
-                    username='root',
-                )
-                # If the key does exist, another node is setting up auth
-                if setup_key_exists.returncode != 0:
-                    this_host = config[MANAGER][HOSTNAME]
-                    self._etcd_command(
-                        ['set', auth_setup_key, this_host],
-                        username='root',
-                    )
+                auth_setup_role = 'cloudifyauthsetup'
 
-                    # We retrieve this with ignore_failures in case this node
-                    # takes long enough that the other node finishes setting
-                    # up auth and deletes it again before we check (unlikely
-                    # though that may be)
-                    setup_key_contents = self._etcd_command(
-                        ['get', auth_setup_key], ignore_failures=True,
-                        username='root',
-                    )
-                    if setup_key_contents.aggr_stdout.strip() == this_host:
-                        should_configure_auth = True
+                # Try to create the role as a 'lock', as that's the only
+                # command the etcdctl v2 provides that won't be 'helpful' and
+                # succeed when it already exists.
+                # We can't use etcd v3 api because patroni doesn't support it
+                # yet.
+                setup_role_exists = self._etcd_command(
+                    ['role', 'add', auth_setup_role], ignore_failures=True,
+                )
+                if setup_role_exists.returncode != 0:
+                    stderr = setup_role_exists.aggr_stderr.strip()
+                    if 'already exists' in stderr:
+                        logger.info(
+                            'Another node is currently configuring etcd '
+                            'authentication.'
+                        )
+                    elif 'Insufficient credentials' in stderr:
+                        logger.info(
+                            'Etcd auth is already configured.'
+                        )
+                else:
+                    logger.info('Setting up etcd authentication.')
+                    should_configure_auth = True
 
                 if should_configure_auth:
                     cluster_config = config[POSTGRESQL_SERVER]['cluster']
@@ -599,7 +596,10 @@ class PostgresqlServer(BaseComponent):
                     self._etcd_command(['role', 'revoke', 'guest',
                                         '--path', '/*', '--readwrite'])
                     self._etcd_command(['auth', 'enable'])
-                    self._etcd_command(['rm', auth_setup_key])
+                    setup_role_exists = self._etcd_command(
+                        ['role', 'remove', auth_setup_role],
+                        username='root'
+                    )
         except ClusteringError:
             logger.warning(
                 'Could not finish etcd configuration. '
