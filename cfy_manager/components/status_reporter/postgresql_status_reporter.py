@@ -13,12 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from ...config import config
 from ..service_names import POSTGRESQL_SERVER
 from ..service_components import DATABASE_SERVICE
 from ..components_constants import SERVICES_TO_INSTALL
-from ..status_reporter.status_reporter import StatusReporter
 
-from ...config import config
+from .status_reporter import StatusReporter
 
 
 class PostgresqlStatusReporter(StatusReporter):
