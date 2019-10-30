@@ -37,7 +37,8 @@ class SystemD(object):
                     ignore_failures=ignore_failure)
 
     def configure(self, service_name, render=True,
-                  user=CLOUDIFY_USER, group=CLOUDIFY_GROUP):
+                  user=CLOUDIFY_USER, group=CLOUDIFY_GROUP,
+                  external_configure_params={}):
         """This configures systemd for a specific service.
 
         It requires that two files are present for each service one containing
@@ -57,7 +58,8 @@ class SystemD(object):
 
         if exists(env_src):
             logger.debug('Deploying systemd EnvironmentFile...')
-            deploy(env_src, env_dst, render=render)
+            deploy(env_src, env_dst, render=render,
+                   additional_render_context=external_configure_params)
             chown(user, group, env_dst)
 
         # components that have had their service file moved to a RPM, won't
@@ -65,7 +67,8 @@ class SystemD(object):
         # TODO: after this is done to all components, this can be removed
         if exists(srv_src):
             logger.debug('Deploying systemd .service file...')
-            deploy(srv_src, srv_dst, render=render)
+            deploy(srv_src, srv_dst, render=render,
+                   additional_render_context=external_configure_params)
 
         logger.debug('Enabling systemd .service...')
         self.systemctl('enable', '{0}.service'.format(sid))

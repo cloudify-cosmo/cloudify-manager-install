@@ -30,7 +30,10 @@ from . import (
     Cli,
     UsageCollector,
     Patch,
-    Sanity
+    Sanity,
+    RabbitmqStatusReporter,
+    PostgresqlStatusReporter,
+    ManagerStatusReporter
 )
 
 
@@ -56,5 +59,11 @@ class ComponentsFactory:
             "cli": Cli(skip_installation),
             "usage_collector": UsageCollector(skip_installation),
             "patch": Patch(skip_installation),
-            "sanity": Sanity(skip_installation)
+            "sanity": Sanity(skip_installation),
+            "manager_status_reporter":
+                ManagerStatusReporter(skip_installation),
+            "rabbitmq_status_reporter":
+                RabbitmqStatusReporter(skip_installation),
+            "postgresql_status_reporter":
+                PostgresqlStatusReporter(skip_installation)
         }[component_name]

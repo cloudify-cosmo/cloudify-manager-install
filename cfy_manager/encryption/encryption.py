@@ -19,10 +19,8 @@ from os.path import join
 
 import argh
 
-from cfy_manager.logger import get_logger
 from cfy_manager.utils import common
 
-logger = get_logger('encryption')
 SCRIPT_DIR = '/opt/cloudify/encryption'
 REST_HOME_DIR = '/opt/manager'
 
