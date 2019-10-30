@@ -40,6 +40,7 @@ from ...logger import get_logger
 from ...exceptions import (
     ClusteringError,
     NetworkError,
+    ProcessExecutionError,
     RabbitNodeListError,
     ValidationError,
 )
@@ -194,6 +195,15 @@ class RabbitMQ(BaseComponent):
         try:
             self._rabbitmqctl(['join_cluster', join_node])
             joined = True
+        except ProcessExecutionError as err:
+            if 'mnesia_not_running' in err.message:
+                raise ClusteringError(
+                    'Rabbit does not appear to be running on {target}. '
+                    'You may need to start rabbit on that node, or restart '
+                    'that node.'.format(target=join_node)
+                )
+            else:
+                raise
         finally:
             self._rabbitmqctl(['start_app'])
             if restore_users_on_fail and not joined:
