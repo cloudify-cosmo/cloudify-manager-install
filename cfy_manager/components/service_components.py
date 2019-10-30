@@ -40,10 +40,10 @@ SERVICE_COMPONENTS = {
         "composer",
         "mgmtworker",
         "cli",
+        "manager_status_reporter",
         "usage_collector",
         "patch",
-        "sanity",
-        "manager_status_reporter"
+        "sanity"
     ]
 }
 

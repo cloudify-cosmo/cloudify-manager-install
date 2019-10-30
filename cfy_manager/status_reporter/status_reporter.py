@@ -14,9 +14,8 @@
 #  * limitations under the License.
 
 from ..utils.systemd import systemd
+from ..constants import STATUS_REPORTER
 from ..logger import get_logger, setup_console_logger
-
-STATUS_REPORTER = 'status-reporter'
 
 logger = get_logger(STATUS_REPORTER)
 setup_console_logger()
