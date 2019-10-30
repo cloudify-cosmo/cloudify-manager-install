@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -192,6 +192,7 @@ def _only_on_brokers():
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
+@argh.named('add')
 def brokers_add(**kwargs):
     """Add a new broker to the broker cluster. This should not be done while
     the manager cluster has any running executions.
@@ -228,6 +229,7 @@ def brokers_add(**kwargs):
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
+@argh.named('remove')
 def brokers_remove(**kwargs):
     """Remove a lost broker from the broker cluster. This should not be done
     while the manager cluster has any running executions. This should only be
@@ -269,6 +271,7 @@ def brokers_remove(**kwargs):
 
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
+@argh.named('list')
 def brokers_list(**kwargs):
     """List brokers in the broker cluster.
     Use the cfy command to list brokers registered with the manager cluster.
@@ -305,6 +308,7 @@ def complain_about_dead_broker_cluster(nodes):
 
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
+@argh.named('list')
 def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     _validate_components_prepared('db_cluster_list')
@@ -329,6 +333,7 @@ def db_node_list(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.named('add')
 def db_node_add(**kwargs):
     """Add a DB cluster node."""
     _validate_components_prepared('db_node_add')
@@ -343,6 +348,7 @@ def db_node_add(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.named('remove')
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
@@ -357,6 +363,7 @@ def db_node_remove(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.named('reinit')
 def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
     _validate_components_prepared('db_node_reinit')
@@ -371,6 +378,7 @@ def db_node_reinit(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.named('set_master')
 def db_node_set_master(**kwargs):
     _validate_components_prepared('db_node_set_master')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
@@ -833,21 +841,27 @@ def main():
         start,
         stop,
         restart,
-        create_internal_certs,
-        create_external_certs,
         sanity_check,
         add_networks,
-        update_encryption_key,
-        generate_test_cert,
-        brokers_add,
-        brokers_list,
-        brokers_remove,
-        db_node_list,
-        db_node_add,
-        db_node_remove,
-        db_node_reinit,
-        db_node_set_master,
+        update_encryption_key
     ])
+
+    parser.add_commands([create_internal_certs,
+                         create_external_certs,
+                         generate_test_cert],
+                        namespace='certs')
+
+    parser.add_commands([brokers_add,
+                        brokers_list,
+                        brokers_remove],
+                        namespace='brokers')
+
+    parser.add_commands([db_node_list,
+                         db_node_add,
+                         db_node_remove,
+                         db_node_reinit,
+                         db_node_set_master],
+                        namespace='dbs')
 
     parser.add_commands([status_reporter.start,
                          status_reporter.stop,
