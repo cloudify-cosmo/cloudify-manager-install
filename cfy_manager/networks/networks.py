@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #########
-# Copyright (c) 2018 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 import json
 import argh
 from os.path import join
-from cfy_manager.logger import get_logger
 from cfy_manager.utils import common
 from cfy_manager.constants import (
     NETWORKS_DIR,
@@ -29,7 +28,6 @@ from cfy_manager.utils.certificates import (
     store_cert_metadata
 )
 
-logger = get_logger('networks')
 SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
 

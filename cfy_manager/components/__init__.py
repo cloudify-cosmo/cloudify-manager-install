@@ -29,6 +29,9 @@ from .sanity import Sanity  # NOQA
 from .stage import Stage  # NOQA
 from .usage_collector import UsageCollector  # NOQA
 from .patch.patch import Patch  # NOQA
+from .status_reporter import RabbitmqStatusReporter  # NOQA
+from .status_reporter import PostgresqlStatusReporter  # NOQA
+from .status_reporter import ManagerStatusReporter  # NOQA
 
 from components_factory import ComponentsFactory  # NOQA
 from service_components import SERVICE_COMPONENTS  # NOQA

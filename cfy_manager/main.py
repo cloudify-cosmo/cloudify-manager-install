@@ -29,9 +29,6 @@ from .components import (
     QUEUE_SERVICE,
     SERVICE_INSTALLATION_ORDER
 )
-from .components.globals import set_globals
-from .components.validations import validate
-from .components.service_names import MANAGER, POSTGRESQL_SERVER
 from .components.components_constants import (
     SERVICES_TO_INSTALL,
     SECURITY,
@@ -41,30 +38,34 @@ from .components.components_constants import (
     CLEAN_DB,
     UNCONFIGURED_INSTALL
 )
+from .components.globals import set_globals
+from .components.service_names import MANAGER, POSTGRESQL_SERVER
+from .components.validations import validate
 from .config import config
-from .encryption.encryption import update_encryption_key
-from .networks.networks import add_networks
-from .exceptions import BootstrapError
 from .constants import INITIAL_CONFIGURE_FILE, INITIAL_INSTALL_FILE
+from .encryption.encryption import update_encryption_key
+from .exceptions import BootstrapError
 from .logger import (
     get_file_handlers_level,
     get_logger,
     setup_console_logger,
     set_file_handlers_level,
 )
+from .networks.networks import add_networks
+from .status_reporter import status_reporter
 from .utils import CFY_UMASK
+from .utils.certificates import (
+    create_internal_certs,
+    create_external_certs,
+    generate_ca_cert,
+    _generate_ssl_certificate,
+)
 from .utils.common import run, sudo, can_lookup_hostname
 from .utils.files import (
     replace_in_file,
     remove as _remove,
     remove_temp_files,
     touch
-)
-from .utils.certificates import (
-    create_internal_certs,
-    create_external_certs,
-    generate_ca_cert,
-    _generate_ssl_certificate,
 )
 
 logger = get_logger('Main')
@@ -815,7 +816,8 @@ def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
     """Main entry point"""
-    argh.dispatch_commands([
+    parser = argh.ArghParser()
+    parser.add_commands([
         validate_command,
         install,
         configure,
@@ -838,6 +840,14 @@ def main():
         db_node_reinit,
         db_node_set_master,
     ])
+
+    parser.add_commands([status_reporter.start,
+                         status_reporter.stop,
+                         status_reporter.remove,
+                         status_reporter.configure],
+                        namespace='status-reporter')
+    parser.dispatch()
+
     os.umask(current_umask)
 
 

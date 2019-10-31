@@ -139,10 +139,12 @@ def remove_files(file_list, ignore_failure=False):
         sudo(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
-def deploy(src, dst, render=True):
+def deploy(src, dst, render=True, additional_render_context={}):
     if render:
         template = _template_env.get_template(src)
-        content = template.render(**config)
+        render_context = additional_render_context.copy()
+        render_context.update(config)
+        content = template.render(**render_context)
         write_to_file(content, dst)
     else:
         copy(src, dst)
