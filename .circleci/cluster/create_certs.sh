@@ -2,7 +2,7 @@
 
 function generate_test_cert {
     san=$1
-    docker run --rm  -v $(pwd):/root/.cloudify-test-ca cfy_manager_image_preinstalled cfy_manager generate-test-cert -s $san
+    docker run --rm  -v $(pwd):/root/.cloudify-test-ca cfy_manager_image_preinstalled cfy_manager certs generate-test-cert -s $san
 }
 
 generate_test_cert $QUEUE_IP
