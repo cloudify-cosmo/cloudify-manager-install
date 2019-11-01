@@ -344,10 +344,10 @@ class PostgresqlServer(BaseComponent):
             local_only=local_only,
         )
 
-    # We retry on this for up to six seconds so that an install of several
+    # We retry on this so that an install of several
     # cluster nodes at once won't suffer from a race condition
     # (e.g. we install like this in the tests)
-    @retry(stop_max_attempt_number=3, wait_fixed=2000)
+    @retry(stop_max_attempt_number=20, wait_fixed=3000)
     def _get_patroni_dcs_conf(self, local_only=True):
         return json.loads(self._etcd_command(
             ['get', '/db/postgres/config'],
