@@ -25,6 +25,7 @@ from ...exceptions import InitializationError
 from ...utils.common import remove, move, chown
 from ...utils.files import write_to_tempfile
 from ...utils.systemd import systemd
+from ...utils.files import check_rpms_are_present
 from ...utils.install import yum_install, yum_remove
 from ...constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
 
@@ -33,18 +34,16 @@ logger = get_logger(STATUS_REPORTER)
 
 class StatusReporter(BaseComponent):
     def __init__(self, skip_installation, reporter_type):
+        skip_installation = (skip_installation or
+                             not check_rpms_are_present(
+                                 sources.status_reporter))
         super(StatusReporter, self).__init__(skip_installation)
         self.reporter_type = reporter_type
-        self.skip_installation = skip_installation
 
     def _build_extra_config_flags(self):
         return ''
 
     def install(self):
-        if self.skip_installation:
-            logger.notice('Not installing status reporter {0} due'
-                          ' to current setup...'.format(self.reporter_type))
-            return
         logger.notice('Installing Status Reporter {0}...'.format(
             self.reporter_type))
         yum_install(sources.status_reporter)
@@ -52,10 +51,6 @@ class StatusReporter(BaseComponent):
             self.reporter_type))
 
     def configure(self):
-        if self.skip_installation:
-            logger.notice('Nothing to configure for status reporter {0} due'
-                          ' to current setup...'.format(self.reporter_type))
-            return
         logger.notice('Configuring status reporter {0}...'.format(
             self.reporter_type))
         reporter_settings = {'reporter_type': self.reporter_type,
@@ -90,10 +85,6 @@ class StatusReporter(BaseComponent):
         return reporter_config['node_id']
 
     def remove(self):
-        if self.skip_installation:
-            logger.notice('Status Reporter was not installed,'
-                          ' so nothing to remove...')
-            return
         logger.notice('Removing status reporter {0}...'.format(
             self.reporter_type))
         systemd.remove(STATUS_REPORTER, service_file=False)
