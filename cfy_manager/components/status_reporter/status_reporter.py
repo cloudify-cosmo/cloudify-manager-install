@@ -13,17 +13,25 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
+
+import yaml
+
 from ..base_component import BaseComponent
 
 from ...logger import get_logger
 from ...components import sources
-from ...utils.common import remove
+from ...utils.common import remove, move, chown
+from ...utils.files import write_to_tempfile
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-
-STATUS_REPORTER = 'status-reporter'
+from ...constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
 
 logger = get_logger(STATUS_REPORTER)
+
+
+class InitializationError(Exception):
+    pass
 
 
 class StatusReporter(BaseComponent):
@@ -58,8 +66,31 @@ class StatusReporter(BaseComponent):
                                  self._build_extra_config_flags()}
         systemd.configure(STATUS_REPORTER,
                           external_configure_params=reporter_settings)
+        logger.notice('Generating node id...')
+        node_id = self._generate_node_id()
+        logger.notice('Generated "{0}" node id.'.format(node_id))
         logger.notice('Status reporter {0} successfully configured'.format(
             self.reporter_type))
+
+    @staticmethod
+    def _generate_node_id():
+        try:
+            with open(STATUS_REPORTER_CONFIGURATION_PATH) as f:
+                reporter_config = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise InitializationError('Failed loading status reporter\'s '
+                                      'configuration with the following: '
+                                      '{0}'.format(e))
+        reporter_config['node_id'] = str(uuid.uuid4())
+        updated_conf = yaml.safe_dump(reporter_config,
+                                      default_flow_style=False)
+        updated_conf_path = write_to_tempfile(updated_conf)
+        remove(STATUS_REPORTER_CONFIGURATION_PATH)
+        move(updated_conf_path, STATUS_REPORTER_CONFIGURATION_PATH)
+        chown('cfyreporter',
+              'cfyreporter',
+              STATUS_REPORTER_CONFIGURATION_PATH)
+        return reporter_config['node_id']
 
     def remove(self):
         if self.skip_installation:
