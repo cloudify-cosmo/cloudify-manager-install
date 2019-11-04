@@ -758,9 +758,10 @@ def remove(verbose=False, force=False):
     should_stop = _are_components_configured()
 
     for component in reversed(components):
-        if should_stop and not component.skip_installation:
-            component.stop()
-        component.remove()
+        if not component.skip_installation:
+            if should_stop:
+                component.stop()
+            component.remove()
 
     if _are_components_installed():
         _remove(INITIAL_INSTALL_FILE)
