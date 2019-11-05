@@ -62,18 +62,21 @@ class Cli(BaseComponent):
         manager = config[MANAGER]['cli_local_profile_host_name']
         use_cmd = ['cfy', 'profiles', 'use', manager,
                    '--skip-credentials-validation']
+        if config['nginx']['port']:
+            use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
         ssl_enabled = \
             'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
 
         cert_path = self._deploy_external_cert()
+        current_user = getuser()
         set_cmd = [
             'cfy', 'profiles', 'set', '-u', username,
             '-p', password, '-t', 'default_tenant',
             '-c', cert_path, '--ssl', ssl_enabled
         ]
-
-        current_user = getuser()
+        if config['nginx']['port']:
+            set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
         logger.info('Setting CLI for the current user ({0})...'.format(
             current_user))

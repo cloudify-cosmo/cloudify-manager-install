@@ -428,6 +428,9 @@ restservice:
   extra_env: {}
 
 nginx:
+  # external port to use; if null, default is 80 for http and 443 for https
+  port: null
+
   # Number of nginx worker processes to have.
   # Specify "auto" to use nginx's recommended configuration of one
   # process per core.
