@@ -14,8 +14,8 @@
 #  * limitations under the License.
 
 import json
-from os.path import join
 import time
+from os.path import join
 
 import requests
 
@@ -341,7 +341,7 @@ class RabbitMQ(BaseComponent):
 
             add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
             for node in not_resolved:
-                ip = cluster_nodes[node]['default']
+                ip = cluster_nodes[node]['networks']['default']
                 if not ip:
                     raise ValidationError(
                         'IP not provided for unresolvable rabbit node '
@@ -418,8 +418,8 @@ class RabbitMQ(BaseComponent):
         # As we only support generating certificates on single-broker setups,
         # we will take only the first cluster member (having failed before now
         # if there are multiple cluster members specified)
-        networks = config[RABBITMQ]['cluster_members']['cloudify-broker']
         rabbit_host = config[MANAGER][HOSTNAME]
+        networks = config[RABBITMQ]['cluster_members'][rabbit_host]['networks']
 
         cert_addresses = networks.values()
         cert_addresses.append(config[RABBITMQ]['nodename'].split('@')[-1])
@@ -499,11 +499,13 @@ class RabbitMQ(BaseComponent):
         self._possibly_add_hosts_entries()
         systemd.configure(RABBITMQ,
                           user='rabbitmq', group='rabbitmq')
-        if not config[RABBITMQ]['cluster_members']:
-            # We must populate the brokers table for an all-in-one manager,
-            # or a single external broker
+        if common.is_all_in_one_manager():
+            # We must populate the brokers table for an all-in-one manager
             config[RABBITMQ]['cluster_members'] = {
-                'cloudify-broker': config['networks'],
+                config[MANAGER][HOSTNAME]: {
+                    'node_id': 'ALL_IN_ONE',
+                    'networks': config['networks']
+                }
             }
         self._generate_rabbitmq_certs()
         self._init_service()

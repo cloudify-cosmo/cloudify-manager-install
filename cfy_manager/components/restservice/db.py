@@ -17,6 +17,8 @@ import time
 import uuid
 from os.path import join
 
+import yaml
+
 from .manager_config import make_manager_config
 from ..components_constants import (
     ADMIN_PASSWORD,
@@ -36,6 +38,7 @@ from ..service_components import DATABASE_SERVICE
 from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
     RABBITMQ,
     RESTSERVICE,
 )
@@ -43,14 +46,16 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import InitializationError
 
 from ...utils import common
-from ...utils.files import temp_copy, write_to_tempfile
+from ...utils.files import temp_copy, write_to_tempfile, sudo_read
 
 logger = get_logger('DB')
 
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
+NETWORKS = 'networks'
 
 
 def drop_db():
@@ -143,28 +148,70 @@ def _create_args_dict():
                                'migrations'),
         'config': make_manager_config(),
         'premium': config[MANAGER][PREMIUM_EDITION],
-        'rabbitmq_brokers': [
-            {
-                'name': name,
-                'host': broker['default'],
-                'management_host': (
-                    '127.0.0.1' if config[RABBITMQ]['management_only_local']
-                    else broker['default']
-                ),
-                'username': config[RABBITMQ]['username'],
-                'password': config[RABBITMQ]['password'],
-                'params': None,
-                'networks': broker,
-                'node_id': str(uuid.uuid4())
-            }
-            for name, broker in config[RABBITMQ]['cluster_members'].items()
-        ],
+        'rabbitmq_brokers': _create_rabbitmq_info(),
+        'db_nodes': _create_db_nodes_info()
     }
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
             args_dict['rabbitmq_ca_cert'] = f.read()
     return args_dict
+
+
+def _create_rabbitmq_info():
+    node_id = None
+
+    # In all-in-one the node_id is identical for every service
+    if common.is_all_in_one_manager():
+        node_id = _get_manager_reporter_id()
+
+    return [
+        {
+            'name': name,
+            'host': broker[NETWORKS]['default'],
+            'management_host': (
+                '127.0.0.1' if config[RABBITMQ]['management_only_local']
+                else broker[NETWORKS]['default']
+            ),
+            'username': config[RABBITMQ]['username'],
+            'password': config[RABBITMQ]['password'],
+            'params': None,
+            'networks': broker[NETWORKS],
+            'is_external': broker.get('node_id') is None,
+            'node_id': node_id or broker.get('node_id', str(uuid.uuid4()))
+        }
+        for name, broker in config[RABBITMQ]['cluster_members'].items()
+    ]
+
+
+def _create_db_nodes_info():
+    if common.is_all_in_one_manager():
+        return [{
+            'name': config[MANAGER][HOSTNAME],
+            'node_id': _get_manager_reporter_id(),
+            'private_ip': config[NETWORKS]['default'],
+            'is_external': False
+        }]
+
+    if common.manager_using_db_cluster():
+        db_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
+        return [
+            {
+                'name': name,
+                'node_id': db['node_id'],
+                'private_ip': db['ip'],
+                'is_external': False
+            }
+            for name, db in db_nodes.items()
+        ]
+
+    # External db is used
+    return [{
+        'name': config[POSTGRESQL_CLIENT]['host'],
+        'node_id': str(uuid.uuid4()),
+        'private_ip': config[POSTGRESQL_CLIENT]['host'],
+        'is_external': True
+    }]
 
 
 def _create_process_env(rest_config=None, authorization_config=None,
@@ -217,8 +264,8 @@ def insert_manager(configs):
             'public_ip': config['manager']['public_ip'],
             'hostname': config[MANAGER][HOSTNAME],
             'private_ip': config['manager']['private_ip'],
-            'networks': config['networks'],
-            'node_id': str(uuid.uuid4())
+            'networks': config[NETWORKS],
+            'node_id': _get_manager_reporter_id()
         }
     }
     try:
@@ -313,3 +360,15 @@ def _log_results(result):
         output = [line.strip() for line in output if line.strip()]
         for line in output:
             logger.error(line)
+
+
+def _get_manager_reporter_id():
+    try:
+        reporter_config = yaml.safe_load(
+            sudo_read(constants.STATUS_REPORTER_CONFIGURATION_PATH)
+        )
+    except yaml.YAMLError as e:
+        raise InitializationError('Failed loading status reporter\'s '
+                                  'configuration with the following: '
+                                  '{0}'.format(e))
+    return reporter_config['node_id']

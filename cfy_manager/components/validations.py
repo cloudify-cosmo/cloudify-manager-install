@@ -488,16 +488,29 @@ def _validate_postgres_azure_configuration():
         )
 
 
+def _validate_postgres_cluster_configuration():
+    condition = [
+        'ip' in node for node in
+        config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+    ]
+    if not all(condition):
+        raise ValidationError(
+            'When using a Postgres Cluster ip must be set for each DB node'
+        )
+
+
 def _validate_postgres_inputs():
     """
     Validating that an external DB will always listen to remote connections
     and, that a postgres password is set - needed for remote connections
     """
-    if _is_installed(DATABASE_SERVICE) and _is_installed(MANAGER_SERVICE) and \
-            config[POSTGRESQL_CLIENT]['host'] not in ('localhost',
-                                                      '127.0.0.1'):
-        raise ValidationError('Cannot install database_service when '
-                              'connecting to an external database')
+    if _is_installed(DATABASE_SERVICE) and _is_installed(MANAGER_SERVICE):
+        if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
+            raise ValidationError('Cannot install database_service when '
+                                  'connecting to an external database')
+        elif config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            raise ValidationError('Cannot install database_service when '
+                                  'connecting to a Postgres Cluster')
     if _is_installed(DATABASE_SERVICE) and not _is_installed(MANAGER_SERVICE):
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             if not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
@@ -520,6 +533,8 @@ def _validate_postgres_inputs():
                 not config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             raise ValidationError('When using an external database, '
                                   'postgres_password must be set')
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            _validate_postgres_cluster_configuration()
 
     if (
         config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]

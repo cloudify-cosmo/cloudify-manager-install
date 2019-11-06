@@ -28,7 +28,9 @@ from ..logger import get_logger
 from ..exceptions import ProcessExecutionError
 
 from cfy_manager.components.components_constants import SERVICES_TO_INSTALL
-from cfy_manager.components.service_components import DATABASE_SERVICE
+from cfy_manager.components.service_components import (QUEUE_SERVICE,
+                                                       MANAGER_SERVICE,
+                                                       DATABASE_SERVICE)
 from cfy_manager.components.service_names import (
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
@@ -207,3 +209,11 @@ def get_haproxy_servers(logger):
         )
 
     return servers
+
+
+def is_all_in_one_manager():
+    return (
+        MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+        DATABASE_SERVICE in config[SERVICES_TO_INSTALL] and
+        QUEUE_SERVICE in config[SERVICES_TO_INSTALL]
+    )
