@@ -14,11 +14,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest import config, server, storage
-
 import os
 import pwd
 import grp
+from stat import S_IREAD
+
+from manager_rest import config, server, storage
 
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 RESTSEC_CONFIG_PATH = '/opt/manager/rest-security.conf'
@@ -50,6 +51,7 @@ def update_auth_token(token):
     uid = pwd.getpwnam("cfyuser").pw_uid
     gid = grp.getgrnam("cfyuser").gr_gid
     os.chown(AUTH_TOKEN_LOCATION, uid, gid)
+    os.chmod(AUTH_TOKEN_LOCATION, S_IREAD)
 
 
 if __name__ == '__main__':
