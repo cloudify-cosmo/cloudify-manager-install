@@ -53,7 +53,7 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...utils import common, files
+from ...utils import common, files, db
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 
@@ -1038,7 +1038,43 @@ class PostgresqlServer(BaseComponent):
         common.sudo(['systemctl', 'restart', 'cloudify-amqp-postgres'])
         common.sudo(['systemctl', 'restart', 'cloudify-restservice'])
 
-    def add_cluster_node(self, address):
+    def _node_is_in_db(self, node_id):
+        result = db.run_psql_command(
+            command=[
+                '-c',
+                "SELECT COUNT(*) FROM db_nodes where node_id='{0}';".format(
+                    node_id,
+                ),
+            ],
+            db_key='cloudify_db_name',
+        )
+
+        # As the node_id is unique, there can only ever be at most 1 entry with
+        # the expected node_id
+        return int(result) == 1
+
+    def _add_node_to_db(self, name, node_id, private_ip):
+        db.run_psql_command(
+            command=[
+                '-c',
+                "INSERT INTO db_nodes (name, node_id, private_ip)"
+                "VALUES ('{0}', '{1}', '{2}');".format(
+                    name, node_id, private_ip
+                ),
+            ],
+            db_key='cloudify_db_name',
+        )
+
+    def _remove_node_from_db(self, node_id):
+        db.run_psql_command(
+            command=[
+                '-c',
+                "DELETE FROM db_nodes WHERE node_id = '{0}';".format(node_id),
+            ],
+            db_key='cloudify_db_name',
+        )
+
+    def add_cluster_node(self, address, node_id, hostname=None):
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             raise DBManagementError(
                 'Database cluster nodes should be added to the cluster '
@@ -1070,9 +1106,14 @@ class PostgresqlServer(BaseComponent):
             stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
         )
 
+        # The new db node maybe exists in db_nodes table, because db-node-add
+        # command should run on each manager in a cluster
+        if not self._node_is_in_db(node_id):
+            self._add_node_to_db((hostname or address), node_id, address)
+
         self._restart_manager_db_dependent_services()
 
-    def remove_cluster_node(self, address):
+    def remove_cluster_node(self, address, node_id=None):
         master, replicas = self._get_cluster_addresses()
 
         if len(replicas) < 2:
@@ -1089,9 +1130,9 @@ class PostgresqlServer(BaseComponent):
             )
 
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-            node_id = self._get_etcd_members().get(address)
+            member_id = self._get_etcd_members().get(address)
 
-            if not node_id:
+            if not member_id:
                 raise DBManagementError(
                     'Cannot find node with address {addr} for '
                     'removal.'.format(addr=address)
@@ -1101,7 +1142,7 @@ class PostgresqlServer(BaseComponent):
                 'Removing etcd node {name}'.format(name=address)
             )
             self._etcd_command(
-                ['member', 'remove', node_id],
+                ['member', 'remove', member_id],
                 username='root',
                 local_only=True,
             )
@@ -1130,6 +1171,8 @@ class PostgresqlServer(BaseComponent):
                 ]
             )
 
+            if self._node_is_in_db(node_id):
+                self._remove_node_from_db(node_id)
             self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):

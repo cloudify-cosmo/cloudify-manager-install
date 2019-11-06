@@ -28,8 +28,6 @@ from ..components_constants import (
     SCRIPTS,
     SECURITY,
     SERVICES_TO_INSTALL,
-    SSL_CLIENT_VERIFICATION,
-    SSL_ENABLED,
 )
 
 from ..service_components import DATABASE_SERVICE
@@ -45,8 +43,8 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common
 from ...utils.node import get_node_id
+from ...utils import common, db as utils_db
 from ...utils.files import temp_copy, write_to_tempfile
 
 logger = get_logger('DB')
@@ -93,37 +91,9 @@ def _execute_db_script(script_name):
         if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
             db_script_command = '-u postgres ' + db_script_command
 
-    db_env = _generate_db_env(database=pg_config['server_db_name'])
+    db_env = utils_db.generate_db_env(database=pg_config['server_db_name'])
 
     common.sudo(db_script_command, env=db_env)
-
-
-def _generate_db_env(database):
-    pg_config = config[POSTGRESQL_CLIENT]
-
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-        # If we're connecting to the actual local db we don't need to supply a
-        # host
-        host = ""
-    else:
-        host = pg_config['host']
-
-    db_env = {
-        'PGHOST': host,
-        'PGUSER': pg_config['server_username'],
-        'PGPASSWORD': pg_config['server_password'],
-        'PGDATABASE': database,
-    }
-
-    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-        db_env['PGSSLMODE'] = 'verify-full'
-        db_env['PGSSLROOTCERT'] = '/etc/cloudify/ssl/postgresql_ca.crt'
-
-        # This only makes sense if SSL is used
-        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-            db_env['PGSSLCERT'] = constants.POSTGRESQL_CLIENT_CERT_PATH
-            db_env['PGSSLKEY'] = constants.POSTGRESQL_CLIENT_KEY_PATH
-    return db_env
 
 
 def _get_provider_context():
@@ -280,30 +250,9 @@ def create_amqp_resources(configs=None):
     logger.notice('AMQP resources successfully created')
 
 
-def _run_psql_command(command, db_key):
-    base_command = []
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-        # In case the default user is postgres and we're in AIO installation,
-        # "peer" authentication is used
-        if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
-            base_command.extend(['-u', 'postgres'])
-
-    # Run psql with just the results output without headers (-t),
-    # and no psqlrc (-X)
-    base_command.extend(['/usr/bin/psql', '-t', '-X'])
-
-    command = base_command + command
-
-    db_env = _generate_db_env(database=config[POSTGRESQL_CLIENT][db_key])
-
-    result = common.sudo(command, env=db_env)
-
-    return result.aggr_stdout.strip()
-
-
 def check_db_exists():
     # Get the list of databases
-    result = _run_psql_command(
+    result = utils_db.run_psql_command(
         command=['-l'],
         db_key='server_db_name',
     )
@@ -330,7 +279,7 @@ def check_db_exists():
 
 
 def manager_is_in_db():
-    result = _run_psql_command(
+    result = utils_db.run_psql_command(
         command=[
             '-c', "SELECT COUNT(*) FROM managers where hostname='{0}'".format(
                 config[MANAGER][HOSTNAME],
