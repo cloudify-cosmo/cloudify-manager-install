@@ -23,10 +23,11 @@ from ...logger import get_logger
 from ...components import sources
 from ...exceptions import InitializationError
 from ...utils.common import remove, move, chown
-from ...utils.files import write_to_tempfile, remove_files
 from ...utils.systemd import systemd
-from ...utils.files import check_rpms_are_present
 from ...utils.install import yum_install, yum_remove
+from ...utils.files import (write_to_tempfile,
+                            remove_files,
+                            check_rpms_are_present)
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
                           STATUS_REPORTER_CONFIGURATION_PATH)
