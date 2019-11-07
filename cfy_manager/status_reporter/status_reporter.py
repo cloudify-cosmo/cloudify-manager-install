@@ -13,13 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
+
 import argh
 import yaml
 
 from ..utils.systemd import systemd
-from ..constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
 from ..utils.files import update_yaml_file, sudo_read
 from ..logger import get_logger, setup_console_logger
+from ..constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
 
 logger = get_logger(STATUS_REPORTER)
 setup_console_logger()
@@ -58,18 +60,20 @@ setup_console_logger()
                ' will contain all the relevant for updating.'
           )
 def configure(managers_ip=[], user_name='', token='', ca_path='',
-              reporting_freq=5, reporter_configuration_path=''):
+              reporting_freq=None, reporter_configuration_path=''):
     logger.notice('Configuring component status reporting service with...')
-    conf_parameters_passed = not any([managers_ip,
-                                      user_name,
-                                      token,
-                                      ca_path,
-                                      reporting_freq])
+    conf_parameters_passed = any([managers_ip,
+                                  user_name,
+                                  token,
+                                  ca_path,
+                                  reporting_freq])
     if reporter_configuration_path and conf_parameters_passed:
         logger.error('Please provide status reporter configuration path '
                      'argument or the other configuration parameters, but '
                      'not together.')
-    if reporter_configuration_path:
+    elif reporter_configuration_path:
+        logger.info('Provided configuration file for status reporter at'
+                    ' {0}...'.format(reporter_configuration_path))
         try:
             file_content = sudo_read(reporter_configuration_path)
             update_content = yaml.safe_load(file_content)
@@ -83,13 +87,16 @@ def configure(managers_ip=[], user_name='', token='', ca_path='',
             'managers_ips': managers_ip,
             'reporting_freq': reporting_freq
             }
+        logger.info('Provided the following params for updating the status'
+                    ' reporter configuration: {0}...'.format(
+                     json.dumps(update_content, indent=1)))
 
     update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
                      'cfyreporter',
                      'cfyreporter',
-                     **update_content)
+                     update_content)
     systemd.restart(STATUS_REPORTER)
-    logger.notice('Component status reporting service Configured')
+    logger.notice('Component status reporting service configured')
 
 
 def start():
