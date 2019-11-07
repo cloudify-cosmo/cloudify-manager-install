@@ -15,18 +15,15 @@
 
 import uuid
 
-import yaml
-
 from ..base_component import BaseComponent
 
 from ...logger import get_logger
 from ...components import sources
-from ...exceptions import InitializationError
-from ...utils.common import remove, move, chown
 from ...utils.systemd import systemd
+from ...utils.files import update_yaml_file
+from ...exceptions import InitializationError
 from ...utils.install import yum_install, yum_remove
-from ...utils.files import (write_to_tempfile,
-                            remove_files,
+from ...utils.files import (remove_files,
                             check_rpms_are_present)
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
@@ -69,23 +66,15 @@ class StatusReporter(BaseComponent):
 
     @staticmethod
     def _generate_node_id():
-        try:
-            with open(STATUS_REPORTER_CONFIGURATION_PATH) as f:
-                reporter_config = yaml.safe_load(f)
-        except yaml.YAMLError as e:
-            raise InitializationError('Failed loading status reporter\'s '
-                                      'configuration with the following: '
-                                      '{0}'.format(e))
-        reporter_config['node_id'] = str(uuid.uuid4())
-        updated_conf = yaml.safe_dump(reporter_config,
-                                      default_flow_style=False)
-        updated_conf_path = write_to_tempfile(updated_conf)
-        remove(STATUS_REPORTER_CONFIGURATION_PATH)
-        move(updated_conf_path, STATUS_REPORTER_CONFIGURATION_PATH)
-        chown('cfyreporter',
-              'cfyreporter',
-              STATUS_REPORTER_CONFIGURATION_PATH)
-        return reporter_config['node_id']
+        node_id = str(uuid.uuid4())
+        result = update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
+                                  'cfyreporter',
+                                  'cfyreporter',
+                                  {'node_id': node_id})
+        if not result:
+            raise InitializationError('Failed updating status reporter\'s '
+                                      'configuration.')
+        return node_id
 
     def remove(self):
         logger.notice('Removing status reporter {0}...'.format(
