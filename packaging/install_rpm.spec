@@ -29,6 +29,13 @@ cp ${RPM_SOURCE_DIR}/config.yaml %{buildroot}/etc/cloudify/config.yaml
 cp ${RPM_SOURCE_DIR}/rpms %{buildroot}/opt/cloudify/sources -Lfr
 cp ${RPM_SOURCE_DIR}/pex/cfy_manager %{buildroot}/usr/bin/cfy_manager
 
+%pre
+ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
+min_ver=7.6
+if (( $(awk 'BEGIN {print ("'$ver'"<"'$min_ver'")}') )); then
+    >&2 echo "[ERROR] OS version earlier than $min_ver, exiting."
+    exit 1;
+fi
 
 %post
 echo "
