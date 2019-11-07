@@ -17,8 +17,6 @@ import time
 import uuid
 from os.path import join
 
-import yaml
-
 from .manager_config import make_manager_config
 from ..components_constants import (
     ADMIN_PASSWORD,
@@ -46,10 +44,10 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import InitializationError
 
 from ...utils import common
-from ...utils.files import temp_copy, write_to_tempfile, sudo_read
+from ...utils.node import get_node_id
+from ...utils.files import temp_copy, write_to_tempfile
 
 logger = get_logger('DB')
 
@@ -163,7 +161,7 @@ def _create_rabbitmq_info():
 
     # In all-in-one the node_id is identical for every service
     if common.is_all_in_one_manager():
-        node_id = _get_manager_reporter_id()
+        node_id = get_node_id()
 
     return [
         {
@@ -188,7 +186,7 @@ def _create_db_nodes_info():
     if common.is_all_in_one_manager():
         return [{
             'name': config[MANAGER][HOSTNAME],
-            'node_id': _get_manager_reporter_id(),
+            'node_id': get_node_id(),
             'private_ip': config[NETWORKS]['default'],
             'is_external': False
         }]
@@ -265,7 +263,7 @@ def insert_manager(configs):
             'hostname': config[MANAGER][HOSTNAME],
             'private_ip': config['manager']['private_ip'],
             'networks': config[NETWORKS],
-            'node_id': _get_manager_reporter_id()
+            'node_id': get_node_id()
         }
     }
     try:
@@ -360,15 +358,3 @@ def _log_results(result):
         output = [line.strip() for line in output if line.strip()]
         for line in output:
             logger.error(line)
-
-
-def _get_manager_reporter_id():
-    try:
-        reporter_config = yaml.safe_load(
-            sudo_read(constants.STATUS_REPORTER_CONFIGURATION_PATH)
-        )
-    except yaml.YAMLError as e:
-        raise InitializationError('Failed loading status reporter\'s '
-                                  'configuration with the following: '
-                                  '{0}'.format(e))
-    return reporter_config['node_id']

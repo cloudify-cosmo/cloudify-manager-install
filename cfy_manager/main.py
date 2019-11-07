@@ -67,6 +67,7 @@ from .utils.files import (
     remove_temp_files,
     touch
 )
+from .utils.node import get_node_id
 
 logger = get_logger('Main')
 
@@ -377,6 +378,12 @@ def db_node_set_master(**kwargs):
         db.set_master(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
+
+
+def get_id():
+    """Get Cloudify's auto-generated id for this node"""
+    node_id = get_node_id()
+    print('The node id is: {0}'.format(node_id))
 
 
 def output_table(data, fields):
@@ -847,6 +854,9 @@ def main():
                          status_reporter.remove,
                          status_reporter.configure],
                         namespace='status-reporter')
+    parser.add_commands([get_id],
+                        namespace='node',
+                        namespace_kwargs={'title': 'Handle node details'})
     parser.dispatch()
 
     os.umask(current_umask)
