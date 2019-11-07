@@ -44,26 +44,23 @@ class ComponentsFactory:
     @staticmethod
     def create_component(component_name, skip_installation=False):
         return {
-            "manager": Manager(skip_installation),
-            "manager_ip_setter": ManagerIpSetter(skip_installation),
-            "nginx": Nginx(skip_installation),
-            "python": Python(skip_installation),
-            "postgresql_server": PostgresqlServer(skip_installation),
-            "postgresql_client": PostgresqlClient(skip_installation),
-            "rabbitmq": RabbitMQ(skip_installation),
-            "restservice": RestService(skip_installation),
-            "amqp_postgres": AmqpPostgres(skip_installation),
-            "stage": Stage(skip_installation),
-            "composer": Composer(skip_installation),
-            "mgmtworker": MgmtWorker(skip_installation),
-            "cli": Cli(skip_installation),
-            "usage_collector": UsageCollector(skip_installation),
-            "patch": Patch(skip_installation),
-            "sanity": Sanity(skip_installation),
-            "manager_status_reporter":
-                ManagerStatusReporter(skip_installation),
-            "rabbitmq_status_reporter":
-                RabbitmqStatusReporter(skip_installation),
-            "postgresql_status_reporter":
-                PostgresqlStatusReporter(skip_installation)
-        }[component_name]
+            "manager": Manager,
+            "manager_ip_setter": ManagerIpSetter,
+            "nginx": Nginx,
+            "python": Python,
+            "postgresql_server": PostgresqlServer,
+            "postgresql_client": PostgresqlClient,
+            "rabbitmq": RabbitMQ,
+            "restservice": RestService,
+            "amqp_postgres": AmqpPostgres,
+            "stage": Stage,
+            "composer": Composer,
+            "mgmtworker": MgmtWorker,
+            "cli": Cli,
+            "usage_collector": UsageCollector,
+            "patch": Patch,
+            "sanity": Sanity,
+            "manager_status_reporter": ManagerStatusReporter,
+            "rabbitmq_status_reporter": RabbitmqStatusReporter,
+            "postgresql_status_reporter": PostgresqlStatusReporter
+        }[component_name](skip_installation)

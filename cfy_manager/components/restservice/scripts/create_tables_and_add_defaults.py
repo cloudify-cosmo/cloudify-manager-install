@@ -17,7 +17,6 @@
 import os
 import json
 import atexit
-import logging
 import tempfile
 import argparse
 import subprocess
@@ -29,27 +28,24 @@ from manager_rest import config, version
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
+from manager_rest.storage import storage_utils
 
-logger = \
-    logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper()))
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 
 def _init_db_tables(db_migrate_dir):
-    logger.info('Setting up a Flask app')
+    print('Setting up a Flask app')
     # Clean up the DB, in case it's not a clean install
     db.drop_all()
     db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
 
-    logger.info('Creating tables in the DB')
+    print('Creating tables in the DB')
     upgrade(directory=db_migrate_dir)
 
 
 def _add_default_user_and_tenant(amqp_manager, script_config):
-    logger.info('Creating bootstrap admin, default tenant and security roles')
-    create_default_user_tenant_and_roles(
+    print('Creating bootstrap admin, default tenant and security roles')
+    storage_utils.create_default_user_tenant_and_roles(
         admin_username=script_config['admin_username'],
         admin_password=script_config['admin_password'],
         amqp_manager=amqp_manager,
@@ -157,6 +153,39 @@ def _add_provider_context(context):
     sm.put(provider_context)
 
 
+def _add_manager_status_reporter_user():
+    print('Creating the Manager Status Reporter user, default tenant and '
+          'security roles')
+    user = storage_utils.create_status_reporter_user_and_assign_role(
+        username=script_config['manager_status_reporter_username'],
+        password=script_config['manager_status_reporter_password'],
+        role=script_config['status_reporter_role'],
+    )
+    print("{0} {1}".format('manager_status_reporter_token', user.api_token))
+
+
+def _add_queue_status_reporter_user():
+    print('Creating the Queue Status Reporter user, default tenant and '
+          'security roles')
+    user = storage_utils.create_status_reporter_user_and_assign_role(
+        username=script_config['queue_status_reporter_username'],
+        password=script_config['queue_status_reporter_password'],
+        role=script_config['status_reporter_role'],
+    )
+    print("{0} {1}".format('queue_status_reporter_token', user.api_token))
+
+
+def _add_db_status_reporter_user():
+    print('Creating the DB Status Reporter user, default tenant and '
+          'security roles')
+    user = storage_utils.create_status_reporter_user_and_assign_role(
+        username=script_config['db_status_reporter_username'],
+        password=script_config['db_status_reporter_password'],
+        role=script_config['status_reporter_role'],
+    )
+    print("{0} {1}".format('db_status_reporter_token', user.api_token))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create SQL DB tables and populate them with defaults'
@@ -179,10 +208,19 @@ if __name__ == '__main__':
 
     if script_config.get('db_migrate_dir'):
         _init_db_tables(script_config['db_migrate_dir'])
-    if script_config.get('admin_username') and \
-            script_config.get('admin_password'):
+    if (script_config.get('admin_username')
+            and script_config.get('admin_password')):
         amqp_manager = _get_amqp_manager(script_config)
         _add_default_user_and_tenant(amqp_manager, script_config)
+    if (script_config.get('manager_status_reporter_username')
+            and script_config.get('manager_status_reporter_password')):
+        _add_manager_status_reporter_user()
+    if (script_config.get('queue_status_reporter_username')
+            and script_config.get('queue_status_reporter_password')):
+        _add_queue_status_reporter_user()
+    if (script_config.get('db_status_reporter_username')
+            and script_config.get('db_status_reporter_password')):
+        _add_db_status_reporter_user()
     if script_config.get('config'):
         _insert_config(script_config['config'])
     if script_config.get('rabbitmq_brokers'):
@@ -197,5 +235,4 @@ if __name__ == '__main__':
     if script_config.get('db_nodes'):
         _insert_db_nodes(script_config['db_nodes'])
 
-    logger.info('Finished creating bootstrap admin, default tenant and '
-                'provider ctx')
+    print('Finished creating bootstrap admin, default tenant and provider ctx')
