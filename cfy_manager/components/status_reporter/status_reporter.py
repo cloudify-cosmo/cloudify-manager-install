@@ -23,11 +23,14 @@ from ...logger import get_logger
 from ...components import sources
 from ...exceptions import InitializationError
 from ...utils.common import remove, move, chown
-from ...utils.files import write_to_tempfile
 from ...utils.systemd import systemd
-from ...utils.files import check_rpms_are_present
 from ...utils.install import yum_install, yum_remove
-from ...constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
+from ...utils.files import (write_to_tempfile,
+                            remove_files,
+                            check_rpms_are_present)
+from ...constants import (STATUS_REPORTER,
+                          STATUS_REPORTER_PATH,
+                          STATUS_REPORTER_CONFIGURATION_PATH)
 
 logger = get_logger(STATUS_REPORTER)
 
@@ -87,9 +90,9 @@ class StatusReporter(BaseComponent):
     def remove(self):
         logger.notice('Removing status reporter {0}...'.format(
             self.reporter_type))
-        systemd.remove(STATUS_REPORTER, service_file=False)
-        yum_remove('cloudify_status_reporter')
-        logger.info('Removing Status Reporter logs...')
-        remove('/var/log/status-reporter')
+        systemd.remove(STATUS_REPORTER)
+        yum_remove('cloudify-status-reporter')
+        logger.info('Removing status reporter directory...')
+        remove_files([STATUS_REPORTER_PATH])
         logger.notice('Status reporter {0} successfully removed'.format(
             self.reporter_type))
