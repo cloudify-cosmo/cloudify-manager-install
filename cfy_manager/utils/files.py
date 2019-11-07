@@ -188,7 +188,9 @@ def check_rpms_are_present(rpm_list):
 
 
 def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
-    assert isinstance(updated_content, dict)
+    if not isinstance(updated_content, dict):
+        raise ValueError('Expected input of type dict, got {0} '
+                         'instead'.format(type(updated_content)))
     if os.path.exists(yaml_path) and os.path.isfile(yaml_path):
         try:
             file_content = sudo_read(yaml_path)
