@@ -175,3 +175,7 @@ def pip_install(source, venv='', constraints_file=None):
 
     logger.info(log_message)
     sudo(cmdline)
+
+
+def is_premium_installed():
+    return RpmPackageHandler.is_package_installed('cloudify-premium')
