@@ -21,7 +21,6 @@ from ...logger import get_logger
 from ...components import sources
 from ...utils.systemd import systemd
 from ...utils.files import update_yaml_file
-from ...exceptions import InitializationError
 from ...utils.install import yum_install, yum_remove
 from ...utils.files import (remove_files,
                             check_rpms_are_present)
@@ -67,13 +66,10 @@ class StatusReporter(BaseComponent):
     @staticmethod
     def _generate_node_id():
         node_id = str(uuid.uuid4())
-        result = update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                                  'cfyreporter',
-                                  'cfyreporter',
-                                  {'node_id': node_id})
-        if not result:
-            raise InitializationError('Failed updating status reporter\'s '
-                                      'configuration.')
+        update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
+                         'cfyreporter',
+                         'cfyreporter',
+                         {'node_id': node_id})
         return node_id
 
     def remove(self):

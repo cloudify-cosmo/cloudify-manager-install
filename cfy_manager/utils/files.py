@@ -196,8 +196,8 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
             file_content = sudo_read(yaml_path)
             yaml_content = yaml.safe_load(file_content)
         except yaml.YAMLError as e:
-            logger.error('Failed to load yaml file, due to {0}'.format(str(e)))
-            return False
+            raise yaml.YAMLError('Failed to load yaml file {0}, due to '
+                                 '{1}'.format(yaml_path, str(e)))
     yaml_content.update(**updated_content)
     updated_file = yaml.safe_dump(yaml_content,
                                   default_flow_style=False)
@@ -205,4 +205,3 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
     chown(user_owner,
           group_owner,
           yaml_path)
-    return True

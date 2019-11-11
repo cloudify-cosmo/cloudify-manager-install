@@ -57,7 +57,9 @@ setup_console_logger()
           type=str,
           help='A local path to the configuration yaml file that'
                ' will contain the relevant settings for updating '
-               'status reporter configuration.'
+               'status reporter configuration. Notice: You can only '
+               'supply local file path or update one of the configuration '
+               'params.'
           )
 def configure(managers_ip=[], user_name='', token='', ca_path='',
               reporting_freq=None, reporter_configuration_path=''):
