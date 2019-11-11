@@ -64,7 +64,6 @@ HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 CONF_DIR = join(HOME_DIR, 'conf')
 NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
-RESOURCES_DIR = join(HOME_DIR, 'resources')
 STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
 
 # These are all the same key as the other db keys, but postgres is very strict
@@ -84,7 +83,6 @@ class Stage(BaseComponent):
         common.mkdir(NODEJS_DIR)
         common.mkdir(HOME_DIR)
         common.mkdir(LOG_DIR)
-        common.mkdir(RESOURCES_DIR)
 
     def _set_community_mode(self):
         premium_edition = config[MANAGER][PREMIUM_EDITION]
