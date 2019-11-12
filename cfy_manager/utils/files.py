@@ -20,10 +20,11 @@ from glob import glob
 from tempfile import mkstemp
 from os.path import join, isabs
 
+import yaml
 from jinja2 import Environment, FileSystemLoader
 
 from .network import is_url, curl_download
-from .common import move, sudo, copy, remove
+from .common import move, sudo, copy, remove, chown
 
 from ..config import config
 from ..logger import get_logger
@@ -184,3 +185,23 @@ def check_rpms_are_present(rpm_list):
         except FileError:
             return False
     return True
+
+
+def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
+    if not isinstance(updated_content, dict):
+        raise ValueError('Expected input of type dict, got {0} '
+                         'instead'.format(type(updated_content)))
+    if os.path.exists(yaml_path) and os.path.isfile(yaml_path):
+        try:
+            file_content = sudo_read(yaml_path)
+            yaml_content = yaml.safe_load(file_content)
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError('Failed to load yaml file {0}, due to '
+                                 '{1}'.format(yaml_path, str(e)))
+    yaml_content.update(**updated_content)
+    updated_file = yaml.safe_dump(yaml_content,
+                                  default_flow_style=False)
+    write_to_file(updated_file, yaml_path)
+    chown(user_owner,
+          group_owner,
+          yaml_path)
