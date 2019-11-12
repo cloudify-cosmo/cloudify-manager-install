@@ -335,21 +335,6 @@ def db_node_list(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
-@argh.named('reinit')
-@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
-                     default=False)
-@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
-                     required=True)
-def db_node_reinit(**kwargs):
-    """Re-initialise an unhealthy DB cluster node."""
-    _validate_components_prepared('db_node_reinit')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
-    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.reinit_cluster_node(kwargs['address'])
-    else:
-        logger.info('There is no database cluster associated with this node.')
-
-
 @argh.named('add')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
@@ -386,6 +371,21 @@ def db_node_remove(**kwargs):
                          '`db-node-remove` on a manager')
             return
         db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.named('reinit')
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+def db_node_reinit(**kwargs):
+    """Re-initialise an unhealthy DB cluster node."""
+    _validate_components_prepared('db_node_reinit')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.reinit_cluster_node(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
 
