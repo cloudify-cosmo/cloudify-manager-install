@@ -129,6 +129,12 @@ DB_NODE_ADDRESS_HELP_MSG = (
 DB_NODE_FORCE_HELP_MSG = (
     "Force removal of cluster node even if it is the master."
 )
+DB_NODE_ID_HELP_MSG = (
+    "Cloudify's auto-generated id of target DB cluster node."
+)
+DB_HOSTNAME_HELP_MSG = (
+    "Hostname of target DB cluster node."
+)
 
 components = []
 
@@ -188,11 +194,11 @@ def _only_on_brokers():
         sys.exit(1)
 
 
+@argh.named('add')
 @argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
-@argh.named('add')
 def brokers_add(**kwargs):
     """Add a new broker to the broker cluster. This should not be done while
     the manager cluster has any running executions.
@@ -225,11 +231,11 @@ def brokers_add(**kwargs):
     rabbitmq.join_cluster(join_node, restore_users_on_fail=True)
 
 
+@argh.named('remove')
 @argh.decorators.arg('-r', '--remove-node', help=BROKER_REMOVE_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
-@argh.named('remove')
 def brokers_remove(**kwargs):
     """Remove a lost broker from the broker cluster. This should not be done
     while the manager cluster has any running executions. This should only be
@@ -269,9 +275,9 @@ def brokers_remove(**kwargs):
     ))
 
 
+@argh.named('list')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
-@argh.named('list')
 def brokers_list(**kwargs):
     """List brokers in the broker cluster.
     Use the cfy command to list brokers registered with the manager cluster.
@@ -306,9 +312,9 @@ def complain_about_dead_broker_cluster(nodes):
         sys.exit(1)
 
 
+@argh.named('list')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
-@argh.named('list')
 def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     _validate_components_prepared('db_cluster_list')
@@ -329,41 +335,11 @@ def db_node_list(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
-@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
-                     default=False)
-@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
-                     required=True)
-@argh.named('add')
-def db_node_add(**kwargs):
-    """Add a DB cluster node."""
-    _validate_components_prepared('db_node_add')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
-    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'])
-    else:
-        logger.info('There is no database cluster associated with this node.')
-
-
-@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
-                     default=False)
-@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
-                     required=True)
-@argh.named('remove')
-def db_node_remove(**kwargs):
-    """Remove a DB cluster node."""
-    _validate_components_prepared('db_node_remove')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
-    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.remove_cluster_node(kwargs['address'])
-    else:
-        logger.info('There is no database cluster associated with this node.')
-
-
-@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
-                     default=False)
-@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
-                     required=True)
 @argh.named('reinit')
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
 def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
     _validate_components_prepared('db_node_reinit')
@@ -374,11 +350,51 @@ def db_node_reinit(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
+@argh.named('add')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG,
+                     required=True)
+@argh.decorators.arg('-n', '--hostname', help=DB_HOSTNAME_HELP_MSG)
+def db_node_add(**kwargs):
+    """Add a DB cluster node."""
+    _validate_components_prepared('db_node_add')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        db.add_cluster_node(kwargs['address'], kwargs['node_id'],
+                            kwargs.get('hostname'))
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
+@argh.named('remove')
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
+@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG)
+def db_node_remove(**kwargs):
+    """Remove a DB cluster node."""
+    _validate_components_prepared('db_node_remove')
+    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+                kwargs.get('node_id') is None):
+            logger.error('Argument -i/--node-id is required when running '
+                         '`db-node-remove` on a manager')
+            return
+        db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
+    else:
+        logger.info('There is no database cluster associated with this node.')
+
+
 @argh.named('set_master')
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
+                     required=True)
 def db_node_set_master(**kwargs):
     _validate_components_prepared('db_node_set_master')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])

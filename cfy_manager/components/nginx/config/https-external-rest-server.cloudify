@@ -1,8 +1,8 @@
 # REST and UI external server
 server {
   # server listening for external requests
-  listen              443 ssl;
-  listen              [::]:443 ssl;
+  listen              {{ nginx.port | default('443', true) }} ssl;
+  listen              [::]:{{ nginx.port | default('443', true) }} ssl;
   server_name         {{ manager.public_ip }};
 
   ssl_certificate     {{ constants.external_cert_path }};
@@ -23,6 +23,11 @@ server {
   include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
 }
 
+{#
+  if port is set by the user, then it is non-standard and not 443, so
+  let's skip the standard 80 port as well
+#}
+{% if nginx.port is none %}
 server {
   listen 80;
   listen [::]:80;
@@ -45,3 +50,4 @@ server {
     include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
   }
 }
+{% endif %}
