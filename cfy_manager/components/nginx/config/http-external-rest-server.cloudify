@@ -1,8 +1,8 @@
 # REST and UI server.
 server {
   # server listening
-  listen              *:80;
-  listen              [::]:80;
+  listen              *:{{ nginx.port | default('80', true) }};
+  listen              [::]:{{ nginx.port | default('80', true) }};
   server_name         _;
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
