@@ -129,6 +129,12 @@ DB_NODE_ADDRESS_HELP_MSG = (
 DB_NODE_FORCE_HELP_MSG = (
     "Force removal of cluster node even if it is the master."
 )
+DB_NODE_ID_HELP_MSG = (
+    "Cloudify's auto-generated id of target DB cluster node."
+)
+DB_HOSTNAME_HELP_MSG = (
+    "Hostname of target DB cluster node."
+)
 
 components = []
 
@@ -329,12 +335,16 @@ def db_node_list(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG,
+                     required=True)
+@argh.decorators.arg('-n', '--hostname', help=DB_HOSTNAME_HELP_MSG)
 def db_node_add(**kwargs):
     """Add a DB cluster node."""
     _validate_components_prepared('db_node_add')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'])
+        db.add_cluster_node(kwargs['address'], kwargs['node_id'],
+                            kwargs.get('hostname'))
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -343,12 +353,18 @@ def db_node_add(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
+@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG)
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.remove_cluster_node(kwargs['address'])
+        if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+                kwargs.get('node_id') is None):
+            logger.error('Argument -i/--node-id is required when running '
+                         '`db-node-remove` on a manager')
+            return
+        db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
     else:
         logger.info('There is no database cluster associated with this node.')
 
