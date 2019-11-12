@@ -1106,7 +1106,7 @@ class PostgresqlServer(BaseComponent):
             stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
         )
 
-        # The new db node maybe exists in db_nodes table, because db-node-add
+        # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
         if not self._node_is_in_db(node_id):
             self._add_node_to_db((hostname or address), node_id, address)

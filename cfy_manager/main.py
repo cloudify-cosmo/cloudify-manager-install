@@ -368,7 +368,7 @@ def db_node_remove(**kwargs):
         if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
                 kwargs.get('node_id') is None):
             logger.error('Argument -i/--node-id is required when running '
-                         '`db-node-remove` on a manager')
+                         '`dbs remove` on a manager')
             return
         db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
     else:

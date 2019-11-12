@@ -28,22 +28,29 @@ from cfy_manager.components.components_constants import (
 
 def run_psql_command(command, db_key):
     base_command = []
+    pg_config = config[POSTGRESQL_CLIENT]
+
     if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
         # In case the default user is postgres and we're in AIO installation,
         # "peer" authentication is used
-        if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
+        if pg_config['server_username'] == 'postgres':
             base_command.extend(['-u', 'postgres'])
 
     # Run psql with just the results output without headers (-t),
     # and no psqlrc (-X)
     base_command.extend(['/usr/bin/psql', '-t', '-X'])
     command = base_command + command
-    db_env = generate_db_env(database=config[POSTGRESQL_CLIENT][db_key])
+    db_kwargs = {}
+    if db_key == 'cloudify_db_name':
+        db_kwargs['username'] = pg_config['cloudify_username'].split('@')[0]
+        db_kwargs['password'] = pg_config['cloudify_password']
+
+    db_env = generate_db_env(database=pg_config[db_key], **db_kwargs)
     result = sudo(command, env=db_env)
     return result.aggr_stdout.strip()
 
 
-def generate_db_env(database):
+def generate_db_env(database, username=None, password=None):
     pg_config = config[POSTGRESQL_CLIENT]
 
     if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
@@ -55,17 +62,17 @@ def generate_db_env(database):
 
     db_env = {
         'PGHOST': host,
-        'PGUSER': pg_config['server_username'],
-        'PGPASSWORD': pg_config['server_password'],
+        'PGUSER': username or pg_config['server_username'],
+        'PGPASSWORD': password or pg_config['server_password'],
         'PGDATABASE': database,
     }
 
-    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+    if pg_config[SSL_ENABLED]:
         db_env['PGSSLMODE'] = 'verify-full'
         db_env['PGSSLROOTCERT'] = '/etc/cloudify/ssl/postgresql_ca.crt'
 
         # This only makes sense if SSL is used
-        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+        if pg_config[SSL_CLIENT_VERIFICATION]:
             db_env['PGSSLCERT'] = POSTGRESQL_CLIENT_CERT_PATH
             db_env['PGSSLKEY'] = POSTGRESQL_CLIENT_KEY_PATH
     return db_env
