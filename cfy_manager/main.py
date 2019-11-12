@@ -843,34 +843,37 @@ def main():
         restart,
         sanity_check,
         add_networks,
-        update_encryption_key
+        update_encryption_key,
+        create_internal_certs,
+        create_external_certs,
+        generate_test_cert
     ])
 
-    parser.add_commands([create_internal_certs,
-                         create_external_certs,
-                         generate_test_cert],
-                        namespace='certs')
+    parser.add_commands([
+        brokers_add,
+        brokers_list,
+        brokers_remove
+    ], namespace='brokers')
 
-    parser.add_commands([brokers_add,
-                        brokers_list,
-                        brokers_remove],
-                        namespace='brokers')
+    parser.add_commands([
+        db_node_list,
+        db_node_add,
+        db_node_remove,
+        db_node_reinit,
+        db_node_set_master
+    ], namespace='dbs')
 
-    parser.add_commands([db_node_list,
-                         db_node_add,
-                         db_node_remove,
-                         db_node_reinit,
-                         db_node_set_master],
-                        namespace='dbs')
+    parser.add_commands([
+        status_reporter.start,
+        status_reporter.stop,
+        status_reporter.remove,
+        status_reporter.configure
+    ], namespace='status-reporter')
 
-    parser.add_commands([status_reporter.start,
-                         status_reporter.stop,
-                         status_reporter.remove,
-                         status_reporter.configure],
-                        namespace='status-reporter')
-    parser.add_commands([get_id],
-                        namespace='node',
-                        namespace_kwargs={'title': 'Handle node details'})
+    parser.add_commands([
+        get_id
+    ], namespace='node',
+        namespace_kwargs={'title': 'Handle node details'})
     parser.dispatch()
 
     os.umask(current_umask)
