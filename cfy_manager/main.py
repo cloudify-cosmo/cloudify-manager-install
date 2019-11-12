@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -194,6 +194,7 @@ def _only_on_brokers():
         sys.exit(1)
 
 
+@argh.named('add')
 @argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -230,6 +231,7 @@ def brokers_add(**kwargs):
     rabbitmq.join_cluster(join_node, restore_users_on_fail=True)
 
 
+@argh.named('remove')
 @argh.decorators.arg('-r', '--remove-node', help=BROKER_REMOVE_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -273,6 +275,7 @@ def brokers_remove(**kwargs):
     ))
 
 
+@argh.named('list')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def brokers_list(**kwargs):
@@ -309,6 +312,7 @@ def complain_about_dead_broker_cluster(nodes):
         sys.exit(1)
 
 
+@argh.named('list')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def db_node_list(**kwargs):
@@ -331,6 +335,7 @@ def db_node_list(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
+@argh.named('add')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -349,6 +354,7 @@ def db_node_add(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
+@argh.named('remove')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -369,6 +375,7 @@ def db_node_remove(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
+@argh.named('reinit')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -383,6 +390,7 @@ def db_node_reinit(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
+@argh.named('set_master')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -849,30 +857,39 @@ def main():
         start,
         stop,
         restart,
-        create_internal_certs,
-        create_external_certs,
         sanity_check,
         add_networks,
         update_encryption_key,
-        generate_test_cert,
+        create_internal_certs,
+        create_external_certs,
+        generate_test_cert
+    ])
+
+    parser.add_commands([
         brokers_add,
         brokers_list,
-        brokers_remove,
+        brokers_remove
+    ], namespace='brokers')
+
+    parser.add_commands([
         db_node_list,
         db_node_add,
         db_node_remove,
         db_node_reinit,
-        db_node_set_master,
-    ])
+        db_node_set_master
+    ], namespace='dbs')
 
-    parser.add_commands([status_reporter.start,
-                         status_reporter.stop,
-                         status_reporter.remove,
-                         status_reporter.configure],
-                        namespace='status-reporter')
-    parser.add_commands([get_id],
-                        namespace='node',
-                        namespace_kwargs={'title': 'Handle node details'})
+    parser.add_commands([
+        status_reporter.start,
+        status_reporter.stop,
+        status_reporter.remove,
+        status_reporter.configure
+    ], namespace='status-reporter')
+
+    parser.add_commands([
+        get_id
+    ], namespace='node',
+        namespace_kwargs={'title': 'Handle node details'})
     parser.dispatch()
 
     os.umask(current_umask)
