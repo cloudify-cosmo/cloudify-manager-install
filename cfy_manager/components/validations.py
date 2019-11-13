@@ -418,9 +418,8 @@ def _validate_ssl_and_external_certificates_match():
 
 
 def _is_cert_self_signed(cert_file):
-    cmd = ['openssl', 'verify', '-CAfile', cert_file, cert_file]
-    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-    if output[-3:-1] == 'OK':
+    response = os.system('openssl verify -CAfile {0} {0}'.format(cert_file))
+    if response == 0:  # success
         return True
     return False
 
