@@ -418,7 +418,8 @@ def _validate_ssl_and_external_certificates_match():
 
 
 def _is_cert_self_signed(cert_file):
-    result = run(['openssl', 'verify', '-CAfile', cert_file, cert_file])
+    result = run(['openssl', 'verify', '-CAfile', cert_file, cert_file],
+                 ignore_failures=True)
     return result.returncode == 0
 
 
