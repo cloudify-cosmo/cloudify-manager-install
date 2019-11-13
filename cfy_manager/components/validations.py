@@ -417,6 +417,24 @@ def _validate_ssl_and_external_certificates_match():
                               "`ssl_enabled` to true.")
 
 
+def _is_cert_self_signed(cert_file):
+    result = run(['openssl', 'verify', '-CAfile', cert_file, cert_file],
+                 ignore_failures=True)
+    return result.returncode == 0
+
+
+def _validate_external_ssl_cert_and_ca():
+    logger.info('Validating that the external SSL certificate matches the CA')
+    external_certificate = config[SSL_INPUTS]['external_cert_path']
+    external_ca = config[SSL_INPUTS]['external_ca_cert_path']
+    err_msg = 'If the external certificate is signed by a CA, the ' \
+              '`external_ca_cert_path` must be provided'
+    if external_certificate:
+        if not _is_cert_self_signed(external_certificate):
+            if not external_ca:
+                raise ValidationError(err_msg)
+
+
 def _validate_cert_inputs():
     _check_internal_ca_cert()
     for ssl_input in (
@@ -709,6 +727,7 @@ def validate(components, skip_validations=False, only_install=False):
         _validate_external_postgres()
         _validate_postgres_ssl_certificates_provided()
         _validate_ssl_and_external_certificates_match()
+        _validate_external_ssl_cert_and_ca()
         _validate_cert_inputs()
 
     _validate_supported_distros()
