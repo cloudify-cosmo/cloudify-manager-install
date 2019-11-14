@@ -13,21 +13,31 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import time
 import uuid
 from os.path import join
 
 from .manager_config import make_manager_config
 from ..components_constants import (
-    ADMIN_PASSWORD,
-    ADMIN_USERNAME,
     AGENT,
+    TOKEN,
+    SCRIPTS,
     HOSTNAME,
+    PASSWORD,
+    SECURITY,
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD,
     PREMIUM_EDITION,
     PROVIDER_CONTEXT,
-    SCRIPTS,
-    SECURITY,
+    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
+    STATUS_REPORTER_ROLE,
+    QUEUE_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
+    DB_STATUS_REPORTER_USERNAME,
+    QUEUE_STATUS_REPORTER_USERNAME,
+    MANAGER_STATUS_REPORTER_USERNAME,
 )
 
 from ..service_components import DATABASE_SERVICE
@@ -52,6 +62,8 @@ logger = get_logger('DB')
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 REST_HOME_DIR = '/opt/manager'
 NETWORKS = 'networks'
+UUID4HEX_LEN = 32
+ENCODED_USER_ID_LENGTH = 5
 
 
 def drop_db():
@@ -102,7 +114,7 @@ def _get_provider_context():
     return context
 
 
-def _create_args_dict():
+def _create_populate_db_args_dict():
     """
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
@@ -110,6 +122,10 @@ def _create_args_dict():
     args_dict = {
         'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
+        'manager_status_reporter_username': MANAGER_STATUS_REPORTER_USERNAME,
+        'manager_status_reporter_password':
+            config[MANAGER_STATUS_REPORTER][PASSWORD],
+        'status_reporter_role': STATUS_REPORTER_ROLE,
         'provider_context': _get_provider_context(),
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
@@ -119,6 +135,18 @@ def _create_args_dict():
         'rabbitmq_brokers': _create_rabbitmq_info(),
         'db_nodes': _create_db_nodes_info()
     }
+    db_status_reporter_password = config.get(
+        DB_STATUS_REPORTER, {}).get(PASSWORD)
+    if db_status_reporter_password:
+        args_dict['db_status_reporter_username'] = DB_STATUS_REPORTER_USERNAME
+        args_dict['db_status_reporter_password'] = db_status_reporter_password
+    queue_status_reporter_password = config.get(
+        QUEUE_STATUS_REPORTER, {}).get(PASSWORD)
+    if queue_status_reporter_password:
+        args_dict['queue_status_reporter_username'] = \
+            QUEUE_STATUS_REPORTER_USERNAME
+        args_dict['queue_status_reporter_password'] = \
+            queue_status_reporter_password
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
@@ -196,6 +224,13 @@ def _create_process_env(rest_config=None, authorization_config=None,
 
 
 def _run_script(script_name, args_dict=None, configs=None):
+    """Runs a script in a separate process.
+
+    :param script_name: script name inside the SCRIPTS_PATH dir.
+    :param args_dict: script arguments to pass to the script.
+    :param configs: keword arguments dict to pass to _create_process_env(..).
+    :return: the script's returned when it finished its execution.
+    """
     env_dict = None
     if configs is not None:
         env_dict = _create_process_env(**configs)
@@ -213,15 +248,25 @@ def _run_script(script_name, args_dict=None, configs=None):
         args_json_path = write_to_tempfile(args_dict, json_dump=True)
         cmd.append(args_json_path)
 
-    result = common.sudo(cmd, env=env_dict)
-
-    _log_results(result)
+    proc_result = common.sudo(cmd, env=env_dict)
+    return _get_script_result(proc_result)
 
 
 def populate_db(configs):
+    reporter_to_conf_key = {
+        'db_status_reporter_token': DB_STATUS_REPORTER,
+        'queue_status_reporter_token': QUEUE_STATUS_REPORTER,
+        'manager_status_reporter_token': MANAGER_STATUS_REPORTER
+    }
+
     logger.notice('Populating DB and creating AMQP resources...')
-    args_dict = _create_args_dict()
-    _run_script('create_tables_and_add_defaults.py', args_dict, configs)
+    args_dict = _create_populate_db_args_dict()
+    tokens = _run_script(
+        'create_tables_and_add_defaults.py', args_dict, configs)
+
+    for reporter in tokens:
+        conf_key = reporter_to_conf_key[reporter]
+        config[conf_key][TOKEN] = tokens[reporter]
     logger.notice('DB populated and AMQP resources successfully created')
 
 
@@ -293,17 +338,16 @@ def manager_is_in_db():
     return int(result) == 1
 
 
-def _log_results(result):
-    """Log stdout/stderr output from the script
+def _get_script_result(result):
+    """Log stderr output from the script and return the return result from the
+    script.
+    :param result: Popen result.
     """
-    if result.aggr_stdout:
-        output = result.aggr_stdout.split('\n')
-        output = [line.strip() for line in output if line.strip()]
-        for line in output[:-1]:
-            logger.debug(line)
-        logger.info(output[-1])
     if result.aggr_stderr:
         output = result.aggr_stderr.split('\n')
         output = [line.strip() for line in output if line.strip()]
         for line in output:
-            logger.error(line)
+            logger.debug(line)
+    if result.aggr_stdout:
+        return json.loads(result.aggr_stdout)
+    return {}

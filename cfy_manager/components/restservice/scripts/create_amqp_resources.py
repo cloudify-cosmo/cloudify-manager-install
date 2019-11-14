@@ -50,4 +50,3 @@ if __name__ == '__main__':
     default_tenant = _get_default_tenant()
     amqp_manager.create_tenant_vhost_and_user(default_tenant)
     amqp_manager.sync_metadata()
-    print 'Finished creating AMQP resources'
