@@ -34,8 +34,10 @@ from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 
-logger = logging.basicConfig(
+logging.basicConfig(
     stream=sys.stderr, level=logging.INFO, format='%(message)s')
+logger = \
+    logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper()))
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 RETURN_DICT = {}
