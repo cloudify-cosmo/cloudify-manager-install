@@ -23,8 +23,7 @@ from .status_reporter import StatusReporter
 class RabbitmqStatusReporter(StatusReporter):
     @staticmethod
     def _should_install():
-        return (len(config[SERVICES_TO_INSTALL]) == 1 and
-                config[SERVICES_TO_INSTALL][0] == QUEUE_SERVICE)
+        return config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]
 
     def __init__(self, skip_installation):
         skip_installation = skip_installation or not self._should_install()

@@ -325,8 +325,7 @@ class RestService(BaseComponent):
 
     @staticmethod
     def _is_in_cluster_mode():
-        return (len(config[SERVICES_TO_INSTALL]) == 1 and
-                config[SERVICES_TO_INSTALL][0] == MANAGER_SERVICE)
+        return config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE]
 
     def _generate_passwords(self):
         if self._is_in_cluster_mode():

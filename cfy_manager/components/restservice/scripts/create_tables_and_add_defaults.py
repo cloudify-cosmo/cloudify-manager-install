@@ -157,9 +157,9 @@ def _add_manager_status_reporter_user():
     print('Creating the Manager Status Reporter user, default tenant and '
           'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
-        username=script_config['manager_status_reporter_username'],
-        password=script_config['manager_status_reporter_password'],
-        role=script_config['status_reporter_role'],
+        script_config['manager_status_reporter_username'],
+        script_config['manager_status_reporter_password'],
+        script_config['status_reporter_role'],
     )
     print("{0} {1}".format('manager_status_reporter_token', user.api_token))
 
@@ -168,9 +168,9 @@ def _add_queue_status_reporter_user():
     print('Creating the Queue Status Reporter user, default tenant and '
           'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
-        username=script_config['queue_status_reporter_username'],
-        password=script_config['queue_status_reporter_password'],
-        role=script_config['status_reporter_role'],
+        script_config['queue_status_reporter_username'],
+        script_config['queue_status_reporter_password'],
+        script_config['status_reporter_role'],
     )
     print("{0} {1}".format('queue_status_reporter_token', user.api_token))
 
@@ -179,9 +179,9 @@ def _add_db_status_reporter_user():
     print('Creating the DB Status Reporter user, default tenant and '
           'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
-        username=script_config['db_status_reporter_username'],
-        password=script_config['db_status_reporter_password'],
-        role=script_config['status_reporter_role'],
+        script_config['db_status_reporter_username'],
+        script_config['db_status_reporter_password'],
+        script_config['status_reporter_role'],
     )
     print("{0} {1}".format('db_status_reporter_token', user.api_token))
 

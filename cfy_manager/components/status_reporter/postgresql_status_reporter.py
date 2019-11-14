@@ -25,8 +25,7 @@ class PostgresqlStatusReporter(StatusReporter):
     @staticmethod
     def _should_install():
         # Only installing when in clustered setup
-        return (len(config[SERVICES_TO_INSTALL]) == 1 and
-                config[SERVICES_TO_INSTALL][0] == DATABASE_SERVICE and
+        return (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
                 config[POSTGRESQL_SERVER]['cluster']['nodes'])
 
     def __init__(self, skip_installation):
