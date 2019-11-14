@@ -15,10 +15,10 @@
 
 import os
 import json
+import time
 import base64
 import random
 import string
-import time
 import urllib2
 import subprocess
 from os.path import join, exists
@@ -29,22 +29,26 @@ import requests
 from cfy_manager.components import sources
 from . import db
 from ..components_constants import (
-    ADMIN_PASSWORD,
-    CLEAN_DB,
-    CONFIG,
-    FLASK_SECURITY,
-    HOME_DIR_KEY,
-    LOG_DIR_KEY,
-    SCRIPTS,
-    SECURITY,
-    SERVICES_TO_INSTALL,
     VENV,
-    CLUSTER_JOIN,
-    SERVER_PASSWORD,
+    CONFIG,
+    SCRIPTS,
+    PASSWORD,
+    CLEAN_DB,
+    SECURITY,
     SSL_INPUTS,
+    LOG_DIR_KEY,
+    HOME_DIR_KEY,
+    CLUSTER_JOIN,
+    ADMIN_PASSWORD,
+    FLASK_SECURITY,
+    SERVER_PASSWORD,
+    DB_STATUS_REPORTER,
+    SERVICES_TO_INSTALL,
+    QUEUE_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
 )
 from ..base_component import BaseComponent
-from ..service_components import DATABASE_SERVICE
+from ..service_components import DATABASE_SERVICE, MANAGER_SERVICE
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
@@ -261,7 +265,7 @@ class RestService(BaseComponent):
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
-        self._generate_admin_password_if_empty()
+        self._generate_passwords()
         certificates.handle_ca_cert(self.logger)
         db.prepare_db()
         db.populate_db(configs)
@@ -318,6 +322,20 @@ class RestService(BaseComponent):
         if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
             config[MANAGER][SECURITY][ADMIN_PASSWORD] = \
                 self._generate_password()
+
+    @staticmethod
+    def _is_in_cluster_mode():
+        return config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE]
+
+    def _generate_passwords(self):
+        if self._is_in_cluster_mode():
+            config.setdefault(DB_STATUS_REPORTER, {})[PASSWORD] = \
+                self._generate_password()
+            config.setdefault(QUEUE_STATUS_REPORTER, {})[PASSWORD] = \
+                self._generate_password()
+        config.setdefault(MANAGER_STATUS_REPORTER, {})[PASSWORD] = \
+            self._generate_password()
+        self._generate_admin_password_if_empty()
 
     def _random_alphanumeric(self, result_len=31):
         """

@@ -14,9 +14,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import logging
 import os
 import sys
+import logging
 from time import time
 from traceback import format_exception
 
@@ -30,13 +30,17 @@ from .components import (
     SERVICE_INSTALLATION_ORDER
 )
 from .components.components_constants import (
-    SERVICES_TO_INSTALL,
-    SECURITY,
-    PRIVATE_IP,
-    PUBLIC_IP,
-    ADMIN_PASSWORD,
+    TOKEN,
     CLEAN_DB,
-    UNCONFIGURED_INSTALL
+    SECURITY,
+    PUBLIC_IP,
+    PRIVATE_IP,
+    ADMIN_PASSWORD,
+    DB_STATUS_REPORTER,
+    SERVICES_TO_INSTALL,
+    UNCONFIGURED_INSTALL,
+    QUEUE_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
 )
 from .components.globals import set_globals
 from .components.service_names import MANAGER, POSTGRESQL_SERVER
@@ -535,18 +539,34 @@ def _print_finish_message():
                 protocol=protocol,
                 ip=manager_config[PUBLIC_IP])
         )
-        print_password_to_screen()
+        print_credentials_to_screen()
         logger.notice('#' * 50)
         logger.notice("To install the default plugins bundle run:")
         logger.notice("'cfy plugins bundle-upload'")
         logger.notice('#' * 50)
 
 
-def print_password_to_screen():
+def print_credentials_to_screen():
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    manager_status_reporter_token = config.get(
+        MANAGER_STATUS_REPORTER, {}).get(TOKEN, None)
+    db_status_reporter_token = config.get(
+        DB_STATUS_REPORTER, {}).get(TOKEN, None)
+    queue_status_reporter_token = config.get(
+        QUEUE_STATUS_REPORTER, {}).get(TOKEN, None)
+
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
-    logger.warning('Admin password: {0}'.format(password))
+    logger.warning('Admin password: %s', password)
+    if manager_status_reporter_token:
+        logger.warning('Manager Status Reported token: %s',
+                       manager_status_reporter_token)
+    if db_status_reporter_token:
+        logger.warning('Database Status Reported token: %s',
+                       db_status_reporter_token)
+    if queue_status_reporter_token:
+        logger.warning('Queue Service Status Reported token: %s',
+                       queue_status_reporter_token)
     set_file_handlers_level(current_level)
 
 
