@@ -557,16 +557,16 @@ def print_credentials_to_screen():
 
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
-    logger.warning('Admin password: {0}'.format(password))
+    logger.warning('Admin password: %s', password)
     if manager_status_reporter_token:
-        logger.warning('Manager Status Reported token: {0}'
-                       ''.format(manager_status_reporter_token))
+        logger.warning('Manager Status Reported token: %s',
+                       manager_status_reporter_token)
     if db_status_reporter_token:
-        logger.warning('Database Status Reported token: {0}'
-                       ''.format(db_status_reporter_token))
+        logger.warning('Database Status Reported token: %s',
+                       db_status_reporter_token)
     if queue_status_reporter_token:
-        logger.warning('Queue Service Status Reported token: {0}'
-                       ''.format(queue_status_reporter_token))
+        logger.warning('Queue Service Status Reported token: %s',
+                       queue_status_reporter_token)
     set_file_handlers_level(current_level)
 
 
