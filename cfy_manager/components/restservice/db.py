@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import time
 import uuid
 from os.path import join
@@ -222,20 +223,13 @@ def _create_process_env(rest_config=None, authorization_config=None,
     return env
 
 
-def _run_script(script_name,
-                args_dict=None,
-                configs=None,
-                extract_output_func=None):
+def _run_script(script_name, args_dict=None, configs=None):
     """Runs a script in a separate process.
 
     :param script_name: script name inside the SCRIPTS_PATH dir.
     :param args_dict: script arguments to pass to the script.
     :param configs: keword arguments dict to pass to _create_process_env(..).
-    :param extract_output_func: a function to extract out of the process's
-        output lines. It should return True for any output line that should be
-        replaced with an empty string - meaning that the line shouldn't be
-        logged.
-    :return: extracted output lines.
+    :return: the script's returned when it finished its execution.
     """
     env_dict = None
     if configs is not None:
@@ -254,20 +248,11 @@ def _run_script(script_name,
         args_json_path = write_to_tempfile(args_dict, json_dump=True)
         cmd.append(args_json_path)
 
-    result = common.sudo(cmd, env=env_dict)
-    return _extract_output_and_log_results(result, extract_output_func)
+    proc_result = common.sudo(cmd, env=env_dict)
+    return _get_script_result(proc_result)
 
 
 def populate_db(configs):
-    def get_reporter_and_token(string):
-        token_len = UUID4HEX_LEN + ENCODED_USER_ID_LENGTH
-        _reporter = string[:- token_len - 1]
-        _token = string[- token_len:]
-        return _reporter, _token
-
-    def is_reporter_token(line):
-        return get_reporter_and_token(line)[0] in reporter_to_conf_key
-
     reporter_to_conf_key = {
         'db_status_reporter_token': DB_STATUS_REPORTER,
         'queue_status_reporter_token': QUEUE_STATUS_REPORTER,
@@ -276,15 +261,12 @@ def populate_db(configs):
 
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_populate_db_args_dict()
-    tokens = _run_script('create_tables_and_add_defaults.py',
-                         args_dict,
-                         configs,
-                         extract_output_func=is_reporter_token)
+    tokens = _run_script(
+        'create_tables_and_add_defaults.py', args_dict, configs)
 
-    for token_tuple in tokens:
-        reporter, token = get_reporter_and_token(token_tuple)
+    for reporter in tokens:
         conf_key = reporter_to_conf_key[reporter]
-        config[conf_key][TOKEN] = token
+        config[conf_key][TOKEN] = tokens[reporter]
     logger.notice('DB populated and AMQP resources successfully created')
 
 
@@ -356,27 +338,16 @@ def manager_is_in_db():
     return int(result) == 1
 
 
-def _extract_output_and_log_results(result, extract_output_func=None):
-    """Log stdout/stderr output from the script
+def _get_script_result(result):
+    """Log stderr output from the script and return the return result from the
+    script.
     :param result: Popen result.
-    :param extract_output_func: function to extract the output lines with.
     """
-    extracted_output_lines = []
-    if result.aggr_stdout:
-        aggr_stdout = [l for l in result.aggr_stdout.split('\n') if l.strip()]
-        output = []
-        for line in aggr_stdout:
-            if extract_output_func and extract_output_func(line):
-                extracted_output_lines.append(line)
-                continue
-            output.append(line)
-
-        for line in output[:-1]:
-            logger.debug(line)
-        logger.info(output[-1])
     if result.aggr_stderr:
         output = result.aggr_stderr.split('\n')
         output = [line.strip() for line in output if line.strip()]
         for line in output:
             logger.error(line)
-    return extracted_output_lines
+    if result.aggr_stdout:
+        return json.loads(result.aggr_stdout)
+    return {}

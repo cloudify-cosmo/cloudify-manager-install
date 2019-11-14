@@ -27,26 +27,31 @@ from datetime import datetime
 from flask_migrate import upgrade
 
 from manager_rest import config, version
-from manager_rest.storage import db, models, get_storage_manager  # NOQA
+from manager_rest.storage import storage_utils
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import storage_utils
+from manager_rest.storage import db, models, get_storage_manager  # NOQA
 
+from cfy_manager.logger import get_logger
+
+logger = get_logger('create_tables_and_add_defaults'.upper())
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
+
+RETURN_DICT = {}
 
 
 def _init_db_tables(db_migrate_dir):
-    print('Setting up a Flask app')
+    logger.debug('Setting up a Flask app')
     # Clean up the DB, in case it's not a clean install
     db.drop_all()
     db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
 
-    print('Creating tables in the DB')
+    logger.debug('Creating tables in the DB')
     upgrade(directory=db_migrate_dir)
 
 
 def _add_default_user_and_tenant(amqp_manager, script_config):
-    print('Creating bootstrap admin, default tenant and security roles')
+    logger.debug('Creating bootstrap admin, default tenant and security roles')
     storage_utils.create_default_user_tenant_and_roles(
         admin_username=script_config['admin_username'],
         admin_password=script_config['admin_password'],
@@ -156,36 +161,36 @@ def _add_provider_context(context):
 
 
 def _add_manager_status_reporter_user():
-    print('Creating the Manager Status Reporter user, default tenant and '
-          'security roles')
+    logger.debug('Creating the Manager Status Reporter user, default tenant '
+                 'and security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['manager_status_reporter_username'],
         script_config['manager_status_reporter_password'],
         script_config['status_reporter_role'],
     )
-    print("{0} {1}".format('manager_status_reporter_token', user.api_token))
+    RETURN_DICT['manager_status_reporter_token'] = user.api_token
 
 
 def _add_queue_status_reporter_user():
-    print('Creating the Queue Status Reporter user, default tenant and '
+    logger.debug('Creating the Queue Status Reporter user, default tenant and '
           'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['queue_status_reporter_username'],
         script_config['queue_status_reporter_password'],
         script_config['status_reporter_role'],
     )
-    print("{0} {1}".format('queue_status_reporter_token', user.api_token))
+    RETURN_DICT['queue_status_reporter_token'] = user.api_token
 
 
 def _add_db_status_reporter_user():
-    print('Creating the DB Status Reporter user, default tenant and '
+    logger.debug('Creating the DB Status Reporter user, default tenant and '
           'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['db_status_reporter_username'],
         script_config['db_status_reporter_password'],
         script_config['status_reporter_role'],
     )
-    print("{0} {1}".format('db_status_reporter_token', user.api_token))
+    RETURN_DICT['db_status_reporter_token'] = user.api_token
 
 
 if __name__ == '__main__':
@@ -237,4 +242,4 @@ if __name__ == '__main__':
     if script_config.get('db_nodes'):
         _insert_db_nodes(script_config['db_nodes'])
 
-    print('Finished creating bootstrap admin, default tenant and provider ctx')
+    print(json.dumps(RETURN_DICT))
