@@ -173,7 +173,7 @@ def _add_manager_status_reporter_user():
 
 def _add_queue_status_reporter_user():
     logger.debug('Creating the Queue Status Reporter user, default tenant and '
-          'security roles')
+                 'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['queue_status_reporter_username'],
         script_config['queue_status_reporter_password'],
@@ -184,7 +184,7 @@ def _add_queue_status_reporter_user():
 
 def _add_db_status_reporter_user():
     logger.debug('Creating the DB Status Reporter user, default tenant and '
-          'security roles')
+                 'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['db_status_reporter_username'],
         script_config['db_status_reporter_password'],
