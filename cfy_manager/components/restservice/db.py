@@ -347,7 +347,7 @@ def _get_script_result(result):
         output = result.aggr_stderr.split('\n')
         output = [line.strip() for line in output if line.strip()]
         for line in output:
-            logger.error(line)
+            logger.debug(line)
     if result.aggr_stdout:
         return json.loads(result.aggr_stdout)
     return {}
