@@ -390,7 +390,7 @@ def db_node_reinit(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
-@argh.named('set_master')
+@argh.named('set-master')
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
