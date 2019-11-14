@@ -32,7 +32,7 @@ from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 
-from cfy_manager.logger import get_logger
+from ....logger import get_logger
 
 logger = get_logger('create_tables_and_add_defaults'.upper())
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
