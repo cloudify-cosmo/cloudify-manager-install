@@ -169,7 +169,7 @@ def _add_manager_status_reporter_user():
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['manager_status_reporter_username'],
         script_config['manager_status_reporter_password'],
-        script_config['status_reporter_role'],
+        script_config['manager_status_reporter_role'],
     )
     RETURN_DICT['manager_status_reporter_token'] = user.api_token
 
@@ -180,7 +180,7 @@ def _add_queue_status_reporter_user():
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['queue_status_reporter_username'],
         script_config['queue_status_reporter_password'],
-        script_config['status_reporter_role'],
+        script_config['queue_status_reporter_role'],
     )
     RETURN_DICT['queue_status_reporter_token'] = user.api_token
 
@@ -191,7 +191,7 @@ def _add_db_status_reporter_user():
     user = storage_utils.create_status_reporter_user_and_assign_role(
         script_config['db_status_reporter_username'],
         script_config['db_status_reporter_password'],
-        script_config['status_reporter_role'],
+        script_config['db_status_reporter_role'],
     )
     RETURN_DICT['db_status_reporter_token'] = user.api_token
 
