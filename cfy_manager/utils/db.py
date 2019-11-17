@@ -29,19 +29,21 @@ from cfy_manager.components.components_constants import (
 def run_psql_command(command, db_key):
     base_command = []
     pg_config = config[POSTGRESQL_CLIENT]
+    peer_authentication = False
 
     if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
         # In case the default user is postgres and we're in AIO installation,
         # "peer" authentication is used
         if pg_config['server_username'] == 'postgres':
             base_command.extend(['-u', 'postgres'])
+            peer_authentication = True
 
     # Run psql with just the results output without headers (-t),
     # and no psqlrc (-X)
     base_command.extend(['/usr/bin/psql', '-t', '-X'])
     command = base_command + command
     db_kwargs = {}
-    if db_key == 'cloudify_db_name':
+    if db_key == 'cloudify_db_name' and not peer_authentication:
         db_kwargs['username'] = pg_config['cloudify_username'].split('@')[0]
         db_kwargs['password'] = pg_config['cloudify_password']
 
