@@ -53,7 +53,7 @@ MANAGER_STATUS_REPORTER_USERNAME = 'manager_status_reporter'
 PASSWORD = 'reporter_password'
 TOKEN = 'reporter_token'
 MANAGER_STATUS_REPORTER_ROLE = 'manager_status_reporter'
-QUEUE_STATUS_REPORTER_ROLE = 'message_queue_status_reporter'
+QUEUE_STATUS_REPORTER_ROLE = 'broker_status_reporter'
 DB_STATUS_REPORTER_ROLE = 'db_status_reporter'
 # endregion
 
