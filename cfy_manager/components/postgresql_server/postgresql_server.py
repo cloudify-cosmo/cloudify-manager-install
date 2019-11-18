@@ -1053,13 +1053,13 @@ class PostgresqlServer(BaseComponent):
         # the expected node_id
         return int(result) == 1
 
-    def _add_node_to_db(self, name, node_id, private_ip):
+    def _add_node_to_db(self, name, node_id, host):
         db.run_psql_command(
             command=[
                 '-c',
-                "INSERT INTO db_nodes (name, node_id, private_ip)"
+                "INSERT INTO db_nodes (name, node_id, host)"
                 "VALUES ('{0}', '{1}', '{2}');".format(
-                    name, node_id, private_ip
+                    name, node_id, host
                 ),
             ],
             db_key='cloudify_db_name',
