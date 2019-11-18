@@ -200,6 +200,9 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
         except yaml.YAMLError as e:
             raise yaml.YAMLError('Failed to load yaml file {0}, due to '
                                  '{1}'.format(yaml_path, str(e)))
+    else:
+        yaml_content = {}
+
     yaml_content.update(**updated_content)
     updated_file = yaml.safe_dump(yaml_content,
                                   default_flow_style=False)
