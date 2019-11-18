@@ -185,7 +185,7 @@ def _create_db_nodes_info():
         return [{
             'name': config[MANAGER][HOSTNAME],
             'node_id': get_node_id(),
-            'private_ip': config[NETWORKS]['default'],
+            'host': config[NETWORKS]['default'],
             'is_external': False
         }]
 
@@ -195,7 +195,7 @@ def _create_db_nodes_info():
             {
                 'name': name,
                 'node_id': db['node_id'],
-                'private_ip': db['ip'],
+                'host': db['ip'],
                 'is_external': False
             }
             for name, db in db_nodes.items()
@@ -205,7 +205,7 @@ def _create_db_nodes_info():
     return [{
         'name': config[POSTGRESQL_CLIENT]['host'],
         'node_id': str(uuid.uuid4()),
-        'private_ip': config[POSTGRESQL_CLIENT]['host'],
+        'host': config[POSTGRESQL_CLIENT]['host'],
         'is_external': True
     }]
 
