@@ -1,0 +1,24 @@
+manager:
+  private_ip: '127.0.0.1'
+  public_ip: '127.0.0.1'
+  hostname: 'localhost'
+  cli_local_profile_host_name: 'localhost'
+  premium_edition: false
+  set_manager_ip_on_boot: true
+  security:
+    admin_password: 'admin'
+
+sanity:
+  skip_sanity: true
+
+postgresql_client:
+  server_username: cfyuser
+
+services_to_install:
+- database_service
+- queue_service
+- manager_service
+
+service_management: supervisord
+skip_sudo: true
+save_config: false
