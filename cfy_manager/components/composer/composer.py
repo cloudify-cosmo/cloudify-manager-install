@@ -16,12 +16,10 @@
 import os
 import json
 
-from os.path import join, dirname
+from os.path import join
 
 from cfy_manager.components import sources
 from ..components_constants import (
-    SERVICE_USER,
-    SERVICE_GROUP,
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
@@ -33,11 +31,10 @@ from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
 from ...constants import BASE_LOG_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
-from ...utils import common, files, sudoers, certificates
+from ...utils import common, files, certificates
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.users import create_service_user
 
 logger = get_logger(COMPOSER)
 
@@ -51,9 +48,6 @@ LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/composer_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/composer_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
-
-COMPOSER_USER = '{0}_user'.format(COMPOSER)
-COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
 COMPOSER_PORT = 3000
 
 
@@ -85,19 +79,14 @@ class Composer(BaseComponent):
 
         files.copy_notice(COMPOSER)
         set_logrotate(COMPOSER)
-        self._create_user_and_set_permissions()
-        self._add_snapshot_sudo_command()
+        self._set_permissions()
 
     def _verify_composer_alive(self):
         systemd.verify_alive(COMPOSER)
         wait_for_port(COMPOSER_PORT)
 
     def _start_and_validate_composer(self):
-        # Used in the service template
-        config[COMPOSER][SERVICE_USER] = COMPOSER_USER
-        config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
-        systemd.configure(COMPOSER,
-                          user=COMPOSER_USER, group=COMPOSER_GROUP)
+        systemd.configure(COMPOSER)
 
         logger.info('Starting Composer service...')
         systemd.restart(COMPOSER)
@@ -108,30 +97,12 @@ class Composer(BaseComponent):
             logger.debug('Joining cluster - not creating the composer db')
             return
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run(
-            [
-                'sudo', '-u', COMPOSER_USER, 'bash', '-c',
-                'cd {path}; {npm} run db-migrate'.format(
-                    path=HOME_DIR,
-                    npm=npm_path,
-                ),
-            ],
-        )
+        common.run([npm_path, 'run', 'db-migrate'], cwd=HOME_DIR)
 
-    def _create_user_and_set_permissions(self):
-        create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-        # composer user is in the cfyuser group for replication
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, COMPOSER_USER])
-        # adding cfyuser to the composer group so that its files are r/w for
-        # snapshots
-        common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
-
+    def _set_permissions(self):
         logger.debug('Fixing permissions...')
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, LOG_DIR)
-
-        common.chmod('g+w', CONF_DIR)
-        common.chmod('g+w', dirname(CONF_DIR))
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, HOME_DIR)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, LOG_DIR)
         common.chown(CLOUDIFY_USER, CLOUDIFY_USER, CONF_DIR)
 
     def _update_composer_config(self):
@@ -164,8 +135,6 @@ class Composer(BaseComponent):
                 component_name=POSTGRESQL_CLIENT,
                 logger=self.logger,
                 ca_destination=DB_CA_PATH,
-                owner=COMPOSER_USER,
-                group=COMPOSER_GROUP,
                 update_config=False,
             )
 
@@ -186,8 +155,6 @@ class Composer(BaseComponent):
                     logger=self.logger,
                     cert_destination=DB_CLIENT_CERT_PATH,
                     key_destination=DB_CLIENT_KEY_PATH,
-                    owner=COMPOSER_USER,
-                    group=COMPOSER_GROUP,
                     key_perms='400',
                     update_config=False,
                 )
@@ -212,18 +179,8 @@ class Composer(BaseComponent):
                 composer_config['db']['url'], query)
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
-        # Using `write_to_file` because the path belongs to the composer
-        # user, so we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
-
-    def _add_snapshot_sudo_command(self):
-        sudoers.allow_user_to_sudo_command(
-            full_command='/opt/nodejs/bin/npm',
-            description='Allow snapshots to restore composer',
-            allow_as=COMPOSER_USER,
-        )
 
     def _configure(self):
         self._update_composer_config()

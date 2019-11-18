@@ -8,8 +8,8 @@ TimeoutStartSec=0
 Restart=always
 RestartSec=10
 EnvironmentFile=/etc/sysconfig/cloudify-composer
-User={{ composer.service_user }}
-Group={{ composer.service_group }}
+User=cfyuser
+Group=cfyuser
 WorkingDirectory=/opt/cloudify-composer/backend
 ExecStart=/opt/nodejs/bin/node /opt/cloudify-composer/server.js
 
