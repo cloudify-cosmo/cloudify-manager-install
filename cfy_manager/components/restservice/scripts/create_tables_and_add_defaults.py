@@ -20,13 +20,19 @@ import os
 import sys
 import json
 import atexit
-import logging
-import tempfile
 import argparse
+import base64
 import subprocess
+import logging
+import hashlib
+import tempfile
 from datetime import datetime
 
 from flask_migrate import upgrade
+
+from cloudify.cryptography_utils import encrypt, decrypt
+from cloudify.rabbitmq_client import USERNAME_PATTERN
+from cloudify.utils import generate_user_password
 
 from manager_rest import config, version
 from manager_rest.storage import storage_utils
@@ -41,6 +47,96 @@ logger = \
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 RETURN_DICT = {}
+
+
+class MockAMQPManager(AMQPManager):
+    def __init__(self, config):
+        self._admin_username = config['username']
+        self._data = {
+            'vhosts': [{'name': '/'}],
+            'users': [
+                {
+                    'hashing_algorithm': 'rabbit_password_hashing_sha256',
+                    'name': self._admin_username,
+                    'password_hash': self._rabbitmq_hash(config['password']),
+                    'tags': 'administrator'
+                },
+            ],
+            'permissions': [
+                {
+                    'user': self._admin_username,
+                    'vhost': '/',
+                    'configure': '.*',
+                    'write': '.*',
+                    'read': '.*'
+                },
+
+            ],
+            'policies': [self._format_policy(p) for p in config['policies']]
+        }
+
+    def _format_policy(self, policy):
+        return {
+            'name': policy['name'],
+            'vhost': policy.get('vhost', '/'),
+            'pattern': policy['expression'],
+            'priority': policy.get('priority', 1),
+            'apply-to': (policy.get('apply-to') or
+                         policy.get('apply_to') or 'queues'),
+            'definition': policy['policy']
+        }
+
+    def create_tenant_vhost_and_user(self, tenant):
+        vhost = tenant.rabbitmq_vhost or \
+            self.VHOST_NAME_PATTERN.format(tenant.name)
+        username = tenant.rabbitmq_username or \
+            USERNAME_PATTERN.format(tenant.name)
+        new_password = generate_user_password()
+        password = decrypt(tenant.rabbitmq_password) \
+            if tenant.rabbitmq_password else new_password
+        encrypted_password = tenant.rabbitmq_password or \
+            encrypt(new_password)
+        tenant.rabbitmq_vhost = vhost
+        tenant.rabbitmq_username = username
+        tenant.rabbitmq_password = encrypted_password
+
+        self._data['vhosts'].append({'name': vhost})
+        self._data['users'].append({
+            'name': username,
+            'password_hash': self._rabbitmq_hash(password),
+            'hashing_algorithm': 'rabbit_password_hashing_sha256',
+            'tags': ''
+        })
+        self._data['permissions'].append({
+            'user': username,
+            'vhost': '/',
+            'configure': '^cloudify-(events-topic|events|logs|monitoring)$',
+            'write': '^cloudify-(events-topic|events|logs|monitoring)$',
+            'read': '.*'
+        })
+        self._data['permissions'].append({
+            'user': username,
+            'vhost': vhost,
+            'configure': '.*',
+            'write': '.*',
+            'read': '.*'
+        })
+        self._data['permissions'].append({
+            'user': self._admin_username,
+            'vhost': vhost,
+            'configure': '.*',
+            'write': '.*',
+            'read': '.*'
+        })
+        return tenant
+
+    def _rabbitmq_hash(self, password):
+        salt = os.urandom(4)
+        hashed = hashlib.sha256(salt + password.encode('utf-8')).digest()
+        return base64.b64encode(salt + hashed)
+
+    def dump(self, f):
+        json.dump(self._data, f)
 
 
 def _init_db_tables(db_migrate_dir):
@@ -60,19 +156,6 @@ def _add_default_user_and_tenant(amqp_manager, script_config):
         admin_password=script_config['admin_password'],
         amqp_manager=amqp_manager,
         authorization_file_path=script_config['authorization_file_path']
-    )
-
-
-def _get_amqp_manager(script_config):
-    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as f:
-        f.write(script_config['rabbitmq_ca_cert'])
-    broker = script_config['rabbitmq_brokers'][0]
-    atexit.register(os.unlink, f.name)
-    return AMQPManager(
-        host=broker['management_host'],
-        username=broker['username'],
-        password=broker['password'],
-        verify=f.name
     )
 
 
@@ -200,12 +283,17 @@ def _add_db_status_reporter_user():
     RETURN_DICT['db_status_reporter_token'] = user.api_token
 
 
-def file_path(path):
-    if os.path.exists(path):
-        return path
-    else:
-        raise argparse.ArgumentTypeError(
-            "The file path \"{0}\" doesn't exist.".format(path))
+def _get_amqp_manager(script_config):
+    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as f:
+        f.write(script_config['rabbitmq_ca_cert'])
+    broker = script_config['rabbitmq_brokers'][0]
+    atexit.register(os.unlink, f.name)
+    return AMQPManager(
+        host=broker['management_host'],
+        username=broker['username'],
+        password=broker['password'],
+        verify=f.name
+    )
 
 
 if __name__ == '__main__':
@@ -233,8 +321,14 @@ if __name__ == '__main__':
         _init_db_tables(script_config['db_migrate_dir'])
     if (script_config.get('admin_username')
             and script_config.get('admin_password')):
-        amqp_manager = _get_amqp_manager(script_config)
+        if script_config['amqp']['local']:
+            amqp_manager = MockAMQPManager(script_config['amqp'])
+        else:
+            amqp_manager = _get_amqp_manager(script_config)
         _add_default_user_and_tenant(amqp_manager, script_config)
+        if script_config['amqp']['local']:
+            with open('/tmp/tenant-details.json', 'w') as f:
+                amqp_manager.dump(f)
     if (script_config.get('manager_status_reporter_username')
             and script_config.get('manager_status_reporter_password')):
         _add_manager_status_reporter_user()

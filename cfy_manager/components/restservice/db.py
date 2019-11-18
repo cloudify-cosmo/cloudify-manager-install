@@ -35,7 +35,7 @@ from ..components_constants import (
     MANAGER_STATUS_REPORTER,
 )
 
-from ..service_components import DATABASE_SERVICE
+from ..service_components import DATABASE_SERVICE, QUEUE_SERVICE
 from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
@@ -126,7 +126,13 @@ def _create_populate_db_args_dict():
         'config': make_manager_config(),
         'premium': config[MANAGER][PREMIUM_EDITION],
         'rabbitmq_brokers': _create_rabbitmq_info(),
-        'db_nodes': _create_db_nodes_info()
+        'db_nodes': _create_db_nodes_info(),
+        'amqp': {
+            'local': QUEUE_SERVICE in config[SERVICES_TO_INSTALL],
+            'policies': config[RABBITMQ]['policies'],
+            'username': config[RABBITMQ]['username'],
+            'password': config[RABBITMQ]['password']
+        }
     }
     manager_status_reporter_password = config.get(
         MANAGER_STATUS_REPORTER, {}).get(PASSWORD)
@@ -259,6 +265,9 @@ def populate_db(configs):
     script_output = _run_script(
         'create_tables_and_add_defaults.py', args_dict, configs)
     tokens = json.loads(script_output)
+    if args_dict['amqp']['local']:
+        common.move('/tmp/tenant-details.json',
+                    '/etc/cloudify/rabbitmq/definitions.json')
 
     for reporter in tokens:
         conf_key = reporter_to_conf_key[reporter]
