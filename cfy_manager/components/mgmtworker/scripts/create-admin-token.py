@@ -29,8 +29,8 @@ AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 def generate_auth_token():
     config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
-    config.instance.rest_service_log_path = '/dev/null'
-    app = server.CloudifyFlaskApp()
+    config.instance.rest_service_log_path = ''
+    app = server.CloudifyFlaskApp(load_config=False)
     try:
         with app.app_context():
             sm = storage.get_storage_manager()
