@@ -248,7 +248,7 @@ def _run_script(script_name, args_dict=None, configs=None):
         cmd.append(args_json_path)
 
     proc_result = common.sudo(cmd, env=env_dict)
-    return _get_script_result(proc_result)
+    return _get_script_stdout(proc_result)
 
 
 def populate_db(configs):
@@ -260,8 +260,9 @@ def populate_db(configs):
 
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_populate_db_args_dict()
-    tokens = _run_script(
+    script_output = _run_script(
         'create_tables_and_add_defaults.py', args_dict, configs)
+    tokens = json.loads(script_output)
 
     for reporter in tokens:
         conf_key = reporter_to_conf_key[reporter]
@@ -337,8 +338,8 @@ def manager_is_in_db():
     return int(result) == 1
 
 
-def _get_script_result(result):
-    """Log stderr output from the script and return the return result from the
+def _get_script_stdout(result):
+    """Log stderr output from the script and return the return stdout from the
     script.
     :param result: Popen result.
     """
@@ -347,6 +348,4 @@ def _get_script_result(result):
         output = [line.strip() for line in output if line.strip()]
         for line in output:
             logger.debug(line)
-    if result.aggr_stdout:
-        return json.loads(result.aggr_stdout)
-    return {}
+    return result.aggr_stdout if result.aggr_stdout else ""

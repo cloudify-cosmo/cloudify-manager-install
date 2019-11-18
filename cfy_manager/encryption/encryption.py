@@ -20,9 +20,9 @@ from os.path import join
 import argh
 
 from cfy_manager.utils import common
+from cfy_manager.constants import REST_HOME_DIR
 
 SCRIPT_DIR = '/opt/cloudify/encryption'
-REST_HOME_DIR = '/opt/manager'
 
 
 def _run_update_encryption_key_script(commit):

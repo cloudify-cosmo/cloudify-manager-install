@@ -18,9 +18,12 @@ import glob
 import os
 import shlex
 import socket
-import subprocess
+import logging
 import tempfile
+import subprocess
+from functools import wraps
 
+import argh
 import requests
 
 from ..config import config
@@ -217,3 +220,23 @@ def is_all_in_one_manager():
         DATABASE_SERVICE in config[SERVICES_TO_INSTALL] and
         QUEUE_SERVICE in config[SERVICES_TO_INSTALL]
     )
+
+
+def allows_json_format(_logger):
+    dest = 'json_format'
+
+    def decorator(f):
+        @argh.arg('--json',
+                  help='Print the tokens in a JSON format instead of '
+                       'using logs.',
+                  dest=dest,
+                  default=False)
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if kwargs[dest]:
+                _logger.setLevel(logging.ERROR)
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

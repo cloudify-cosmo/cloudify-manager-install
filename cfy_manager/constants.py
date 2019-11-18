@@ -19,6 +19,7 @@ BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 NETWORKS_DIR = join(BASE_DIR, 'networks')
 UTILS_DIR = join(BASE_DIR, 'utils')
+STATUS_REPORTER_DIR = join(BASE_DIR, 'status_reporter')
 
 REST_HOME_DIR = '/opt/manager'
 
@@ -81,3 +82,5 @@ STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
 STATUS_REPORTER_CONFIGURATION_PATH = join(
     STATUS_REPORTER_PATH,
     'status_reporter_configuration.yaml')
+
+SCRIPTS = 'scripts'
