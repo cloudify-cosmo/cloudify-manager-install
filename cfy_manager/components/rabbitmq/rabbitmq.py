@@ -45,7 +45,7 @@ from ...exceptions import (
     RabbitNodeListError,
     ValidationError,
 )
-from ...utils.systemd import systemd
+from ...utils import service
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
@@ -54,7 +54,6 @@ from ...utils.files import write_to_file, deploy
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
-CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 SECURE_PORT = 5671
 
@@ -77,7 +76,9 @@ class RabbitMQ(BaseComponent):
 
     def _deploy_configuration(self):
         logger.info('Deploying RabbitMQ config')
-        deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH)
+        config_src = join(constants.COMPONENTS_DIR, RABBITMQ,
+                          CONFIG, 'rabbitmq.config')
+        deploy(config_src, RABBITMQ_CONFIG_PATH)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
 
     def _init_service(self):
@@ -93,12 +94,6 @@ class RabbitMQ(BaseComponent):
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
         self._deploy_configuration()
-        systemd.systemctl('daemon-reload')
-
-        # rabbitmq restart exits with 143 status code that is valid in
-        # this case.
-        systemd.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
 
     def _rabbitmqctl(self, command, **kwargs):
         nodename = config[RABBITMQ]['nodename']
@@ -175,12 +170,6 @@ class RabbitMQ(BaseComponent):
         if cookie:
             write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
             sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
-
-    def _possibly_join_cluster(self):
-        join_node = config[RABBITMQ]['join_cluster']
-        if not join_node:
-            return
-        self.join_cluster(join_node)
 
     def join_cluster(self, join_node, restore_users_on_fail=False):
         join_node = self.add_missing_nodename_prefix(join_node)
@@ -490,24 +479,9 @@ class RabbitMQ(BaseComponent):
             self._set_rabbitmq_policy(**policy)
         logger.info("RabbitMQ policies configured.")
 
-    def _start_rabbitmq(self):
-        logger.info("Starting RabbitMQ Service...")
-        # rabbitmq restart exits with 143 status code that is valid
-        # in this case.
-        systemd.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
-        if not config[RABBITMQ]['join_cluster']:
-            # Policies will be obtained from the cluster if we're joining
-            self._set_policies()
-            systemd.restart(RABBITMQ)
-
     def _validate_rabbitmq_running(self):
         logger.info('Making sure RabbitMQ is live...')
-        systemd.verify_alive(RABBITMQ)
-
-        result = self._rabbitmqctl(['status'])
-        if result.returncode != 0:
-            raise ValidationError('Rabbitmq failed to start')
+        service.verify_alive(RABBITMQ)
 
         if not is_port_open(SECURE_PORT, host='127.0.0.1'):
             raise NetworkError(
@@ -519,9 +493,9 @@ class RabbitMQ(BaseComponent):
         self._possibly_set_nodename()
         self._set_erlang_cookie()
         self._possibly_add_hosts_entries()
-        systemd.configure(RABBITMQ,
-                          user='rabbitmq', group='rabbitmq')
-        if common.is_all_in_one_manager():
+        service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
+        if common.is_all_in_one_manager() or \
+                not config[RABBITMQ]['cluster_members']:
             # We must populate the brokers table for an all-in-one manager
             config[RABBITMQ]['cluster_members'] = {
                 config[MANAGER][HOSTNAME]: {
@@ -531,12 +505,6 @@ class RabbitMQ(BaseComponent):
             }
         self._generate_rabbitmq_certs()
         self._init_service()
-        if not config[RABBITMQ]['join_cluster']:
-            # Users will be synced with the cluster if we're joining one
-            self._manage_users()
-        self._start_rabbitmq()
-        self._validate_rabbitmq_running()
-        self._possibly_join_cluster()
 
     def install(self):
         logger.notice('Installing RabbitMQ...')
@@ -553,7 +521,7 @@ class RabbitMQ(BaseComponent):
         yum_remove('erlang')
         logger.info('Stopping the Erlang Port Mapper Daemon...')
         sudo(['epmd', '-kill'], ignore_failures=True)
-        systemd.remove(RABBITMQ, service_file=False)
+        service.remove(RABBITMQ, service_file=False)
         yum_remove('socat')
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
@@ -561,11 +529,19 @@ class RabbitMQ(BaseComponent):
 
     def start(self):
         logger.notice('Starting RabbitMQ...')
-        systemd.start(RABBITMQ)
+        self._possibly_set_nodename()
+        service.start(RABBITMQ)
+        wait_for_port(SECURE_PORT)
         self._validate_rabbitmq_running()
+        if config[RABBITMQ]['join_cluster']:
+            self.join_cluster(config[RABBITMQ]['join_cluster'])
+        elif not self._installing_manager():
+            # Users will be synced with the cluster if we're joining one
+            self._manage_users()
+            self._set_policies()
         logger.notice('RabbitMQ successfully started')
 
     def stop(self):
         logger.notice('Stopping RabbitMQ...')
-        systemd.stop(RABBITMQ)
+        service.stop(RABBITMQ)
         logger.notice('RabbitMQ successfully stopped')

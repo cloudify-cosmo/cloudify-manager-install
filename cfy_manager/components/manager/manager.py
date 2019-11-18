@@ -26,14 +26,13 @@ from ..service_names import RABBITMQ
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...utils import common
+from ...utils import common, service
 from ...utils.certificates import use_supplied_certificates
 from ...utils.files import (replace_in_file,
                             remove_files,
                             touch)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
-from ...utils.systemd import systemd
 from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
@@ -148,7 +147,8 @@ class Manager(BaseComponent):
             join(self._get_exec_tempdir(), 'cloudify-ctx'),
         ])
         # Remove syncthing so a reinstall of a cluster node can work
-        systemd.remove('syncthing')
+        # TODO
+        service.remove('syncthing')
         remove_files([
             '/opt/syncthing',
         ])

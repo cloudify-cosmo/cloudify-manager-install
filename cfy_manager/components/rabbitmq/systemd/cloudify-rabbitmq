@@ -1,0 +1,6 @@
+RABBITMQ_LOG_BASE="/var/log/cloudify/rabbitmq"
+RABBITMQ_PID_FILE="/run/rabbitmq/rabbitmq.pid"
+RABBITMQ_CONFIG_FILE=/etc/cloudify/rabbitmq/rabbitmq
+RABBITMQ_NODENAME={{ rabbitmq.nodename }}
+RABBITMQ_ENABLED_PLUGINS_FILE=/etc/cloudify/rabbitmq/enabled_plugins{% if rabbitmq.use_long_name %}
+RABBITMQ_USE_LONGNAME=true{% endif %}

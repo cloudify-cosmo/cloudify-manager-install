@@ -20,7 +20,7 @@ from ..base_component import BaseComponent
 from ..service_names import AMQP_POSTGRES
 from ...config import config
 from ...logger import get_logger
-from ...utils.systemd import systemd
+from ...utils import service
 from ...constants import BASE_LOG_DIR
 
 
@@ -38,33 +38,27 @@ class AmqpPostgres(BaseComponent):
         conf = config.setdefault('amqp_postgres', {})
         conf[LOG_DIR_KEY] = join(BASE_LOG_DIR, AMQP_POSTGRES)
 
-    def _configure(self):
-        logger.info('Starting AMQP-PostgreSQL Broker Service...')
-        systemd.configure(AMQP_POSTGRES)
-        systemd.restart(AMQP_POSTGRES)
-        systemd.verify_alive(AMQP_POSTGRES)
-
     def install(self):
         pass
 
     def configure(self):
         logger.notice('Configuring AMQP-Postgres...')
         self._setup_log_dir()
-        self._configure()
+        service.configure(AMQP_POSTGRES)
         logger.notice('AMQP-Postgres successfully configured')
 
     def start(self):
         logger.notice('Starting AMQP-Postgres...')
-        systemd.start(AMQP_POSTGRES)
-        systemd.verify_alive(AMQP_POSTGRES)
+        service.start(AMQP_POSTGRES)
+        service.verify_alive(AMQP_POSTGRES)
         logger.notice('AMQP-Postgres successfully started')
 
     def stop(self):
         logger.notice('Stopping AMQP-Postgres...')
-        systemd.stop(AMQP_POSTGRES)
+        service.stop(AMQP_POSTGRES)
         logger.notice('AMQP-Postgres successfully stopped')
 
     def remove(self):
         logger.notice('Removing AMQP-Postgres...')
-        systemd.remove(AMQP_POSTGRES, service_file=False)
+        service.remove(AMQP_POSTGRES, service_file=False)
         logger.notice('AMQP-Postgres successfully removed')

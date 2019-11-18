@@ -85,22 +85,11 @@ class Composer(BaseComponent):
         set_logrotate(COMPOSER)
 
     def _verify_composer_alive(self):
-        systemd.verify_alive(COMPOSER)
+        service.verify_alive(COMPOSER)
         wait_for_port(COMPOSER_PORT)
 
-    def _start_and_validate_composer(self):
-        # Used in the service template
-        config[COMPOSER][SERVICE_USER] = COMPOSER_USER
-        config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
-        systemd.configure(COMPOSER,
-                          user=COMPOSER_USER, group=COMPOSER_GROUP)
-
-        logger.info('Starting Composer service...')
-        systemd.restart(COMPOSER)
-        self._verify_composer_alive()
-
     def _run_db_migrate(self):
-        if config[CLUSTER_JOIN]:
+        if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the composer db')
             return
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
@@ -198,11 +187,6 @@ class Composer(BaseComponent):
         common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
 
-    def _configure(self):
-        self._update_composer_config()
-        self._run_db_migrate()
-        self._start_and_validate_composer()
-
     def install(self):
         if config[COMPOSER]['skip_installation']:
             logger.notice('Skipping Cloudify Composer installation.')
@@ -213,24 +197,29 @@ class Composer(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
-        self._configure()
+        self._update_composer_config()
+        config[COMPOSER][SERVICE_USER] = COMPOSER_USER
+        config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
+        service.configure(COMPOSER,
+                          user=COMPOSER_USER, group=COMPOSER_GROUP)
         logger.notice('Cloudify Composer successfully configured')
 
     def remove(self):
         logger.notice('Removing Cloudify Composer...')
         files.remove_notice(COMPOSER)
         remove_logrotate(COMPOSER)
-        systemd.remove(COMPOSER)
+        service.remove(COMPOSER)
         files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
         logger.notice('Cloudify Composer successfully removed')
 
     def start(self):
         logger.notice('Starting Cloudify Composer...')
-        systemd.start(COMPOSER)
+        self._run_db_migrate()
+        service.start(COMPOSER)
         self._verify_composer_alive()
         logger.notice('Cloudify Composer successfully started')
 
     def stop(self):
         logger.notice('Stopping Cloudify Composer...')
-        systemd.stop(COMPOSER)
+        service.stop(COMPOSER)
         logger.notice('Cloudify Composer successfully stopped')

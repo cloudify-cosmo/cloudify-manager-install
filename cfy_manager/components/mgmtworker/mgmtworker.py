@@ -28,10 +28,11 @@ from ..components_constants import (
 )
 from ..base_component import BaseComponent
 from ..service_names import MGMTWORKER, MANAGER
+
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
-from ...utils import common, sudoers
+from ...utils import common, service, sudoers
 from ...utils.files import (
     deploy,
     get_local_source_path
@@ -72,7 +73,6 @@ class MgmtWorker(BaseComponent):
                 'cluster_service_queue_{0}'.format(config[MANAGER][HOSTNAME])
 
         self._deploy_hooks_config()
-        self._deploy_admin_token()
 
     def _deploy_admin_token(self):
         script_name = 'create-admin-token.py'
@@ -113,13 +113,11 @@ class MgmtWorker(BaseComponent):
                      hooks_config_dst)
 
     def _verify_mgmtworker_alive(self):
-        systemd.verify_alive(MGMTWORKER)
+        service.verify_alive(MGMTWORKER)
 
     def _configure(self):
         self._deploy_mgmtworker_config()
-        systemd.configure(MGMTWORKER)
-        systemd.restart(MGMTWORKER)
-        self._verify_mgmtworker_alive()
+        service.configure(MGMTWORKER)
 
     def install(self):
         logger.notice('Installing Management Worker...')
@@ -140,6 +138,7 @@ class MgmtWorker(BaseComponent):
     def configure(self):
         logger.notice('Configuring Management Worker...')
         self._configure()
+        self._deploy_admin_token()
         if self.is_premium_installed():
             syncthing = Syncthing(skip_installation=False)
             syncthing.configure()
@@ -147,7 +146,7 @@ class MgmtWorker(BaseComponent):
 
     def remove(self):
         logger.notice('Removing Management Worker...')
-        systemd.remove(MGMTWORKER, service_file=False)
+        service.remove(MGMTWORKER, service_file=False)
         yum_remove('cloudify-management-worker')
         common.remove('/opt/mgmtworker')
         common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
@@ -155,7 +154,6 @@ class MgmtWorker(BaseComponent):
 
     def start(self):
         logger.notice('Starting Management Worker...')
-        systemd.start(MGMTWORKER)
         if self.is_premium_installed():
             syncthing = Syncthing(skip_installation=False)
             syncthing.start()
@@ -165,5 +163,5 @@ class MgmtWorker(BaseComponent):
 
     def stop(self):
         logger.notice('Stopping Management Worker...')
-        systemd.stop(MGMTWORKER)
+        service.stop(MGMTWORKER)
         logger.notice('Management Worker successfully stopped')

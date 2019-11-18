@@ -31,9 +31,7 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common
-from ...utils import certificates
-from ...utils.systemd import systemd
+from ...utils import common, certificates, service
 from ...utils.install import yum_install, yum_remove
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
@@ -54,17 +52,8 @@ class Nginx(BaseComponent):
         yum_install(sources.nginx)
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
-        self._deploy_unit_override()
+        # TODO
         set_logrotate(NGINX)
-
-    def _deploy_unit_override(self):
-        logger.debug('Creating systemd unit override...')
-        unit_override_path = '/etc/systemd/system/nginx.service.d'
-        common.mkdir(unit_override_path)
-        deploy(
-            src=join(CONFIG_PATH, 'overrides.conf'),
-            dst=join(unit_override_path, 'overrides.conf')
-        )
 
     def _generate_internal_certs(self):
         logger.info('Generating internal certificate...')
@@ -249,14 +238,12 @@ class Nginx(BaseComponent):
 
     def _start_and_verify_service(self):
         logger.info('Starting NGINX service...')
-        systemd.enable(NGINX, append_prefix=False)
-        systemd.restart(NGINX, append_prefix=False)
-        systemd.verify_alive(NGINX, append_prefix=False)
+        service.start(NGINX, append_prefix=False)
+        service.verify_alive(NGINX, append_prefix=False)
 
     def _configure(self):
         self._handle_certs()
         self._deploy_nginx_config_files()
-        self._start_and_verify_service()
 
     def install(self):
         logger.notice('Installing NGINX...')
@@ -266,6 +253,8 @@ class Nginx(BaseComponent):
     def configure(self):
         logger.notice('Configuring NGINX...')
         self._configure()
+        service.configure(NGINX)
+        service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 
     def remove(self):
@@ -284,11 +273,10 @@ class Nginx(BaseComponent):
 
     def start(self):
         logger.notice('Starting NGINX...')
-        systemd.start(NGINX, append_prefix=False)
-        systemd.verify_alive(NGINX, append_prefix=False)
+        self._start_and_verify_service()
         logger.notice('NGINX successfully started')
 
     def stop(self):
         logger.notice('Stopping NGINX...')
-        systemd.stop(NGINX, append_prefix=False)
+        service.stop(NGINX, append_prefix=False)
         logger.notice('NGINX successfully stopped')

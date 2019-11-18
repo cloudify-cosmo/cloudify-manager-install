@@ -43,9 +43,9 @@ from ...utils import (
     certificates,
     common,
     files,
+    service,
     sudoers,
 )
-from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
@@ -247,20 +247,8 @@ class Stage(BaseComponent):
             common.chmod('640', config_path)
 
     def _verify_stage_alive(self):
-        systemd.verify_alive(STAGE)
+        service.verify_alive(STAGE)
         wait_for_port(8088)
-
-    def _start_and_validate_stage(self):
-        self._set_community_mode()
-        # Used in the service template
-        config[STAGE][SERVICE_USER] = STAGE_USER
-        config[STAGE][SERVICE_GROUP] = STAGE_GROUP
-        systemd.configure(STAGE,
-                          user=STAGE_USER, group=STAGE_GROUP)
-
-        logger.info('Starting Stage service...')
-        systemd.restart(STAGE)
-        self._verify_stage_alive()
 
     def _add_snapshot_sudo_command(self):
         sudoers.allow_user_to_sudo_command(
@@ -272,8 +260,9 @@ class Stage(BaseComponent):
     def _configure(self):
         self._set_db_url()
         self._set_internal_manager_ip()
-        self._run_db_migrate()
-        self._start_and_validate_stage()
+        self._set_community_mode()
+        # Used in the service template
+        service.configure(STAGE)
 
     def install(self):
         if config[STAGE]['skip_installation']:
@@ -292,7 +281,7 @@ class Stage(BaseComponent):
         logger.notice('Removing Stage...')
         files.remove_notice(STAGE)
         remove_logrotate(STAGE)
-        systemd.remove(STAGE)
+        service.remove(STAGE)
         files.remove_files([
             HOME_DIR,
             NODEJS_DIR,
@@ -304,11 +293,12 @@ class Stage(BaseComponent):
 
     def start(self):
         logger.notice('Starting Stage...')
-        systemd.start(STAGE)
+        self._run_db_migrate()
+        service.start(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')
 
     def stop(self):
         logger.notice('Stopping Stage...')
-        systemd.stop(STAGE)
+        service.stop(STAGE)
         logger.notice('Stage successfully stopped')

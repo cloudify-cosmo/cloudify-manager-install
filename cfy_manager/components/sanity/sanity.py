@@ -149,7 +149,7 @@ class Sanity(BaseComponent):
     def install(self):
         pass
 
-    def configure(self):
+    def start(self):
         if config[SANITY]['skip_sanity'] or config[CLUSTER_JOIN]:
             logger.info('Skipping sanity check...')
             return
