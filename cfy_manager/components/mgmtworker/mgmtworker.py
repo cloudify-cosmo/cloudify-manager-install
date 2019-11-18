@@ -54,42 +54,6 @@ class MgmtWorker(BaseComponent):
     def __init__(self, skip_installation):
         super(MgmtWorker, self).__init__(skip_installation)
 
-    def _add_snapshot_restore_sudo_commands(self):
-        sudoers.allow_user_to_sudo_command(
-            '/opt/nodejs/bin/npm',
-            description='Allow web UI DB migrations during snapshot restore.',
-            allow_as='stage_user',
-        )
-
-        sudoers.allow_user_to_sudo_command(
-            '/usr/bin/cfy_manager status-reporter configure '
-            '--token [a-zA-Z0-9]*',
-            description='Allows status reporter configuration during '
-                        'snapshort restore.',
-            allow_as='root',
-        )
-
-        scripts = [
-            (
-                'allow-snapshot-ssl-client-cert-access',
-                'Allow cfyuser to access ssl client certs for snapshots.'
-            ),
-            (
-                'deny-snapshot-ssl-client-cert-access',
-                'Restore ownership on ssl client certs after snapshot.'
-            ),
-        ]
-        for script, description in scripts:
-            sudoers.deploy_sudo_command_script(
-                script,
-                description,
-                component=MGMTWORKER,
-                allow_as='root',
-            )
-            script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script)
-            common.chown('root', 'root', script_path)
-            common.chmod('0500', script_path)
-
     def _deploy_mgmtworker_config(self):
         config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
         config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
@@ -113,7 +77,7 @@ class MgmtWorker(BaseComponent):
         script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script_name)
         common.chown('root', 'root', script_path)
         common.chmod('0500', script_path)
-        common.run(['sudo', script_path])
+        common.run([script_path])
 
     def _deploy_hooks_config(self):
         file_name = 'hooks.conf'
@@ -140,12 +104,6 @@ class MgmtWorker(BaseComponent):
                      const.CLOUDIFY_GROUP,
                      hooks_config_dst)
 
-    def _prepare_snapshot_permissions(self):
-        self._add_snapshot_restore_sudo_commands()
-        # TODO: See if these are necessary
-        common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
-        common.sudo(['chmod', 'g+rw', '/opt/manager'])
-
     def _verify_mgmtworker_alive(self):
         systemd.verify_alive(MGMTWORKER)
 
@@ -155,7 +113,6 @@ class MgmtWorker(BaseComponent):
             cluster.configure()
         self._deploy_mgmtworker_config()
         systemd.configure(MGMTWORKER)
-        self._prepare_snapshot_permissions()
         systemd.restart(MGMTWORKER)
         self._verify_mgmtworker_alive()
 

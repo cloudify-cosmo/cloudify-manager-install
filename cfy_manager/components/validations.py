@@ -728,7 +728,6 @@ def validate(components, skip_validations=False, only_install=False):
 
     _validate_supported_distros()
     _validate_openssl_version()
-    _validate_user_has_sudo_permissions()
     _validate_sufficient_disk_space()
 
     if _errors:

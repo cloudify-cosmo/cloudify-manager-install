@@ -16,7 +16,7 @@
 import os
 import json
 
-from os.path import join, dirname
+from os.path import join
 
 from cfy_manager.components import sources
 from ..components_constants import (
@@ -32,12 +32,10 @@ from ..service_names import COMPOSER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
-from ...constants import BASE_LOG_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
-from ...utils import common, files, sudoers, certificates
-from ...utils.systemd import systemd
+from ...constants import BASE_LOG_DIR
+from ...utils import common, files, certificates, service
 from ...utils.network import wait_for_port
 from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.users import create_service_user
 
 logger = get_logger(COMPOSER)
 
@@ -85,8 +83,6 @@ class Composer(BaseComponent):
 
         files.copy_notice(COMPOSER)
         set_logrotate(COMPOSER)
-        self._create_user_and_set_permissions()
-        self._add_snapshot_sudo_command()
 
     def _verify_composer_alive(self):
         systemd.verify_alive(COMPOSER)
@@ -110,29 +106,13 @@ class Composer(BaseComponent):
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
         common.run(
             [
-                'sudo', '-u', COMPOSER_USER, 'bash', '-c',
+                'bash', '-c',
                 'cd {path}; {npm} run db-migrate'.format(
                     path=HOME_DIR,
                     npm=npm_path,
                 ),
             ],
         )
-
-    def _create_user_and_set_permissions(self):
-        create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-        # composer user is in the cfyuser group for replication
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, COMPOSER_USER])
-        # adding cfyuser to the composer group so that its files are r/w for
-        # snapshots
-        common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
-
-        logger.debug('Fixing permissions...')
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, LOG_DIR)
-
-        common.chmod('g+w', CONF_DIR)
-        common.chmod('g+w', dirname(CONF_DIR))
-        common.chown(CLOUDIFY_USER, CLOUDIFY_USER, CONF_DIR)
 
     def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
@@ -217,13 +197,6 @@ class Composer(BaseComponent):
         files.write_to_file(contents=content, destination=config_path)
         common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
-
-    def _add_snapshot_sudo_command(self):
-        sudoers.allow_user_to_sudo_command(
-            full_command='/opt/nodejs/bin/npm',
-            description='Allow snapshots to restore composer',
-            allow_as=COMPOSER_USER,
-        )
 
     def _configure(self):
         self._update_composer_config()

@@ -77,8 +77,3 @@ def deploy_sudo_command_script(
 
     logger.info('Allowing user `{0}` to run `{1}`'
                 .format(constants.CLOUDIFY_USER, script))
-    allow_user_to_sudo_command(
-        full_command=script,
-        description=description,
-        allow_as=allow_as
-    )

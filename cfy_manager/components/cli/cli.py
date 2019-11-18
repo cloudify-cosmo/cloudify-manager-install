@@ -79,7 +79,7 @@ class Cli(BaseComponent):
             set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
         logger.info('Setting CLI for the current user ({0})...'.format(
-            current_user))
+            getuser()))
         # we don't want the commands with the password to be printed
         # to log file
         current_level = get_file_handlers_level()
@@ -88,12 +88,6 @@ class Cli(BaseComponent):
         common.run(set_cmd)
         self._set_colors(is_root=False)
 
-        if current_user != 'root':
-            logger.info('Setting CLI for the root user...')
-            for cmd in (use_cmd, set_cmd):
-                root_cmd = ['sudo', '-u', 'root'] + cmd
-                common.run(root_cmd)
-            self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
 
     def install(self):

@@ -73,6 +73,8 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
 
 
 def sudo(command, *args, **kwargs):
+    if config.get('skip_sudo'):
+        return run(command, *args, **kwargs)
     if isinstance(command, str):
         command = shlex.split(command)
     if 'env' in kwargs:
@@ -103,6 +105,7 @@ def chmod(mode, path, recursive=False):
 
 
 def chown(user, group, path):
+    return
     logger.debug('chowning {0} by {1}:{2}...'.format(
         path, user, group))
     sudo(['chown', '-R', '{0}:{1}'.format(user, group), path])

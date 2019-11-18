@@ -19,8 +19,6 @@ from os.path import join
 
 from cfy_manager.components import sources
 from ..components_constants import (
-    SERVICE_USER,
-    SERVICE_GROUP,
     HOME_DIR_KEY,
     SSL_INPUTS,
     SSL_ENABLED,
@@ -39,9 +37,7 @@ from ...logger import get_logger
 from ...exceptions import FileError
 from ...constants import (
     BASE_LOG_DIR,
-    BASE_RESOURCES_PATH,
-    CLOUDIFY_GROUP,
-    CLOUDIFY_USER,
+    BASE_RESOURCES_PATH
 )
 from ...utils import (
     certificates,
@@ -51,7 +47,6 @@ from ...utils import (
 )
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
-from ...utils.users import create_service_user
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
@@ -114,24 +109,10 @@ class Stage(BaseComponent):
 
         files.copy_notice(STAGE)
         set_logrotate(STAGE)
-        self._create_user_and_set_permissions()
         self._install_nodejs()
         self._deploy_scripts()
 
         self._add_snapshot_sudo_command()
-
-    def _create_user_and_set_permissions(self):
-        create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
-        # stage user is in the cfyuser group for replication
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
-        # For snapshot restore purposes
-        common.sudo(['usermod', '-aG', STAGE_GROUP, CLOUDIFY_USER])
-
-        logger.debug('Fixing permissions...')
-        common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
-        common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
-        common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CONF_DIR)
 
     def _install_nodejs(self):
         logger.info('Installing NodeJS...')
@@ -155,14 +136,14 @@ class Stage(BaseComponent):
         )
 
     def _run_db_migrate(self):
-        if config[CLUSTER_JOIN]:
+        if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the stage db')
             return
         backend_dir = join(HOME_DIR, 'backend')
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
         common.run(
             [
-                'sudo', '-u', STAGE_USER, 'bash', '-c',
+                'bash', '-c',
                 'cd {path}; {npm} run db-migrate'.format(
                     path=backend_dir,
                     npm=npm_path,

@@ -146,9 +146,11 @@ class PostgresqlServer(BaseComponent):
 
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
-        postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
+        pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
         try:
-            common.sudo(command=[postgresql95_setup, 'initdb'])
+            common.run([pg_ctl, 'initdb'], env={
+                'PGDATA': '/var/lib/pgsql/9.5/data'
+            })
         except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
             pass

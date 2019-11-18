@@ -482,20 +482,6 @@ def use_supplied_certificates(component_name,
             key_destination, key_destination, key_pass
         )
 
-    logger.info('Setting certificate ownership and permissions.')
-
-    for path in cert_destination, key_destination, ca_destination:
-        if path:
-            sudo(['chown', '{owner}.{group}'.format(owner=owner, group=group),
-                  path])
-    # Make key only readable by user and group
-    if key_destination:
-        sudo(['chmod', key_perms, key_destination])
-    # Make certs readable by anyone
-    for path in cert_destination, ca_destination:
-        if path:
-            sudo(['chmod', cert_perms, path])
-
     if update_config:
         logger.info('Updating configured certification locations.')
         if cert_destination:
