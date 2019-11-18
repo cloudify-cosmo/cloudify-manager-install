@@ -19,9 +19,6 @@ from os.path import join
 
 from cfy_manager.components import sources
 from ..components_constants import (
-    SERVICE_USER,
-    SERVICE_GROUP,
-    HOME_DIR_KEY,
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
@@ -43,22 +40,13 @@ from ...constants import (
     CLOUDIFY_GROUP,
     CLOUDIFY_USER,
 )
-from ...utils import (
-    certificates,
-    common,
-    files,
-    sudoers,
-)
+from ...utils import certificates, common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
-from ...utils.users import create_service_user
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
 logger = get_logger(STAGE)
-
-STAGE_USER = '{0}_user'.format(STAGE)
-STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 CONF_DIR = join(HOME_DIR, 'conf')
@@ -114,23 +102,14 @@ class Stage(BaseComponent):
 
         files.copy_notice(STAGE)
         set_logrotate(STAGE)
-        self._create_user_and_set_permissions()
+        self._set_permissions()
         self._install_nodejs()
-        self._deploy_scripts()
 
-        self._add_snapshot_sudo_command()
-
-    def _create_user_and_set_permissions(self):
-        create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
-        # stage user is in the cfyuser group for replication
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
-        # For snapshot restore purposes
-        common.sudo(['usermod', '-aG', STAGE_GROUP, CLOUDIFY_USER])
-
+    def _set_permissions(self):
         logger.debug('Fixing permissions...')
-        common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
-        common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
-        common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, HOME_DIR)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, NODEJS_DIR)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, LOG_DIR)
         common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CONF_DIR)
 
     def _install_nodejs(self):
@@ -138,37 +117,13 @@ class Stage(BaseComponent):
         nodejs = files.get_local_source_path(sources.nodejs)
         common.untar(nodejs, NODEJS_DIR)
 
-    def _deploy_script(self, script_name, description, sudo_as=STAGE_USER):
-        sudoers.deploy_sudo_command_script(
-            script_name,
-            description,
-            component=STAGE,
-            allow_as=sudo_as,
-        )
-        common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
-
-    def _deploy_scripts(self):
-        config[STAGE][HOME_DIR_KEY] = HOME_DIR
-        self._deploy_script(
-            'restore-snapshot.py',
-            'Restore stage directories from a snapshot path'
-        )
-
     def _run_db_migrate(self):
         if config[CLUSTER_JOIN]:
             logger.debug('Joining cluster - not creating the stage db')
             return
         backend_dir = join(HOME_DIR, 'backend')
         npm_path = join(NODEJS_DIR, 'bin', 'npm')
-        common.run(
-            [
-                'sudo', '-u', STAGE_USER, 'bash', '-c',
-                'cd {path}; {npm} run db-migrate'.format(
-                    path=backend_dir,
-                    npm=npm_path,
-                ),
-            ],
-        )
+        common.run([npm_path, 'run', 'db-migrate'], cwd=backend_dir)
 
     def _set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
@@ -196,8 +151,6 @@ class Stage(BaseComponent):
                 component_name=POSTGRESQL_CLIENT,
                 logger=self.logger,
                 ca_destination=DB_CA_PATH,
-                owner=STAGE_USER,
-                group=STAGE_GROUP,
                 update_config=False,
             )
 
@@ -218,8 +171,6 @@ class Stage(BaseComponent):
                     logger=self.logger,
                     cert_destination=DB_CLIENT_CERT_PATH,
                     key_destination=DB_CLIENT_KEY_PATH,
-                    owner=STAGE_USER,
-                    group=STAGE_GROUP,
                     key_perms='400',
                     update_config=False,
                 )
@@ -248,7 +199,7 @@ class Stage(BaseComponent):
         # Using `write_to_file` because the path belongs to the stage user, so
         # we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
-        common.chown(STAGE_USER, STAGE_GROUP, config_path)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, config_path)
         common.chmod('640', config_path)
 
     def _set_internal_manager_ip(self):
@@ -259,10 +210,8 @@ class Stage(BaseComponent):
         if config[SSL_INPUTS]['internal_manager_host']:
             stage_config['ip'] = config[SSL_INPUTS]['internal_manager_host']
             content = json.dumps(stage_config, indent=4, sort_keys=True)
-            # Using `write_to_file` because the path belongs to the stage user,
-            # so we need to move with sudo
             files.write_to_file(contents=content, destination=config_path)
-            common.chown(STAGE_USER, STAGE_GROUP, config_path)
+            common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, config_path)
             common.chmod('640', config_path)
 
     def _verify_stage_alive(self):
@@ -272,21 +221,11 @@ class Stage(BaseComponent):
     def _start_and_validate_stage(self):
         self._set_community_mode()
         # Used in the service template
-        config[STAGE][SERVICE_USER] = STAGE_USER
-        config[STAGE][SERVICE_GROUP] = STAGE_GROUP
-        systemd.configure(STAGE,
-                          user=STAGE_USER, group=STAGE_GROUP)
+        systemd.configure(STAGE)
 
         logger.info('Starting Stage service...')
         systemd.restart(STAGE)
         self._verify_stage_alive()
-
-    def _add_snapshot_sudo_command(self):
-        sudoers.allow_user_to_sudo_command(
-            full_command='/opt/nodejs/bin/node',
-            description='Allow snapshots to restore stage',
-            allow_as=STAGE_USER,
-        )
 
     def _configure(self):
         self._set_db_url()
