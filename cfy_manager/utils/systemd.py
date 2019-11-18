@@ -38,7 +38,7 @@ class SystemD(object):
 
     def configure(self, service_name, render=True,
                   user=CLOUDIFY_USER, group=CLOUDIFY_GROUP,
-                  external_configure_params={}):
+                  external_configure_params=None):
         """This configures systemd for a specific service.
 
         It requires that two files are present for each service one containing
