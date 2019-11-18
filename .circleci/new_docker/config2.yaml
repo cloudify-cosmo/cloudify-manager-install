@@ -1,0 +1,41 @@
+manager:
+  private_ip: '127.0.0.1'
+  public_ip: '127.0.0.1'
+  hostname: 'host2'
+  cli_local_profile_host_name: 'localhost'
+  premium_edition: false
+  set_manager_ip_on_boot: true
+  security:
+    admin_password: 'admin'
+
+postgresql_client:
+  host: 172.17.0.2
+  ca_path: /etc/ssl/certs/ca-bundle.crt
+  server_db_name: postgres
+  server_username: postgres
+  server_password: 'postgres'
+  ssl_enabled: false
+  ssl_client_verification: false
+
+rabbitmq:
+  cluster_members:
+    rabbit1:
+      networks:
+        default: 172.17.0.3
+  ca_path: /tmp/rabbitmq-cert.pem
+
+sanity:
+  skip_sanity: true
+ssl_inputs:
+  ca_cert_path: '/tmp/ca.pem'
+  ca_key_path: '/tmp/ca_key.pem'
+
+nginx:
+  port: 8090
+
+services_to_install:
+- manager_service
+service_management: supervisord
+skip_sudo: true
+save_config: false
+join: true

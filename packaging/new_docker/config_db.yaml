@@ -1,0 +1,10 @@
+manager:
+  private_ip: '127.0.0.1'
+  public_ip: '127.0.0.1'
+
+
+services_to_install:
+ - database_service
+service_management: supervisord
+skip_sudo: true
+save_config: false

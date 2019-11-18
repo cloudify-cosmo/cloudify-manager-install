@@ -110,6 +110,40 @@ jobs:
           name: Check Manager Status
           command: |
             .circleci/cluster/validate_status.sh ${CONTAINER_NAME}
+  build_image:
+    machine: true
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: docker build
+          command: |
+            pushd packaging/new_docker
+              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+              time docker build -t cloudify-manager .
+              docker build -t cloudify-manager-queue --build-arg config=config_queue.yaml -f Dockerfile .
+              docker build -t cloudify-manager-db -f Dockerfile.db .
+            popd
+      - run:
+          name: run containers
+          command: |
+            set -eux
+            pushd .circleci/new_docker
+              docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=postgres -e POSTGRES_PASSWORD=postgres -d postgres:9.5
+              docker run --name cloudify-manager-queue -d -v $(pwd)/config_queue.yaml:/etc/cloudify/config.yaml --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges cloudify-manager-queue
+              docker run --name cloudify-manager-db -d -v $(pwd)/config_db.yaml:/etc/cloudify/config.yaml cloudify-manager-db
+              sleep 10
+              docker cp cloudify-manager-queue:/etc/cloudify/ssl/rabbitmq-cert.pem rabbitmq-cert.pem
+              docker run --name cloudify-manager -v $(pwd)/config.yaml:/tmp/config.yaml -d -v $(pwd)/rabbitmq-cert.pem:/tmp/rabbitmq-cert.pem --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges cloudify-manager
+              sleep 60
+              docker exec -it cloudify-manager tail /var/log/cloudify/manager/cfy_manager.log
+              docker cp cloudify-manager:/etc/cloudify/ssl/cloudify_internal_ca_cert.pem ca.pem
+              docker cp cloudify-manager:/etc/cloudify/ssl/cloudify_internal_ca_key.pem ca_key.pem
+              docker run --name cloudify-manager-2 -v $(pwd)/config2.yaml:/tmp/config.yaml -d -v $(pwd)/rabbitmq-cert.pem:/tmp/rabbitmq-cert.pem -v $(pwd)/ca.pem:/tmp/ca.pem -v $(pwd)/ca_key.pem:/tmp/ca_key.pem --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges cloudify-manager
+              sleep 60
+              docker exec -it cloudify-manager-2 tail /var/log/cloudify/manager/cfy_manager.log
+            popd
 
   install_cluster:
     machine: true
@@ -298,17 +332,13 @@ workflows:
   version: 2
   build:
     jobs: &build_jobs
-      - flake8
       - fetch_rpms
       - build_executable
       - build_rpm:
           requires:
             - fetch_rpms
             - build_executable
-      - install_manager:
-          requires:
-            - build_rpm
-      - install_cluster:
+      - build_image:
           requires:
             - build_rpm
 
