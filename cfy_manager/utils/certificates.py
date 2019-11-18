@@ -19,6 +19,7 @@ import json
 from contextlib import contextmanager
 
 from . import network
+from . import service
 from .common import sudo, remove, chown, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
@@ -339,8 +340,11 @@ def remove_key_encryption(src_key_path,
           'JSON file containing an object with the '
           '"hostname" and "networks" fields.')
 @argh.arg('--manager-hostname', help='The manager hostname to be stored')
+@argh.arg('--no-reload', help='Skip reloading nginx configuration',
+          default=False)
 def create_internal_certs(manager_hostname=None,
-                          metadata=const.CERT_METADATA_FILE_PATH):
+                          metadata=const.CERT_METADATA_FILE_PATH,
+                          no_reload=False):
     """
     Recreate Cloudify Manager's internal certificates, based on the manager IP
     and a metadata file input
@@ -377,6 +381,8 @@ def create_internal_certs(manager_hostname=None,
         hostname,
         filename=metadata
     )
+    if not no_reload and service.is_alive('nginx', append_prefix=False):
+        service.restart('nginx', append_prefix=False)
 
 
 @argh.arg('--private-ip', help="The manager's private IP", required=True)
