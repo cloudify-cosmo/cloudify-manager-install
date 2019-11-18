@@ -66,9 +66,6 @@ class UsageCollector(BaseComponent):
         if not self._validate_cronie_installed():
             return False
         common.mkdir(LOG_DIR)
-        common.chown(constants.CLOUDIFY_USER,
-                     constants.CLOUDIFY_GROUP,
-                     LOG_DIR)
         set_logrotate(USAGE_COLLECTOR)
         self._remove_cron_jobs()
         self._create_cron_jobs()
@@ -95,9 +92,6 @@ class UsageCollector(BaseComponent):
             destination_path = join(SCRIPTS_DESTINATION_PATH, script_name)
             files.deploy(source_path, destination_path)
             common.chmod('+x', destination_path)
-            common.chown(constants.CLOUDIFY_USER,
-                         constants.CLOUDIFY_GROUP,
-                         destination_path)
         logger.info('Usage Collector scripts successfully deployed')
 
     def _create_cron_jobs(self):
@@ -125,9 +119,8 @@ class UsageCollector(BaseComponent):
                                          script_name)
 
         # Adding a new job to crontab
-        # Adding sudo manually, because common.sudo doesn't support parenthesis
-        cmd = '(sudo crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'sudo crontab -u {0} -'.format(constants.CLOUDIFY_USER, job)
+        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
+              'crontab -u {0} -'.format(constants.CLOUDIFY_USER, job)
         common.run([cmd], shell=True)
 
     def _get_cron_time_string(self, interval_type, interval):
@@ -153,8 +146,8 @@ class UsageCollector(BaseComponent):
         logger.info('Usage Collector cron jobs successfully removed')
 
     def _delete_cron_job(self, job_comment):
-        cmd = "sudo crontab -u {0} -l | " \
+        cmd = "crontab -u {0} -l | " \
               "grep -v '# {1}' | " \
-              "sudo crontab -u {0} -" \
+              "crontab -u {0} -" \
               .format(constants.CLOUDIFY_USER, job_comment)
         common.run([cmd], shell=True)
