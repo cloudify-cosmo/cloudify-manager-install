@@ -140,8 +140,10 @@ def remove_files(file_list, ignore_failure=False):
         sudo(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
-def deploy(src, dst, render=True, additional_render_context={}):
+def deploy(src, dst, render=True, additional_render_context=None):
     if render:
+        if additional_render_context is None:
+            additional_render_context = {}
         template = _template_env.get_template(src)
         render_context = additional_render_context.copy()
         render_context.update(config)
