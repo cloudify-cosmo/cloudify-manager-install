@@ -518,7 +518,7 @@ def _prepare_execution(verbose=False,
                        clean_db=False,
                        config_write_required=False,
                        only_install=False,
-                       components=None):
+                       include_components=None):
     setup_console_logger(verbose)
 
     config.load_config()
@@ -527,7 +527,7 @@ def _prepare_execution(verbose=False,
         # but we do populate things that are not relevant.
         _populate_and_validate_config_values(private_ip, public_ip,
                                              admin_password, clean_db)
-    _create_component_objects(components)
+    _create_component_objects(include_components)
 
 
 def _print_finish_message():
@@ -638,7 +638,7 @@ def _validate_components_prepared(cmd):
         )
 
 
-def _get_components_list(components):
+def _get_components_list(include_components):
     """
     Match all available services to install with all desired ones and
     return a unique list ordered by service installation order
@@ -652,13 +652,13 @@ def _get_components_list(components):
     ordered_components = []
     for service in ordered_services:
         for component in SERVICE_COMPONENTS[service]:
-            if not components or component in components:
+            if not include_components or component in include_components:
                 ordered_components.append(component)
     return ordered_components
 
 
-def _create_component_objects(filter_components):
-    components_to_install = _get_components_list(filter_components)
+def _create_component_objects(include_components):
+    components_to_install = _get_components_list(include_components)
     for component_name in components_to_install:
         component_config = config.get(component_name, {})
         skip_installation = component_config.get('skip_installation', False)
@@ -827,11 +827,11 @@ def remove(verbose=False, force=False):
     _print_time()
 
 
-@argh.arg('filter_components', nargs='*')
-def start(filter_components, verbose=False):
+@argh.arg('include_components', nargs='*')
+def start(include_components, verbose=False):
     """ Start Cloudify Manager services """
 
-    _prepare_execution(verbose, components=filter_components)
+    _prepare_execution(verbose, components=include_components)
     _validate_components_prepared('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in components:
@@ -841,13 +841,13 @@ def start(filter_components, verbose=False):
     _print_time()
 
 
-@argh.arg('filter_components', nargs='*')
-def stop(filter_components, verbose=False, force=False):
+@argh.arg('include_components', nargs='*')
+def stop(include_components, verbose=False, force=False):
     """ Stop Cloudify Manager services """
 
-    _prepare_execution(verbose, components=filter_components)
+    _prepare_execution(verbose, components=include_components)
     _validate_components_prepared('stop')
-    if not filter_components:
+    if not include_components:
         _validate_force(force, 'stop')
 
     logger.notice('Stopping Cloudify Manager services...')
@@ -858,17 +858,17 @@ def stop(filter_components, verbose=False, force=False):
     _print_time()
 
 
-@argh.arg('filter_components', nargs='*')
-def restart(filter_components, verbose=False, force=False):
+@argh.arg('include_components', nargs='*')
+def restart(include_components, verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
-    _prepare_execution(verbose, components=filter_components)
+    _prepare_execution(verbose, components=include_components)
     _validate_components_prepared('restart')
     if not components:
         _validate_force(force, 'restart')
 
-    stop(filter_components, verbose, force)
-    start(filter_components, verbose)
+    stop(include_components, verbose, force)
+    start(include_components, verbose)
     _print_time()
 
 
