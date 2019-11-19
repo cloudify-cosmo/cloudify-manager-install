@@ -1329,20 +1329,22 @@ class PostgresqlServer(BaseComponent):
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')
-        systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._start_etcd()
             systemd.start('patroni', append_prefix=False)
             systemd.verify_alive('patroni', append_prefix=False)
+        else:
+            systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
         logger.notice('Stopping PostgreSQL Server...')
-        systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             systemd.stop('etcd', append_prefix=False)
             systemd.stop('patroni', append_prefix=False)
+        else:
+            systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):
