@@ -116,7 +116,7 @@ class Stage(BaseComponent):
         set_logrotate(STAGE)
         self._create_user_and_set_permissions()
         self._install_nodejs()
-        self._deploy_scripts()
+        # self._deploy_scripts()
 
         self._add_snapshot_sudo_command()
 
