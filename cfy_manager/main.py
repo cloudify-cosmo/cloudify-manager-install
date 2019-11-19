@@ -607,13 +607,6 @@ def _finish_configuration(only_install=None):
     config.dump_config()
 
 
-def _validate_force(force, cmd):
-    if not force:
-        raise BootstrapError(
-            'The --force flag must be passed to `cfy_manager {0}`'.format(cmd)
-        )
-
-
 def _validate_components_prepared(cmd):
     error_message = (
         'Could not find {touched_file}.\nThis most likely means '
@@ -806,7 +799,10 @@ def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
     _prepare_execution(verbose)
-    _validate_force(force, 'remove')
+    if force:
+        logger.warning('--force is deprecated, does nothing, and will be '
+                       'removed in a future version')
+
     logger.notice('Removing Cloudify Manager...')
 
     should_stop = _are_components_configured()
@@ -847,8 +843,9 @@ def stop(include_components, verbose=False, force=False):
 
     _prepare_execution(verbose, components=include_components)
     _validate_components_prepared('stop')
-    if not include_components:
-        _validate_force(force, 'stop')
+    if force:
+        logger.warning('--force is deprecated, does nothing, and will be '
+                       'removed in a future version')
 
     logger.notice('Stopping Cloudify Manager services...')
     for component in components:
@@ -864,8 +861,9 @@ def restart(include_components, verbose=False, force=False):
 
     _prepare_execution(verbose, components=include_components)
     _validate_components_prepared('restart')
-    if not components:
-        _validate_force(force, 'restart')
+    if force:
+        logger.warning('--force is deprecated, does nothing, and will be '
+                       'removed in a future version')
 
     stop(include_components, verbose, force)
     start(include_components, verbose)
