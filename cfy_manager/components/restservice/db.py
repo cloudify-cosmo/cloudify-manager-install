@@ -32,13 +32,13 @@ from ..components_constants import (
     PROVIDER_CONTEXT,
     DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
-    QUEUE_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
     DB_STATUS_REPORTER_ROLE,
-    QUEUE_STATUS_REPORTER_ROLE,
+    BROKER_STATUS_REPORTER_ROLE,
     DB_STATUS_REPORTER_USERNAME,
     MANAGER_STATUS_REPORTER_ROLE,
-    QUEUE_STATUS_REPORTER_USERNAME,
+    BROKER_STATUS_REPORTER_USERNAME,
     MANAGER_STATUS_REPORTER_USERNAME,
 )
 
@@ -143,15 +143,15 @@ def _create_populate_db_args_dict():
         args_dict['db_status_reporter_username'] = DB_STATUS_REPORTER_USERNAME
         args_dict['db_status_reporter_password'] = db_status_reporter_password
         args_dict['db_status_reporter_role'] = DB_STATUS_REPORTER_ROLE
-    queue_status_reporter_password = config.get(
-        QUEUE_STATUS_REPORTER, {}).get(PASSWORD)
-    if queue_status_reporter_password:
-        args_dict['queue_status_reporter_username'] = \
-            QUEUE_STATUS_REPORTER_USERNAME
-        args_dict['queue_status_reporter_password'] = \
-            queue_status_reporter_password
-        args_dict['queue_status_reporter_role'] = \
-            QUEUE_STATUS_REPORTER_ROLE
+    broker_status_reporter_password = config.get(
+        BROKER_STATUS_REPORTER, {}).get(PASSWORD)
+    if broker_status_reporter_password:
+        args_dict['broker_status_reporter_username'] = \
+            BROKER_STATUS_REPORTER_USERNAME
+        args_dict['broker_status_reporter_password'] = \
+            broker_status_reporter_password
+        args_dict['broker_status_reporter_role'] = \
+            BROKER_STATUS_REPORTER_ROLE
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
@@ -260,7 +260,7 @@ def _run_script(script_name, args_dict=None, configs=None):
 def populate_db(configs):
     reporter_to_conf_key = {
         'db_status_reporter_token': DB_STATUS_REPORTER,
-        'queue_status_reporter_token': QUEUE_STATUS_REPORTER,
+        'broker_status_reporter_token': BROKER_STATUS_REPORTER,
         'manager_status_reporter_token': MANAGER_STATUS_REPORTER
     }
 

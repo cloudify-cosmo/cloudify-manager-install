@@ -174,15 +174,15 @@ def _add_manager_status_reporter_user():
     RETURN_DICT['manager_status_reporter_token'] = user.api_token
 
 
-def _add_queue_status_reporter_user():
+def _add_broker_status_reporter_user():
     logger.info('Creating the Queue Status Reporter user, default tenant and '
                 'security roles')
     user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['queue_status_reporter_username'],
-        script_config['queue_status_reporter_password'],
-        script_config['queue_status_reporter_role'],
+        script_config['broker_status_reporter_username'],
+        script_config['broker_status_reporter_password'],
+        script_config['broker_status_reporter_role'],
     )
-    RETURN_DICT['queue_status_reporter_token'] = user.api_token
+    RETURN_DICT['broker_status_reporter_token'] = user.api_token
 
 
 def _add_db_status_reporter_user():
@@ -225,9 +225,9 @@ if __name__ == '__main__':
     if (script_config.get('manager_status_reporter_username')
             and script_config.get('manager_status_reporter_password')):
         _add_manager_status_reporter_user()
-    if (script_config.get('queue_status_reporter_username')
-            and script_config.get('queue_status_reporter_password')):
-        _add_queue_status_reporter_user()
+    if (script_config.get('broker_status_reporter_username')
+            and script_config.get('broker_status_reporter_password')):
+        _add_broker_status_reporter_user()
     if (script_config.get('db_status_reporter_username')
             and script_config.get('db_status_reporter_password')):
         _add_db_status_reporter_user()

@@ -44,7 +44,7 @@ from ..components_constants import (
     SERVER_PASSWORD,
     DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
-    QUEUE_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
 )
 from ..base_component import BaseComponent
@@ -331,7 +331,7 @@ class RestService(BaseComponent):
         if self._is_in_cluster_mode():
             config.setdefault(DB_STATUS_REPORTER, {})[PASSWORD] = \
                 self._generate_password()
-            config.setdefault(QUEUE_STATUS_REPORTER, {})[PASSWORD] = \
+            config.setdefault(BROKER_STATUS_REPORTER, {})[PASSWORD] = \
                 self._generate_password()
         config.setdefault(MANAGER_STATUS_REPORTER, {})[PASSWORD] = \
             self._generate_password()

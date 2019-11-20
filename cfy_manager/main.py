@@ -39,7 +39,7 @@ from .components.components_constants import (
     DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
     UNCONFIGURED_INSTALL,
-    QUEUE_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
 )
 from .components.globals import set_globals
@@ -553,8 +553,8 @@ def print_credentials_to_screen():
         MANAGER_STATUS_REPORTER, {}).get(TOKEN, None)
     db_status_reporter_token = config.get(
         DB_STATUS_REPORTER, {}).get(TOKEN, None)
-    queue_status_reporter_token = config.get(
-        QUEUE_STATUS_REPORTER, {}).get(TOKEN, None)
+    broker_status_reporter_token = config.get(
+        BROKER_STATUS_REPORTER, {}).get(TOKEN, None)
 
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
@@ -565,9 +565,9 @@ def print_credentials_to_screen():
     if db_status_reporter_token:
         logger.warning('Database Status Reported token: %s',
                        db_status_reporter_token)
-    if queue_status_reporter_token:
+    if broker_status_reporter_token:
         logger.warning('Queue Service Status Reported token: %s',
-                       queue_status_reporter_token)
+                       broker_status_reporter_token)
     set_file_handlers_level(current_level)
 
 
