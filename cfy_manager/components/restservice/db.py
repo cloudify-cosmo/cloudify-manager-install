@@ -32,12 +32,8 @@ from ..components_constants import (
     PROVIDER_CONTEXT,
     DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
-    STATUS_REPORTER_ROLE,
-    QUEUE_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
-    DB_STATUS_REPORTER_USERNAME,
-    QUEUE_STATUS_REPORTER_USERNAME,
-    MANAGER_STATUS_REPORTER_USERNAME,
 )
 
 from ..service_components import DATABASE_SERVICE
@@ -122,10 +118,10 @@ def _create_populate_db_args_dict():
     args_dict = {
         'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-        'manager_status_reporter_username': MANAGER_STATUS_REPORTER_USERNAME,
+        'manager_status_reporter_username': MANAGER_STATUS_REPORTER,
         'manager_status_reporter_password':
             config[MANAGER_STATUS_REPORTER][PASSWORD],
-        'status_reporter_role': STATUS_REPORTER_ROLE,
+        'manager_status_reporter_role': MANAGER_STATUS_REPORTER,
         'provider_context': _get_provider_context(),
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
@@ -138,15 +134,18 @@ def _create_populate_db_args_dict():
     db_status_reporter_password = config.get(
         DB_STATUS_REPORTER, {}).get(PASSWORD)
     if db_status_reporter_password:
-        args_dict['db_status_reporter_username'] = DB_STATUS_REPORTER_USERNAME
+        args_dict['db_status_reporter_username'] = DB_STATUS_REPORTER
         args_dict['db_status_reporter_password'] = db_status_reporter_password
-    queue_status_reporter_password = config.get(
-        QUEUE_STATUS_REPORTER, {}).get(PASSWORD)
-    if queue_status_reporter_password:
-        args_dict['queue_status_reporter_username'] = \
-            QUEUE_STATUS_REPORTER_USERNAME
-        args_dict['queue_status_reporter_password'] = \
-            queue_status_reporter_password
+        args_dict['db_status_reporter_role'] = DB_STATUS_REPORTER
+    broker_status_reporter_password = config.get(
+        BROKER_STATUS_REPORTER, {}).get(PASSWORD)
+    if broker_status_reporter_password:
+        args_dict['broker_status_reporter_username'] = \
+            BROKER_STATUS_REPORTER
+        args_dict['broker_status_reporter_password'] = \
+            broker_status_reporter_password
+        args_dict['broker_status_reporter_role'] = \
+            BROKER_STATUS_REPORTER
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
@@ -255,7 +254,7 @@ def _run_script(script_name, args_dict=None, configs=None):
 def populate_db(configs):
     reporter_to_conf_key = {
         'db_status_reporter_token': DB_STATUS_REPORTER,
-        'queue_status_reporter_token': QUEUE_STATUS_REPORTER,
+        'broker_status_reporter_token': BROKER_STATUS_REPORTER,
         'manager_status_reporter_token': MANAGER_STATUS_REPORTER
     }
 

@@ -44,16 +44,11 @@ SERVER_PASSWORD = 'server_password'
 SSL_ENABLED = 'ssl_enabled'
 SSL_CLIENT_VERIFICATION = 'ssl_client_verification'
 
-DB_STATUS_REPORTER = 'database_status_reporter'
-DB_STATUS_REPORTER_USERNAME = 'database_status_reporter'
-QUEUE_STATUS_REPORTER = 'queue_service_status_reporter'
-QUEUE_STATUS_REPORTER_USERNAME = 'queue_service_status_reporter'
+DB_STATUS_REPORTER = 'db_status_reporter'
+BROKER_STATUS_REPORTER = 'broker_status_reporter'
 MANAGER_STATUS_REPORTER = 'manager_status_reporter'
-MANAGER_STATUS_REPORTER_USERNAME = 'manager_status_reporter'
 PASSWORD = 'reporter_password'
 TOKEN = 'reporter_token'
-STATUS_REPORTER_ROLE = 'status_reporter'
-
 # endregion
 
 # region Config Keys
