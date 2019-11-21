@@ -45,16 +45,10 @@ SSL_ENABLED = 'ssl_enabled'
 SSL_CLIENT_VERIFICATION = 'ssl_client_verification'
 
 DB_STATUS_REPORTER = 'db_status_reporter'
-DB_STATUS_REPORTER_USERNAME = 'db_status_reporter'
 BROKER_STATUS_REPORTER = 'broker_status_reporter'
-BROKER_STATUS_REPORTER_USERNAME = 'broker_status_reporter'
 MANAGER_STATUS_REPORTER = 'manager_status_reporter'
-MANAGER_STATUS_REPORTER_USERNAME = 'manager_status_reporter'
 PASSWORD = 'reporter_password'
 TOKEN = 'reporter_token'
-MANAGER_STATUS_REPORTER_ROLE = 'manager_status_reporter'
-BROKER_STATUS_REPORTER_ROLE = 'broker_status_reporter'
-DB_STATUS_REPORTER_ROLE = 'db_status_reporter'
 # endregion
 
 # region Config Keys
