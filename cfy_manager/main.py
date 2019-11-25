@@ -827,7 +827,7 @@ def remove(verbose=False, force=False):
 def start(include_components, verbose=False):
     """ Start Cloudify Manager services """
 
-    _prepare_execution(verbose, components=include_components)
+    _prepare_execution(verbose, include_components=include_components)
     _validate_components_prepared('start')
     logger.notice('Starting Cloudify Manager services...')
     for component in components:
@@ -841,7 +841,7 @@ def start(include_components, verbose=False):
 def stop(include_components, verbose=False, force=False):
     """ Stop Cloudify Manager services """
 
-    _prepare_execution(verbose, components=include_components)
+    _prepare_execution(verbose, include_components=include_components)
     _validate_components_prepared('stop')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
@@ -859,7 +859,7 @@ def stop(include_components, verbose=False, force=False):
 def restart(include_components, verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
-    _prepare_execution(verbose, components=include_components)
+    _prepare_execution(verbose, include_components=include_components)
     _validate_components_prepared('restart')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
