@@ -24,7 +24,6 @@ DEPENDENCIES_ERROR_MESSAGES = {
     'python-setuptools': 'required by python',
     'python-backports': 'required by python',
     'python-backports-ssl_match_hostname': 'required by python',
-    'openssh-server': 'required by the sanity check'
 }
 
 COMPONENTS_DEPENDENCIES = {
@@ -42,7 +41,7 @@ COMPONENTS_DEPENDENCIES = {
     'Python': [],
     'RabbitMQ': ['initscripts', 'systemd-sysv'],
     'RestService': ['systemd-sysv'],
-    'Sanity': ['openssh-server'],
+    'Sanity': [],
     'Stage': ['systemd-sysv'],
     'UsageCollector': [],
     'Patch': [],
