@@ -13,15 +13,36 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from __future__ import print_function
+
 import json
+from os import environ
+from os.path import join
 
 import argh
 import yaml
 
+from ..utils import db
+from ..config import config
 from ..utils.systemd import systemd
-from ..utils.files import update_yaml_file, sudo_read
+from ..utils.common import allows_json_format
+from ..utils.install import is_premium_installed
 from ..logger import get_logger, setup_console_logger
-from ..constants import STATUS_REPORTER, STATUS_REPORTER_CONFIGURATION_PATH
+from ..utils.files import update_yaml_file, sudo_read
+from ..utils.scripts import run_script_on_manager_venv
+from ..components.restservice.restservice import REST_SECURITY_CONFIG_PATH
+from ..constants import (
+    STATUS_REPORTER,
+    STATUS_REPORTER_DIR,
+    STATUS_REPORTER_CONFIGURATION_PATH,
+)
+from ..components.components_constants import (
+    DB_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER
+)
+
+SCRIPTS_PATH = join(STATUS_REPORTER_DIR, 'scripts')
 
 logger = get_logger(STATUS_REPORTER)
 setup_console_logger()
@@ -123,3 +144,66 @@ def remove():
     logger.notice('Removing component status reporting service...')
     systemd.remove(STATUS_REPORTER)
     logger.notice('Component status reporting service removed')
+
+
+@allows_json_format(logger)
+def get_tokens(json_format=None):
+    """Retrieves the status reporters' tokens from the DB and prints them to
+    STDOUT.
+
+    This must be run from a Manager machine.
+    """
+    logger.notice('Trying to fetch status reporters tokens...')
+    if not is_premium_installed():
+        logger.error("This command can only be run on a Cloudify Manager "
+                     "machine.")
+        return
+    tokens = _get_status_reporter_tokens()
+    if not tokens:
+        logger.error("Failed to fetch tokens.")
+        return
+
+    if json_format:
+        print(json.dumps(tokens))
+    else:
+        for username, token in tokens.items():
+            logger.notice('Token of "{0}" is "{1}"'.format(username, token))
+
+
+def _get_status_reporter_tokens():
+    config.load_config()
+    sql_stmnt = (
+        """
+        SELECT
+            json_build_object(
+                'id', id,
+                'username', username,
+                'api_token_key', api_token_key
+            )
+        FROM users
+        WHERE username IN ('{0}', '{1}', '{2}')
+        """.format(
+            MANAGER_STATUS_REPORTER,
+            BROKER_STATUS_REPORTER,
+            DB_STATUS_REPORTER
+        )
+    )
+    query_result = db.run_psql_command(
+        command=['-c', sql_stmnt],
+        db_key='cloudify_db_name',
+    )
+    query_result = query_result.splitlines()
+    users = [json.loads(result.strip()) for result in query_result]
+    script_path = join(SCRIPTS_PATH, 'get_encoded_user_ids.py')
+    rest_security_config_path = environ.get(
+        'MANAGER_REST_SECURITY_CONFIG_PATH', REST_SECURITY_CONFIG_PATH)
+    envvars = {'MANAGER_REST_SECURITY_CONFIG_PATH': rest_security_config_path}
+    result = run_script_on_manager_venv(script_path, users, envvars=envvars)
+    if not result:
+        return None
+    users = json.loads(result.aggr_stdout)
+    tokens = {
+        user['username']:
+            '{0}{1}'.format(user['encoded_id'], user['api_token_key'])
+        for user in users}
+    return tokens

@@ -909,7 +909,8 @@ def main():
         status_reporter.start,
         status_reporter.stop,
         status_reporter.remove,
-        status_reporter.configure
+        status_reporter.configure,
+        status_reporter.get_tokens
     ], namespace='status-reporter')
 
     parser.add_commands([
