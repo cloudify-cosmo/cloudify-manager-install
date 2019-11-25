@@ -184,7 +184,6 @@ class Composer(BaseComponent):
         # Using `write_to_file` because the path belongs to the composer
         # user, so we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
 
     def install(self):

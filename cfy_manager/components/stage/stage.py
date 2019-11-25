@@ -19,7 +19,6 @@ from os.path import join
 
 from cfy_manager.components import sources
 from ..components_constants import (
-    HOME_DIR_KEY,
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
@@ -44,7 +43,6 @@ from ...utils import (
     common,
     files,
     service,
-    sudoers,
 )
 from ...utils.network import wait_for_port
 from ...utils.logrotate import set_logrotate, remove_logrotate
@@ -110,30 +108,11 @@ class Stage(BaseComponent):
         files.copy_notice(STAGE)
         set_logrotate(STAGE)
         self._install_nodejs()
-        self._deploy_scripts()
-
-        self._add_snapshot_sudo_command()
 
     def _install_nodejs(self):
         logger.info('Installing NodeJS...')
         nodejs = files.get_local_source_path(sources.nodejs)
         common.untar(nodejs, NODEJS_DIR)
-
-    def _deploy_script(self, script_name, description, sudo_as=STAGE_USER):
-        sudoers.deploy_sudo_command_script(
-            script_name,
-            description,
-            component=STAGE,
-            allow_as=sudo_as,
-        )
-        common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
-
-    def _deploy_scripts(self):
-        config[STAGE][HOME_DIR_KEY] = HOME_DIR
-        self._deploy_script(
-            'restore-snapshot.py',
-            'Restore stage directories from a snapshot path'
-        )
 
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):
@@ -229,7 +208,6 @@ class Stage(BaseComponent):
         # Using `write_to_file` because the path belongs to the stage user, so
         # we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
-        common.chown(STAGE_USER, STAGE_GROUP, config_path)
         common.chmod('640', config_path)
 
     def _set_internal_manager_ip(self):
@@ -243,19 +221,11 @@ class Stage(BaseComponent):
             # Using `write_to_file` because the path belongs to the stage user,
             # so we need to move with sudo
             files.write_to_file(contents=content, destination=config_path)
-            common.chown(STAGE_USER, STAGE_GROUP, config_path)
             common.chmod('640', config_path)
 
     def _verify_stage_alive(self):
         service.verify_alive(STAGE)
         wait_for_port(8088)
-
-    def _add_snapshot_sudo_command(self):
-        sudoers.allow_user_to_sudo_command(
-            full_command='/opt/nodejs/bin/node',
-            description='Allow snapshots to restore stage',
-            allow_as=STAGE_USER,
-        )
 
     def _configure(self):
         self._set_db_url()

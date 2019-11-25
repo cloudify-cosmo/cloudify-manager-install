@@ -1,6 +1,7 @@
 FROM registry.access.redhat.com/ubi7/ubi
 
 ARG rpm_file=cloudify-manager-install.rpm
+ARG config=config.yaml
 ARG uid=1500
 ARG gid=1500
 
@@ -8,41 +9,37 @@ RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
 # This should save some time for the installations of all these programs
-RUN yum install -y deltarpm
-RUN yum install -y epel-release
-RUN yum install -y initscripts sudo openssh-server systemd-sysv openssl-1.0.2k \
-    libselinux-utils logrotate python-setuptools \
-    python-backports python-backports-ssl_match_hostname which cronie
-RUN yum install -y supervisor
+RUN yum install -y openssl-1.0.2k libselinux-utils \
+    logrotate python-setuptools python-backports \
+    python-backports-ssl_match_hostname which cronie \
+    systemd-sysv initscripts tcp_wrappers-libs sudo
+RUN easy_install supervisor
 
 EXPOSE 80 443 53333
 
-# Should help to stop the container gracfully
-
 COPY $rpm_file /tmp/cloudify-manager-install.rpm
 RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager-install.rpm
-COPY config.yaml /etc/cloudify/config.yaml
+COPY $config /etc/cloudify/config.yaml
 COPY starter.sh /opt/cloudify-starter.sh
 RUN chmod +x /opt/cloudify-starter.sh
 RUN cfy_manager install --only-install --verbose
-RUN mkdir -p /var/log/supervisor
-RUN mkdir /run/cloudify-restservice
-RUN chown cfyuser: -R /var/log/cloudify \
-    /etc/nginx \
-    /etc/cloudify \
+RUN mkdir /etc/supervisord.d && chown cfyuser: /etc/supervisord.d
+RUN chown cfyuser: -R /etc/nginx \
     /var/log/nginx \
-    /opt/cloudify-stage \
+    /opt/cloudify-composer/backend \
+    /opt/status-reporter \
+    /opt/cloudify-stage/dist \
+    /opt/cloudify-stage/conf \
+    /etc/rabbitmq \
+    /var/log/cloudify \
+    /var/lib/rabbitmq \
+    /var/log/rabbitmq || true
+RUN chown -f cfyuser: /opt/cloudify-stage \
     /opt/cloudify-composer \
-    /opt/syncthing \
-    /opt/manager \
-    /opt/mgmtworker \
-    /opt/status-reporter
-RUN chown cfyuser: /etc/supervisord.d \
-    /opt/manager \
-    /opt/cloudify \
     /var/cache/nginx \
-    /var/log/supervisor \
-    /run/cloudify-restservice
+    /run/cloudify-restservice \
+    /run/rabbitmq || true
+
 RUN chmod a+wx /var/run
 RUN rm /etc/cloudify/config.yaml
 

@@ -29,10 +29,8 @@ from ...logger import get_logger
 from ...utils import common, service
 from ...utils.certificates import use_supplied_certificates
 from ...utils.files import (replace_in_file,
-                            remove_files,
-                            touch)
+                            remove_files)
 from ...utils.logrotate import setup_logrotate
-from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
@@ -46,14 +44,13 @@ class Manager(BaseComponent):
 
     def _install(self):
         self._create_cloudify_user()
-        self._create_sudoers_file_and_disable_sudo_requiretty()
         self._set_selinux_permissive()
         setup_logrotate()
         self._create_manager_resources_dirs()
 
     def _get_exec_tempdir(self):
         return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \
-               gettempdir()
+            gettempdir()
 
     def _create_cloudify_user(self):
         create_service_user(
@@ -67,17 +64,6 @@ class Manager(BaseComponent):
             constants.CLOUDIFY_GROUP,
             constants.CLOUDIFY_HOME_DIR,
         )
-
-    def _create_sudoers_file_and_disable_sudo_requiretty(self):
-        common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
-        touch(constants.CLOUDIFY_SUDOERS_FILE)
-        common.chmod('440', constants.CLOUDIFY_SUDOERS_FILE)
-        entry = 'Defaults:{user} !requiretty'\
-            .format(user=constants.CLOUDIFY_USER)
-        description = 'Disable sudo requiretty for {0}'.format(
-            constants.CLOUDIFY_USER
-        )
-        add_entry_to_sudoers(entry, description)
 
     def _get_selinux_state(self):
         try:
@@ -105,10 +91,15 @@ class Manager(BaseComponent):
 
     def _create_manager_resources_dirs(self):
         resources_root = constants.MANAGER_RESOURCES_HOME
-        common.mkdir(resources_root)
-        common.mkdir(join(resources_root, 'cloudify_agent'))
-        common.mkdir(join(resources_root, 'packages', 'scripts'))
-        common.mkdir(join(resources_root, 'packages', 'templates'))
+        for dirname in [
+            resources_root,
+            join(resources_root, 'cloudify_agent'),
+            join(resources_root, 'packages', 'scripts'),
+            join(resources_root, 'packages', 'templates')
+        ]:
+            common.mkdir(dirname)
+            common.chown(
+                constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, dirname)
 
     def _prepare_certificates(self):
         if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):

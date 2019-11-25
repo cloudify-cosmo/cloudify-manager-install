@@ -57,7 +57,7 @@ HOME_DIR = join('/etc', RABBITMQ)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 SECURE_PORT = 5671
 
-RABBITMQ_CTL = 'rabbitmqctl'
+RABBITMQ_CTL = '/usr/lib/rabbitmq/lib/rabbitmq_server-3.7.7/sbin/rabbitmqctl'
 logger = get_logger(RABBITMQ)
 
 
@@ -79,7 +79,6 @@ class RabbitMQ(BaseComponent):
         config_src = join(constants.COMPONENTS_DIR, RABBITMQ,
                           CONFIG, 'rabbitmq.config')
         deploy(config_src, RABBITMQ_CONFIG_PATH)
-        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
 
     def _init_service(self):
         logger.info('Initializing RabbitMQ...')
@@ -96,6 +95,7 @@ class RabbitMQ(BaseComponent):
         self._deploy_configuration()
 
     def _rabbitmqctl(self, command, **kwargs):
+        kwargs.setdefault('cwd', '/etc/cloudify')
         nodename = config[RABBITMQ]['nodename']
         base_command = [RABBITMQ_CTL, '-n', nodename]
         if config[RABBITMQ]['use_long_name']:
@@ -169,7 +169,6 @@ class RabbitMQ(BaseComponent):
 
         if cookie:
             write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
-            sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
 
     def join_cluster(self, join_node, restore_users_on_fail=False):
         join_node = self.add_missing_nodename_prefix(join_node)
@@ -441,8 +440,6 @@ class RabbitMQ(BaseComponent):
             new_networks=networks.keys(),
             # The cfyuser won't exist yet (and may never exist if only rabbit
             # is being installed)
-            owner='rabbitmq',
-            group='rabbitmq',
         )
 
         sign_cert = constants.CA_CERT_PATH if has_ca_key else None
@@ -493,7 +490,7 @@ class RabbitMQ(BaseComponent):
         self._possibly_set_nodename()
         self._set_erlang_cookie()
         self._possibly_add_hosts_entries()
-        service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
+        service.configure(RABBITMQ)
         if common.is_all_in_one_manager() or \
                 not config[RABBITMQ]['cluster_members']:
             # We must populate the brokers table for an all-in-one manager

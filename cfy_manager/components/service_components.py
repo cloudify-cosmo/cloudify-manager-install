@@ -35,7 +35,7 @@ SERVICE_COMPONENTS = {
         "manager",
         "postgresql_client",
         "restservice",
-        "manager_ip_setter",
+        # "manager_ip_setter",
         "nginx",
         "python",
         "amqp_postgres",

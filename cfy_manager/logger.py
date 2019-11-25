@@ -134,9 +134,9 @@ def _create_log_dir():
     if not isdir(log_dir):
         # Need to call subprocess directly, because utils.common depends on the
         # logger, and we'd get a cyclical import
-        check_output(['sudo', 'mkdir', '-p', log_dir],
+        check_output(['mkdir', '-p', log_dir],
                      preexec_fn=subprocess_preexec)
-        check_output(['sudo', 'chown', '-R',
+        check_output(['chown', '-R',
                       '{0}:{1}'.format(geteuid(), getegid()),
                       log_dir], preexec_fn=subprocess_preexec)
     return log_dir

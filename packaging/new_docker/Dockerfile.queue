@@ -4,8 +4,8 @@ ARG uid=1501
 ARG gid=1501
 
 ARG rpm_file=cloudify-manager-install.rpm
-RUN groupadd -g $gid rabbitmq
-RUN useradd -ms /bin/bash --home-dir /etc/rabbitmq -u $uid -g $gid rabbitmq
+RUN groupadd -g $gid cfyuser
+RUN useradd -ms /bin/bash --home-dir /etc/cloudify -u $uid -g $gid cfyuser
 
 # This should save some time for the installations of all these programs
 RUN yum install -y deltarpm
@@ -25,13 +25,15 @@ COPY config_queue.yaml /etc/cloudify/config.yaml
 COPY starter.sh /opt/cloudify-starter.sh
 RUN chmod +x /opt/cloudify-starter.sh
 RUN cfy_manager install --only-install --verbose
-RUN chown rabbitmq: /etc/supervisord.d
-RUN mkdir -p /var/log/supervisor && chown rabbitmq: /var/log/supervisor
-RUN chown rabbitmq: -R /etc/rabbitmq
-RUN chown rabbitmq: -R /var/log/cloudify
-RUN chown rabbitmq: -R /etc/cloudify
-RUN chown rabbitmq: -R /opt/status-reporter
-RUN mkdir /run/rabbitmq && chown rabbitmq: -R /run/rabbitmq
-USER rabbitmq
+RUN chown cfyuser: /etc/supervisord.d
+RUN mkdir -p /var/log/supervisor && chown cfyuser: /var/log/supervisor
+RUN chown cfyuser: -R /etc/rabbitmq
+RUN chown cfyuser: -R /var/lib/rabbitmq
+RUN chown cfyuser: -R /var/log/rabbitmq
+RUN chown cfyuser: -R /var/log/cloudify
+RUN chown cfyuser: -R /etc/cloudify
+RUN chown cfyuser: -R /opt/status-reporter
+RUN mkdir /run/rabbitmq && chown cfyuser: -R /run/rabbitmq
+USER cfyuser
 COPY supervisord.conf /etc/supervisord.conf
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]

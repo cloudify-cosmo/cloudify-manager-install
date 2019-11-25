@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 DEPENDENCIES_ERROR_MESSAGES = {
-    'sudo': 'necessary to run commands with root privileges',
     'openssl-1.0.2k': 'necessary for creating certificates',
     'logrotate': 'used in Cloudify logs',
     'systemd-sysv': 'required to create Cloudify services',
@@ -29,7 +28,7 @@ DEPENDENCIES_ERROR_MESSAGES = {
 }
 
 COMPONENTS_DEPENDENCIES = {
-    'default': ['sudo', 'logrotate', 'yum', 'python-setuptools',
+    'default': ['logrotate', 'yum', 'python-setuptools',
                 'python-backports', 'python-backports-ssl_match_hostname'],
     'Cli': ['sed'],
     'Composer': ['systemd-sysv', 'tar'],

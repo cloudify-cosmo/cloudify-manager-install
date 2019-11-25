@@ -32,7 +32,7 @@ from ..service_names import MGMTWORKER, MANAGER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
-from ...utils import common, service, sudoers
+from ...utils import common, service
 from ...utils.files import (
     deploy,
     get_local_source_path
@@ -74,17 +74,18 @@ class MgmtWorker(BaseComponent):
 
         self._deploy_hooks_config()
 
-    def _deploy_admin_token(self):
+    def _deploy_admin_token_script(self):
         script_name = 'create-admin-token.py'
-        sudoers.deploy_sudo_command_script(
-            script_name,
-            'Create an admin token for mgmtworker',
-            component=MGMTWORKER,
-            allow_as='root',
-        )
-        script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script_name)
-        common.chown('root', 'root', script_path)
-        common.chmod('0500', script_path)
+        script_src = join(const.COMPONENTS_DIR, MGMTWORKER, 'scripts',
+                          script_name)
+        target = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script_name)
+        deploy(script_src, target, render=True)
+        common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, target)
+        common.chmod('0500', target)
+
+    def _deploy_admin_token(self):
+        script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER,
+                           'create-admin-token.py')
         common.run([script_path])
 
     def _deploy_hooks_config(self):
@@ -108,9 +109,6 @@ class MgmtWorker(BaseComponent):
 
         # The user should use root to edit the hooks config file
         common.chmod('440', hooks_config_dst)
-        common.chown(const.CLOUDIFY_USER,
-                     const.CLOUDIFY_GROUP,
-                     hooks_config_dst)
 
     def _verify_mgmtworker_alive(self):
         service.verify_alive(MGMTWORKER)
@@ -122,7 +120,7 @@ class MgmtWorker(BaseComponent):
     def install(self):
         logger.notice('Installing Management Worker...')
         yum_install(sources.mgmtworker)
-
+        self._deploy_admin_token_script()
         try:
             get_local_source_path(sources.premium)
         except FileError:
