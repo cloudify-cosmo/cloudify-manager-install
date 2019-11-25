@@ -53,9 +53,9 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...utils import common, files, db
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
+from ...utils import common, files, db, node as cloudify_node
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
@@ -1173,6 +1173,8 @@ class PostgresqlServer(BaseComponent):
 
             if self._node_is_in_db(node_id):
                 self._remove_node_from_db(node_id)
+
+            cloudify_node.archive_status_report('db', node_id)
             self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):

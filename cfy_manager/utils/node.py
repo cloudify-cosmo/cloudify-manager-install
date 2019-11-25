@@ -18,9 +18,19 @@ from os import path
 import yaml
 
 from .files import sudo_read
+from .common import move, mkdir, chown
 from .install import is_premium_installed
+
+from ..logger import get_logger
 from ..exceptions import InitializationError
-from ..constants import STATUS_REPORTER_CONFIGURATION_PATH
+from ..constants import (CLOUDIFY_USER,
+                         CLOUDIFY_GROUP,
+                         STATUS_REPORTER_CONFIGURATION_PATH)
+
+
+ARCHIVE_DIR = 'archive'
+logger = get_logger('utils')
+CLUSTER_STATUS_PATH = '/opt/cloudify/cluster_statuses'
 
 
 def get_node_id():
@@ -42,3 +52,29 @@ def get_node_id():
                                   'configuration with the following: '
                                   '{0}'.format(e))
     return reporter_config['node_id']
+
+
+def archive_status_report(node_type, node_id):
+    file_name = '{node_type}_{node_id}.json'.format(node_type=node_type,
+                                                    node_id=node_id)
+    report_path = '{status_path}/{file_name}'.format(
+        status_path=CLUSTER_STATUS_PATH, file_name=file_name
+    )
+    if not path.exists(report_path):
+        return
+
+    try:
+        destination_path = '{status_path}/{archive}'.format(
+            status_path=CLUSTER_STATUS_PATH, archive=ARCHIVE_DIR
+        )
+        if not path.isdir(destination_path):
+            mkdir(destination_path, use_sudo=True)
+            chown(CLOUDIFY_USER, CLOUDIFY_GROUP, destination_path)
+        move(report_path, destination_path)
+        archived_report_path = '{archive_path}/{file_name}'.format(
+            archive_path=destination_path, file_name=file_name
+        )
+        chown(CLOUDIFY_USER, CLOUDIFY_GROUP, archived_report_path)
+    except Exception as e:
+        logger.warn('Error had occurred while trying to archive status report '
+                    'file {0}: {1}'.format(file_name, e))
