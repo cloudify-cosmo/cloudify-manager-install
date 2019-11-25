@@ -238,8 +238,8 @@ class Nginx(BaseComponent):
 
     def _start_and_verify_service(self):
         logger.info('Starting NGINX service...')
-        service.start(NGINX, append_prefix=False)
-        service.verify_alive(NGINX, append_prefix=False)
+        service.start(NGINX)
+        service.verify_alive(NGINX)
 
     def _configure(self):
         self._handle_certs()
@@ -254,7 +254,7 @@ class Nginx(BaseComponent):
         logger.notice('Configuring NGINX...')
         self._configure()
         service.configure(NGINX)
-        service.enable(NGINX, append_prefix=False)
+        service.enable(NGINX)
         logger.notice('NGINX successfully configured')
 
     def remove(self):
@@ -278,5 +278,5 @@ class Nginx(BaseComponent):
 
     def stop(self):
         logger.notice('Stopping NGINX...')
-        service.stop(NGINX, append_prefix=False)
+        service.stop(NGINX)
         logger.notice('NGINX successfully stopped')

@@ -62,8 +62,9 @@ class StatusReporter(BaseComponent):
         reporter_settings = {'reporter_type': self.reporter_type,
                              'extra_config_flags':
                                  self._build_extra_config_flags()}
-        service.configure(STATUS_REPORTER,
-                          external_configure_params=reporter_settings)
+        service.configure(self.reporter_type,
+                          external_configure_params=reporter_settings,
+                          src_dir=STATUS_REPORTER)
         logger.notice('Generating node id...')
         node_id = self._generate_basic_reporter_settings(self._user_name)
         logger.notice('Generated "{0}" node id.'.format(node_id))
@@ -80,7 +81,7 @@ class StatusReporter(BaseComponent):
     def remove(self):
         logger.notice('Removing status reporter {0}...'.format(
             self.reporter_type))
-        service.remove(STATUS_REPORTER)
+        service.remove(self.reporter_type)
         yum_remove('cloudify-status-reporter')
         logger.info('Removing status reporter directory...')
         remove_files([STATUS_REPORTER_PATH])

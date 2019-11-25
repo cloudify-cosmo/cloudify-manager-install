@@ -177,7 +177,8 @@ class Supervisord(object):
 
     def configure(self, service_name,
                   user=CLOUDIFY_USER, group=CLOUDIFY_GROUP,
-                  external_configure_params=None):
+                  external_configure_params=None,
+                  src_dir=None):
         """This configures systemd for a specific service.
 
         It requires that two files are present for each service one containing
@@ -189,15 +190,16 @@ class Supervisord(object):
         sid = _get_full_service_name(service_name, append_prefix=True)
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
 
-        service_dir_name = service_name.replace('-', '_')
-        srv_src = join(COMPONENTS_DIR, service_dir_name, 'supervisord.conf')
-
+        if src_dir is None:
+            src_dir = service_name
+        src_dir = src_dir.replace('-', '_')
+        srv_src = join(COMPONENTS_DIR, src_dir, 'supervisord.conf')
+        logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
             deploy(srv_src, dst, render=True,
                    additional_render_context=external_configure_params)
 
-        logger.debug('Enabling systemd .service...')
         self.enable(sid)
 
 
@@ -257,6 +259,7 @@ def is_alive(service_name, append_prefix=True):
 
 
 def configure(service_name, user=CLOUDIFY_USER, group=CLOUDIFY_GROUP,
-              external_configure_params=None):
+              external_configure_params=None, src_dir=None):
     return _get_backend().configure(
-        service_name, user, group, external_configure_params)
+        service_name, user, group, external_configure_params,
+        src_dir=src_dir)
