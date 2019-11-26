@@ -19,23 +19,16 @@ from os.path import join
 
 import argh
 
-from cfy_manager.utils import common
-from cfy_manager.constants import REST_HOME_DIR
+from ..utils.scripts import run_script_on_manager_venv
 
 SCRIPT_DIR = '/opt/cloudify/encryption'
 
 
 def _run_update_encryption_key_script(commit):
     script_path = join(SCRIPT_DIR, 'update-encryption-key')
+    script_args = ['--commit'] if commit else None
 
-    # Directly calling with this python bin, in order to make sure it's run
-    # in the correct venv
-    python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    cmd = [python_path, script_path]
-    if commit:
-        cmd.append('--commit')
-
-    return common.sudo(cmd)
+    return run_script_on_manager_venv(script_path, script_args=script_args)
 
 
 @argh.arg('-c', '--commit',

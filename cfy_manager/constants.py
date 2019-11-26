@@ -19,9 +19,11 @@ BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 NETWORKS_DIR = join(BASE_DIR, 'networks')
 UTILS_DIR = join(BASE_DIR, 'utils')
-STATUS_REPORTER_DIR = join(BASE_DIR, 'status_reporter')
 
 REST_HOME_DIR = '/opt/manager'
+REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
+REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
+REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
@@ -88,3 +90,18 @@ STATUS_REPORTER_MANAGERS_IPS = 'managers_ips'
 STATUS_REPORTER_CONFIG_KEY = 'extra_config'
 
 SCRIPTS = 'scripts'
+
+SELECT_USER_TOKENS_QUERY = """
+SELECT
+    json_build_object(
+        'id', id,
+        'username', username,
+        'api_token_key', api_token_key
+    )
+FROM users
+WHERE username
+"""
+
+VERBOSE_HELP_MSG = (
+    "Used to give more verbose output."
+)

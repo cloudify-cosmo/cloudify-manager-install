@@ -196,13 +196,22 @@ def _add_db_status_reporter_user():
     RETURN_DICT['db_status_reporter_token'] = user.api_token
 
 
+def file_path(path):
+    if os.path.exists(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(
+            "The file path \"{0}\" doesn't exist.".format(path))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create SQL DB tables and populate them with defaults'
     )
     parser.add_argument(
-        'config_path',
-        help='Path to a config file containing info needed by this script'
+        '--input',
+        help='Path to a config file containing info needed by this script',
+        required=True,
     )
 
     args = parser.parse_args()
@@ -213,7 +222,7 @@ if __name__ == '__main__':
         secret_key=config.instance.security_secret_key
     )
 
-    with open(args.config_path, 'r') as f:
+    with open(args.input, 'r') as f:
         script_config = json.load(f)
 
     if script_config.get('db_migrate_dir'):

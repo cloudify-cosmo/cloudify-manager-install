@@ -105,6 +105,10 @@ jobs:
             cd packaging/docker
             chmod +x install_manager.sh
             ./install_manager.sh
+      - run:
+          name: Check Manager Status
+          command: |
+            .circleci/cluster/validate_status.sh ${CONTAINER_NAME}
 
   install_cluster:
     machine: true
@@ -220,13 +224,12 @@ jobs:
             docker cp external_key_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_key.pem
             docker cp db_client_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_key.pem
             docker cp db_client_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_cert.pem
+            set +x
             docker exec ${MANAGER2_NAME} cfy_manager install --verbose
       - run:
-          name: status
+          name: Check Cluster Status
           command: |
-            set -eux
-            docker exec ${MANAGER1_NAME} cfy cluster status
-            docker exec ${MANAGER2_NAME} cfy cluster status
+            .circleci/cluster/validate_status.sh ${MANAGER1_NAME} ${MANAGER2_NAME}
 
   flake8:
     docker:

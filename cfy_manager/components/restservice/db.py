@@ -21,7 +21,6 @@ from os.path import join
 from .manager_config import make_manager_config
 from ..components_constants import (
     AGENT,
-    TOKEN,
     SCRIPTS,
     HOSTNAME,
     PASSWORD,
@@ -49,9 +48,10 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
+from ...utils.files import temp_copy
 from ...utils.node import get_node_id
 from ...utils import common, db as utils_db
-from ...utils.files import temp_copy, write_to_tempfile
+from ...utils.scripts import run_script_on_manager_venv
 
 logger = get_logger('DB')
 
@@ -222,32 +222,21 @@ def _create_process_env(rest_config=None, authorization_config=None,
     return env
 
 
-def _run_script(script_name, args_dict=None, configs=None):
+def _run_script(script_name, script_input=None, configs=None):
     """Runs a script in a separate process.
 
     :param script_name: script name inside the SCRIPTS_PATH dir.
-    :param args_dict: script arguments to pass to the script.
+    :param script_input: script input to pass to the script.
     :param configs: keword arguments dict to pass to _create_process_env(..).
     :return: the script's returned when it finished its execution.
     """
-    env_dict = None
-    if configs is not None:
-        env_dict = _create_process_env(**configs)
+    env_dict = _create_process_env(**configs) if configs else None
 
     script_path = join(SCRIPTS_PATH, script_name)
 
-    # Directly calling with this python bin, in order to make sure it's run
-    # in the correct venv
-    python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
-    cmd = [python_path, script_path]
-
-    if args_dict:
-        # The script won't have access to the config, so we dump the relevant
-        # args to a JSON file, and pass its path to the script
-        args_json_path = write_to_tempfile(args_dict, json_dump=True)
-        cmd.append(args_json_path)
-
-    proc_result = common.sudo(cmd, env=env_dict)
+    proc_result = run_script_on_manager_venv(script_path,
+                                             script_input,
+                                             envvars=env_dict)
     return _get_script_stdout(proc_result)
 
 
@@ -266,7 +255,7 @@ def populate_db(configs):
 
     for reporter in tokens:
         conf_key = reporter_to_conf_key[reporter]
-        config[conf_key][TOKEN] = tokens[reporter]
+        config[conf_key][constants.STATUS_REPORTER_TOKEN] = tokens[reporter]
     logger.notice('DB populated and AMQP resources successfully created')
 
 

@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -216,21 +216,71 @@ def is_all_in_one_manager():
     )
 
 
-def allows_json_format(_logger):
+def allows_json_format():
+    """Decorator for Argparse commands that allow a JSON format. This silences
+    the given logger and outputs only at least at the ERROR level. Any inner
+    calls that build a new logger will also have a silenced logger.
+    """
     dest = 'json_format'
 
     def decorator(f):
         @argh.arg('--json',
-                  help='Print the tokens in a JSON format instead of '
-                       'using logs.',
+                  help='Print in a JSON format instead of using logs.',
                   dest=dest,
                   default=False)
         @wraps(f)
         def wrapper(*args, **kwargs):
             if kwargs[dest]:
-                _logger.setLevel(logging.ERROR)
+                logging.getLogger().setLevel(logging.ERROR)
             return f(*args, **kwargs)
 
         return wrapper
 
     return decorator
+
+
+def output_table(data, fields):
+    field_lengths = []
+    for field in fields:
+        for entry in data:
+            if isinstance(entry[field], list):
+                entry[field] = ', '.join(entry[field])
+        if data:
+            field_length = max(
+                2 + len(str(entry[field])) for entry in data
+            )
+        else:
+            field_length = 2
+        field_length = max(
+            field_length,
+            2 + len(field)
+        )
+        field_lengths.append(field_length)
+
+    output_table_divider(field_lengths)
+    # Column headings
+    output_table_row(field_lengths, fields)
+    output_table_divider(field_lengths)
+
+    for entry in data:
+        row = [
+            entry[field] for field in fields
+        ]
+        output_table_row(field_lengths, row)
+    output_table_divider(field_lengths)
+
+
+def output_table_divider(lengths):
+    output = '+'
+    for length in lengths:
+        output += '-' * length
+        output += '+'
+    print(output)
+
+
+def output_table_row(lengths, entries):
+    output = '|'
+    for i in range(len(lengths)):
+        output += str(entries[i]).center(lengths[i])
+        output += '|'
+    print(output)

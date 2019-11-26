@@ -26,8 +26,18 @@ from collections import namedtuple
 
 import requests
 
-from cfy_manager.components import sources
 from . import db
+from ...components import sources
+from ...utils.db import run_psql_command
+from ...status_reporter import status_reporter
+from ...utils.scripts import get_encoded_user_ids
+from ...constants import (
+    REST_HOME_DIR,
+    REST_CONFIG_PATH,
+    SELECT_USER_TOKENS_QUERY,
+    REST_SECURITY_CONFIG_PATH,
+    REST_AUTHORIZATION_CONFIG_PATH
+)
 from ..components_constants import (
     VENV,
     CONFIG,
@@ -73,17 +83,13 @@ from ...utils.files import (
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
-HOME_DIR = '/opt/manager'
-REST_VENV = join(HOME_DIR, 'env')
+REST_VENV = join(REST_HOME_DIR, 'env')
 LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
-REST_CONFIG_PATH = join(HOME_DIR, 'cloudify-rest.conf')
-REST_AUTHORIZATION_CONFIG_PATH = join(HOME_DIR, 'authorization.conf')
-REST_SECURITY_CONFIG_PATH = join(HOME_DIR, 'rest-security.conf')
 logger = get_logger(RESTSERVICE)
-CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(HOME_DIR, 'license_key.pem.pub')
+CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(REST_HOME_DIR, 'license_key.pem.pub')
 REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
 LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
 
@@ -94,7 +100,7 @@ class RestService(BaseComponent):
 
     def _make_paths(self):
         # Used in the service templates
-        config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
+        config[RESTSERVICE][HOME_DIR_KEY] = REST_HOME_DIR
         config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
         config[RESTSERVICE][VENV] = REST_VENV
 
@@ -262,6 +268,24 @@ class RestService(BaseComponent):
                 db.create_amqp_resources(configs)
             else:
                 self._join_cluster(configs)
+            self._fetch_manager_reporter_token()
+
+    @staticmethod
+    def _fetch_manager_reporter_token():
+        sql_stmnt = "{0} = '{1}'".format(
+            SELECT_USER_TOKENS_QUERY,
+            MANAGER_STATUS_REPORTER
+        )
+        query_result = run_psql_command(
+            command=['-c', sql_stmnt],
+            db_key='cloudify_db_name',
+        )
+        manager_reporter = json.loads(query_result)
+        reporters_tokens = get_encoded_user_ids([manager_reporter])
+        config.setdefault(
+            MANAGER_STATUS_REPORTER,
+            {})[constants.STATUS_REPORTER_TOKEN] = \
+            reporters_tokens[MANAGER_STATUS_REPORTER]
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
@@ -482,8 +506,20 @@ class RestService(BaseComponent):
         else:
             self._verify_restservice_alive()
             self._upload_cloudify_license()
+        self._configure_status_reporter()
 
         logger.notice('Rest Service successfully configured')
+
+    @staticmethod
+    def _configure_status_reporter():
+        conf = {
+            'token':
+                config[
+                    MANAGER_STATUS_REPORTER][constants.STATUS_REPORTER_TOKEN],
+            'managers_ips': ['localhost'],
+            'ca_path': config[SSL_INPUTS]['internal_cert_path']
+        }
+        status_reporter.configure(**conf)
 
     def remove(self):
         logger.notice('Removing Restservice...')

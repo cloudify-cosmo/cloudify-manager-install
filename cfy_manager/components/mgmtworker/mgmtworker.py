@@ -61,6 +61,14 @@ class MgmtWorker(BaseComponent):
             allow_as='stage_user',
         )
 
+        sudoers.allow_user_to_sudo_command(
+            '/usr/bin/cfy_manager status-reporter configure '
+            '--token [a-zA-Z0-9]*',
+            description='Allows status reporter configuration during '
+                        'snapshort restore.',
+            allow_as='root',
+        )
+
         scripts = [
             (
                 'allow-snapshot-ssl-client-cert-access',

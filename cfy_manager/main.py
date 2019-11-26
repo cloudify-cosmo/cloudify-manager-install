@@ -30,7 +30,6 @@ from .components import (
     SERVICE_INSTALLATION_ORDER
 )
 from .components.components_constants import (
-    TOKEN,
     CLEAN_DB,
     SECURITY,
     PUBLIC_IP,
@@ -43,10 +42,16 @@ from .components.components_constants import (
     MANAGER_STATUS_REPORTER,
 )
 from .components.globals import set_globals
+from cfy_manager.utils.common import output_table
 from .components.service_names import MANAGER, POSTGRESQL_SERVER
 from .components.validations import validate
 from .config import config
-from .constants import INITIAL_CONFIGURE_FILE, INITIAL_INSTALL_FILE
+from .constants import (
+    VERBOSE_HELP_MSG,
+    INITIAL_INSTALL_FILE,
+    STATUS_REPORTER_TOKEN,
+    INITIAL_CONFIGURE_FILE,
+)
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
 from .logger import (
@@ -123,9 +128,6 @@ BROKER_ADD_JOIN_NODE_HELP_MSG = (
 BROKER_REMOVE_NODE_HELP_MSG = (
     "Broker node to remove. Before removal, the target broker must be taken "
     "offline by stopping its service or shutting down its host."
-)
-VERBOSE_HELP_MSG = (
-    "Used to give more verbose output."
 )
 DB_NODE_ADDRESS_HELP_MSG = (
     "Address of target DB cluster node."
@@ -414,53 +416,6 @@ def get_id():
     print('The node id is: {0}'.format(node_id))
 
 
-def output_table(data, fields):
-    field_lengths = []
-    for field in fields:
-        for entry in data:
-            if isinstance(entry[field], list):
-                entry[field] = ', '.join(entry[field])
-        if data:
-            field_length = max(
-                2 + len(str(entry[field])) for entry in data
-            )
-        else:
-            field_length = 2
-        field_length = max(
-            field_length,
-            2 + len(field)
-        )
-        field_lengths.append(field_length)
-
-    output_table_divider(field_lengths)
-    # Column headings
-    output_table_row(field_lengths, fields)
-    output_table_divider(field_lengths)
-
-    for entry in data:
-        row = [
-            entry[field] for field in fields
-        ]
-        output_table_row(field_lengths, row)
-    output_table_divider(field_lengths)
-
-
-def output_table_divider(lengths):
-    output = '+'
-    for length in lengths:
-        output += '-' * length
-        output += '+'
-    print(output)
-
-
-def output_table_row(lengths, entries):
-    output = '|'
-    for i in range(len(lengths)):
-        output += str(entries[i]).center(lengths[i])
-        output += '|'
-    print(output)
-
-
 def _print_time():
     running_time = time() - START_TIME
     m, s = divmod(running_time, 60)
@@ -550,24 +505,24 @@ def _print_finish_message():
 def print_credentials_to_screen():
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
     manager_status_reporter_token = config.get(
-        MANAGER_STATUS_REPORTER, {}).get(TOKEN, None)
+        MANAGER_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
     db_status_reporter_token = config.get(
-        DB_STATUS_REPORTER, {}).get(TOKEN, None)
+        DB_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
     broker_status_reporter_token = config.get(
-        BROKER_STATUS_REPORTER, {}).get(TOKEN, None)
+        BROKER_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
 
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
-    logger.warning('Admin password: %s', password)
+    logger.notice('Admin password: %s', password)
     if manager_status_reporter_token:
-        logger.warning('Manager Status Reported token: %s',
-                       manager_status_reporter_token)
+        logger.notice('Manager Status Reported token: %s',
+                      manager_status_reporter_token)
     if db_status_reporter_token:
-        logger.warning('Database Status Reported token: %s',
-                       db_status_reporter_token)
+        logger.notice('Database Status Reported token: %s',
+                      db_status_reporter_token)
     if broker_status_reporter_token:
-        logger.warning('Queue Service Status Reported token: %s',
-                       broker_status_reporter_token)
+        logger.notice('Queue Service Status Reported token: %s',
+                      broker_status_reporter_token)
     set_file_handlers_level(current_level)
 
 
@@ -906,6 +861,7 @@ def main():
     ], namespace='dbs')
 
     parser.add_commands([
+        status_reporter.show_configuration,
         status_reporter.start,
         status_reporter.stop,
         status_reporter.remove,

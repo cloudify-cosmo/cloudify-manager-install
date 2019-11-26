@@ -190,13 +190,18 @@ def check_rpms_are_present(rpm_list):
 
 
 def read_yaml_file(yaml_path):
-    if os.path.exists(yaml_path) and os.path.isfile(yaml_path):
+    """Loads a YAML file.
+
+    :param yaml_path: the path to the yaml file.
+    :return: YAML file parsed content.
+    """
+    if os.path.isfile(yaml_path):
         try:
             file_content = sudo_read(yaml_path)
             return yaml.safe_load(file_content)
         except yaml.YAMLError as e:
-            raise yaml.YAMLError('Failed to load yaml file {0}, due to '
-                                 '{1}'.format(yaml_path, str(e)))
+            raise yaml.YAMLError('Failed to load yaml file {0}, due to {1}'
+                                 ''.format(yaml_path, str(e)))
     return None
 
 
