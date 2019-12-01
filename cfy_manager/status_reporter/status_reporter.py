@@ -84,7 +84,7 @@ setup_console_logger()
           )
 def configure(managers_ip=[], user_name='', token='', ca_path='',
               reporting_freq=None, reporter_configuration_path=''):
-    logger.notice('Configuring component status reporting service with...')
+    logger.notice('Configuring Status Reporter service with...')
     conf_parameters_passed = any([managers_ip,
                                   user_name,
                                   token,
@@ -124,20 +124,22 @@ def configure(managers_ip=[], user_name='', token='', ca_path='',
                      'cfyreporter',
                      'cfyreporter',
                      update_content)
+    systemd.configure(STATUS_REPORTER)
+    logger.info('Starting Status Reporter service...')
     systemd.restart(STATUS_REPORTER)
-    logger.notice('Component status reporting service configured')
+    logger.notice('Status Reporter successfully configured')
 
 
 def start():
-    logger.notice('Starting component status reporting service...')
+    logger.notice('Starting Status Reporter service...')
     systemd.start(STATUS_REPORTER)
-    logger.notice('Started status reporting service')
+    logger.notice('Started Status Reporter service')
 
 
 def stop():
-    logger.notice('Stopping component status reporting service...')
+    logger.notice('Stopping Status Reporter service...')
     systemd.stop(STATUS_REPORTER)
-    logger.notice('Component status reporting service stopped')
+    logger.notice('Status Reporter service stopped')
 
 
 def remove():
