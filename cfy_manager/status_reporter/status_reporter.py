@@ -124,7 +124,6 @@ def configure(managers_ip=[], user_name='', token='', ca_path='',
                      'cfyreporter',
                      'cfyreporter',
                      update_content)
-    systemd.configure(STATUS_REPORTER)
     logger.info('Starting Status Reporter service...')
     systemd.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
