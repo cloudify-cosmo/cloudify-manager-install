@@ -15,7 +15,7 @@
 
 from ...config import config
 from ..service_components import QUEUE_SERVICE
-from ..components_constants import SERVICES_TO_INSTALL
+from ..components_constants import SERVICES_TO_INSTALL, BROKER_STATUS_REPORTER
 
 from .status_reporter import StatusReporter
 
@@ -29,3 +29,4 @@ class RabbitmqStatusReporter(StatusReporter):
         skip_installation = skip_installation or not self._should_install()
         super(RabbitmqStatusReporter, self).__init__(skip_installation,
                                                      'rabbitmq_reporter')
+        self._user_name = BROKER_STATUS_REPORTER

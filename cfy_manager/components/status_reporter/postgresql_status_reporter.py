@@ -16,7 +16,7 @@
 from ...config import config
 from ..service_names import POSTGRESQL_SERVER
 from ..service_components import DATABASE_SERVICE
-from ..components_constants import SERVICES_TO_INSTALL
+from ..components_constants import SERVICES_TO_INSTALL, DB_STATUS_REPORTER
 
 from .status_reporter import StatusReporter
 
@@ -32,3 +32,4 @@ class PostgresqlStatusReporter(StatusReporter):
         skip_installation = skip_installation or not self._should_install()
         super(PostgresqlStatusReporter, self).__init__(skip_installation,
                                                        'postgresql_reporter')
+        self._user_name = DB_STATUS_REPORTER

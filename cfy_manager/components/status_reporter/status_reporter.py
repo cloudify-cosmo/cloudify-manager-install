@@ -38,6 +38,7 @@ class StatusReporter(BaseComponent):
                                  sources.status_reporter))
         super(StatusReporter, self).__init__(skip_installation)
         self.reporter_type = reporter_type
+        self._user_name = None
 
     def _build_extra_config_flags(self):
         return ''
@@ -58,18 +59,19 @@ class StatusReporter(BaseComponent):
         systemd.configure(STATUS_REPORTER,
                           external_configure_params=reporter_settings)
         logger.notice('Generating node id...')
-        node_id = self._generate_node_id()
+        node_id = self._generate_basic_reporter_settings(self._user_name)
         logger.notice('Generated "{0}" node id.'.format(node_id))
         logger.notice('Status reporter {0} successfully configured'.format(
             self.reporter_type))
 
     @staticmethod
-    def _generate_node_id():
+    def _generate_basic_reporter_settings(user_name):
         node_id = str(uuid.uuid4())
         update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
                          'cfyreporter',
                          'cfyreporter',
-                         {'node_id': node_id})
+                         {'node_id': node_id,
+                          'user_name': user_name})
         return node_id
 
     def remove(self):
