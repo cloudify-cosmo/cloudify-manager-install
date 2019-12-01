@@ -26,6 +26,7 @@ from ...utils.files import (remove_files,
                             check_rpms_are_present)
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
+                          STATUS_REPORTER_OS_USER,
                           STATUS_REPORTER_CONFIGURATION_PATH)
 
 logger = get_logger(STATUS_REPORTER)
@@ -68,8 +69,8 @@ class StatusReporter(BaseComponent):
     def _generate_basic_reporter_settings(user_name):
         node_id = str(uuid.uuid4())
         update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                         'cfyreporter',
-                         'cfyreporter',
+                         STATUS_REPORTER_OS_USER,
+                         STATUS_REPORTER_OS_USER,
                          {'node_id': node_id,
                           'user_name': user_name})
         return node_id

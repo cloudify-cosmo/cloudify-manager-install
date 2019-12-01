@@ -82,5 +82,6 @@ STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
 STATUS_REPORTER_CONFIGURATION_PATH = join(
     STATUS_REPORTER_PATH,
     'status_reporter_configuration.yaml')
+STATUS_REPORTER_OS_USER = 'cfyreporter'
 
 SCRIPTS = 'scripts'
