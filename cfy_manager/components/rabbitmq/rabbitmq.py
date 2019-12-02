@@ -15,6 +15,7 @@
 
 import json
 import time
+import socket
 from os.path import join
 
 import requests
@@ -357,6 +358,7 @@ class RabbitMQ(BaseComponent):
                             node=node,
                         )
                     )
+                ip = socket.gethostbyname(ip)
                 add_to_hosts.append('{ip} {name}'.format(
                     ip=ip,
                     name=node,
