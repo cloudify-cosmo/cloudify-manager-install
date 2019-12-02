@@ -358,7 +358,15 @@ class RabbitMQ(BaseComponent):
                             node=node,
                         )
                     )
-                ip = socket.gethostbyname(ip)
+                try:
+                    ip = socket.gethostbyname(ip)
+                except socket.gaierror as e:
+                    raise ValidationError(
+                        'Cannot resolve: {addr} (rabbitmq node {node} default '
+                        'network address): {err}'.format(
+                            addr=ip, node=node, err=e
+                        )
+                    )
                 add_to_hosts.append('{ip} {name}'.format(
                     ip=ip,
                     name=node,
