@@ -15,6 +15,7 @@
 
 import json
 import time
+import socket
 from os.path import join
 
 import requests
@@ -355,6 +356,15 @@ class RabbitMQ(BaseComponent):
                         'A default network ip must be set for this '
                         'node.'.format(
                             node=node,
+                        )
+                    )
+                try:
+                    ip = socket.gethostbyname(ip)
+                except socket.gaierror as e:
+                    raise ValidationError(
+                        'Cannot resolve: {addr} (rabbitmq node {node} default '
+                        'network address): {err}'.format(
+                            addr=ip, node=node, err=e
                         )
                     )
                 add_to_hosts.append('{ip} {name}'.format(
