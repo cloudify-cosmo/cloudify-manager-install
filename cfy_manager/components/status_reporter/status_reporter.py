@@ -23,11 +23,15 @@ from ...utils.systemd import systemd
 from ...utils.files import update_yaml_file
 from ...utils.install import yum_install, yum_remove
 from ...utils.files import (remove_files,
-                            check_rpms_are_present)
+                            read_yaml_file,
+                            check_rpms_are_present
+                            )
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
                           STATUS_REPORTER_OS_USER,
-                          STATUS_REPORTER_CONFIGURATION_PATH)
+                          STATUS_REPORTER_CONFIGURATION_PATH,
+                          STATUS_REPORTER_TOKEN,
+                          STATUS_REPORTER_MANAGERS_IPS)
 
 logger = get_logger(STATUS_REPORTER)
 
@@ -87,3 +91,31 @@ class StatusReporter(BaseComponent):
         remove_files([STATUS_REPORTER_PATH])
         logger.notice('Status reporter {0} successfully removed'.format(
             self.reporter_type))
+
+    @staticmethod
+    def _is_status_reporter_configured():
+        status_reporter_configuration = read_yaml_file(
+            STATUS_REPORTER_CONFIGURATION_PATH)
+        return (status_reporter_configuration.get(
+            STATUS_REPORTER_MANAGERS_IPS, None) and
+                status_reporter_configuration.get(
+                    STATUS_REPORTER_TOKEN, None))
+
+    def start(self):
+        if not (self._is_status_reporter_configured()):
+            logger.warning('Not starting status reporter service, please '
+                           'configure first the mandatory settings: '
+                           'Cloudify\'s managers ips and authentication '
+                           'token')
+            return
+        logger.notice('Starting Status Reporter service...')
+        systemd.start(STATUS_REPORTER)
+        logger.notice('Started Status Reporter service')
+
+    def stop(self):
+        if not (self._is_status_reporter_configured()):
+            logger.warning('There is no status reporter service up')
+            return
+        logger.notice('Stopping Status Reporter service...')
+        systemd.stop(STATUS_REPORTER)
+        logger.notice('Status Reporter service stopped')

@@ -35,7 +35,9 @@ from ..constants import (
     STATUS_REPORTER,
     STATUS_REPORTER_DIR,
     STATUS_REPORTER_OS_USER,
-    STATUS_REPORTER_CONFIGURATION_PATH
+    STATUS_REPORTER_CONFIGURATION_PATH,
+    STATUS_REPORTER_TOKEN,
+    STATUS_REPORTER_MANAGERS_IPS
 )
 from ..components.components_constants import (
     DB_STATUS_REPORTER,
@@ -120,9 +122,9 @@ def _get_configure_args(ca_path, log_level, managers_ip, node_id,
                         reporting_freq, token, user_name):
     conf_parameters_passed = {
         'user_name': user_name,
-        'token': token,
+        STATUS_REPORTER_TOKEN: token,
         'ca_path': ca_path,
-        'managers_ips': managers_ip,
+        STATUS_REPORTER_MANAGERS_IPS: managers_ip,
         'reporting_freq': reporting_freq,
         'node_id': node_id,
         'log_level': log_level

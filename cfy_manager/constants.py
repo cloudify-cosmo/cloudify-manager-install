@@ -83,5 +83,7 @@ STATUS_REPORTER_CONFIGURATION_PATH = join(
     STATUS_REPORTER_PATH,
     'status_reporter_configuration.yaml')
 STATUS_REPORTER_OS_USER = 'cfyreporter'
+STATUS_REPORTER_TOKEN = 'token'
+STATUS_REPORTER_MANAGERS_IPS = 'managers_ips'
 
 SCRIPTS = 'scripts'
