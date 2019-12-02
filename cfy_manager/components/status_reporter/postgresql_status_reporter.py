@@ -31,5 +31,5 @@ class PostgresqlStatusReporter(StatusReporter):
     def __init__(self, skip_installation):
         skip_installation = skip_installation or not self._should_install()
         super(PostgresqlStatusReporter, self).__init__(skip_installation,
-                                                       'postgresql_reporter')
-        self._user_name = DB_STATUS_REPORTER
+                                                       'postgresql_reporter',
+                                                       DB_STATUS_REPORTER)

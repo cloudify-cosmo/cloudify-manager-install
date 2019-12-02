@@ -33,13 +33,16 @@ logger = get_logger(STATUS_REPORTER)
 
 
 class StatusReporter(BaseComponent):
-    def __init__(self, skip_installation, reporter_type):
+    def __init__(self, skip_installation, reporter_type, user_name):
         skip_installation = (skip_installation or
                              not check_rpms_are_present(
                                  sources.status_reporter))
         super(StatusReporter, self).__init__(skip_installation)
+        self._user_name = user_name
+
+        # The reporter type correlates to the name of the reporter script
+        # defined on it's package.
         self.reporter_type = reporter_type
-        self._user_name = None
 
     def _build_extra_config_flags(self):
         return ''

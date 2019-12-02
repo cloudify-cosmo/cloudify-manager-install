@@ -28,5 +28,5 @@ class RabbitmqStatusReporter(StatusReporter):
     def __init__(self, skip_installation):
         skip_installation = skip_installation or not self._should_install()
         super(RabbitmqStatusReporter, self).__init__(skip_installation,
-                                                     'rabbitmq_reporter')
-        self._user_name = BROKER_STATUS_REPORTER
+                                                     'rabbitmq_reporter',
+                                                     BROKER_STATUS_REPORTER)

@@ -21,5 +21,5 @@ class ManagerStatusReporter(StatusReporter):
 
     def __init__(self, skip_installation):
         super(ManagerStatusReporter, self).__init__(skip_installation,
-                                                    'manager_reporter')
-        self._user_name = MANAGER_STATUS_REPORTER
+                                                    'manager_reporter',
+                                                    MANAGER_STATUS_REPORTER)
