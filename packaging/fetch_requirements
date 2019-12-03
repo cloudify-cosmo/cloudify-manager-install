@@ -36,13 +36,12 @@ AGENT_INFO = {'name': 'cloudify-agent', 'patterns': ['/cloudify-agents']}
 MANAGER_INFO = {
     'name': 'cloudify-manager',
     'patterns': [
-        '/cloudify-amqp',
-        '/cloudify-amqp-postgres',
         '/cloudify-rest-service',
         '/cloudify-premium',
         '/cloudify-rabbitmq',
         '/cloudify-management-worker',
-        '/cloudify-manager-ip-setter'
+        '/cloudify-manager-ip-setter',
+        '/clouidfy-status-reporter'
     ]
 }
 
