@@ -18,7 +18,8 @@ import argh
 import json
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown, copy, network
+from . import network
+from .common import sudo, remove, chown, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
