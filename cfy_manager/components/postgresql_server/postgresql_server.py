@@ -773,7 +773,7 @@ class PostgresqlServer(BaseComponent):
         """
         parsed = network.parse_ip(address)
         if not parsed:  # name, not IP
-            return parsed
+            return address
         if parsed.version == 4:
             return '{0}/32'.format(address)
         elif parsed.version == 6:
