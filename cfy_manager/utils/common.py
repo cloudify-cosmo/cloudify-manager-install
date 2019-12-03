@@ -34,10 +34,7 @@ from cfy_manager.components.components_constants import SERVICES_TO_INSTALL
 from cfy_manager.components.service_components import (QUEUE_SERVICE,
                                                        MANAGER_SERVICE,
                                                        DATABASE_SERVICE)
-from cfy_manager.components.service_names import (
-    POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER,
-)
+from cfy_manager.components.service_names import POSTGRESQL_SERVER
 
 from . import subprocess_preexec
 
@@ -164,9 +161,6 @@ def manager_using_db_cluster():
     """Is this manager using a clustered DB backend?"""
     return (
         DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]
-        and config[POSTGRESQL_CLIENT]['host'] in (
-            '127.0.0.1', 'localhost',
-        )
         and config[POSTGRESQL_SERVER]['cluster']['nodes']
     )
 
