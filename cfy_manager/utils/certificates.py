@@ -16,10 +16,9 @@
 import os
 import argh
 import json
-import socket
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown, copy
+from .common import sudo, remove, chown, copy, network
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
@@ -103,20 +102,7 @@ def _format_ips(ips, cn=None):
     ]
     subject_altips = []
     for name in altnames:
-        ip_address = False
-        try:
-            socket.inet_pton(socket.AF_INET, name)
-            ip_address = True
-        except socket.error:
-            # Not IPv4
-            pass
-        try:
-            socket.inet_pton(socket.AF_INET6, name)
-            ip_address = True
-        except socket.error:
-            # Not IPv6
-            pass
-        if ip_address:
+        if network.parse_ip(name):
             subject_altips.append('IP:{name}'.format(name=name))
 
     cert_metadata = ','.join([
