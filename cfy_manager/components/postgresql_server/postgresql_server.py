@@ -18,6 +18,7 @@ import re
 import time
 import json
 import yaml
+import socket
 from copy import copy
 from getpass import getuser
 from tempfile import mkstemp
@@ -440,7 +441,11 @@ class PostgresqlServer(BaseComponent):
         self._create_patroni_config(PATRONI_CONFIG_PATH)
         common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
         common.chmod('640', PATRONI_CONFIG_PATH)
-        files.deploy(os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH)
+        files.deploy(
+            os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
+            additional_render_context={
+                'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+            })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
         common.chmod('440', ETCD_CONFIG_PATH)
         common.chown('postgres', '', '/var/lib/patroni')
