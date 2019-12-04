@@ -15,7 +15,8 @@
 
 from ...config import config
 from ...utils.files import update_yaml_file
-from ...constants import STATUS_REPORTER_CONFIGURATION_PATH
+from ...constants import (STATUS_REPORTER_CONFIG_KEY,
+                          STATUS_REPORTER_CONFIGURATION_PATH)
 
 from ..service_components import QUEUE_SERVICE
 from ..components_constants import SERVICES_TO_INSTALL, BROKER_STATUS_REPORTER
@@ -39,12 +40,12 @@ class RabbitmqStatusReporter(StatusReporter):
         update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
                          'cfyreporter',
                          'cfyreporter',
-                         {'extra_config': self._get_extra_config()})
+                         {STATUS_REPORTER_CONFIG_KEY: self._extra_config()})
 
     @staticmethod
-    def _get_extra_config():
+    def _extra_config():
         extra_config = {'use_long_name': config['rabbitmq']['use_long_name'],
-                        'rabbitmq_username': config['rabbitmq']['username'],
-                        'rabbitmq_password': config['rabbitmq']['password'],
-                        'rabbitmq_nodename': config['rabbitmq']['nodename']}
+                        'username': config['rabbitmq']['username'],
+                        'password': config['rabbitmq']['password'],
+                        'nodename': config['rabbitmq']['nodename']}
         return extra_config
