@@ -90,8 +90,10 @@ rabbitmq:
   username: cloudify
   password: c10udify
 
-  # A list of cluster members, including network-specific IPs.
-  # The 'default' network IP must be set for each member.
+  # A list of cluster members, including network-specific addresses.
+  # The 'default' network address must be set for each member.
+  # (addresses can be IPs, and the address of the local node will be used for
+  # connecting to it, so it must be allowed by the rabbitmq certificate)
   # If installing an all-in-one manager this section can be left blank.
   # Example:
   # cluster_members:
@@ -99,8 +101,8 @@ rabbitmq:
   #     node_id: <Cloudify's auto-generated id of the rabbit node> (only needed on
   #              the first manager installed in a cluster)
   #     networks:
-  #       default: <ip of rabbit node> (not needed if node name is resolvable via DNS)
-  #       <other network name>: <ip for this node on 'other network'>
+  #       default: <address of rabbit node> (not needed if node name is resolvable via DNS)
+  #       <other network name>: <address for this node on 'other network'>
   #     ...
   #   <name of second rabbit node>:
   #     node_id: ...

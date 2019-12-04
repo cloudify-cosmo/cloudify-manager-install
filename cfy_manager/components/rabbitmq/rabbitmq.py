@@ -15,6 +15,7 @@
 
 import json
 import time
+import socket
 from os.path import join
 
 import requests
@@ -251,7 +252,13 @@ class RabbitMQ(BaseComponent):
                 break
 
     def list_rabbit_nodes(self):
-        nodes_url = 'https://localhost:15671/api/nodes'
+        if config[RABBITMQ].get('management_only_local'):
+            nodes_url = 'https://localhost:15671/api/nodes'
+        else:
+            nodename = config[RABBITMQ]['nodename'].split('@')[-1]
+            default_ip = config[RABBITMQ]['cluster_members'][
+                nodename]['networks']['default']
+            nodes_url = 'https://{0}:15671/api/nodes'.format(default_ip)
         auth = (
             config[RABBITMQ]['username'],
             config[RABBITMQ]['password'],
@@ -349,6 +356,15 @@ class RabbitMQ(BaseComponent):
                         'A default network ip must be set for this '
                         'node.'.format(
                             node=node,
+                        )
+                    )
+                try:
+                    ip = socket.gethostbyname(ip)
+                except socket.gaierror as e:
+                    raise ValidationError(
+                        'Cannot resolve: {addr} (rabbitmq node {node} default '
+                        'network address): {err}'.format(
+                            addr=ip, node=node, err=e
                         )
                     )
                 add_to_hosts.append('{ip} {name}'.format(

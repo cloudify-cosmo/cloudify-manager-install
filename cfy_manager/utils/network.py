@@ -20,6 +20,7 @@ import urllib2
 from time import sleep
 from tempfile import mkstemp
 from urlparse import urlparse
+from ipaddress import ip_address
 
 from ..exceptions import NetworkError
 from ..components.service_names import MANAGER
@@ -29,6 +30,18 @@ from ..config import config
 from ..logger import get_logger
 
 logger = get_logger('Network')
+
+
+def parse_ip(ip):
+    """Parse the string ip, and return an IPAddress or None"""
+    # ip should be unicode, coming from yaml, but in python 2
+    # it can unfortunately be bytes depending on the actual value
+    if isinstance(ip, bytes):
+        ip = ip.decode('utf-8')
+    try:
+        return ip_address(ip)
+    except ValueError:
+        return None
 
 
 def is_url(url):

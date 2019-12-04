@@ -18,6 +18,7 @@ import re
 import time
 import json
 import yaml
+import socket
 from copy import copy
 from getpass import getuser
 from tempfile import mkstemp
@@ -55,7 +56,7 @@ from ...config import config
 from ...logger import get_logger
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
-from ...utils import common, files, db, node as cloudify_node
+from ...utils import common, files, db, node as cloudify_node, network
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
@@ -440,7 +441,11 @@ class PostgresqlServer(BaseComponent):
         self._create_patroni_config(PATRONI_CONFIG_PATH)
         common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
         common.chmod('640', PATRONI_CONFIG_PATH)
-        files.deploy(os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH)
+        files.deploy(
+            os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
+            additional_render_context={
+                'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+            })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
         common.chmod('440', ETCD_CONFIG_PATH)
         common.chown('postgres', '', '/var/lib/patroni')
@@ -495,8 +500,10 @@ class PostgresqlServer(BaseComponent):
                 # pg_hba in case this is being added to an existing cluster
                 patroni_conf = self._get_patroni_dcs_conf(local_only=False)
                 node_ip = config[MANAGER][PRIVATE_IP]
+                look_for = ' {address} '.format(
+                    address=self._format_pg_hba_address(node_ip))
                 if not any(
-                    ' {ip}/32 '.format(ip=node_ip) in entry
+                    look_for in entry
                     for entry in patroni_conf['postgresql']['pg_hba']
                 ):
                     self._add_node_to_pg_hba(
@@ -756,10 +763,31 @@ class PostgresqlServer(BaseComponent):
         with open(patroni_config_path, 'w') as f:
             f.write(yaml.dump(patroni_conf, default_flow_style=False))
 
+    def _format_pg_hba_address(self, address):
+        """Format the address for use in pg_hba
+
+        Postgresql expects the following in pg_hba:
+         - for ipv4 addresses: ip/32
+         - for ipv6 addresses: ip/128
+         - for names: no postfix
+        """
+        parsed = network.parse_ip(address)
+        if not parsed:  # name, not IP
+            return address
+        if parsed.version == 4:
+            return '{0}/32'.format(address)
+        elif parsed.version == 6:
+            return '{0}/128'.format(address)
+        else:
+            raise ValueError('Unexpected IP version in {0}: {1}'
+                             .format(address, parsed.version))
+
     def _add_node_to_pg_hba(self, pg_hba, node):
+        address = self._format_pg_hba_address(node)
         pg_hba[:0] = [
-            'hostssl all postgres {ip}/32 md5'.format(ip=node),
-            'hostssl replication replicator {ip}/32 md5'.format(ip=node)
+            'hostssl all postgres {address} md5'.format(address=address),
+            'hostssl replication replicator {address} md5'.format(
+                address=address)
         ]
 
     def _get_cluster_addresses(self):
@@ -1151,7 +1179,8 @@ class PostgresqlServer(BaseComponent):
                 'Updating pg_hba to remove {address}'.format(address=address)
             )
             patroni_config = self._get_patroni_dcs_conf()
-            exclusion_string = ' {addr}/32 '.format(addr=address)
+            exclusion_string = ' {address} '.format(
+                address=self._format_pg_hba_address(address))
             patroni_config['postgresql']['pg_hba'] = [
                 entry for entry in patroni_config['postgresql']['pg_hba']
                 if exclusion_string not in entry
