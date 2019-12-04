@@ -20,15 +20,13 @@ from ..base_component import BaseComponent
 from ...logger import get_logger
 from ...components import sources
 from ...utils.systemd import systemd
-from ...utils.files import update_yaml_file
 from ...utils.install import yum_install, yum_remove
+from ...utils.node import update_status_reporter_config
 from ...utils.files import (remove_files,
                             read_yaml_file,
-                            check_rpms_are_present
-                            )
+                            check_rpms_are_present)
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
-                          STATUS_REPORTER_OS_USER,
                           STATUS_REPORTER_CONFIGURATION_PATH,
                           STATUS_REPORTER_TOKEN,
                           STATUS_REPORTER_MANAGERS_IPS)
@@ -75,11 +73,8 @@ class StatusReporter(BaseComponent):
     @staticmethod
     def _generate_basic_reporter_settings(user_name):
         node_id = str(uuid.uuid4())
-        update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                         STATUS_REPORTER_OS_USER,
-                         STATUS_REPORTER_OS_USER,
-                         {'node_id': node_id,
-                          'user_name': user_name})
+        update_status_reporter_config({'node_id': node_id,
+                                       'user_name': user_name})
         return node_id
 
     def remove(self):
