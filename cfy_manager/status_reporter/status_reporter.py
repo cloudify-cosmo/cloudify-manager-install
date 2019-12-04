@@ -44,11 +44,10 @@ from ..components.components_constants import (
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER
 )
-
+VERBOSE_HELP_MSG = "Used to give more verbose output."
 SCRIPTS_PATH = join(STATUS_REPORTER_DIR, 'scripts')
 
 logger = get_logger(STATUS_REPORTER)
-setup_console_logger()
 
 
 @argh.arg('--managers-ip',
@@ -91,8 +90,11 @@ setup_console_logger()
           help='The status reporter\'s logging level, default level is info'
                'Example: `error`.'
           )
-def configure(managers_ip=None, user_name='', token='', ca_path='',
-              reporting_freq=None, node_id='', log_level=''):
+@argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
+def configure(managers_ip=[], user_name='', token='', ca_path='',
+              reporting_freq=None, node_id='', reporter_configuration_path='',
+              log_level='', verbose=False):
+    setup_console_logger(verbose=verbose)
     logger.notice('Configuring Status Reporter service with...')
     passed_parameters = _get_configure_args(ca_path,
                                             log_level,
@@ -108,7 +110,7 @@ def configure(managers_ip=None, user_name='', token='', ca_path='',
 
     logger.info('Provided the following params for updating the status'
                 ' reporter configuration: {0}...'.format(
-                 json.dumps(passed_parameters, indent=1)))
+                    json.dumps(passed_parameters, indent=1)))
     update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
                      STATUS_REPORTER_OS_USER,
                      STATUS_REPORTER_OS_USER,
@@ -133,31 +135,39 @@ def _get_configure_args(ca_path, log_level, managers_ip, node_id,
             conf_parameters_passed.items() if value}
 
 
-def start():
+@argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
+def start(verbose=False):
+    setup_console_logger(verbose=verbose)
     logger.notice('Starting Status Reporter service...')
     systemd.start(STATUS_REPORTER)
     logger.notice('Started Status Reporter service')
 
 
-def stop():
+@argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
+def stop(verbose=False):
+    setup_console_logger(verbose=verbose)
     logger.notice('Stopping Status Reporter service...')
     systemd.stop(STATUS_REPORTER)
     logger.notice('Status Reporter service stopped')
 
 
-def remove():
+@argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
+def remove(verbose=False):
+    setup_console_logger(verbose=verbose)
     logger.notice('Removing component status reporting service...')
     systemd.remove(STATUS_REPORTER)
     logger.notice('Component status reporting service removed')
 
 
+@argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
 @allows_json_format(logger)
-def get_tokens(json_format=None):
+def get_tokens(json_format=None, verbose=False):
     """Retrieves the status reporters' tokens from the DB and prints them to
     STDOUT.
 
     This must be run from a Manager machine.
     """
+    setup_console_logger(verbose=verbose)
     logger.notice('Trying to fetch status reporters tokens...')
     if not is_premium_installed():
         logger.error("This command can only be run on a Cloudify Manager "
