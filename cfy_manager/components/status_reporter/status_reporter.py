@@ -97,9 +97,9 @@ class StatusReporter(BaseComponent):
         status_reporter_configuration = read_yaml_file(
             STATUS_REPORTER_CONFIGURATION_PATH)
         return (status_reporter_configuration.get(
-            STATUS_REPORTER_MANAGERS_IPS, None) and
+            STATUS_REPORTER_MANAGERS_IPS) and
                 status_reporter_configuration.get(
-                    STATUS_REPORTER_TOKEN, None))
+                    STATUS_REPORTER_TOKEN))
 
     def start(self):
         if not (self._is_status_reporter_configured()):
