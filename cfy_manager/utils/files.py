@@ -189,20 +189,22 @@ def check_rpms_are_present(rpm_list):
     return True
 
 
+def read_yaml_file(yaml_path):
+    if os.path.exists(yaml_path) and os.path.isfile(yaml_path):
+        try:
+            file_content = sudo_read(yaml_path)
+            return yaml.safe_load(file_content)
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError('Failed to load yaml file {0}, due to '
+                                 '{1}'.format(yaml_path, str(e)))
+    return None
+
+
 def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
     if not isinstance(updated_content, dict):
         raise ValueError('Expected input of type dict, got {0} '
                          'instead'.format(type(updated_content)))
-    if os.path.exists(yaml_path) and os.path.isfile(yaml_path):
-        try:
-            file_content = sudo_read(yaml_path)
-            yaml_content = yaml.safe_load(file_content)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError('Failed to load yaml file {0}, due to '
-                                 '{1}'.format(yaml_path, str(e)))
-    else:
-        yaml_content = {}
-
+    yaml_content = read_yaml_file(yaml_path) or {}
     yaml_content.update(**updated_content)
     updated_file = yaml.safe_dump(yaml_content,
                                   default_flow_style=False)

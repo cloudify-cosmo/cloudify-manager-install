@@ -14,10 +14,12 @@
 #  * limitations under the License.
 
 from .status_reporter import StatusReporter
+from ..components_constants import MANAGER_STATUS_REPORTER
 
 
 class ManagerStatusReporter(StatusReporter):
 
     def __init__(self, skip_installation):
         super(ManagerStatusReporter, self).__init__(skip_installation,
-                                                    'manager_reporter')
+                                                    'manager_reporter',
+                                                    MANAGER_STATUS_REPORTER)

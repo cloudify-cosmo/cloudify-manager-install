@@ -16,25 +16,28 @@
 from __future__ import print_function
 
 import json
+import logging
 from os import environ
 from os.path import join
 
 import argh
-import yaml
 
 from ..utils import db
 from ..config import config
 from ..utils.systemd import systemd
+from ..utils.files import update_yaml_file
 from ..utils.common import allows_json_format
 from ..utils.install import is_premium_installed
 from ..logger import get_logger, setup_console_logger
-from ..utils.files import update_yaml_file, sudo_read
 from ..utils.scripts import run_script_on_manager_venv
 from ..components.restservice.restservice import REST_SECURITY_CONFIG_PATH
 from ..constants import (
     STATUS_REPORTER,
     STATUS_REPORTER_DIR,
+    STATUS_REPORTER_OS_USER,
     STATUS_REPORTER_CONFIGURATION_PATH,
+    STATUS_REPORTER_TOKEN,
+    STATUS_REPORTER_MANAGERS_IPS
 )
 from ..components.components_constants import (
     DB_STATUS_REPORTER,
@@ -74,60 +77,60 @@ setup_console_logger()
           help='The interval in seconds that the status reporter will report '
                'it\'s status to the Cloudify system.'
           )
-@argh.arg('--reporter-configuration-path',
+@argh.arg('--node-id',
           type=str,
-          help='A local path to the configuration yaml file that'
-               ' will contain the relevant settings for updating '
-               'status reporter configuration. Notice: You can only '
-               'supply local file path or update one of the configuration '
-               'params.'
+          help='The status reporter\'s node id, '
+               'Example: `e99315a0-a153-475a-9879-f41e84d46233`.'
           )
-def configure(managers_ip=[], user_name='', token='', ca_path='',
-              reporting_freq=None, reporter_configuration_path=''):
+@argh.arg('--log-level',
+          type=str,
+          choices=[logging.getLevelName(logging.INFO),
+                   logging.getLevelName(logging.WARN),
+                   logging.getLevelName(logging.ERROR),
+                   logging.getLevelName(logging.DEBUG)],
+          help='The status reporter\'s logging level, default level is info'
+               'Example: `error`.'
+          )
+def configure(managers_ip=None, user_name='', token='', ca_path='',
+              reporting_freq=None, node_id='', log_level=''):
     logger.notice('Configuring Status Reporter service with...')
-    conf_parameters_passed = any([managers_ip,
-                                  user_name,
-                                  token,
-                                  ca_path,
-                                  reporting_freq])
-    if reporter_configuration_path and conf_parameters_passed:
-        logger.error('Please provide status reporter configuration path '
-                     'argument or the other configuration parameters, but '
-                     'not together.')
-        return
-    elif reporter_configuration_path:
-        logger.info('Provided configuration file for status reporter at'
-                    ' {0}...'.format(reporter_configuration_path))
-        try:
-            file_content = sudo_read(reporter_configuration_path)
-            update_content = yaml.safe_load(file_content)
-        except yaml.YAMLError as e:
-            logger.error('Failed to load yaml file, due to {0}'.format(str(e)))
-            return
-    elif conf_parameters_passed:
-        update_content = {
-            'user_name': user_name,
-            'token': token,
-            'ca_path': ca_path,
-            'managers_ips': managers_ip,
-            'reporting_freq': reporting_freq
-            }
-        logger.info('Provided the following params for updating the status'
-                    ' reporter configuration: {0}...'.format(
-                     json.dumps(update_content, indent=1)))
-    else:
+    passed_parameters = _get_configure_args(ca_path,
+                                            log_level,
+                                            managers_ip,
+                                            node_id,
+                                            reporting_freq,
+                                            token,
+                                            user_name)
+    if not passed_parameters:
         logger.warning('No configuration param were given,'
                        ' so nothing to update')
         return
 
+    logger.info('Provided the following params for updating the status'
+                ' reporter configuration: {0}...'.format(
+                 json.dumps(passed_parameters, indent=1)))
     update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                     'cfyreporter',
-                     'cfyreporter',
-                     update_content)
-    systemd.configure(STATUS_REPORTER)
+                     STATUS_REPORTER_OS_USER,
+                     STATUS_REPORTER_OS_USER,
+                     passed_parameters)
     logger.info('Starting Status Reporter service...')
     systemd.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
+
+
+def _get_configure_args(ca_path, log_level, managers_ip, node_id,
+                        reporting_freq, token, user_name):
+    conf_parameters_passed = {
+        'user_name': user_name,
+        STATUS_REPORTER_TOKEN: token,
+        'ca_path': ca_path,
+        STATUS_REPORTER_MANAGERS_IPS: managers_ip,
+        'reporting_freq': reporting_freq,
+        'node_id': node_id,
+        'log_level': log_level
+    }
+    return {key: value for (key, value) in
+            conf_parameters_passed.items() if value}
 
 
 def start():
