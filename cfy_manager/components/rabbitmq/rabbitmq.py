@@ -252,13 +252,18 @@ class RabbitMQ(BaseComponent):
                 break
 
     def list_rabbit_nodes(self):
-        if config[RABBITMQ].get('management_only_local'):
-            nodes_url = 'https://localhost:15671/api/nodes'
-        else:
+        nodes_url = 'https://localhost:15671/api/nodes'
+        if not config[RABBITMQ].get('management_only_local'):
             nodename = config[RABBITMQ]['nodename'].split('@')[-1]
-            default_ip = config[RABBITMQ]['cluster_members'][
-                nodename]['networks']['default']
-            nodes_url = 'https://{0}:15671/api/nodes'.format(default_ip)
+            try:
+                default_ip = config[RABBITMQ]['cluster_members'][
+                    nodename]['networks']['default']
+            except KeyError:
+                logger.warning('Current node %s has no default network '
+                               'address set in cluster_members, falling '
+                               'back to localhost', nodename)
+            else:
+                nodes_url = 'https://{0}:15671/api/nodes'.format(default_ip)
         auth = (
             config[RABBITMQ]['username'],
             config[RABBITMQ]['password'],
