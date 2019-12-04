@@ -107,9 +107,13 @@ def _setup_logger():
     _setup_file_logger(logger)
 
 
-def setup_console_logger(verbose=False, init=[]):
-    if not init:
-        init.append(True)
+logging_initialized = False
+
+
+def setup_console_logger(verbose=False):
+    global logging_initialized
+    if not logging_initialized:
+        logging_initialized = True
     else:
         # it is enough to init the logger only once for cfy_manager execution
         return
