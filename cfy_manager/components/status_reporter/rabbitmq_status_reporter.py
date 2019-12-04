@@ -14,9 +14,8 @@
 #  * limitations under the License.
 
 from ...config import config
-from ...utils.files import update_yaml_file
-from ...constants import (STATUS_REPORTER_CONFIG_KEY,
-                          STATUS_REPORTER_CONFIGURATION_PATH)
+from ...constants import STATUS_REPORTER_CONFIG_KEY
+from ...utils.files import update_status_reporter_config_file
 
 from ..service_components import QUEUE_SERVICE
 from ..components_constants import SERVICES_TO_INSTALL, BROKER_STATUS_REPORTER
@@ -37,10 +36,8 @@ class RabbitmqStatusReporter(StatusReporter):
 
     def configure(self):
         super(RabbitmqStatusReporter, self).configure()
-        update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                         'cfyreporter',
-                         'cfyreporter',
-                         {STATUS_REPORTER_CONFIG_KEY: self._extra_config()})
+        update_status_reporter_config_file(
+            {STATUS_REPORTER_CONFIG_KEY: self._extra_config()})
 
     @staticmethod
     def _extra_config():

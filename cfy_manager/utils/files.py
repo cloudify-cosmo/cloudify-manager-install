@@ -29,7 +29,10 @@ from .common import move, sudo, copy, remove, chown
 from ..config import config
 from ..logger import get_logger
 from ..exceptions import FileError
-from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
+from ..constants import (COMPONENTS_DIR,
+                         CLOUDIFY_SOURCES_PATH,
+                         STATUS_REPORTER_OS_USER,
+                         STATUS_REPORTER_CONFIGURATION_PATH)
 
 logger = get_logger('Files')
 
@@ -217,3 +220,13 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
     chown(user_owner,
           group_owner,
           yaml_path)
+
+
+def update_status_reporter_config_file(updated_content):
+    """
+    :param updated_content: {'key': 'value'}
+    """
+    update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
+                     STATUS_REPORTER_OS_USER,
+                     STATUS_REPORTER_OS_USER,
+                     updated_content)
