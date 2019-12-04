@@ -111,11 +111,9 @@ logging_initialized = False
 
 
 def setup_console_logger(verbose=False):
+    # it is enough to init the logger only once for cfy_manager execution
     global logging_initialized
-    if not logging_initialized:
-        logging_initialized = True
-    else:
-        # it is enough to init the logger only once for cfy_manager execution
+    if logging_initialized:
         return
     # Requests is fairly verbose at INFO level; make it verbose only when
     # requested
@@ -128,6 +126,7 @@ def setup_console_logger(verbose=False):
     sh.setLevel(log_level)
     sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))
     logger.addHandler(sh)
+    logging_initialized = True
 
 
 def _create_log_dir():
