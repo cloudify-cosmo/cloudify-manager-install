@@ -17,8 +17,6 @@ from __future__ import print_function
 
 import json
 import logging
-from os import environ
-from os.path import join
 
 import argh
 
@@ -27,23 +25,24 @@ from ..config import config
 from ..utils.systemd import systemd
 from ..utils.common import allows_json_format
 from ..utils.install import is_premium_installed
+from ..utils.scripts import get_encoded_user_ids
+from cfy_manager.utils.common import output_table
 from ..logger import get_logger, setup_console_logger
-from ..utils.scripts import run_script_on_manager_venv
 from ..utils.node import update_status_reporter_config
-from ..components.restservice.restservice import REST_SECURITY_CONFIG_PATH
+from ..utils.files import read_yaml_file
 from ..constants import (
     STATUS_REPORTER,
-    STATUS_REPORTER_DIR,
+    VERBOSE_HELP_MSG,
     STATUS_REPORTER_TOKEN,
-    STATUS_REPORTER_MANAGERS_IPS
+    SELECT_USER_TOKENS_QUERY,
+    STATUS_REPORTER_MANAGERS_IPS,
+    STATUS_REPORTER_CONFIGURATION_PATH,
 )
 from ..components.components_constants import (
     DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER
 )
-VERBOSE_HELP_MSG = "Used to give more verbose output."
-SCRIPTS_PATH = join(STATUS_REPORTER_DIR, 'scripts')
 
 logger = get_logger(STATUS_REPORTER)
 
@@ -51,6 +50,7 @@ logger = get_logger(STATUS_REPORTER)
 @argh.arg('--managers-ip',
           nargs='+',
           type=str,
+          dest='managers_ips',
           help='Cloudify managers ip list status reporter will report to, '
                'Example: `<ip-1> <ip-2> <ip-3>`'
           )
@@ -89,14 +89,14 @@ logger = get_logger(STATUS_REPORTER)
                'Example: `error`.'
           )
 @argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
-def configure(managers_ip=[], user_name='', token='', ca_path='',
-              reporting_freq=None, node_id='', reporter_configuration_path='',
-              log_level='', verbose=False):
+def configure(managers_ips=None, user_name='', token='', ca_path='',
+              reporting_freq=None, node_id='', log_level='', verbose=False):
+    managers_ips = managers_ips or []
     setup_console_logger(verbose=verbose)
     logger.notice('Configuring Status Reporter service with...')
     passed_parameters = _get_configure_args(ca_path,
                                             log_level,
-                                            managers_ip,
+                                            managers_ips,
                                             node_id,
                                             reporting_freq,
                                             token,
@@ -155,10 +155,9 @@ def remove(verbose=False):
 
 
 @argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
-@allows_json_format(logger)
+@allows_json_format()
 def get_tokens(json_format=None, verbose=False):
-    """Retrieves the status reporters' tokens from the DB and prints them to
-    STDOUT.
+    """Retrieves the status reporters' tokens from the DB and prints them.
 
     This must be run from a Manager machine.
     """
@@ -180,23 +179,30 @@ def get_tokens(json_format=None, verbose=False):
             logger.notice('Token of "{0}" is "{1}"'.format(username, token))
 
 
+@argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
+@allows_json_format()
+def show_configuration(json_format=None, verbose=False):
+    """Prints the status reporter configuration.
+    """
+    setup_console_logger(verbose=verbose)
+    logger.info('Fetching config...')
+    _config = read_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH)
+    if not _config:
+        logger.error("Config file doesn't exist.")
+        return
+    if json_format:
+        print(json.dumps(_config))
+    else:
+        output_columns = ('Key', 'Value')
+        output_table(_config.items(), output_columns)
+
+
 def _get_status_reporter_tokens():
     config.load_config()
-    sql_stmnt = (
-        """
-        SELECT
-            json_build_object(
-                'id', id,
-                'username', username,
-                'api_token_key', api_token_key
-            )
-        FROM users
-        WHERE username IN ('{0}', '{1}', '{2}')
-        """.format(
-            MANAGER_STATUS_REPORTER,
-            BROKER_STATUS_REPORTER,
-            DB_STATUS_REPORTER
-        )
+    sql_stmnt = SELECT_USER_TOKENS_QUERY + " IN ('{0}', '{1}', '{2}')".format(
+        MANAGER_STATUS_REPORTER,
+        BROKER_STATUS_REPORTER,
+        DB_STATUS_REPORTER
     )
     query_result = db.run_psql_command(
         command=['-c', sql_stmnt],
@@ -204,16 +210,4 @@ def _get_status_reporter_tokens():
     )
     query_result = query_result.splitlines()
     users = [json.loads(result.strip()) for result in query_result]
-    script_path = join(SCRIPTS_PATH, 'get_encoded_user_ids.py')
-    rest_security_config_path = environ.get(
-        'MANAGER_REST_SECURITY_CONFIG_PATH', REST_SECURITY_CONFIG_PATH)
-    envvars = {'MANAGER_REST_SECURITY_CONFIG_PATH': rest_security_config_path}
-    result = run_script_on_manager_venv(script_path, users, envvars=envvars)
-    if not result:
-        return None
-    users = json.loads(result.aggr_stdout)
-    tokens = {
-        user['username']:
-            '{0}{1}'.format(user['encoded_id'], user['api_token_key'])
-        for user in users}
-    return tokens
+    return get_encoded_user_ids(users)

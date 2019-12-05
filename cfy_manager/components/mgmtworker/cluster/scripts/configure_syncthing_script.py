@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import json
 import argparse
 
@@ -35,17 +36,28 @@ def run_syncthing_configuration(hostname, bootstrap_cluster):
     syncthing.finish()
 
 
+def file_path(path):
+    if os.path.isfile(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(
+            "The file path \"{0}\" doesn't exist.".format(path))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Configure Syncthing replication for the cluster nodes'
     )
     parser.add_argument(
-        'args_dict_config_path',
-        help='The manager to update in the managers table with its syncthing '
-             'ID'
+        '--input',
+        help='Path to a config file containing info needed by this script. It '
+             'should include the manager to update in the managers table with '
+             'its syncthing ID.',
+        type=file_path,
+        required=True,
     )
     args = parser.parse_args()
-    with open(args.args_dict_config_path, 'r') as f:
+    with open(args.input, 'r') as f:
         args_dict = json.load(f)
 
     config.instance.load_configuration()

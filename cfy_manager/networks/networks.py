@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #########
 # Copyright (c) 2018-2019 Cloudify Platform Ltd. All rights reserved
 #
@@ -17,19 +16,22 @@
 import json
 import argh
 from os.path import join
-from cfy_manager.utils import common
-from cfy_manager.constants import (
+
+from ..logger import get_logger
+from ..constants import (
     NETWORKS_DIR,
 )
-
-from cfy_manager.utils.certificates import (
+from ..utils.certificates import (
     create_internal_certs,
     load_cert_metadata,
     store_cert_metadata
 )
+from ..utils.scripts import run_script_on_manager_venv
 
 SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
+
+logger = get_logger('networks')
 
 
 def _validate_duplicate_network(old_networks, new_networks):
@@ -68,7 +70,7 @@ def _update_metadata_file(metadata, networks):
 
 @argh.arg('--networks',
           help='A JSON string containing the new networks to be added to the'
-               ' Manager. Example: `{"<network-name>": "<ip>"}`',
+               ' Manager. Example: \'{"<network-name>": "<ip>"}\'',
           required=True)
 @argh.arg('--skip-generating-certificates',
           help='Specify whether we skip generating certificates, so the user '
@@ -78,7 +80,7 @@ def add_networks(networks=None, skip_generating_certificates=False):
     """
     Add new networks to a running Cloudify Manager
     """
-    print('Trying to add new networks to Manager...')
+    logger.info('Trying to add new networks to Manager...')
 
     networks = json.loads(networks)
     metadata = load_cert_metadata()
@@ -87,19 +89,18 @@ def add_networks(networks=None, skip_generating_certificates=False):
     if not skip_generating_certificates:
         create_internal_certs()
 
-    cmd = [
-        join(REST_HOME_DIR, 'env', 'bin', 'python'),
-        join(SCRIPT_DIR, 'update-manager-networks.py'),
+    script_path = join(SCRIPT_DIR, 'update-manager-networks.py')
+    args = [
         '--hostname', metadata['hostname'],
         '--networks', json.dumps(networks),
     ]
     if bool(metadata.get('broker_addresses')):
         # if we store broker addresses in the metadata file, that means we
         # have a local broker and must update that too
-        cmd.append('--broker')
+        args.append('--broker')
 
-    common.sudo(cmd)
+    run_script_on_manager_venv(script_path, script_args=args)
 
-    print('New networks were added successfully. Please restart the'
-          ' following services: `nginx`, `cloudify-mgmtworker`,'
-          '`cloudify-rabbitmq`')
+    logger.notice('New networks were added successfully. Please restart the'
+                  ' following services: `nginx`, `cloudify-mgmtworker`,'
+                  '`cloudify-rabbitmq`')

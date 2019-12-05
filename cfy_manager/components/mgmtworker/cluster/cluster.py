@@ -16,12 +16,13 @@
 import requests
 from os.path import join
 
-from cfy_manager.components import sources
-from ...base_component import BaseComponent
-from ...restservice.restservice import RestService
-from ...validations import _is_installed
 from ....config import config
 from ....logger import get_logger
+from ....components import sources
+from ...validations import _is_installed
+from ...base_component import BaseComponent
+from ...restservice.restservice import RestService
+from ....utils.scripts import run_script_on_manager_venv
 from ....constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
 from ....components.components_constants import (
     PRIVATE_IP,
@@ -40,10 +41,8 @@ from ....components.service_names import (
     RESTSERVICE,
     MGMTWORKER
 )
-from ....utils.common import sudo
 from ....utils.systemd import systemd
 from ....utils.install import yum_install
-from ....utils.files import write_to_tempfile
 from ....utils.network import get_auth_headers, wait_for_port
 
 REST_HOME_DIR = '/opt/manager'
@@ -101,13 +100,10 @@ class Cluster(BaseComponent):
             'hostname': config[MANAGER][HOSTNAME],
             'bootstrap_cluster': bootstrap_cluster,
         }
-        args_json_path = write_to_tempfile(args_dict, json_dump=True)
-        cmd = [
-            join(REST_HOME_DIR, 'env', 'bin', 'python'),
-            join(SCRIPTS_PATH, 'configure_syncthing_script.py'),
-            args_json_path
-        ]
-        result = sudo(cmd, env=self._create_process_env())
+        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
+        result = run_script_on_manager_venv(script_path,
+                                            args_dict,
+                                            envvars=self._create_process_env())
         self._log_results(result)
 
     def _remove_manager_from_cluster(self):
