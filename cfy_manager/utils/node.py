@@ -17,14 +17,15 @@ from os import path
 
 import yaml
 
-from .files import sudo_read
 from .common import move, mkdir, chown
 from .install import is_premium_installed
+from .files import sudo_read, update_yaml_file
 
 from ..logger import get_logger
 from ..exceptions import InitializationError
 from ..constants import (CLOUDIFY_USER,
                          CLOUDIFY_GROUP,
+                         STATUS_REPORTER_OS_USER,
                          STATUS_REPORTER_CONFIGURATION_PATH)
 
 
@@ -78,3 +79,14 @@ def archive_status_report(node_type, node_id):
     except Exception as e:
         logger.warn('Error had occurred while trying to archive status report '
                     'file {0}: {1}'.format(file_name, e))
+
+
+def update_status_reporter_config(updated_content):
+    """
+    :param updated_content: The content to update in the config file
+    :type updated_content: dict
+    """
+    update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
+                     STATUS_REPORTER_OS_USER,
+                     STATUS_REPORTER_OS_USER,
+                     updated_content)

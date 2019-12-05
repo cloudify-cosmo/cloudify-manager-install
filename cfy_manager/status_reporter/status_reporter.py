@@ -25,17 +25,15 @@ import argh
 from ..utils import db
 from ..config import config
 from ..utils.systemd import systemd
-from ..utils.files import update_yaml_file
 from ..utils.common import allows_json_format
 from ..utils.install import is_premium_installed
 from ..logger import get_logger, setup_console_logger
 from ..utils.scripts import run_script_on_manager_venv
+from ..utils.node import update_status_reporter_config
 from ..components.restservice.restservice import REST_SECURITY_CONFIG_PATH
 from ..constants import (
     STATUS_REPORTER,
     STATUS_REPORTER_DIR,
-    STATUS_REPORTER_OS_USER,
-    STATUS_REPORTER_CONFIGURATION_PATH,
     STATUS_REPORTER_TOKEN,
     STATUS_REPORTER_MANAGERS_IPS
 )
@@ -111,10 +109,7 @@ def configure(managers_ip=[], user_name='', token='', ca_path='',
     logger.info('Provided the following params for updating the status'
                 ' reporter configuration: {0}...'.format(
                     json.dumps(passed_parameters, indent=1)))
-    update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                     STATUS_REPORTER_OS_USER,
-                     STATUS_REPORTER_OS_USER,
-                     passed_parameters)
+    update_status_reporter_config(passed_parameters)
     logger.info('Starting Status Reporter service...')
     systemd.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
