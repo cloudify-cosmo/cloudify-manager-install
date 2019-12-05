@@ -15,7 +15,7 @@
 
 from ...config import config
 from ...constants import STATUS_REPORTER_CONFIG_KEY
-from ...utils.files import update_status_reporter_config_file
+from ...utils.node import update_status_reporter_config
 
 from ..service_components import QUEUE_SERVICE
 from ..components_constants import SERVICES_TO_INSTALL, BROKER_STATUS_REPORTER
@@ -36,7 +36,7 @@ class RabbitmqStatusReporter(StatusReporter):
 
     def configure(self):
         super(RabbitmqStatusReporter, self).configure()
-        update_status_reporter_config_file(
+        update_status_reporter_config(
             {STATUS_REPORTER_CONFIG_KEY: self._extra_config()})
 
     @staticmethod
