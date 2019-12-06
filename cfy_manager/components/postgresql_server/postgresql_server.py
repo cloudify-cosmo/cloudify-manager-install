@@ -682,7 +682,7 @@ class PostgresqlServer(BaseComponent):
                     'username': pgsrv['cluster']['patroni']['rest_user'],
                     'password': pgsrv['cluster']['patroni']['rest_password']
                 },
-                'cacert': PATRONI_DB_CA_PATH,
+                'cafile': PATRONI_DB_CA_PATH,
                 'certfile': PATRONI_REST_CERT_PATH,
                 'keyfile': PATRONI_REST_KEY_PATH,
             },
@@ -692,18 +692,25 @@ class PostgresqlServer(BaseComponent):
                     'loop_wait': 10,
                     'retry_timeout': 10,
                     'maximum_lag_on_failover': 0,
+                    'synchronous_mode': True,
                     'synchronous_mode_strict': True,
                     'check_timeline': True,
                     'postgresql': {
-                        'use_pg_rewind': True,
-                        'remove_data_directory_on_rewind_failure': True,
-                        'remove_data_directory_on_diverged_timelines': True,
                         'pg_hba': [
                             'hostssl replication replicator 127.0.0.1/32 md5',
                             'hostssl all all 0.0.0.0/0 md5{0}'.format(
                                 ' clientcert=1'
                                 if pgsrv['ssl_client_verification'] else '')
                         ],
+                        'parameters': {
+                            'unix_socket_directories': '.',
+                            'synchronous_commit': 'on',
+                            'ssl': 'on',
+                            'ssl_ca_file': PATRONI_DB_CA_PATH,
+                            'ssl_cert_file': PATRONI_DB_CERT_PATH,
+                            'ssl_key_file': PATRONI_DB_KEY_PATH,
+                            'ssl_ciphers': 'HIGH',
+                        },
                     },
                 },
                 'initdb': [{'encoding': 'UTF8'}, 'data-checksums']
@@ -719,23 +726,20 @@ class PostgresqlServer(BaseComponent):
                         'password': (
                             pgsrv['cluster']['postgres']['replicator_password']
                         ),
+                        'sslmode': 'verify-full',
+                        'sslrootcert': PATRONI_DB_CA_PATH,
                     },
                     'superuser': {
                         'username': 'postgres',
-                        'password': pgsrv['postgres_password']
+                        'password': pgsrv['postgres_password'],
+                        'sslmode': 'verify-full',
+                        'sslrootcert': PATRONI_DB_CA_PATH,
                     }
                 },
-                'parameters': {
-                    'unix_socket_directories': '.',
-                    'synchronous_commit': 'on',
-                    'synchronous_standby_names': '*',
-                    'ssl': 'on',
-                    'ssl_ca_file': PATRONI_DB_CA_PATH,
-                    'ssl_cert_file': PATRONI_DB_CERT_PATH,
-                    'ssl_key_file': PATRONI_DB_KEY_PATH,
-                    'ssl_ciphers': 'HIGH',
-                },
-                'custom_conf': POSTGRES_PATRONI_CONFIG_PATH
+                'custom_conf': POSTGRES_PATRONI_CONFIG_PATH,
+                'use_pg_rewind': True,
+                'remove_data_directory_on_rewind_failure': True,
+                'remove_data_directory_on_diverged_timelines': True,
             },
             'tags': {
                 'nofailover': False,
