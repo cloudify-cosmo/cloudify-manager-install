@@ -14,6 +14,9 @@
 #  * limitations under the License.
 
 from ...config import config
+from ...constants import STATUS_REPORTER_CONFIG_KEY
+from ...utils.node import update_status_reporter_config
+
 from ..service_components import QUEUE_SERVICE
 from ..components_constants import SERVICES_TO_INSTALL, BROKER_STATUS_REPORTER
 
@@ -30,3 +33,16 @@ class RabbitmqStatusReporter(StatusReporter):
         super(RabbitmqStatusReporter, self).__init__(skip_installation,
                                                      'rabbitmq_reporter',
                                                      BROKER_STATUS_REPORTER)
+
+    def configure(self):
+        super(RabbitmqStatusReporter, self).configure()
+        update_status_reporter_config(
+            {STATUS_REPORTER_CONFIG_KEY: self._extra_config()})
+
+    @staticmethod
+    def _extra_config():
+        extra_config = {'use_long_name': config['rabbitmq']['use_long_name'],
+                        'username': config['rabbitmq']['username'],
+                        'password': config['rabbitmq']['password'],
+                        'nodename': config['rabbitmq']['nodename']}
+        return extra_config
