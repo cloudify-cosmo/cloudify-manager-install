@@ -524,6 +524,10 @@ def print_credentials_to_screen():
     if broker_status_reporter_token:
         logger.notice('Queue Service Status Reported token: %s',
                       broker_status_reporter_token)
+    for reporter in (MANAGER_STATUS_REPORTER,
+                     DB_STATUS_REPORTER,
+                     BROKER_STATUS_REPORTER):
+        config.pop(reporter, None)
     set_file_handlers_level(current_level)
 
 
