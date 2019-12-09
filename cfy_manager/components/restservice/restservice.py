@@ -267,6 +267,7 @@ class RestService(BaseComponent):
                 )
                 db.create_amqp_resources(configs)
             else:
+                db.validate_schema_version(configs)
                 self._join_cluster(configs)
             self._fetch_manager_reporter_token()
 
