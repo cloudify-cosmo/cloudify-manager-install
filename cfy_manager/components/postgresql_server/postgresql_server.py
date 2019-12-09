@@ -1236,54 +1236,116 @@ class PostgresqlServer(BaseComponent):
                 'Reinitialise can only be run from a DB node.'
             )
 
-    def set_master(self, address):
-        master, replicas = self._get_cluster_addresses()
+    def _become_synchronous(self, candidate, master_address,
+                            sync_ips):
+        for i in range(30):
+            if sync_ips and i % 5 == 0:
+                # Retry this every 5 attempts. If there are more than 3 nodes
+                # this gives a chance to have the target node become sync.
+                logger.info(
+                    'Attempting to promote {addr} to sync replica.'.format(
+                        addr=candidate,
+                    )
+                )
+                self._patronictl_command(['restart', '--force', 'postgres',
+                                          self._get_patroni_id(sync_ips[0])])
+            master_status = self._get_node_status(master_address,
+                                                  master=True)
+            sync_ips = self._get_sync_replicas(
+                master_status['raw_status']
+            )
+            if sync_ips:
+                if candidate in sync_ips:
+                    logger.info(
+                        '{addr} has become synchronous replica.'.format(
+                            addr=candidate,
+                        )
+                    )
+                    break
+                else:
+                    raise DBManagementError(
+                        '{addr} did not manage to become synchronous '
+                        'replica. Before you retry, please ensure the DB '
+                        'cluster is healthy and the managers are in '
+                        'maintenance mode.'.format(addr=candidate)
+                    )
+            else:
+                logger.info(
+                    'Waiting for {addr} to become synchronous '
+                    'replica.'.format(
+                        addr=candidate,
+                    )
+                )
+                time.sleep(1)
 
-        if address == master:
+    def set_master(self, address):
+        master_address, replicas = self._get_cluster_addresses()
+
+        if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
+            raise DBManagementError(
+                'Set master can only be run from a DB node.'
+            )
+
+        if address == master_address:
             raise DBManagementError(
                 'The selected node is the current master.'
             )
 
-        if address not in [master] + replicas:
+        if address not in [master_address] + replicas:
             raise DBManagementError(
                 'Cannot make DB node {addr} master, as it is '
                 'not part of the cluster.'.format(addr=address)
             )
 
-        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-            logger.info('Changing master to {addr}'.format(addr=address))
-            self._patronictl_command([
-                'switchover', '--force',
-                '--candidate', self._get_patroni_id(address),
-            ])
-            for i in range(30):
-                master, _ = self._get_cluster_addresses()
-                if master != address:
-                    logger.info(
-                        'Waiting for master to change to {addr}. '
-                        'Current master is {master}.'.format(
-                            addr=address,
-                            master=master,
-                        )
-                    )
-                    time.sleep(1)
+        master_status = self._get_node_status(master_address, master=True)
+        sync_ips = self._get_sync_replicas(master_status['raw_status'])
+        if address not in sync_ips:
+            # Patroni will only fail over to a synchronous replica, so we will
+            # restart the current synchronous replica which will force the
+            # current async replica to become synchronous
+            logger.info(
+                '{addr} is async replica. Only sync replicas can become '
+                'master.'.format(
+                    addr=address,
+                )
+            )
+            self._become_synchronous(address, master_address,
+                                     sync_ips)
+
+        for i in range(30):
+            if i in [0, 10, 20]:
+                # We will retry the command in case of timing issues, e.g.
+                # after promoting an async replica to sync
+                logger.info('Changing master to {addr}'.format(addr=address))
+                self._patronictl_command([
+                    'switchover', '--force',
+                    '--candidate', self._get_patroni_id(address),
+                ])
+            master, _ = self._get_cluster_addresses()
             if master == address:
-                logger.info('Master changed to {addr}'.format(addr=address))
+                break
             else:
-                logger.warning(
-                    'Master has not changed to {addr}. '
-                    'Master is currently {master}. '
-                    'This may indicate the master changed to the specified '
-                    'node and then changed again, or that the change did not '
-                    'occur. Please check cluster health before retrying this '
-                    'operation.'.format(
+                logger.info(
+                    'Waiting for master to change to {addr}. '
+                    'Current master is {master}.'.format(
                         addr=address,
                         master=master,
                     )
                 )
+                time.sleep(1)
+        if master == address:
+            logger.info('Master changed to {addr}'.format(addr=address))
         else:
-            raise DBManagementError(
-                'Set master can only be run from a DB node.'
+            logger.warning(
+                'Master has not changed to {addr}. '
+                'Master is currently {master}. '
+                'This may indicate the master changed to the specified '
+                'node and then changed again, or that the change did not '
+                'occur. Please check cluster health before retrying this '
+                'operation.'.format(
+                    addr=address,
+                    master=master,
+                )
             )
 
     def install(self):

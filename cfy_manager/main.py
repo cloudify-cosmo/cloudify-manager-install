@@ -402,6 +402,7 @@ def db_node_reinit(**kwargs):
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
 def db_node_set_master(**kwargs):
+    """Switch the current DB master node."""
     _validate_components_prepared('db_node_set_master')
     db = _prepare_component_management('postgresql_server', kwargs['verbose'])
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
