@@ -47,6 +47,7 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import ValidationError
 
 from ...utils.files import temp_copy
 from ...utils.node import get_node_id
@@ -325,6 +326,24 @@ def manager_is_in_db():
     # As the name is unique, there can only ever be at most 1 entry with the
     # expected name, and if there is then the manager is in the db.
     return int(result) == 1
+
+
+def validate_schema_version(configs):
+    """Check that the database schema version is the same as the current
+    manager's migrations version.
+    """
+    migrations_version = _run_script('get_db_version.py', configs=configs)
+    db_version = utils_db.run_psql_command(
+        command=['-c', 'SELECT version_num FROM alembic_version'],
+        db_key='cloudify_db_name'
+    )
+    migrations_version = migrations_version.strip()
+    db_version = db_version.strip()
+    if migrations_version != db_version:
+        raise ValidationError(
+            'Database schema version mismatch: this manager expects schema '
+            'revision {0} but the database is {1})'
+            .format(migrations_version, db_version))
 
 
 def _get_script_stdout(result):
