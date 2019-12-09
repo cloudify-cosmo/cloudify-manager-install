@@ -25,7 +25,6 @@ from ..logger import get_logger
 from ..exceptions import InitializationError
 from ..constants import (CLOUDIFY_USER,
                          CLOUDIFY_GROUP,
-                         STATUS_REPORTER_OS_USER,
                          STATUS_REPORTER_CONFIGURATION_PATH)
 
 
@@ -87,6 +86,6 @@ def update_status_reporter_config(updated_content):
     :type updated_content: dict
     """
     update_yaml_file(STATUS_REPORTER_CONFIGURATION_PATH,
-                     STATUS_REPORTER_OS_USER,
-                     STATUS_REPORTER_OS_USER,
+                     CLOUDIFY_USER,
+                     CLOUDIFY_GROUP,
                      updated_content)
