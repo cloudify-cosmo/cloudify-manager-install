@@ -30,8 +30,8 @@ from ..constants import (CLOUDIFY_USER,
 
 
 ARCHIVE_DIR = 'archive'
-logger = get_logger('utils')
-CLUSTER_STATUS_PATH = '/opt/cloudify/cluster_statuses'
+logger = get_logger('SystemNode')
+CLUSTER_STATUS_PATH = '/opt/status-reporter/cluster_statuses'
 
 
 def get_node_id():
