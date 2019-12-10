@@ -33,7 +33,8 @@ RUN chown cfyuser: -R /etc/nginx \
     /etc/rabbitmq \
     /var/log/cloudify \
     /var/lib/rabbitmq \
-    /var/log/rabbitmq || true
+    /var/log/rabbitmq \
+    /etc/cloudify || true
 RUN chown -f cfyuser: /opt/cloudify-stage \
     /opt/cloudify-composer \
     /var/cache/nginx \
