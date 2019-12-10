@@ -132,26 +132,41 @@ jobs:
             pushd .circleci/new_docker
               function generate_test_cert {
                   san=$1
-                  docker run --rm  -v $(pwd):/etc/cloudify/.cloudify-test-ca cloudify-manager cfy_manager generate-test-cert -s $san
+                  CONTAINER_ID=$(docker run -d cloudify-manager yes)
+                  if [ -f "ca.crt" ]
+                  then
+                    docker exec ${CONTAINER_ID} mkdir /etc/cloudify/.cloudify-test-ca
+                    docker cp ca.key ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.key
+                    docker cp ca.crt ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.crt
+                  fi
+                  docker exec ${CONTAINER_ID} cfy_manager generate-test-cert -s $san
+                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.key ca.key
+                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.crt ca.crt
+                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/$san.crt $san.crt
+                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/$san.key $san.key
+                  docker rm -f ${CONTAINER_ID}
               }
 
               generate_test_cert 172.17.0.3
               mv 172.17.0.3.crt queue1_cert.pem
-              mv 172.17.0.3.crt queue1_key.pem
+              mv 172.17.0.3.key queue1_key.pem
 
               generate_test_cert 172.17.0.4
               mv 172.17.0.4.crt queue2_cert.pem
-              mv 172.17.0.4.crt queue2_key.pem
+              mv 172.17.0.4.key queue2_key.pem
 
               docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=postgres -e POSTGRES_PASSWORD=postgres -d postgres:9.5
-              docker run --name cloudify-manager-queue -d \
+              QUEUE1_ID=$(docker run --name cloudify-manager-queue -d \
+                --hostname rabbit1 \
                 -v $(pwd)/config_queue.yaml:/etc/cloudify/config.yaml \
                 -v $(pwd)/ca.crt:/tmp/ca.pem \
                 -v $(pwd)/queue1_cert.pem:/tmp/cert.pem \
                 -v $(pwd)/queue1_key.pem:/tmp/key.pem \
                 --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges \
-                cloudify-manager-queue
+                cloudify-manager-queue)
               docker run --name cloudify-manager-queue-2 -d \
+                --hostname rabbit2 \
+                --link=${QUEUE1_ID}:rabbit1 \
                 -v $(pwd)/config_queue.yaml:/etc/cloudify/config.yaml \
                 -v $(pwd)/queue2_cert.pem:/tmp/cert.pem \
                 -v $(pwd)/queue2_key.pem:/tmp/key.pem \

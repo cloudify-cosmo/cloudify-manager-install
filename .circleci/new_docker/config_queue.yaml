@@ -12,9 +12,6 @@ rabbitmq:
     rabbit1:
       networks:
         default: 172.17.0.3
-    rabbit2:
-      networks:
-        default: 172.17.0.4
 
 services_to_install:
  - queue_service
