@@ -70,11 +70,11 @@ from ...config import config
 from ...logger import (
     get_logger,
 )
-from ...exceptions import BootstrapError, NetworkError
-from ...utils import certificates, common
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
+from ...utils import certificates, common
+from ...exceptions import BootstrapError, NetworkError
 from ...utils.network import get_auth_headers, wait_for_port
+from ...utils.install import yum_install, yum_remove, is_premium_installed
 from ...utils.files import (
     check_rpms_are_present,
     deploy,
@@ -354,6 +354,8 @@ class RestService(BaseComponent):
         return config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE]
 
     def _generate_passwords(self):
+        if not is_premium_installed():
+            return
         if self._is_in_cluster_mode():
             config.setdefault(DB_STATUS_REPORTER, {})[PASSWORD] = \
                 self._generate_password()
@@ -508,7 +510,8 @@ class RestService(BaseComponent):
         else:
             self._verify_restservice_alive()
             self._upload_cloudify_license()
-        self._configure_status_reporter()
+        if is_premium_installed():
+            self._configure_status_reporter()
 
         logger.notice('Rest Service successfully configured')
 
