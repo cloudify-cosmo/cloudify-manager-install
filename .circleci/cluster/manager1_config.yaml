@@ -10,9 +10,13 @@ rabbitmq:
   ca_path: /etc/cloudify/ca.pem
   cluster_members:
     rabbit1:
-      node_id: 'rabbit1_node_id'
+      node_id: rabbit1
       networks:
-        default: QUEUE_IP
+        default: QUEUE1_IP
+    rabbit2:
+      node_id: rabbit2
+      networks:
+        default: QUEUE2_IP
 
 postgresql_server:
   ssl_enabled: true
