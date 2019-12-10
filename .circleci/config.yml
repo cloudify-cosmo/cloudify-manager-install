@@ -132,7 +132,7 @@ jobs:
             pushd .circleci/new_docker
               function generate_test_cert {
                   san=$1
-                  docker run --rm  -v $(pwd):/root/.cloudify-test-ca cloudify-manager cfy_manager generate-test-cert -s $san
+                  docker run --rm  -v $(pwd):/etc/cloudify/.cloudify-test-ca cloudify-manager cfy_manager generate-test-cert -s $san
               }
 
               generate_test_cert 172.17.0.3

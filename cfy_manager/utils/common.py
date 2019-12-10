@@ -74,7 +74,7 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
 
 
 def sudo(command, *args, **kwargs):
-    if config.get('skip_sudo'):
+    if config.get('skip_sudo', True):
         return run(command, *args, **kwargs)
     if isinstance(command, str):
         command = shlex.split(command)

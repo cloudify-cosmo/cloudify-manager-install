@@ -20,7 +20,7 @@ from contextlib import contextmanager
 
 from . import network
 from . import service
-from .common import sudo, remove, chown, copy
+from .common import remove, chown, copy, run as sudo
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
