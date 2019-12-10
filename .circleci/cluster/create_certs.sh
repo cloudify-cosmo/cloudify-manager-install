@@ -5,9 +5,13 @@ function generate_test_cert {
     docker run --rm  -v $(pwd):/root/.cloudify-test-ca cfy_manager_image_preinstalled cfy_manager generate-test-cert -s $san
 }
 
-generate_test_cert $QUEUE_IP
-mv $QUEUE_IP.crt queue_cert.pem
-mv $QUEUE_IP.key queue_key.pem
+generate_test_cert $QUEUE1_IP
+mv $QUEUE1_IP.crt queue1_cert.pem
+mv $QUEUE1_IP.key queue1_key.pem
+
+generate_test_cert $QUEUE2_IP
+mv $QUEUE2_IP.crt queue2_cert.pem
+mv $QUEUE2_IP.key queue2_key.pem
 
 generate_test_cert $DB1_IP
 mv $DB1_IP.crt db1_cert.pem

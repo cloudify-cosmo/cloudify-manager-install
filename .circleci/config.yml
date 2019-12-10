@@ -135,7 +135,8 @@ jobs:
             echo "export DB1_NAME=${CONTAINER_NAME}_db1" >> $BASH_ENV
             echo "export DB2_NAME=${CONTAINER_NAME}_db2" >> $BASH_ENV
             echo "export DB3_NAME=${CONTAINER_NAME}_db3" >> $BASH_ENV
-            echo "export QUEUE_NAME=${CONTAINER_NAME}_queue" >> $BASH_ENV
+            echo "export QUEUE1_NAME=${CONTAINER_NAME}_queue_1" >> $BASH_ENV
+            echo "export QUEUE2_NAME=${CONTAINER_NAME}_queue_2" >> $BASH_ENV
       - run:
           name: Run base container
           command: |
@@ -145,7 +146,8 @@ jobs:
             }
             run_container ${MANAGER1_NAME}
             run_container ${MANAGER2_NAME}
-            run_container ${QUEUE_NAME}
+            run_container ${QUEUE1_NAME}
+            run_container ${QUEUE2_NAME}
             run_container ${DB1_NAME}
             run_container ${DB2_NAME}
             run_container ${DB3_NAME}
@@ -155,7 +157,8 @@ jobs:
           name: Prepare ip envvars
           command: |
             IP_FORMAT='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
-            QUEUE_IP=$(docker inspect --format="$IP_FORMAT" ${QUEUE_NAME})
+            QUEUE1_IP=$(docker inspect --format="$IP_FORMAT" ${QUEUE1_NAME})
+            QUEUE2_IP=$(docker inspect --format="$IP_FORMAT" ${QUEUE2_NAME})
             DB1_IP=$(docker inspect --format="$IP_FORMAT" ${DB1_NAME})
             DB2_IP=$(docker inspect --format="$IP_FORMAT" ${DB2_NAME})
             DB3_IP=$(docker inspect --format="$IP_FORMAT" ${DB3_NAME})
@@ -167,19 +170,33 @@ jobs:
             echo "export DB1_IP=${DB1_IP}" >> $BASH_ENV
             echo "export DB2_IP=${DB2_IP}" >> $BASH_ENV
             echo "export DB3_IP=${DB3_IP}" >> $BASH_ENV
-            echo "export QUEUE_IP=${QUEUE_IP}" >> $BASH_ENV
+            echo "export QUEUE1_IP=${QUEUE1_IP}" >> $BASH_ENV
+            echo "export QUEUE2_IP=${QUEUE2_IP}" >> $BASH_ENV
       - run:
           name: generate certs
           command: /bin/bash .circleci/cluster/create_certs.sh
       - run:
-          name: Install the queue container
+          name: Install the queue containers
           command: |
             set -eux
-            sed -e "s/CONTAINER_IP/${QUEUE_IP}/g" .circleci/cluster/queue_config.yaml > queue_config.yaml
-            docker cp queue_config.yaml ${QUEUE_NAME}:/etc/cloudify/config.yaml
-            docker cp queue_key.pem ${QUEUE_NAME}:/etc/cloudify/queue_key.pem
-            docker cp queue_cert.pem ${QUEUE_NAME}:/etc/cloudify/queue_cert.pem
-            docker exec ${QUEUE_NAME} cfy_manager install
+            sed -e "s/CONTAINER_IP/${QUEUE1_IP}/g" \
+              -e "s/QUEUE2_IP/${QUEUE2_IP}/" \
+              .circleci/cluster/queue1_config.yaml > queue1_config.yaml
+            sed -e "s/CONTAINER_IP/${QUEUE2_IP}/g" \
+              -e "s/QUEUE1_IP/${QUEUE1_IP}/" \
+              .circleci/cluster/queue2_config.yaml > queue2_config.yaml
+
+            docker cp ca.crt ${QUEUE1_NAME}:/etc/cloudify/ca.pem
+            docker cp queue1_config.yaml ${QUEUE1_NAME}:/etc/cloudify/config.yaml
+            docker cp queue1_key.pem ${QUEUE1_NAME}:/etc/cloudify/queue_key.pem
+            docker cp queue1_cert.pem ${QUEUE1_NAME}:/etc/cloudify/queue_cert.pem
+            docker exec ${QUEUE1_NAME} cfy_manager install
+
+            docker cp ca.crt ${QUEUE2_NAME}:/etc/cloudify/ca.pem
+            docker cp queue2_config.yaml ${QUEUE2_NAME}:/etc/cloudify/config.yaml
+            docker cp queue2_key.pem ${QUEUE2_NAME}:/etc/cloudify/queue_key.pem
+            docker cp queue2_cert.pem ${QUEUE2_NAME}:/etc/cloudify/queue_cert.pem
+            docker exec ${QUEUE2_NAME} cfy_manager install
       - run:
           name: Install the DB containers
           command: /bin/bash .circleci/cluster/install_db.sh
@@ -188,7 +205,8 @@ jobs:
           command: |
             set -eux
             sed -e "s/CONTAINER_IP/${MANAGER1_IP}/g" \
-              -e "s/QUEUE_IP/${QUEUE_IP}/g" \
+              -e "s/QUEUE1_IP/${QUEUE1_IP}/g" \
+              -e "s/QUEUE2_IP/${QUEUE2_IP}/g" \
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
               -e "s/DB3_IP/${DB3_IP}/g" \
@@ -209,7 +227,6 @@ jobs:
           command: |
             set -eux
             sed -e "s/CONTAINER_IP/${MANAGER2_IP}/g" \
-              -e "s/QUEUE_IP/${QUEUE_IP}/g" \
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
               -e "s/DB3_IP/${DB3_IP}/g" \
