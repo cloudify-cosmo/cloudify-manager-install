@@ -22,6 +22,9 @@ rabbitmq:
     rabbit1:
       networks:
         default: 172.17.0.3
+    rabbit2:
+      networks:
+        default: 172.17.0.4
   ca_path: /tmp/rabbitmq-cert.pem
 
 sanity:

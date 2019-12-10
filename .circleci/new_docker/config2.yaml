@@ -17,13 +17,6 @@ postgresql_client:
   ssl_enabled: false
   ssl_client_verification: false
 
-rabbitmq:
-  cluster_members:
-    rabbit1:
-      networks:
-        default: 172.17.0.3
-  ca_path: /tmp/rabbitmq-cert.pem
-
 sanity:
   skip_sanity: true
 ssl_inputs:
