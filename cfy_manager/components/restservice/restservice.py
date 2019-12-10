@@ -354,6 +354,8 @@ class RestService(BaseComponent):
         return config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE]
 
     def _generate_passwords(self):
+        if not is_premium_installed():
+            return
         if self._is_in_cluster_mode():
             config.setdefault(DB_STATUS_REPORTER, {})[PASSWORD] = \
                 self._generate_password()

@@ -119,10 +119,6 @@ def _create_populate_db_args_dict():
     args_dict = {
         'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-        'manager_status_reporter_username': MANAGER_STATUS_REPORTER,
-        'manager_status_reporter_password':
-            config[MANAGER_STATUS_REPORTER][PASSWORD],
-        'manager_status_reporter_role': MANAGER_STATUS_REPORTER,
         'provider_context': _get_provider_context(),
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
@@ -132,6 +128,13 @@ def _create_populate_db_args_dict():
         'rabbitmq_brokers': _create_rabbitmq_info(),
         'db_nodes': _create_db_nodes_info()
     }
+    manager_status_reporter_password = config.get(
+        MANAGER_STATUS_REPORTER, {}).get(PASSWORD)
+    if manager_status_reporter_password:
+        args_dict['manager_status_reporter_username'] = MANAGER_STATUS_REPORTER
+        args_dict['manager_status_reporter_password'] = \
+            manager_status_reporter_password
+        args_dict['manager_status_reporter_role'] = MANAGER_STATUS_REPORTER
     db_status_reporter_password = config.get(
         DB_STATUS_REPORTER, {}).get(PASSWORD)
     if db_status_reporter_password:
