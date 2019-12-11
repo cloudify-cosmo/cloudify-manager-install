@@ -201,6 +201,20 @@ jobs:
           name: Install the DB containers
           command: /bin/bash .circleci/cluster/install_db.sh
       - run:
+          name: Prepare node_id envvars for the status reporter
+          command: |
+            QUEUE1_NODE=$(docker exec ${QUEUE1_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
+            QUEUE2_NODE=$(docker exec ${QUEUE2_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
+            DB1_NODE=$(docker exec ${DB1_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
+            DB2_NODE=$(docker exec ${DB2_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
+            DB3_NODE=$(docker exec ${DB3_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
+
+            echo "export QUEUE1_NODE=${QUEUE1_NODE}" >> $BASH_ENV
+            echo "export QUEUE2_NODE=${QUEUE2_NODE}" >> $BASH_ENV
+            echo "export DB1_NODE=${DB1_NODE}" >> $BASH_ENV
+            echo "export DB2_NODE=${DB2_NODE}" >> $BASH_ENV
+            echo "export DB3_NODE=${DB3_NODE}" >> $BASH_ENV
+      - run:
           name: Install the first manager container
           command: |
             set -eux
@@ -210,6 +224,11 @@ jobs:
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
               -e "s/DB3_IP/${DB3_IP}/g" \
+              -e "s/QUEUE1_NODE/${QUEUE1_NODE}/g" \
+              -e "s/QUEUE2_NODE/${QUEUE2_NODE}/g" \
+              -e "s/DB1_NODE/${DB1_NODE}/g" \
+              -e "s/DB2_NODE/${DB2_NODE}/g" \
+              -e "s/DB3_NODE/${DB3_NODE}/g" \
               .circleci/cluster/manager1_config.yaml > manager1_config.yaml
             docker cp manager1_config.yaml ${CONTAINER_NAME}_1:/etc/cloudify/config.yaml
 
@@ -230,6 +249,9 @@ jobs:
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
               -e "s/DB3_IP/${DB3_IP}/g" \
+              -e "s/DB1_NODE/${DB1_NODE}/g" \
+              -e "s/DB2_NODE/${DB2_NODE}/g" \
+              -e "s/DB3_NODE/${DB3_NODE}/g" \
               .circleci/cluster/manager2_config.yaml > manager2_config.yaml
             docker cp manager2_config.yaml ${MANAGER2_NAME}:/etc/cloudify/config.yaml
             docker cp ca.crt ${MANAGER2_NAME}:/etc/cloudify/ca.pem
