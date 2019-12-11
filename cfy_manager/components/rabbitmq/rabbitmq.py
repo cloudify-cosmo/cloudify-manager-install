@@ -350,6 +350,7 @@ class RabbitMQ(BaseComponent):
 
             if not not_resolved:
                 logger.info('All nodes were resolvable.')
+                return
 
             add_to_hosts = ['', '# Added for cloudify rabbitmq clustering']
             for node in not_resolved:
