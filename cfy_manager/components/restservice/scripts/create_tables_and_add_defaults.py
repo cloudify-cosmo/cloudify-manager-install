@@ -19,6 +19,7 @@ from __future__ import print_function
 import os
 import sys
 import json
+import time
 import atexit
 import argparse
 import base64
@@ -35,7 +36,7 @@ from cloudify.rabbitmq_client import USERNAME_PATTERN
 from cloudify.utils import generate_user_password
 
 from manager_rest import config, version
-from manager_rest.storage import storage_utils
+from manager_rest.storage import storage_utils, db
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
@@ -325,7 +326,15 @@ if __name__ == '__main__':
             amqp_manager = MockAMQPManager(script_config['amqp'])
         else:
             amqp_manager = _get_amqp_manager(script_config)
-        _add_default_user_and_tenant(amqp_manager, script_config)
+        for _retry in range(5):
+            try:
+                _add_default_user_and_tenant(amqp_manager, script_config)
+            except Exception as e:
+                logger.error('exc: {0}'.format(e))
+                db.session.rollback()
+                time.sleep(3)
+            else:
+                break
         if script_config['amqp']['local']:
             with open('/tmp/tenant-details.json', 'w') as f:
                 amqp_manager.dump(f)
