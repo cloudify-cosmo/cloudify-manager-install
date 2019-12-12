@@ -505,8 +505,6 @@ def _print_finish_message():
 
 def print_credentials_to_screen():
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-    manager_status_reporter_token = config.get(
-        MANAGER_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
     db_status_reporter_token = config.get(
         DB_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
     broker_status_reporter_token = config.get(
@@ -515,9 +513,6 @@ def print_credentials_to_screen():
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
     logger.notice('Admin password: %s', password)
-    if manager_status_reporter_token:
-        logger.notice('Manager Status Reported token: %s',
-                      manager_status_reporter_token)
     if db_status_reporter_token:
         logger.notice('Database Status Reported token: %s',
                       db_status_reporter_token)
