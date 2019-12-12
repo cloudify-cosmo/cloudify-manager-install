@@ -16,7 +16,7 @@
 from os.path import join, isdir
 
 from .files import deploy
-from .common import chown, mkdir, chmod, remove
+from .common import mkdir, chmod, remove
 
 from ..logger import get_logger
 from ..constants import COMPONENTS_DIR
@@ -40,13 +40,11 @@ def set_logrotate(service_name):
 
     deploy(src, dst)
     chmod('644', dst)
-    chown('root', 'root', dst)
 
 
 def setup_logrotate():
     if not isdir(LOGROTATED_PATH):
         mkdir(LOGROTATED_PATH)
-        chown('root', 'root', LOGROTATED_PATH)
 
 
 def remove_logrotate(service_name):
