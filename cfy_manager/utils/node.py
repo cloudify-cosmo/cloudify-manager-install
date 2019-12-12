@@ -31,7 +31,7 @@ from ..constants import (CLOUDIFY_USER,
 
 ARCHIVE_DIR = 'archive'
 logger = get_logger('SystemNode')
-CLUSTER_STATUS_PATH = '/opt/status-reporter/cluster_statuses'
+CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
 
 
 def get_node_id():
