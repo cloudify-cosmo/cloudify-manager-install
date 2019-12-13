@@ -97,7 +97,6 @@ class StatusReporter(BaseComponent):
             status_reporter_configuration.get(STATUS_REPORTER_TOKEN))
 
     def start(self):
-        return
         if not (self._is_status_reporter_configured()):
             logger.warning('Not starting status reporter service, please '
                            'configure first the mandatory settings: '
@@ -105,7 +104,7 @@ class StatusReporter(BaseComponent):
                            'token')
             return
         logger.notice('Starting Status Reporter service...')
-        service.start(STATUS_REPORTER)
+        service.start(STATUS_REPORTER, ignore_failure=True)
         logger.notice('Started Status Reporter service')
 
     def stop(self):

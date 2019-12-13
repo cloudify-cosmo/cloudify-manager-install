@@ -121,8 +121,8 @@ class SystemD(object):
         self.systemctl('disable', service_name,
                        ignore_failure=ignore_failure)
 
-    def start(self, service_name):
-        self.systemctl('start', service_name)
+    def start(self, service_name, ignore_failure=False):
+        self.systemctl('start', service_name, ignore_failure=ignore_failure)
 
     def stop(self, service_name):
         self.systemctl('stop', service_name)
@@ -161,8 +161,9 @@ class Supervisord(object):
     def disable(self, service_name):
         self.supervisorctl('remove', service_name)
 
-    def start(self, service_name):
-        self.supervisorctl('start', service_name)
+    def start(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'start', service_name, ignore_failure=ignore_failure)
 
     def stop(self, service_name):
         self.supervisorctl('stop', service_name)
@@ -222,10 +223,11 @@ def disable(service_name, append_prefix=True):
     return _get_backend().disable(full_service_name)
 
 
-def start(service_name, append_prefix=True):
+def start(service_name, append_prefix=True, ignore_failure=False):
     full_service_name = _get_full_service_name(service_name, append_prefix)
     logger.debug('Starting service {0}...'.format(full_service_name))
-    return _get_backend().start(full_service_name)
+    return _get_backend().start(
+        full_service_name, ignore_failure=ignore_failure)
 
 
 def stop(service_name, append_prefix=True):

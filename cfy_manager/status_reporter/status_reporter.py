@@ -160,7 +160,7 @@ def _get_configure_args(ca_path, log_level, managers_ip, node_id,
 def start(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Starting Status Reporter service...')
-    service.start(STATUS_REPORTER)
+    service.start(STATUS_REPORTER, ignore_failure=True)
     logger.notice('Started Status Reporter service')
 
 
