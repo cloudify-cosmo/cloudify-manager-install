@@ -16,6 +16,7 @@
 
 import os
 import sys
+import json
 import logging
 from time import time
 from traceback import format_exception
@@ -69,7 +70,7 @@ from .utils.certificates import (
     generate_ca_cert,
     _generate_ssl_certificate,
 )
-from .utils.common import run, sudo, can_lookup_hostname
+from .utils.common import run, sudo, can_lookup_hostname, allows_json_format
 from .utils.files import (
     replace_in_file,
     remove as _remove,
@@ -411,10 +412,14 @@ def db_node_set_master(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
-def get_id():
+@allows_json_format()
+def get_id(json_format=None):
     """Get Cloudify's auto-generated id for this node"""
     node_id = get_node_id()
-    print('The node id is: {0}'.format(node_id))
+    if json_format:
+        print(json.dumps({'node_id': node_id}))
+    else:
+        print('The node id is: {0}'.format(node_id))
 
 
 def _print_time():
