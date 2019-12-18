@@ -512,7 +512,6 @@ class RestService(BaseComponent):
                                             args_dict,
                                             envvars=self._create_process_env())
         log_script_run_results(result)
-        logger.error(result)
 
     def configure(self):
         logger.notice('Configuring Rest Service...')
@@ -532,14 +531,7 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         self._configure_db()
-        # this flag is set inside of restservice._configure_db
-        to_join = config[CLUSTER_JOIN]
-        if to_join:
-            logger.notice(
-                'Adding manager "{0}" to the cluster, this may take a '
-                'while until config files finish replicating'.format(
-                    config[MANAGER][HOSTNAME]))
-        self._run_syncthing_configuration_script(not to_join)
+        self._join_cluster_setup()
         if is_premium_installed():
             self._fetch_manager_reporter_token()
         if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
@@ -557,6 +549,16 @@ class RestService(BaseComponent):
             self._configure_status_reporter()
 
         logger.notice('Rest Service successfully configured')
+
+    def _join_cluster_setup(self):
+        # this flag is set inside of restservice._configure_db
+        to_join = config[CLUSTER_JOIN]
+        if to_join:
+            logger.notice(
+                'Adding manager "{0}" to the cluster, this may take a '
+                'while until config files finish replicating'.format(
+                    config[MANAGER][HOSTNAME]))
+        self._run_syncthing_configuration_script(not to_join)
 
     @staticmethod
     def _configure_status_reporter():
