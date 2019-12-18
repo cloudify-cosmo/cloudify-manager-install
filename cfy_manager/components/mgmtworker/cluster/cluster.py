@@ -14,20 +14,19 @@
 #  * limitations under the License.
 
 import requests
-from os.path import join
 
-from ....config import config
-from ....logger import get_logger
-from ....components import sources
 from ...validations import _is_installed
 from ...base_component import BaseComponent
 from ...restservice.restservice import RestService
-from ....constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
-from ....components.components_constants import (
-    PRIVATE_IP,
-    HOSTNAME,
-    SCRIPTS
-)
+
+from ....components import sources
+from ....config import config
+from ....logger import get_logger
+from ....utils.systemd import systemd
+from ....utils.install import yum_install
+from ....constants import CA_CERT_PATH, INTERNAL_REST_PORT
+from ....utils.network import get_auth_headers, wait_for_port
+from ....components.components_constants import PRIVATE_IP, HOSTNAME
 from ....components.service_components import (
     MANAGER_SERVICE,
     DATABASE_SERVICE,
@@ -35,21 +34,10 @@ from ....components.service_components import (
 )
 from ....components.service_names import (
     MANAGER,
-    CLUSTER,
     RESTSERVICE,
-    MGMTWORKER
 )
-from ....utils.systemd import systemd
-from ....utils.install import yum_install
-from ....utils.network import get_auth_headers, wait_for_port
-
-REST_HOME_DIR = '/opt/manager'
-REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
-REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
-REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 
 logger = get_logger('cluster')
-SCRIPTS_PATH = join(COMPONENTS_DIR, MGMTWORKER, CLUSTER, SCRIPTS)
 
 
 class Cluster(BaseComponent):
