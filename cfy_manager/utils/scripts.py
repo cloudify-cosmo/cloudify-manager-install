@@ -60,6 +60,20 @@ def run_script_on_manager_venv(script_path,
     return common.sudo(cmd, env=envvars)
 
 
+def log_script_run_results(script_result):
+    """Log stdout/stderr output from the script"""
+    if script_result.aggr_stdout:
+        output = script_result.aggr_stdout.split('\n')
+        output = [line.strip() for line in output if line.strip()]
+        for line in output[:-1]:
+            logger.debug(line)
+        logger.info(output[-1])
+    if script_result.aggr_stderr:
+        output = script_result.aggr_stderr.split('\n')
+        output = [line.strip() for line in output if line.strip()]
+        for line in output:
+            logger.error(line)
+
 def get_encoded_user_ids(users):
     script_path = join(SCRIPTS_PATH, 'get_encoded_user_ids.py')
     envvars = {'MANAGER_REST_SECURITY_CONFIG_PATH': REST_SECURITY_CONFIG_PATH}

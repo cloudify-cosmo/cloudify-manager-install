@@ -22,13 +22,11 @@ from ....components import sources
 from ...validations import _is_installed
 from ...base_component import BaseComponent
 from ...restservice.restservice import RestService
-from ....utils.scripts import run_script_on_manager_venv
 from ....constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
 from ....components.components_constants import (
     PRIVATE_IP,
     HOSTNAME,
-    SCRIPTS,
-    CLUSTER_JOIN
+    SCRIPTS
 )
 from ....components.service_components import (
     MANAGER_SERVICE,
@@ -69,43 +67,6 @@ class Cluster(BaseComponent):
             rest_service_component = RestService()
             rest_service_component._verify_restservice_alive()
 
-    def _log_results(self, result):
-        """Log stdout/stderr output from the script"""
-        if result.aggr_stdout:
-            output = result.aggr_stdout.split('\n')
-            output = [line.strip() for line in output if line.strip()]
-            for line in output[:-1]:
-                logger.debug(line)
-            logger.info(output[-1])
-        if result.aggr_stderr:
-            output = result.aggr_stderr.split('\n')
-            output = [line.strip() for line in output if line.strip()]
-            for line in output:
-                logger.error(line)
-
-    def _create_process_env(self):
-        env = {}
-        for value, envvar in [
-            (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
-            (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-            (REST_AUTHORIZATION_CONFIG_PATH,
-             'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
-        ]:
-            if value is not None:
-                env[envvar] = value
-        return env
-
-    def _run_syncthing_configuration_script(self, bootstrap_cluster):
-        args_dict = {
-            'hostname': config[MANAGER][HOSTNAME],
-            'bootstrap_cluster': bootstrap_cluster,
-        }
-        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
-        result = run_script_on_manager_venv(script_path,
-                                            args_dict,
-                                            envvars=self._create_process_env())
-        self._log_results(result)
-
     def _remove_manager_from_cluster(self):
         logger.notice('Removing manager "{0}" from cluster'
                       .format(config[MANAGER][HOSTNAME]))
@@ -123,14 +84,6 @@ class Cluster(BaseComponent):
         if _is_installed(MANAGER_SERVICE) and not \
                 _is_installed(DATABASE_SERVICE) and not\
                 _is_installed(QUEUE_SERVICE):
-            # this flag is set inside of restservice._configure_db
-            join = config[CLUSTER_JOIN]
-            if join:
-                logger.notice(
-                    'Adding manager "{0}" to the cluster, this may take a '
-                    'while until config files finish replicating'
-                    .format(config[MANAGER][HOSTNAME]))
-            self._run_syncthing_configuration_script(not join)
             self._verify_local_rest_service_alive(verify_rest_call=True)
             logger.notice('Node has been added successfully!')
         else:
