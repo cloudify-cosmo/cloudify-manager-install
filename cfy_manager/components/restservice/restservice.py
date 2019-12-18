@@ -274,7 +274,8 @@ class RestService(BaseComponent):
             else:
                 db.validate_schema_version(configs)
                 self._join_cluster(configs)
-            self._fetch_manager_reporter_token()
+            if is_premium_installed():
+                self._fetch_manager_reporter_token()
 
     @staticmethod
     def _fetch_manager_reporter_token():
