@@ -74,6 +74,7 @@ def log_script_run_results(script_result):
         for line in output:
             logger.error(line)
 
+
 def get_encoded_user_ids(users):
     script_path = join(SCRIPTS_PATH, 'get_encoded_user_ids.py')
     envvars = {'MANAGER_REST_SECURITY_CONFIG_PATH': REST_SECURITY_CONFIG_PATH}
