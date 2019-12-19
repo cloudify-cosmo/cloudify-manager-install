@@ -404,6 +404,8 @@ class PostgresqlServer(BaseComponent):
         systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
         systemd.disable(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
+        expect_healthy_nodes = False
+
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
         common.chmod('a+x', '/var/lib/patroni')
@@ -610,6 +612,7 @@ class PostgresqlServer(BaseComponent):
                         ['role', 'remove', auth_setup_role],
                         username='root'
                     )
+                    expect_healthy_nodes = True
         except ClusteringError:
             logger.warning(
                 'Could not finish etcd configuration. '
@@ -630,6 +633,21 @@ class PostgresqlServer(BaseComponent):
         )
         systemd.enable('patroni', append_prefix=False)
         systemd.start('patroni', append_prefix=False)
+
+        if expect_healthy_nodes:
+            self._handle_failed_initial_clustering()
+
+    def _handle_failed_initial_clustering(self):
+        for attempt in range(2):
+            dead_nodes = self._find_dead_nodes()
+            if dead_nodes:
+                self.logger.info(
+                    'Attempting to recover from initial clustering failure.'
+                )
+                for address in dead_nodes:
+                    self.reinit_cluster_node(address)
+            else:
+                break
 
     def _get_etcd_members(self):
         """Get a dict mapping etcd member IPs to their IDs."""
@@ -933,6 +951,36 @@ class PostgresqlServer(BaseComponent):
                 if replica['sync_state'] == 'sync':
                     sync_ips.append(replica['client_addr'])
         return sync_ips
+
+    def _find_dead_nodes(self):
+        self.logger.info('Waiting for cluster to become healthy.')
+        # It can take up to 30 seconds to stabilise on a busy environment,
+        # so we'll allow a minute for busy environments with bad networks
+        delay = 2
+        for attempt in range(30):
+            dead_nodes = []
+            master_found = False
+            try:
+                _, cluster_nodes = self.get_cluster_status()
+            except ProcessExecutionError:
+                time.sleep(delay)
+                continue
+            if cluster_nodes[0]['node_ip'] is not None:
+                master_found = True
+            for node in cluster_nodes:
+                if 'Node not running' in node['errors']:
+                    ip = node['node_ip']
+                    self.logger.warning('Node {} not yet up...'.format(ip))
+                    dead_nodes.append(ip)
+                if not dead_nodes:
+                    self.logger.info('Cluster is healthy.')
+                    break
+            time.sleep(delay)
+        if not master_found:
+            raise DBManagementError(
+                'No master found when waiting for cluster to become healthy.'
+            )
+        return dead_nodes
 
     def _determine_cluster_status(self, db_nodes):
         status = self.HEALTHY
