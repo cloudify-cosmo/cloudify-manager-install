@@ -216,6 +216,16 @@ def is_all_in_one_manager():
     )
 
 
+def is_installed(service):
+    return service in config[SERVICES_TO_INSTALL]
+
+
+def is_manager_service_only_installed():
+    return (is_installed(MANAGER_SERVICE) and
+            not is_installed(DATABASE_SERVICE) and
+            not is_installed(QUEUE_SERVICE))
+
+
 def allows_json_format():
     """Decorator for Argparse commands that allow a JSON format. This silences
     the given logger and outputs only at least at the ERROR level. Any inner

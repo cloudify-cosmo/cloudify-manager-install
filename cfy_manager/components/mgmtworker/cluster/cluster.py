@@ -15,9 +15,9 @@
 
 import requests
 
-from ...validations import _is_installed
 from ...base_component import BaseComponent
 from ...restservice.restservice import RestService
+from cfy_manager.utils.common import is_manager_service_only_installed
 
 from ....components import sources
 from ....config import config
@@ -27,11 +27,6 @@ from ....utils.install import yum_install
 from ....constants import CA_CERT_PATH, INTERNAL_REST_PORT
 from ....utils.network import get_auth_headers, wait_for_port
 from ....components.components_constants import PRIVATE_IP, HOSTNAME
-from ....components.service_components import (
-    MANAGER_SERVICE,
-    DATABASE_SERVICE,
-    QUEUE_SERVICE
-)
 from ....components.service_names import (
     MANAGER,
     RESTSERVICE,
@@ -69,9 +64,7 @@ class Cluster(BaseComponent):
     def configure(self):
         # Need to restart the RESTSERVICE so flask could import premium
         self._verify_local_rest_service_alive()
-        if _is_installed(MANAGER_SERVICE) and not \
-                _is_installed(DATABASE_SERVICE) and not\
-                _is_installed(QUEUE_SERVICE):
+        if is_manager_service_only_installed():
             self._verify_local_rest_service_alive(verify_rest_call=True)
             logger.notice('Node has been added successfully!')
         else:
