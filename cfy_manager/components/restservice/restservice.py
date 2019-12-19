@@ -551,6 +551,9 @@ class RestService(BaseComponent):
         logger.notice('Rest Service successfully configured')
 
     def _join_cluster_setup(self):
+        if not common.is_manager_service_only_installed():
+            return
+
         # this flag is set inside of restservice._configure_db
         to_join = config[CLUSTER_JOIN]
         if to_join:
