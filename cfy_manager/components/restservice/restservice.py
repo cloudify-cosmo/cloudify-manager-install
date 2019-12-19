@@ -57,6 +57,7 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
+    HOSTNAME
 )
 from ..base_component import BaseComponent
 from ..service_components import DATABASE_SERVICE, MANAGER_SERVICE
@@ -75,6 +76,8 @@ from ...utils import certificates, common
 from ...exceptions import BootstrapError, NetworkError
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.install import yum_install, yum_remove, is_premium_installed
+from ...utils.scripts import (run_script_on_manager_venv,
+                              log_script_run_results)
 from ...utils.files import (
     check_rpms_are_present,
     deploy,
@@ -129,15 +132,19 @@ class RestService(BaseComponent):
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
-        if not config.get(FLASK_SECURITY):
-            config[FLASK_SECURITY] = {
-                'hash_salt': base64.b64encode(os.urandom(32)),
-                'secret_key': base64.b64encode(os.urandom(32)),
-                'encoding_alphabet': self._random_alphanumeric(),
-                'encoding_block_size': 24,
-                'encoding_min_length': 5,
-                'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
-            }
+        security_config = config.get(FLASK_SECURITY, {})
+        config[FLASK_SECURITY] = {
+            'hash_salt': base64.b64encode(os.urandom(32)),
+            'secret_key': base64.b64encode(os.urandom(32)),
+            'encoding_alphabet': self._random_alphanumeric(),
+            'encoding_block_size': 24,
+            'encoding_min_length': 5,
+            'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
+        }
+
+        # We want the config values to take precedence and generate the
+        # missing values
+        config[FLASK_SECURITY].update(security_config)
 
     def _pre_create_snapshot_paths(self):
         for resource_dir in (
@@ -270,7 +277,6 @@ class RestService(BaseComponent):
             else:
                 db.validate_schema_version(configs)
                 self._join_cluster(configs)
-            self._fetch_manager_reporter_token()
 
     @staticmethod
     def _fetch_manager_reporter_token():
@@ -353,7 +359,7 @@ class RestService(BaseComponent):
     def _is_in_cluster_mode():
         return config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE]
 
-    def _generate_passwords(self):
+    def _generate_status_reporter_passwords(self):
         if not is_premium_installed():
             return
         if self._is_in_cluster_mode():
@@ -363,6 +369,9 @@ class RestService(BaseComponent):
                 self._generate_password()
         config.setdefault(MANAGER_STATUS_REPORTER, {})[PASSWORD] = \
             self._generate_password()
+
+    def _generate_passwords(self):
+        self._generate_status_reporter_passwords()
         self._generate_admin_password_if_empty()
 
     def _random_alphanumeric(self, result_len=31):
@@ -481,6 +490,29 @@ class RestService(BaseComponent):
                 )
         logger.notice('Rest Service successfully installed')
 
+    def _create_process_env(self):
+        env = {}
+        for value, envvar in [
+            (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
+            (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
+            (REST_AUTHORIZATION_CONFIG_PATH,
+             'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
+        ]:
+            if value is not None:
+                env[envvar] = value
+        return env
+
+    def _run_syncthing_configuration_script(self, bootstrap_cluster):
+        args_dict = {
+            'hostname': config[MANAGER][HOSTNAME],
+            'bootstrap_cluster': bootstrap_cluster,
+        }
+        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
+        result = run_script_on_manager_venv(script_path,
+                                            args_dict,
+                                            envvars=self._create_process_env())
+        log_script_run_results(result)
+
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
@@ -499,6 +531,9 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         self._configure_db()
+        if is_premium_installed():
+            self._join_cluster_setup()
+            self._fetch_manager_reporter_token()
         if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             logger.info('Removing postgres password from config.yaml')
             config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
@@ -514,6 +549,16 @@ class RestService(BaseComponent):
             self._configure_status_reporter()
 
         logger.notice('Rest Service successfully configured')
+
+    def _join_cluster_setup(self):
+        # this flag is set inside of restservice._configure_db
+        to_join = config[CLUSTER_JOIN]
+        if to_join:
+            logger.notice(
+                'Adding manager "{0}" to the cluster, this may take a '
+                'while until config files finish replicating'.format(
+                    config[MANAGER][HOSTNAME]))
+        self._run_syncthing_configuration_script(not to_join)
 
     @staticmethod
     def _configure_status_reporter():
