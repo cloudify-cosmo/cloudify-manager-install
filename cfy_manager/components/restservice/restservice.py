@@ -45,6 +45,7 @@ from ..components_constants import (
     PASSWORD,
     CLEAN_DB,
     SECURITY,
+    CONSTANTS,
     SSL_INPUTS,
     LOG_DIR_KEY,
     HOME_DIR_KEY,
@@ -566,7 +567,8 @@ class RestService(BaseComponent):
             'token':
                 config[
                     MANAGER_STATUS_REPORTER][constants.STATUS_REPORTER_TOKEN],
-            'managers_ips': ['localhost']
+            'managers_ips': ['localhost'],
+            'ca_path': config[CONSTANTS]['ca_cert_path']
         }
         status_reporter.configure(**conf)
 
