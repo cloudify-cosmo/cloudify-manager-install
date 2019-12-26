@@ -59,6 +59,7 @@ jobs:
           command: |
             pushd /tmp/cloudify-manager-install/rpms
               /tmp/cloudify-manager-install/packaging/fetch_requirements --edition premium -b ${CIRCLE_BRANCH} >~/fetch_requirements.log
+              cat ~/fetch_requirements.log
             popd
       - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
       - persist_to_workspace:
@@ -265,6 +266,21 @@ jobs:
             docker cp db_client_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_cert.pem
             set +x
             docker exec ${MANAGER2_NAME} cfy_manager install --verbose
+      - run:
+          name: Configuring status reporters of brokers
+          command: |
+            set -eux
+            TOKEN=$(docker exec ${MANAGER1_NAME} cfy_manager status-reporter get-tokens --json |  python -c 'import json,sys;obj=json.load(sys.stdin);print obj["broker_status_reporter"]')
+            .circleci/cluster/configure_status_reporter.sh "${QUEUE1_NAME} ${QUEUE2_NAME}" "${MANAGER1_IP} ${MANAGER2_IP}" ${TOKEN}
+      - run:
+          name: Configuring status reporters of db nodes
+          command: |
+            set -eux
+            TOKEN=$(docker exec ${MANAGER1_NAME} cfy_manager status-reporter get-tokens --json |  python -c 'import json,sys;obj=json.load(sys.stdin);print obj["db_status_reporter"]')
+            .circleci/cluster/configure_status_reporter.sh "${DB1_NAME} ${DB2_NAME} ${DB3_NAME}" "${MANAGER1_IP} ${MANAGER2_IP}" ${TOKEN}
+      - run:
+          name: Waiting a little for the status reporters to check in
+          command: sleep 1
       - run:
           name: Check Cluster Status
           command: |
