@@ -13,8 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from ...config import config
 from .status_reporter import StatusReporter
-from ..components_constants import MANAGER_STATUS_REPORTER
+from ...utils.node import update_status_reporter_config
+from ..components_constants import MANAGER_STATUS_REPORTER, CONSTANTS
 
 
 class ManagerStatusReporter(StatusReporter):
@@ -23,3 +25,8 @@ class ManagerStatusReporter(StatusReporter):
         super(ManagerStatusReporter, self).__init__(skip_installation,
                                                     'manager_reporter',
                                                     MANAGER_STATUS_REPORTER)
+
+    def configure(self):
+        super(ManagerStatusReporter, self).configure()
+        update_status_reporter_config({'ca_path':
+                                       config[CONSTANTS]['ca_cert_path']})
