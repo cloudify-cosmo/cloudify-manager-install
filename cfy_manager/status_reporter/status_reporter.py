@@ -121,8 +121,8 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
 
 def _handle_ca_path(ca_path):
     if ca_path and not is_premium_installed():
-        # There is no need to handle the CA certificate for the manager status reporter,
-        # because it use the same local file like the restservice.
+        # There is no need to handle the CA certificate for the manager status
+        # reporter, because it use the same local file like the restservice.
         logger.info('Copying CA certificate from {0} to {1}...'.format(
             ca_path, CA_DEFAULT_PATH))
         copy(ca_path, CA_DEFAULT_PATH)
@@ -131,11 +131,12 @@ def _handle_ca_path(ca_path):
               CA_DEFAULT_PATH])
 
 
-def _get_configure_args(log_level, managers_ip, node_id,
+def _get_configure_args(ca_path, log_level, managers_ip, node_id,
                         reporting_freq, token, user_name):
     conf_parameters_passed = {
         'user_name': user_name,
         STATUS_REPORTER_TOKEN: token,
+        'ca_path': ca_path,
         STATUS_REPORTER_MANAGERS_IPS: managers_ip,
         'reporting_freq': reporting_freq,
         'node_id': node_id,
