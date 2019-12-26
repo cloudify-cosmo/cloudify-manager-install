@@ -45,7 +45,6 @@ from ..components_constants import (
     PASSWORD,
     CLEAN_DB,
     SECURITY,
-    CONSTANTS,
     SSL_INPUTS,
     LOG_DIR_KEY,
     HOME_DIR_KEY,
@@ -68,9 +67,7 @@ from ..service_names import (
 )
 from ... import constants
 from ...config import config
-from ...logger import (
-    get_logger,
-)
+from ...logger import get_logger
 from ...utils.systemd import systemd
 from ...utils import certificates, common
 from ...exceptions import BootstrapError, NetworkError
@@ -569,8 +566,7 @@ class RestService(BaseComponent):
             'token':
                 config[
                     MANAGER_STATUS_REPORTER][constants.STATUS_REPORTER_TOKEN],
-            'managers_ips': ['localhost'],
-            'ca_path': config[CONSTANTS]['ca_cert_path']
+            'managers_ips': ['localhost']
         }
         status_reporter.configure(**conf)
 
