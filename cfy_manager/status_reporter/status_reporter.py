@@ -120,15 +120,15 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
 
 
 def _handle_ca_path(ca_path):
-    if ca_path and not is_premium_installed():
-        # There is no need to handle the CA certificate for the manager status
-        # reporter, because it use the same local file like the restservice.
-        logger.info('Copying CA certificate from {0} to {1}...'.format(
-            ca_path, CA_DEFAULT_PATH))
-        copy(ca_path, CA_DEFAULT_PATH)
-        sudo(['chown', '{owner}.{group}'.format(
-            owner=STATUS_REPORTER_OS_USER, group=STATUS_REPORTER_OS_USER),
-              CA_DEFAULT_PATH])
+    if not ca_path:
+        return
+
+    logger.info('Copying CA certificate from {0} to {1}...'.format(
+        ca_path, CA_DEFAULT_PATH))
+    copy(ca_path, CA_DEFAULT_PATH)
+    sudo(['chown', '{owner}.{group}'.format(
+        owner=STATUS_REPORTER_OS_USER, group=STATUS_REPORTER_OS_USER),
+          CA_DEFAULT_PATH])
 
 
 def _get_configure_args(ca_path, log_level, managers_ip, node_id,
