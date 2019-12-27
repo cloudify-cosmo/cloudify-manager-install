@@ -68,9 +68,7 @@ from ..service_names import (
 )
 from ... import constants
 from ...config import config
-from ...logger import (
-    get_logger,
-)
+from ...logger import get_logger
 from ...utils.systemd import systemd
 from ...utils import certificates, common
 from ...exceptions import BootstrapError, NetworkError
