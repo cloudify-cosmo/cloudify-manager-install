@@ -23,26 +23,29 @@ import argh
 from ..utils import db
 from ..config import config
 from ..utils.systemd import systemd
-from ..utils.common import allows_json_format
+from ..utils.files import read_yaml_file
 from ..utils.install import is_premium_installed
 from ..utils.scripts import get_encoded_user_ids
 from cfy_manager.utils.common import output_table
 from ..logger import get_logger, setup_console_logger
 from ..utils.node import update_status_reporter_config
-from ..utils.files import read_yaml_file
-from ..constants import (
-    STATUS_REPORTER,
-    VERBOSE_HELP_MSG,
-    STATUS_REPORTER_TOKEN,
-    SELECT_USER_TOKENS_QUERY,
-    STATUS_REPORTER_MANAGERS_IPS,
-    STATUS_REPORTER_CONFIGURATION_PATH,
-)
+from ..utils.common import allows_json_format, copy, sudo
 from ..components.components_constants import (
     DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER
 )
+from ..constants import (
+    STATUS_REPORTER,
+    VERBOSE_HELP_MSG,
+    STATUS_REPORTER_TOKEN,
+    STATUS_REPORTER_OS_USER,
+    SELECT_USER_TOKENS_QUERY,
+    STATUS_REPORTER_MANAGERS_IPS,
+    STATUS_REPORTER_CONFIGURATION_PATH,
+)
+
+CA_DEFAULT_PATH = '/etc/cloudify/status_reporter_cert.pem'
 
 logger = get_logger(STATUS_REPORTER)
 
@@ -110,9 +113,22 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                 ' reporter configuration: {0}...'.format(
                     json.dumps(passed_parameters, indent=1)))
     update_status_reporter_config(passed_parameters)
+    _handle_ca_path(ca_path)
     logger.info('Starting Status Reporter service...')
     systemd.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
+
+
+def _handle_ca_path(ca_path):
+    if not ca_path:
+        return
+
+    logger.info('Copying CA certificate from {0} to {1}...'.format(
+        ca_path, CA_DEFAULT_PATH))
+    copy(ca_path, CA_DEFAULT_PATH)
+    sudo(['chown', '{owner}.{group}'.format(
+        owner=STATUS_REPORTER_OS_USER, group=STATUS_REPORTER_OS_USER),
+          CA_DEFAULT_PATH])
 
 
 def _get_configure_args(ca_path, log_level, managers_ip, node_id,

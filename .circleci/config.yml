@@ -280,7 +280,7 @@ jobs:
             .circleci/cluster/configure_status_reporter.sh "${DB1_NAME} ${DB2_NAME} ${DB3_NAME}" "${MANAGER1_IP} ${MANAGER2_IP}" ${TOKEN}
       - run:
           name: Waiting a little for the status reporters to check in
-          command: sleep 1
+          command: sleep 6
       - run:
           name: Check Cluster Status
           command: |
