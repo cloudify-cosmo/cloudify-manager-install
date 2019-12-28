@@ -45,7 +45,7 @@ from ..constants import (
     STATUS_REPORTER_CONFIGURATION_PATH,
 )
 
-CA_DEFAULT_PATH = '/etc/cloudify/status_reporter_cert.pem'
+CA_DEFAULT_PATH = '/etc/cloudify/ssl/status_reporter_cert.pem'
 
 logger = get_logger(STATUS_REPORTER)
 
