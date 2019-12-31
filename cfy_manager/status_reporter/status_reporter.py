@@ -91,9 +91,15 @@ logger = get_logger(STATUS_REPORTER)
           help='The status reporter\'s logging level, default level is info'
                'Example: `error`.'
           )
+@argh.arg('--request-timeout',
+          type=int,
+          help='The timeout in seconds that the status reporter will wait for '
+               'an answer from the Cloudify manager on every http request.'
+          )
 @argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
 def configure(managers_ips=None, user_name='', token='', ca_path='',
-              reporting_freq=None, node_id='', log_level='', verbose=False):
+              reporting_freq=None, node_id='', log_level='', verbose=False,
+              request_timeout=None):
     managers_ips = managers_ips or []
     setup_console_logger(verbose=verbose)
     logger.notice('Configuring Status Reporter service with...')
@@ -103,7 +109,8 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                                             node_id,
                                             reporting_freq,
                                             token,
-                                            user_name)
+                                            user_name,
+                                            request_timeout)
     if not passed_parameters:
         logger.warning('No configuration param were given,'
                        ' so nothing to update')
@@ -132,7 +139,7 @@ def _handle_ca_path(ca_path):
 
 
 def _get_configure_args(ca_path, log_level, managers_ip, node_id,
-                        reporting_freq, token, user_name):
+                        reporting_freq, token, user_name, request_timeout):
     conf_parameters_passed = {
         'user_name': user_name,
         STATUS_REPORTER_TOKEN: token,
@@ -140,7 +147,8 @@ def _get_configure_args(ca_path, log_level, managers_ip, node_id,
         STATUS_REPORTER_MANAGERS_IPS: managers_ip,
         'reporting_freq': reporting_freq,
         'node_id': node_id,
-        'log_level': log_level
+        'log_level': log_level,
+        'request_timeout': request_timeout
     }
     return {key: value for (key, value) in
             conf_parameters_passed.items() if value}
