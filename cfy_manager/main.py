@@ -137,7 +137,8 @@ DB_NODE_FORCE_HELP_MSG = (
     "Force removal of cluster node even if it is the master."
 )
 DB_NODE_ID_HELP_MSG = (
-    "Cloudify's auto-generated id of target DB cluster node."
+    "Cloudify's auto-generated id of target DB cluster node. "
+    "Run `cfy_manager node get-id` on the DB cluster node to retrieve it."
 )
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
