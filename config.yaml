@@ -98,8 +98,9 @@ rabbitmq:
   # Example:
   # cluster_members:
   #   <hostname of rabbit node>:
-  #     node_id: <Cloudify's auto-generated id of the rabbit node> (only needed on
-  #              the first manager installed in a cluster)
+  #     node_id: <Cloudify's auto-generated id of the rabbit node>
+  #              Run `cfy_manager node get-id` on the rabbit node to retrieve it.
+  #              (only needed on the first manager installed in a cluster)
   #     networks:
   #       default: <address of rabbit node> (not needed if node name is resolvable via DNS)
   #       <other network name>: <address for this node on 'other network'>
@@ -244,8 +245,9 @@ postgresql_server:
     # nodes:
     #   <hostname of postgres node>:
     #     ip: <ip of postgres node>
-    #     node_id: <Cloudify's auto-generated id of the postgres node> (only needed on
-    #              the first manager installed in a cluster)
+    #     node_id: <Cloudify's auto-generated id of the postgres node>
+    #              Run `cfy_manager node get-id` on the postgres node to retrieve it.
+    #              (only needed on the first manager installed in a cluster)
     #   postgres_2:
     #     ip: 192.0.2.2
     #     node_id: c5c39913-b8d5-4130-99be-c29a2c970605
