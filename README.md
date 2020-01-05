@@ -33,7 +33,7 @@ with:
 4. Execute the script:
 
 Note: For this to work you will either need an ssh key that can access cloudify-premium (premium) or cloudify-versions (community),
-or you will need to export GITHUB_USERNAME and GITHUB_PASSWORD env vars.
+or you will need to export GITHUB_USERNAME and GITHUB_TOKEN env vars.
 
 `./create_rpm`
 
