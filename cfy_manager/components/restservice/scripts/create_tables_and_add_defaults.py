@@ -136,7 +136,8 @@ def _insert_manager(config):
         distribution=version_data['distribution'],
         distro_release=version_data['distro_release'],
         _ca_cert_id=ca,
-        node_id=config['node_id']
+        node_id=config['node_id'],
+        last_seen=config['last_seen']
     )
     sm.put(inst)
 

@@ -271,7 +271,8 @@ def insert_manager(configs):
             'hostname': config[MANAGER][HOSTNAME],
             'private_ip': config['manager']['private_ip'],
             'networks': config[NETWORKS],
-            'node_id': get_node_id()
+            'node_id': get_node_id(),
+            'last_seen': common.get_formatted_timestamp()
         }
     }
     try:

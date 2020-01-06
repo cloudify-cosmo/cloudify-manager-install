@@ -22,6 +22,7 @@ import logging
 import tempfile
 import subprocess
 from functools import wraps
+from datetime import datetime
 
 import argh
 import requests
@@ -294,3 +295,8 @@ def output_table_row(lengths, entries):
         output += str(entries[i]).center(lengths[i])
         output += '|'
     print(output)
+
+
+def get_formatted_timestamp():
+    # Adding 'Z' to match ISO format
+    return '{0}Z'.format(datetime.utcnow().isoformat()[:-3])
