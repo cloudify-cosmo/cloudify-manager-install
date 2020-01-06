@@ -128,6 +128,7 @@ PG_HBA_HOSTSSL_REGEX_PATTERN = \
 PG_PORT = 5432
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER, CONFIG)
+SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER, 'scripts')
 
 logger = get_logger(POSTGRESQL_SERVER)
 
@@ -437,6 +438,9 @@ class PostgresqlServer(BaseComponent):
         )
         common.chmod('a-x', '/var/lib/patroni')
 
+        logger.info('Deploying patroni initial startup monitor.')
+        self._deploy_patroni_startup_check()
+
         logger.info('Deploying cluster config files.')
         self._create_patroni_config(PATRONI_CONFIG_PATH)
         common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
@@ -631,6 +635,10 @@ class PostgresqlServer(BaseComponent):
         systemd.enable('patroni', append_prefix=False)
         systemd.start('patroni', append_prefix=False)
 
+        logger.info('Activating patroni initial startup monitor.')
+        self._activate_patroni_startup_check()
+        logger.info('Patroni started.')
+
     def _get_etcd_members(self):
         """Get a dict mapping etcd member IPs to their IDs."""
         etcd_members = {}
@@ -665,6 +673,26 @@ class PostgresqlServer(BaseComponent):
             etcd_members[result['ip']] = result['id']
 
         return etcd_members
+
+    def _deploy_patroni_startup_check(self):
+        files.deploy(
+            os.path.join(SCRIPTS_PATH, 'patroni_startup_check'),
+            '/opt/patroni/bin/patroni_startup_check',
+        )
+        common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
+        common.chmod('500', '/opt/patroni/bin/patroni_startup_check')
+
+    def _activate_patroni_startup_check(self):
+        # Similarly to the current snapshot post restore commands, this will
+        # continue to run after the installer finishes, until its task is
+        # complete (patroni starts healthily)
+        common.sudo(
+            [
+                'systemd-run',
+                '--unit', 'patroni_startup_check',
+                '/opt/patroni/bin/patroni_startup_check',
+            ]
+        )
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]
