@@ -171,6 +171,7 @@ def _add_manager_status_reporter_user():
         script_config['manager_status_reporter_username'],
         script_config['manager_status_reporter_password'],
         script_config['manager_status_reporter_role'],
+        script_config['manager_status_reporter_user_id']
     )
     RETURN_DICT['manager_status_reporter_token'] = user.api_token
 
@@ -182,6 +183,7 @@ def _add_broker_status_reporter_user():
         script_config['broker_status_reporter_username'],
         script_config['broker_status_reporter_password'],
         script_config['broker_status_reporter_role'],
+        script_config['broker_status_reporter_user_id']
     )
     RETURN_DICT['broker_status_reporter_token'] = user.api_token
 
@@ -193,6 +195,7 @@ def _add_db_status_reporter_user():
         script_config['db_status_reporter_username'],
         script_config['db_status_reporter_password'],
         script_config['db_status_reporter_role'],
+        script_config['db_status_reporter_user_id']
     )
     RETURN_DICT['db_status_reporter_token'] = user.api_token
 
