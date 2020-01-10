@@ -218,7 +218,9 @@ def show_configuration(json_format=None, verbose=False):
         print(json.dumps(_config))
     else:
         output_columns = ('Key', 'Value')
-        output_table(_config.items(), output_columns)
+        output_rows = [{'Key': key, 'Value': value}
+                       for key, value in _config.items()]
+        output_table(output_rows, output_columns)
 
 
 def _get_status_reporter_tokens():
