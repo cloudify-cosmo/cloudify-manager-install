@@ -194,6 +194,9 @@ class PostgresqlServer(BaseComponent):
                         ca_path=PG_CA_CERT_PATH,
                     )
                 )
+            for name, value in config[POSTGRESQL_SERVER]['config'].items():
+                conf_handle.write("{0} = '{1}'\n".format(name, value))
+
         return temp_pgconfig_path
 
     def _write_new_hba_file(self, lines, enable_remote_connections):
