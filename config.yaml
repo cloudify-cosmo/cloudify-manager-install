@@ -228,6 +228,12 @@ postgresql_server:
   # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
   postgres_password: ''
 
+  # postgresql.conf overrides
+  config:
+    shared_buffers: '1024MB'
+    effective_cache_size: '1024MB'
+    work_mem: '16MB'
+
   # PostgreSQL server's or cluster's public certificate, private key, and CA certificate
   # paths. All will be copied to the appropriate location and have permissions and
   # ownership set appropriately.
