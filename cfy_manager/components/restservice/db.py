@@ -135,12 +135,14 @@ def _create_populate_db_args_dict():
         args_dict['manager_status_reporter_password'] = \
             manager_status_reporter_password
         args_dict['manager_status_reporter_role'] = MANAGER_STATUS_REPORTER
+        args_dict['manager_status_reporter_user_id'] = 90000
     db_status_reporter_password = config.get(
         DB_STATUS_REPORTER, {}).get(PASSWORD)
     if db_status_reporter_password:
         args_dict['db_status_reporter_username'] = DB_STATUS_REPORTER
         args_dict['db_status_reporter_password'] = db_status_reporter_password
         args_dict['db_status_reporter_role'] = DB_STATUS_REPORTER
+        args_dict['db_status_reporter_user_id'] = 90001
     broker_status_reporter_password = config.get(
         BROKER_STATUS_REPORTER, {}).get(PASSWORD)
     if broker_status_reporter_password:
@@ -150,6 +152,7 @@ def _create_populate_db_args_dict():
             broker_status_reporter_password
         args_dict['broker_status_reporter_role'] = \
             BROKER_STATUS_REPORTER
+        args_dict['broker_status_reporter_user_id'] = 90002
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
