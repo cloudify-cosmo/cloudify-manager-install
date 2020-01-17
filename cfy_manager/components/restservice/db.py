@@ -85,7 +85,7 @@ def _execute_db_script(script_name):
     script_path = join(SCRIPTS_PATH, script_name)
     tmp_script_path = temp_copy(script_path)
     common.chmod('o+rx', tmp_script_path)
-    username = pg_config['cloudify_username'].split('@')[0]
+    username = pg_config['cloudify_username']
     db_script_command = \
         '{cmd} {db} {user} {password}'.format(
             cmd=tmp_script_path,
