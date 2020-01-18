@@ -710,6 +710,9 @@ def install(verbose=False,
             # install then we shouldn't configure
             if not component.skip_installation:
                 component.configure()
+        for component in components:
+            if not component.skip_installation:
+                component.start()
 
     if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
             QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
