@@ -121,8 +121,6 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                     json.dumps(passed_parameters, indent=1)))
     update_status_reporter_config(passed_parameters)
     _handle_ca_path(ca_path)
-    logger.info('Starting Status Reporter service...')
-    systemd.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
 
 
