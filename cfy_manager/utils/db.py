@@ -44,7 +44,7 @@ def run_psql_command(command, db_key):
     command = base_command + command
     db_kwargs = {}
     if db_key == 'cloudify_db_name' and not peer_authentication:
-        db_kwargs['username'] = pg_config['cloudify_username'].split('@')[0]
+        db_kwargs['username'] = pg_config['cloudify_username']
         db_kwargs['password'] = pg_config['cloudify_password']
 
     db_env = generate_db_env(database=pg_config[db_key], **db_kwargs)
