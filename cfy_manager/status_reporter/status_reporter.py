@@ -97,9 +97,13 @@ logger = get_logger(STATUS_REPORTER)
                'an answer from the Cloudify manager on every http request.'
           )
 @argh.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
+@argh.arg('--no-restart',
+          help='In case there is a need to not restart the status reporter '
+               'after configuring it.',
+          default=False)
 def configure(managers_ips=None, user_name='', token='', ca_path='',
               reporting_freq=None, node_id='', log_level='', verbose=False,
-              request_timeout=None):
+              request_timeout=None, no_restart=False):
     managers_ips = managers_ips or []
     setup_console_logger(verbose=verbose)
     logger.notice('Configuring Status Reporter service with...')
@@ -121,6 +125,10 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                     json.dumps(passed_parameters, indent=1)))
     update_status_reporter_config(passed_parameters)
     _handle_ca_path(ca_path)
+    if no_restart:
+        logger.info('Status Reporter service\'s configuration change applied'
+                    ' successfully, a restart is required to activate it')
+        return
     logger.info('Starting Status Reporter service...')
     systemd.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
