@@ -22,11 +22,13 @@ SERVICE_COMPONENTS = {
     # will be installed
     "database_service": [
         "postgresql_server",
-        "postgresql_status_reporter"
+        "postgresql_status_reporter",
+        "patch"
     ],
     "queue_service": [
         "rabbitmq",
-        "rabbitmq_status_reporter"
+        "rabbitmq_status_reporter",
+        "patch"
     ],
     "manager_service": [
         "manager_status_reporter",
