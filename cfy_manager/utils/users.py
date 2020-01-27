@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 from pwd import getpwnam
-from grp import getgrnam
 
 from .common import sudo
 from ..logger import get_logger
@@ -33,17 +32,6 @@ def _user_exists(user):
         return False
 
 
-def _group_exists(group):
-    logger.debug('Checking whether group {0} exists...'.format(group))
-    try:
-        getgrnam(group)
-        logger.debug('Group `{0}` already exists'.format(group))
-        return True
-    except KeyError:
-        logger.debug('Group `{0}` does not exist'.format(group))
-        return False
-
-
 def create_service_user(user, group, home):
     """Creates a user.
 
@@ -51,11 +39,10 @@ def create_service_user(user, group, home):
     This user will only be created if it didn't already exist.
     """
 
-    if not _group_exists(group):
-        logger.info('Creating group {group}'.format(group=group))
-        # --force in groupadd causes it to return true if the group exists.
-        # Other behaviour changes don't affect this basic use of the command.
-        sudo(['groupadd', '--force', group])
+    logger.info('Creating group %(group)s if absent', {'group': group})
+    # --force in groupadd causes it to return true if the group exists.
+    # Other behaviour changes don't affect this basic use of the command.
+    sudo(['groupadd', '--force', group])
 
     if not _user_exists(user):
         logger.info('Creating user {0}, home: {1}...'.format(user, home))
