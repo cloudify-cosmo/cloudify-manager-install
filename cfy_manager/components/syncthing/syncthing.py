@@ -122,9 +122,13 @@ class Syncthing(BaseComponent):
                         'and Queue endpoints. Ignoring cluster configuration')
 
     def start(self):
-        service.start('syncthing')
-        self._run_syncthing_configuration_script(
-            'start', not config.get(CLUSTER_JOIN))
+        if is_manager_service_only_installed():
+            service.start('syncthing')
+            self._run_syncthing_configuration_script(
+                'start', not config.get(CLUSTER_JOIN))
+        else:
+            logger.warn('Cluster must be instantiated with external DB '
+                        'and Queue endpoints. Ignoring cluster configuration')
 
     def remove(self):
         try:
