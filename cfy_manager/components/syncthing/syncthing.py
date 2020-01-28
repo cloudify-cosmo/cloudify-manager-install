@@ -19,7 +19,6 @@ import requests
 from cfy_manager.components import sources
 from ..base_component import BaseComponent
 from ..restservice.restservice import RestService
-from ..validations import _is_installed
 from ...config import config
 from ...logger import get_logger
 from ...constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
@@ -29,16 +28,12 @@ from ...components.components_constants import (
     SCRIPTS,
     CLUSTER_JOIN
 )
-from ...components.service_components import (
-    MANAGER_SERVICE,
-    DATABASE_SERVICE,
-    QUEUE_SERVICE
-)
 from ...components.service_names import (
     MANAGER,
     RESTSERVICE,
 )
 from ...utils import service
+from ...utils.common import is_manager_service_only_installed
 from ...utils.install import yum_install
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.scripts import run_script_on_manager_venv
@@ -110,9 +105,7 @@ class Syncthing(BaseComponent):
     def configure(self):
         # Need to restart the RESTSERVICE so flask could import premium
         self._verify_local_rest_service_alive()
-        if _is_installed(MANAGER_SERVICE) and not \
-                _is_installed(DATABASE_SERVICE) and not\
-                _is_installed(QUEUE_SERVICE):
+        if is_manager_service_only_installed():
             # this flag is set inside of restservice._configure_db
             join = config.get(CLUSTER_JOIN)
             if join:

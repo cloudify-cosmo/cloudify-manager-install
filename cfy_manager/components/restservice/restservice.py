@@ -76,8 +76,6 @@ from ...utils import service
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.install import is_premium_installed
-from ...utils.scripts import (run_script_on_manager_venv,
-                              log_script_run_results)
 from ...utils.files import (
     check_rpms_are_present,
     deploy,
@@ -502,17 +500,6 @@ class RestService(BaseComponent):
                 env[envvar] = value
         return env
 
-    def _run_syncthing_configuration_script(self, bootstrap_cluster):
-        args_dict = {
-            'hostname': config[MANAGER][HOSTNAME],
-            'bootstrap_cluster': bootstrap_cluster,
-        }
-        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
-        result = run_script_on_manager_venv(script_path,
-                                            args_dict,
-                                            envvars=self._create_process_env())
-        log_script_run_results(result)
-
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
@@ -554,7 +541,6 @@ class RestService(BaseComponent):
                 'Adding manager "{0}" to the cluster, this may take a '
                 'while until config files finish replicating'.format(
                     config[MANAGER][HOSTNAME]))
-        self._run_syncthing_configuration_script(not to_join)
 
     @staticmethod
     def _configure_status_reporter():

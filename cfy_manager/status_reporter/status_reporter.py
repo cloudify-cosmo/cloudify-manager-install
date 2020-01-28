@@ -39,7 +39,8 @@ from ..constants import (
     STATUS_REPORTER,
     VERBOSE_HELP_MSG,
     STATUS_REPORTER_TOKEN,
-    STATUS_REPORTER_OS_USER,
+    CLOUDIFY_USER,
+    CLOUDIFY_GROUP,
     SELECT_USER_TOKENS_QUERY,
     STATUS_REPORTER_MANAGERS_IPS,
     STATUS_REPORTER_CONFIGURATION_PATH,
@@ -136,7 +137,7 @@ def _handle_ca_path(ca_path):
         ca_path, CA_DEFAULT_PATH))
     copy(ca_path, CA_DEFAULT_PATH)
     sudo(['chown', '{owner}.{group}'.format(
-        owner=STATUS_REPORTER_OS_USER, group=STATUS_REPORTER_OS_USER),
+        owner=CLOUDIFY_USER, group=CLOUDIFY_GROUP),
         CA_DEFAULT_PATH])
 
 
