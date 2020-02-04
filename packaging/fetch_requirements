@@ -177,17 +177,17 @@ def get_package_urls_file(edition, branch, repo_destination_path):
         print('Authentication is required...')
         if (
             'GITHUB_USERNAME' in os.environ and
-            'GITHUB_PASSWORD' in os.environ
+            'GITHUB_TOKEN' in os.environ
         ):
-            print('Username and password have been supplied.')
-            repo = 'https://{username}:{password}@github.com/'.format(
+            print('Github username and token have been supplied.')
+            repo = 'https://{username}:{token}@github.com/'.format(
                 username=os.environ['GITHUB_USERNAME'],
-                password=os.environ['GITHUB_PASSWORD'],
+                token=os.environ['GITHUB_TOKEN'],
             )
             repo += '{repo_path}'
             using_credentials = True
         else:
-            print('Username and password not supplied, SSH key will be used.')
+            print('Github username and token not supplied, SSH key will be used.')
             repo = 'git@github.com:{repo_path}'
     else:
         print('Authentication not required.')
