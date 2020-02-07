@@ -22,7 +22,7 @@ API_PREFIX = (
 
 URL_TEMPLATE = API_PREFIX + 'tree/{branch}'
 ARTIFACTS_TEMPLATE = API_PREFIX + '{build[build_num]}/artifacts'
-TRY_BRANCHES = ('supervisord-docker-image-1', 'master')
+TRY_BRANCHES = ('5.0.5-ms', 'master')
 
 # Keys: other repositories in the same organization
 # Values: collection of Workflow jobs from which we need to fetch artifacts.
