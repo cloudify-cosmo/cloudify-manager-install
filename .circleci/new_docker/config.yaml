@@ -9,7 +9,7 @@ manager:
     admin_password: 'admin'
 
 postgresql_client:
-  host: 172.17.0.2
+  host: DB_IP
   ca_path: /etc/ssl/certs/ca-bundle.crt
   server_db_name: postgres
   server_username: postgres
@@ -20,11 +20,13 @@ postgresql_client:
 rabbitmq:
   cluster_members:
     rabbit1:
+      node_id: QUEUE1_NODE
       networks:
-        default: 172.17.0.3
+        default: QUEUE1_IP
     rabbit2:
+      node_id: QUEUE2_NODE
       networks:
-        default: 172.17.0.4
+        default: QUEUE2_IP
   ca_path: /tmp/rabbitmq-cert.pem
 
 sanity:

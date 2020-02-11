@@ -126,27 +126,26 @@ jobs:
               docker build -t cloudify-manager-db -f Dockerfile.db .
             popd
       - run:
-          name: run containers
+          name: prepare envvars
+          command: |
+            echo "export IP_FORMAT='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'" >> $BASH_ENV
+      - run:
+          name: run db containers
+          command: |
+            docker run \
+              --name postgres \
+              -e POSTGRES_USER=postgres \
+              -e POSTGRES_DB=postgres \
+              -e POSTGRES_PASSWORD=postgres \
+              -d postgres:9.5
+            DB_IP=$(docker inspect --format="$IP_FORMAT" postgres)
+            echo "export DB_IP=$DB_IP" >> $BASH_ENV
+      - run:
+          name: run queue containers
           command: |
             set -eux
             pushd .circleci/new_docker
-              function generate_test_cert {
-                  san=$1
-                  CONTAINER_ID=$(docker run -d cloudify-manager yes)
-                  if [ -f "ca.crt" ]
-                  then
-                    docker exec ${CONTAINER_ID} mkdir /etc/cloudify/.cloudify-test-ca
-                    docker cp ca.key ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.key
-                    docker cp ca.crt ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.crt
-                  fi
-                  docker exec ${CONTAINER_ID} cfy_manager generate-test-cert -s $san
-                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.key ca.key
-                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/ca.crt ca.crt
-                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/$san.crt $san.crt
-                  docker cp ${CONTAINER_ID}:/etc/cloudify/.cloudify-test-ca/$san.key $san.key
-                  docker rm -f ${CONTAINER_ID}
-              }
-
+              source functions.sh
               generate_test_cert 172.17.0.3
               mv 172.17.0.3.crt queue1_cert.pem
               mv 172.17.0.3.key queue1_key.pem
@@ -155,7 +154,6 @@ jobs:
               mv 172.17.0.4.crt queue2_cert.pem
               mv 172.17.0.4.key queue2_key.pem
 
-              docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=postgres -e POSTGRES_PASSWORD=postgres -d postgres:9.5
               QUEUE1_ID=$(docker run --name cloudify-manager-queue -d \
                 --hostname rabbit1 \
                 -v $(pwd)/config_queue.yaml:/etc/cloudify/config.yaml \
@@ -164,25 +162,61 @@ jobs:
                 -v $(pwd)/queue1_key.pem:/tmp/key.pem \
                 --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges \
                 cloudify-manager-queue)
+              wait_for_container cloudify-manager-queue
               docker run --name cloudify-manager-queue-2 -d \
                 --hostname rabbit2 \
                 --link=${QUEUE1_ID}:rabbit1 \
-                -v $(pwd)/config_queue.yaml:/etc/cloudify/config.yaml \
+                -v $(pwd)/config_queue2.yaml:/etc/cloudify/config.yaml \
                 -v $(pwd)/queue2_cert.pem:/tmp/cert.pem \
+                -v $(pwd)/ca.crt:/tmp/ca.pem \
                 -v $(pwd)/queue2_key.pem:/tmp/key.pem \
                 --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges \
                 cloudify-manager-queue
+              wait_for_container cloudify-manager-queue-2
+            popd
+            QUEUE1_IP=$(docker inspect --format="$IP_FORMAT" cloudify-manager-queue)
+            QUEUE2_IP=$(docker inspect --format="$IP_FORMAT" cloudify-manager-queue-2)
 
-              sleep 10
+            QUEUE1_NODE=$(docker exec cloudify-manager-queue cfy_manager node get-id | grep -oE '[^ ]+$')
+            QUEUE2_NODE=$(docker exec cloudify-manager-queue-2 cfy_manager node get-id | grep -oE '[^ ]+$')
+
+            echo "export QUEUE1_IP=$QUEUE1_IP" >> $BASH_ENV
+            echo "export QUEUE2_IP=$QUEUE2_IP" >> $BASH_ENV
+            echo "export QUEUE1_NODE=$QUEUE1_NODE" >> $BASH_ENV
+            echo "export QUEUE2_NODE=$QUEUE2_NODE" >> $BASH_ENV
+
+      - run:
+          name: run containers
+          command: |
+            set -eux
+            pushd .circleci/new_docker
+              source functions.sh
+
+              sed -i -e "s/DB_IP/$DB_IP/" \
+                -e "s/QUEUE1_IP/$QUEUE1_IP/" \
+                -e "s/QUEUE2_IP/$QUEUE2_IP/" \
+                -e "s/QUEUE1_NODE/$QUEUE1_NODE/" \
+                -e "s/QUEUE2_NODE/$QUEUE2_NODE/" \
+                config.yaml
+
               docker run --name cloudify-manager -d \
                 -v $(pwd)/config.yaml:/tmp/config.yaml \
                 -v $(pwd)/ca.crt:/tmp/rabbitmq-cert.pem \
                 --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges \
                 cloudify-manager
-              sleep 60
+              wait_for_container cloudify-manager
               docker exec -it cloudify-manager tail /var/log/cloudify/manager/cfy_manager.log
+
               docker cp cloudify-manager:/etc/cloudify/ssl/cloudify_internal_ca_cert.pem ca.pem
               docker cp cloudify-manager:/etc/cloudify/ssl/cloudify_internal_ca_key.pem ca_key.pem
+
+              sed -i -e "s/DB_IP/$DB_IP/" \
+                -e "s/QUEUE1_IP/$QUEUE1_IP/" \
+                -e "s/QUEUE2_IP/$QUEUE2_IP/" \
+                -e "s/QUEUE1_NODE/$QUEUE1_NODE/" \
+                -e "s/QUEUE2_NODE/$QUEUE2_NODE/" \
+                config2.yaml
+
               docker run --name cloudify-manager-2 -d \
                 -v $(pwd)/config2.yaml:/tmp/config.yaml \
                 -v $(pwd)/ca.crt:/tmp/rabbitmq-cert.pem \
@@ -190,9 +224,37 @@ jobs:
                 -v $(pwd)/ca_key.pem:/tmp/ca_key.pem \
                 --cap-drop SETUID --cap-drop SETGID --cap-drop NET_BIND_SERVICE --security-opt no-new-privileges \
                 cloudify-manager
-              sleep 60
+
+              wait_for_container cloudify-manager-2
               docker exec -it cloudify-manager-2 tail /var/log/cloudify/manager/cfy_manager.log
+              docker cp cloudify-manager:/etc/cloudify/ssl/cloudify_internal_ca_cert.pem ca.crt
+
+              TOKEN=$(docker exec cloudify-manager cfy_manager status-reporter get-tokens --json |  python -c 'import json,sys;obj=json.load(sys.stdin);print obj["broker_status_reporter"]')
+              MANAGER1_IP=$(docker inspect --format="$IP_FORMAT" cloudify-manager)
+              docker cp ca.crt cloudify-manager-queue:/tmp/rest_ca.crt
+              docker cp ca.crt cloudify-manager-queue-2:/tmp/rest_ca.crt
+              docker exec \
+                cloudify-manager-queue \
+                cfy_manager \
+                  status-reporter \
+                  configure \
+                    --managers-ip $MANAGER1_IP \
+                    --token $TOKEN \
+                    --ca-path /tmp/rest_ca.crt
+              docker exec \
+                cloudify-manager-queue-2 \
+                cfy_manager \
+                  status-reporter \
+                  configure \
+                    --managers-ip $MANAGER1_IP \
+                    --token $TOKEN \
+                    --ca-path /tmp/rest_ca.crt
             popd
+      - run:
+          name: check cluster status
+          command: |
+            sleep 6
+            .circleci/cluster/validate_status.sh cloudify-manager cloudify-manager-2
 
   install_cluster:
     machine: true

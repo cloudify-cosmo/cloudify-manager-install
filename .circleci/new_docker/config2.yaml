@@ -9,7 +9,7 @@ manager:
     admin_password: 'admin'
 
 postgresql_client:
-  host: 172.17.0.2
+  host: DB_IP
   ca_path: /etc/ssl/certs/ca-bundle.crt
   server_db_name: postgres
   server_username: postgres
