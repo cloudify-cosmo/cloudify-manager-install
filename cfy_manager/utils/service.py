@@ -205,7 +205,7 @@ class Supervisord(object):
 
 
 def _get_backend():
-    if config.get('service_management') == 'supervisord':
+    if config.get('service_management', 'supervisord') == 'supervisord':
         return Supervisord()
     else:
         return SystemD()

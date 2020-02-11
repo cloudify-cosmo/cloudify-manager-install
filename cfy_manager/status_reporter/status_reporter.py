@@ -126,6 +126,12 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                     json.dumps(passed_parameters, indent=1)))
     update_status_reporter_config(passed_parameters)
     _handle_ca_path(ca_path)
+    if no_restart:
+        logger.info('Status Reporter service\'s configuration change applied'
+                    ' successfully, a restart is required to activate it')
+        return
+    logger.info('Starting Status Reporter service...')
+    service.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
 
 
