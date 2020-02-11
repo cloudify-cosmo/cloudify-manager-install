@@ -15,8 +15,6 @@
 
 from os.path import join
 
-from ..syncthing.syncthing import Syncthing
-
 from cfy_manager.components import sources
 from ..components_constants import (
     CONFIG,
@@ -28,15 +26,13 @@ from ..components_constants import (
 )
 from ..base_component import BaseComponent
 from ..service_names import MGMTWORKER, MANAGER
+from ..syncthing.syncthing import Syncthing
 
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
 from ...utils import common, service
-from ...utils.files import (
-    deploy,
-    get_local_source_path
-)
+from ...utils.files import deploy, get_local_source_path
 from ...utils.install import (
     yum_install,
     yum_remove,
@@ -58,6 +54,7 @@ logger = get_logger(MGMTWORKER)
 class MgmtWorker(BaseComponent):
     def __init__(self, skip_installation):
         super(MgmtWorker, self).__init__(skip_installation)
+        self._syncthing = Syncthing(skip_installation=skip_installation)
 
     @staticmethod
     def is_premium_installed():
@@ -121,6 +118,7 @@ class MgmtWorker(BaseComponent):
         logger.notice('Installing Management Worker...')
         yum_install(sources.mgmtworker)
         self._deploy_admin_token_script()
+        logger.notice('Management Worker successfully installed')
         try:
             get_local_source_path(sources.premium)
         except FileError:
@@ -129,17 +127,11 @@ class MgmtWorker(BaseComponent):
             logger.notice('premium will not be installed.')
         else:
             logger.notice('Installing Cloudify Premium...')
-            syncthing = Syncthing(skip_installation=False)
-            syncthing.install()
-        logger.notice('Management Worker successfully installed')
+            self._syncthing.install()
 
     def configure(self):
         logger.notice('Configuring Management Worker...')
         self._configure()
-        self._deploy_admin_token()
-        if self.is_premium_installed():
-            syncthing = Syncthing(skip_installation=False)
-            syncthing.configure()
         logger.notice('Management Worker successfully configured')
 
     def remove(self):
@@ -152,9 +144,10 @@ class MgmtWorker(BaseComponent):
 
     def start(self):
         logger.notice('Starting Management Worker...')
-        if self.is_premium_installed():
-            syncthing = Syncthing(skip_installation=False)
-            syncthing.start()
+        try:
+            self._deploy_admin_token()
+        except Exception:
+            pass
         service.start(MGMTWORKER)
         self._verify_mgmtworker_alive()
         logger.notice('Management Worker successfully started')

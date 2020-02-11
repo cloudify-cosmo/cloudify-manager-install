@@ -18,7 +18,6 @@ import requests
 
 from cfy_manager.components import sources
 from ..base_component import BaseComponent
-from ..restservice.restservice import RestService
 from ...config import config
 from ...logger import get_logger
 from ...constants import COMPONENTS_DIR, CA_CERT_PATH, INTERNAL_REST_PORT
@@ -28,14 +27,11 @@ from ...components.components_constants import (
     SCRIPTS,
     CLUSTER_JOIN
 )
-from ...components.service_names import (
-    MANAGER,
-    RESTSERVICE,
-)
+from ...components.service_names import MANAGER
 from ...utils import service
 from ...utils.common import is_manager_service_only_installed
 from ...utils.install import yum_install
-from ...utils.network import get_auth_headers, wait_for_port
+from ...utils.network import get_auth_headers
 from ...utils.scripts import run_script_on_manager_venv
 
 REST_HOME_DIR = '/opt/manager'
@@ -49,18 +45,6 @@ SCRIPTS_PATH = join(COMPONENTS_DIR, 'syncthing', SCRIPTS)
 
 class Syncthing(BaseComponent):
     API_VERSION = 'v3.1'
-
-    def _verify_local_rest_service_alive(self, verify_rest_call=False):
-        # Restarting rest-service to read the new replicated rest-security.conf
-        service.restart(RESTSERVICE)
-        service.verify_alive(RESTSERVICE)
-        rest_port = config[RESTSERVICE]['port']
-
-        wait_for_port(rest_port)
-
-        if verify_rest_call:
-            rest_service_component = RestService()
-            rest_service_component._verify_restservice_alive()
 
     def _log_results(self, result):
         """Log stdout/stderr output from the script"""
@@ -104,7 +88,6 @@ class Syncthing(BaseComponent):
 
     def configure(self):
         # Need to restart the RESTSERVICE so flask could import premium
-        self._verify_local_rest_service_alive()
         if is_manager_service_only_installed():
             # this flag is set inside of restservice._configure_db
             join = config.get(CLUSTER_JOIN)
@@ -115,7 +98,6 @@ class Syncthing(BaseComponent):
                     .format(config[MANAGER][HOSTNAME]))
             service.configure('syncthing')
             self._run_syncthing_configuration_script('configure', not join)
-            self._verify_local_rest_service_alive(verify_rest_call=True)
             logger.notice('Node has been added successfully!')
         else:
             logger.warn('Cluster must be instantiated with external DB '
