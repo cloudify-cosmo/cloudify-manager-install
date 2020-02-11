@@ -36,7 +36,8 @@ from ...constants import (
     REST_CONFIG_PATH,
     SELECT_USER_TOKENS_QUERY,
     REST_SECURITY_CONFIG_PATH,
-    REST_AUTHORIZATION_CONFIG_PATH
+    REST_AUTHORIZATION_CONFIG_PATH,
+    CA_CERT_PATH
 )
 from ..components_constants import (
     VENV,
@@ -45,7 +46,6 @@ from ..components_constants import (
     PASSWORD,
     CLEAN_DB,
     SECURITY,
-    CONSTANTS,
     SSL_INPUTS,
     LOG_DIR_KEY,
     HOME_DIR_KEY,
@@ -57,9 +57,9 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
-    HOSTNAME
 )
 from ..base_component import BaseComponent
+from ..syncthing.syncthing import Syncthing
 from ..service_components import DATABASE_SERVICE, MANAGER_SERVICE
 from ..service_names import (
     MANAGER,
@@ -99,6 +99,7 @@ LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
 class RestService(BaseComponent):
     def __init__(self, skip_installation=False):
         super(RestService, self).__init__(skip_installation)
+        self._syncthing = Syncthing(skip_installation=skip_installation)
 
     def _make_paths(self):
         # Used in the service templates
@@ -521,26 +522,16 @@ class RestService(BaseComponent):
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
-            self._fetch_manager_reporter_token()
         if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             logger.info('Removing postgres password from config.yaml')
             config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
-        if is_premium_installed():
-            self._configure_status_reporter()
 
         logger.notice('Rest Service successfully configured')
 
     def _join_cluster_setup(self):
         if not common.is_manager_service_only_installed():
             return
-
-        # this flag is set inside of restservice._configure_db
-        to_join = config[CLUSTER_JOIN]
-        if to_join:
-            logger.notice(
-                'Adding manager "{0}" to the cluster, this may take a '
-                'while until config files finish replicating'.format(
-                    config[MANAGER][HOSTNAME]))
+        self._syncthing.configure()
 
     @staticmethod
     def _configure_status_reporter():
@@ -549,7 +540,7 @@ class RestService(BaseComponent):
                 config[
                     MANAGER_STATUS_REPORTER][constants.STATUS_REPORTER_TOKEN],
             'managers_ips': ['localhost'],
-            'ca_path': config[CONSTANTS]['ca_cert_path']
+            'ca_path': CA_CERT_PATH
         }
         status_reporter.configure(**conf)
 
@@ -581,6 +572,10 @@ class RestService(BaseComponent):
         else:
             self._verify_restservice_alive()
             self._upload_cloudify_license()
+        if is_premium_installed():
+            self._syncthing.start()
+            self._fetch_manager_reporter_token()
+            self._configure_status_reporter()
         logger.notice('Restservice successfully started')
 
     def stop(self):
