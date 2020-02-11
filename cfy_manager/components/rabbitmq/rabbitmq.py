@@ -169,6 +169,7 @@ class RabbitMQ(BaseComponent):
 
         if cookie:
             write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
+            write_to_file(cookie.strip(), '/etc/cloudify/.erlang.cookie')
 
     def join_cluster(self, join_node, restore_users_on_fail=False):
         join_node = self.add_missing_nodename_prefix(join_node)
