@@ -13,13 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os import path
-
 import yaml
 
 from .common import move, mkdir, chown
 from .install import is_premium_installed
-from .files import sudo_read, update_yaml_file
+from .files import sudo_read, update_yaml_file, is_file, is_dir
 
 from ..logger import get_logger
 from ..exceptions import InitializationError
@@ -35,7 +33,7 @@ CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
 
 
 def get_node_id():
-    if not path.exists(STATUS_REPORTER_CONFIGURATION_PATH):
+    if not is_file(STATUS_REPORTER_CONFIGURATION_PATH):
         if is_premium_installed():
             raise InitializationError(
                 'Status reporter is not installed, path does not exist: {0}'
@@ -61,14 +59,14 @@ def archive_status_report(node_type, node_id):
     report_path = '{status_path}/{file_name}'.format(
         status_path=CLUSTER_STATUS_PATH, file_name=file_name
     )
-    if not path.exists(report_path):
+    if not is_file(report_path):
         return
 
     try:
         destination_path = '{status_path}/{archive}'.format(
             status_path=CLUSTER_STATUS_PATH, archive=ARCHIVE_DIR
         )
-        if not path.isdir(destination_path):
+        if not is_dir(destination_path):
             mkdir(destination_path, use_sudo=True)
             chown(CLOUDIFY_USER, CLOUDIFY_GROUP, destination_path)
         move(report_path, destination_path)
