@@ -53,6 +53,7 @@ from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
 from ..utils.common import run, sudo
+from cfy_manager.utils.files import is_file
 
 logger = get_logger(VALIDATIONS)
 
@@ -282,8 +283,7 @@ def _validate_dependencies(components):
 
 def _check_ssl_file(filename, kind='Key', password=None):
     """Does the cert/key file exist and is it valid?"""
-    file_exists_check = sudo(['test', '-f', filename], ignore_failures=True)
-    if file_exists_check.returncode != 0:
+    if not is_file(filename):
         raise ValidationError(
             '{0} file {1} does not exist'
             .format(kind, filename))

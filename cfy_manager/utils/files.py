@@ -217,3 +217,17 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
     chown(user_owner,
           group_owner,
           yaml_path)
+
+
+def is_file(file_path):
+    """Is the path a file?"""
+    return sudo(
+        ['test', '-f', file_path], ignore_failures=True
+    ).returncode == 0
+
+
+def is_dir(dir_path):
+    """Is the path a directory?"""
+    return sudo(
+        ['test', '-d', dir_path], ignore_failures=True
+    ).returncode == 0
