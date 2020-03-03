@@ -195,7 +195,7 @@ def read_yaml_file(yaml_path):
     :param yaml_path: the path to the yaml file.
     :return: YAML file parsed content.
     """
-    if os.path.isfile(yaml_path):
+    if is_file(yaml_path):
         try:
             file_content = sudo_read(yaml_path)
             return yaml.safe_load(file_content)
