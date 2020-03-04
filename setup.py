@@ -57,6 +57,7 @@ setup(
         'netifaces==0.10.6',
         'ipaddress==1.0.19',
         'PyYAML==3.10',
+        'psutil==3.3.0',
         'requests==2.7.0',
         'retrying==1.3.3',
         'psycopg2==2.7.4'
