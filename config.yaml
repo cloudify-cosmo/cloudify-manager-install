@@ -230,8 +230,13 @@ postgresql_server:
 
   # postgresql.conf overrides
   config:
-    shared_buffers: '1024MB'
-    effective_cache_size: '1024MB'
+    # Put here any compatible parameters that will override PostgreSQL defaults.
+    # We suggest and set as default values following:
+    #
+    #   * "shared_buffers": 25% of total RAM size,
+    #   * "effective_cache_size":
+    #       - 25% of total RAM size for all-in-one manager installation,
+    #       - 50% of total RAM size for cluster installation
     work_mem: '16MB'
 
   # PostgreSQL server's or cluster's public certificate, private key, and CA certificate

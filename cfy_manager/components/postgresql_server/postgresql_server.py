@@ -18,6 +18,7 @@ import re
 import time
 import json
 import yaml
+import psutil
 import socket
 from copy import copy
 from getpass import getuser
@@ -174,6 +175,50 @@ class PostgresqlServer(BaseComponent):
             lines = f.readlines()
         return lines
 
+    def _bytes_as_mb(self, value_in_bytes):
+        return '{}MB'.format(value_in_bytes // 1024 // 1024)
+
+    def _generate_default_shared_buffers(self):
+        """Calculate `shared_buffers` PostgreSQL parameter as 25% of RAM."""
+        return self._bytes_as_mb(psutil.virtual_memory().total // 4)
+
+    def _generate_default_effective_cache_size(self):
+        """
+        Calculate `effective_cache_size` PostgreSQL parameter.
+
+        Depending on the installation, make it 50% of the RAM size for
+        standalone database installation (like in cluster) or 25% for the
+        all-in-one installation.
+        """
+        if common.is_installed(MANAGER_SERVICE):
+            return self._bytes_as_mb(psutil.virtual_memory().total // 4)
+        else:
+            return self._bytes_as_mb(psutil.virtual_memory().total // 2)
+
+    def _generate_pg_params(self, overrides):
+        params = {
+            'log_destination': "stderr",
+            'logging_collector': "on",
+            'log_filename': "'postgresql-%a.log'",
+            'log_truncate_on_rotation': "on",
+            'log_rotation_age': "1d",
+            'log_rotation_size': 0,
+            'log_line_prefix': "'< %m >'",
+            'log_timezone': "'UCT'",
+            'datestyle': "'iso, mdy'",
+            'timezone': "'UCT'",
+            'default_text_search_config': "'pg_catalog.english'",
+            'lc_messages': "en_US.UTF-8",
+            'lc_monetary': "en_US.UTF-8",
+            'lc_numeric': "en_US.UTF-8",
+            'lc_time': "en_US.UTF-8",
+            'shared_buffers': self._generate_default_shared_buffers(),
+            'effective_cache_size':
+            self._generate_default_effective_cache_size(),
+        }
+        params.update(overrides)
+        return params
+
     def _write_new_pgconfig_file(self):
         """Create the postgres config override file.
         """
@@ -194,8 +239,9 @@ class PostgresqlServer(BaseComponent):
                         ca_path=PG_CA_CERT_PATH,
                     )
                 )
-            for name, value in config[POSTGRESQL_SERVER]['config'].items():
-                conf_handle.write("{0} = '{1}'\n".format(name, value))
+            for name, value in self._generate_pg_params(
+                    config[POSTGRESQL_SERVER]['config']).items():
+                conf_handle.write("{0} = {1}\n".format(name, value))
 
         return temp_pgconfig_path
 
@@ -482,18 +528,12 @@ class PostgresqlServer(BaseComponent):
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()
         os.close(fd)
+        pg_params = self._generate_pg_params(
+            {'log_directory': "'{0}'".format(POSTGRES_LOG_PATH)})
         with open(tmp_path, 'w') as pg_conf:
-            pg_conf.write(
-                "log_destination = 'stderr'\nlogging_collector = on\n"
-                "log_directory = '{0}'\nlog_filename = 'postgresql-%a.log'\n"
-                "log_truncate_on_rotation = on\nlog_rotation_age = 1d\n"
-                "log_rotation_size = 0\nlog_line_prefix = '< %m >'\n"
-                "log_timezone = 'UCT'\ndatestyle = 'iso, mdy'\n"
-                "timezone = 'UCT'\nlc_messages = 'en_US.UTF-8'\n"
-                "lc_monetary = 'en_US.UTF-8'\nlc_numeric = 'en_US.UTF-8'\n"
-                "lc_time = 'en_US.UTF-8'\nshared_buffers = 128MB\n"
-                "default_text_search_config = 'pg_catalog.english'\n".format(
-                    POSTGRES_LOG_PATH))
+            for name, value in pg_params.items():
+                pg_conf.write("{0} = {1}\n".format(name, value))
+
         common.sudo(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
         common.sudo(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
