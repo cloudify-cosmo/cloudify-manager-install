@@ -1,3 +1,4 @@
+from __future__ import print_function
 #########
 # Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #

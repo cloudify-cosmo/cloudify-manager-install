@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #########
 # Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
 #
@@ -21,7 +22,7 @@ from subprocess import check_output
 import logging
 
 from .constants import BASE_LOG_DIR
-from utils import subprocess_preexec
+from .utils import subprocess_preexec
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 

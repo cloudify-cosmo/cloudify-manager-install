@@ -15,7 +15,7 @@
 
 import os
 
-CFY_UMASK = 0022
+CFY_UMASK = 0o022
 
 
 def subprocess_preexec():
