@@ -1,4 +1,3 @@
-from __future__ import print_function
 #########
 # Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
@@ -13,6 +12,8 @@ from __future__ import print_function
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+from __future__ import print_function
 
 import os
 import json
