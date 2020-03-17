@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 
-class BootstrapError(StandardError):
+class BootstrapError(Exception):
     pass
 
 
@@ -45,7 +45,7 @@ class ClusteringError(BootstrapError):
     pass
 
 
-class RabbitNodeListError(StandardError):
+class RabbitNodeListError(Exception):
     """Raised when there is an error listing rabbit nodes."""
     pass
 
