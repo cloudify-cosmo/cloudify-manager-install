@@ -509,7 +509,7 @@ validations:
   # These allow to override specific validation values
   # NOTE: We do not recommend changing these values unless you know exactly
   # what you're doing.
-  minimum_required_total_physical_memory_in_mb: 3700
+  minimum_required_total_physical_memory_in_mb: 1838
 
   # Minimum required disk space on Manager host in GB.
   minimum_required_available_disk_space_in_gb: 5
