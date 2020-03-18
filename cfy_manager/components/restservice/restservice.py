@@ -27,6 +27,7 @@ from collections import namedtuple
 import requests
 
 from . import db
+from ..._compat import urlopen
 from ...components import sources
 from ...utils.db import run_psql_command
 from ...status_reporter import status_reporter
@@ -227,7 +228,7 @@ class RestService(BaseComponent):
         req = urllib2.Request(url, headers=get_auth_headers())
 
         try:
-            response = urllib2.urlopen(req)
+            response = urlopen(req)
         # keep an erroneous HTTP response to examine its status code, but still
         # abort on fatal errors like being unable to connect at all
         except urllib2.HTTPError as e:

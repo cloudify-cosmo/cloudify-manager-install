@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import argparse
-import urllib2
 import json
 import yaml
 import tempfile
@@ -9,6 +8,8 @@ import os
 import shutil
 import tarfile
 import requests
+
+from cfy_manager._compat import urlopen
 
 PLUGINS_TO_BUNDLE = ['vSphere',
                      'OpenStack',
@@ -69,7 +70,7 @@ def _create_caravan(mappings, dest, tar_name):
 
 
 def build_caravan(dir, name, path):
-    plugins_json = urllib2.urlopen(path)
+    plugins_json = urlopen(path)
     plugins = json.loads(plugins_json.read())
     mapping = {}
 
