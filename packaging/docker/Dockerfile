@@ -21,7 +21,7 @@ rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
 rm -f /lib/systemd/system/basic.target.wants/*;\
 rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-EXPOSE 22 80 443 5671 5672 15672 9200 5432 8086 999
+EXPOSE 22 80 443 5671 15672 9200 5432 8086 999
 
 # Should help to stop the container gracfully
 STOPSIGNAL SIGRTMIN+3
