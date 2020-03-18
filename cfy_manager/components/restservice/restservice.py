@@ -19,7 +19,6 @@ import time
 import base64
 import random
 import string
-import urllib2
 import subprocess
 from os.path import join, exists
 from collections import namedtuple
@@ -27,7 +26,7 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ..._compat import urlopen
+from ..._compat import HTTPError, URLError, Request, urlopen
 from ...components import sources
 from ...utils.db import run_psql_command
 from ...status_reporter import status_reporter
@@ -225,15 +224,15 @@ class RestService(BaseComponent):
         rest_port = config[RESTSERVICE]['port']
         url = REST_URL.format(port=rest_port, endpoint='status')
         wait_for_port(rest_port)
-        req = urllib2.Request(url, headers=get_auth_headers())
+        req = Request(url, headers=get_auth_headers())
 
         try:
             response = urlopen(req)
         # keep an erroneous HTTP response to examine its status code, but still
         # abort on fatal errors like being unable to connect at all
-        except urllib2.HTTPError as e:
+        except HTTPError as e:
             response = e
-        except urllib2.URLError as e:
+        except URLError as e:
             raise NetworkError(
                 'REST service returned an invalid response: {0}'.format(e))
         if response.code != 200:

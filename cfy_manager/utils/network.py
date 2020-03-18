@@ -16,12 +16,11 @@
 import os
 import socket
 import base64
-import urllib2
 from time import sleep
 from tempfile import mkstemp
 from ipaddress import ip_address
 
-from .._compat import urlopen, urlparse
+from .._compat import HTTPError, Request, urlopen, urlparse
 from ..exceptions import NetworkError
 from ..components.service_names import MANAGER
 
@@ -119,10 +118,10 @@ def get_auth_headers():
 
 
 def check_http_response(url, **request_kwargs):
-    req = urllib2.Request(url, **request_kwargs)
+    req = Request(url, **request_kwargs)
     try:
         response = urlopen(req)
-    except urllib2.HTTPError as e:
+    except HTTPError as e:
         # HTTPError can also be used as a non-200 response. Pass this
         # through to the predicate function, so it can decide if a
         # non-200 response is fine or not.

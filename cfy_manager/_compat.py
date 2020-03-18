@@ -21,15 +21,20 @@ PY2 = sys.version_info[0] == 2
 
 
 if PY2:
-    from urllib2 import urlopen
+    from urllib2 import HTTPError, URLError
+    from urllib2 import Request, urlopen
     from urlparse import urlparse
 
 else:
-    from urllib.request import urlopen
+    from urllib.error import HTTPError, URLError
+    from urllib.request import Request, urlopen
     from urllib.parse import urlparse
 
 __all__ = [
     'PY2',
+    'HTTPError',
+    'URLError',
+    'Request',
     'urlopen',
     'urlparse',
 ]
