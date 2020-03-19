@@ -6,13 +6,13 @@ from multiprocessing import cpu_count
 
 from manager_rest import config, server
 from manager_rest.storage import models
-from script_utils import (logger,
-                          send_data,
-                          DAYS_INTERVAL,
-                          collect_metadata,
-                          needs_to_send_data,
-                          RESTSERVICE_CONFIG_PATH,
-                          get_storage_manager_instance)
+from .script_utils import (logger,
+                           send_data,
+                           DAYS_INTERVAL,
+                           collect_metadata,
+                           needs_to_send_data,
+                           RESTSERVICE_CONFIG_PATH,
+                           get_storage_manager_instance)
 
 
 GIGA_SIZE = 1024 * 1024 * 1024

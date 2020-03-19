@@ -18,9 +18,9 @@ from uuid import uuid4
 from random import randint
 from os import makedirs
 from os.path import join, exists
-from scripts.script_utils import (USAGE_PATH, USAGE_CONFIG_PATH, DAYS_INTERVAL,
-                                  HOURS_INTERVAL, HOURLY_TIMESTAMP,
-                                  DAILY_TIMESTAMP)
+from .scripts.script_utils import (USAGE_PATH, USAGE_CONFIG_PATH,
+                                   DAYS_INTERVAL, HOURS_INTERVAL,
+                                   HOURLY_TIMESTAMP, DAILY_TIMESTAMP)
 from ... import constants
 from ...config import config
 from ...logger import get_logger

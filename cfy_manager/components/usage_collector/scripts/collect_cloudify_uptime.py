@@ -1,8 +1,8 @@
-from script_utils import (logger,
-                          send_data,
-                          HOURS_INTERVAL,
-                          collect_metadata,
-                          needs_to_send_data)
+from .script_utils import (logger,
+                           send_data,
+                           HOURS_INTERVAL,
+                           collect_metadata,
+                           needs_to_send_data)
 
 
 CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
