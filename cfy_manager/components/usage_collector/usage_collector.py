@@ -13,8 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
+import json
+from uuid import uuid4
 from random import randint
+from os.path import join, exists
+
+from script_utils import (USAGE_CONFIG_PATH, DAYS_INTERVAL, HOURS_INTERVAL,
+                          HOURLY_TIMESTAMP, DAILY_TIMESTAMP)
 
 from ... import constants
 from ...config import config
@@ -27,10 +32,6 @@ from ..service_names import USAGE_COLLECTOR
 from ...utils.install import RpmPackageHandler
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
-
-HOURS_INTERVAL = 'interval_in_hours'
-DAYS_INTERVAL = 'interval_in_days'
-MANAGER_ID_PATH = '/etc/cloudify/.id'
 MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COLLECTOR_SCRIPTS = [('collect_cloudify_uptime', HOURS_INTERVAL),
                      ('collect_cloudify_usage', DAYS_INTERVAL)]
@@ -45,6 +46,7 @@ class UsageCollector(BaseComponent):
 
     def install(self):
         logger.notice('Installing Usage Collector...')
+        self._create_collector_config_file()
         self._deploy_collector_scripts()
         logger.notice('Usage Collector successfully installed')
 
@@ -59,7 +61,6 @@ class UsageCollector(BaseComponent):
             self._remove_cron_jobs()
         remove_logrotate(USAGE_COLLECTOR)
         common.remove(SCRIPTS_DESTINATION_PATH)
-        common.remove(MANAGER_ID_PATH)
         logger.notice('Usage Collector successfully removed')
 
     def _configure(self):
@@ -80,6 +81,19 @@ class UsageCollector(BaseComponent):
                            'unable to install Usage Collector')
             return False
         return True
+
+    @staticmethod
+    def _create_collector_config_file():
+        if exists(USAGE_CONFIG_PATH):
+            return
+        usage_collector_config = {'id': uuid4().hex,
+                                  HOURLY_TIMESTAMP: None,
+                                  DAILY_TIMESTAMP: None}
+        for collector, interval_type in COLLECTOR_SCRIPTS:
+            interval = config[USAGE_COLLECTOR][collector][interval_type]
+            usage_collector_config[interval_type] = interval
+        with open(USAGE_CONFIG_PATH, 'w') as f:
+            json.dump(usage_collector_config, f)
 
     def _deploy_collector_scripts(self):
         logger.info('Deploying Usage Collector scripts...')
