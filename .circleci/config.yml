@@ -32,7 +32,7 @@ jobs:
             FUTURIZE="futurize ."
             while read line; do
               [[ "$line" =~ ^#.* ]] && continue
-              FUTURIZE="${FUTURIZE} ${line}"
+              FUTURIZE="${FUTURIZE} -f ${line}"
             done<.circleci/py3fixers
             echo "Running: $FUTURIZE"
             $FUTURIZE>futurize_diffs
