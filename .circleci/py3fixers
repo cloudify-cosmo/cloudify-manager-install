@@ -39,3 +39,6 @@ lib2to3.fixes.fix_filter
 # fix_dict is not checked because futurize would still want to change
 # things that _are_ compatible, eg. `d.items() -> list(d.items())`
 # lib2to3.fixes.fix_dict
+lib2to3.fixes.fix_map
+lib2to3.fixes.fix_zip
+lib2to3.fixes.fix_xrange
