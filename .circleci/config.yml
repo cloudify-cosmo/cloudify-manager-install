@@ -18,20 +18,6 @@ jobs:
           paths:
             - rpms
 
-  build_executable:
-    docker:
-      - image: python:2
-    working_directory: ~/cloudify-manager-install
-    steps:
-      - checkout
-      - run: pip install pex==1.3.2
-      - run: |
-          pex . -o pex/cfy_manager -m cfy_manager.main --disable-cache
-      - persist_to_workspace:
-          root: ~/cloudify-manager-install
-          paths:
-            - pex
-
   py3_compat:
     docker:
       - image: circleci/python:2.7
@@ -75,7 +61,6 @@ jobs:
           command: |
             rm ~/rpm -fr
             ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install/rpms
-            ln -s /tmp/workspace/pex /tmp/cloudify-manager-install/pex
             ln -s /tmp/cloudify-manager-install ~/rpm
       - run:
           name: set up cloudify-premium deploy key
@@ -88,6 +73,11 @@ jobs:
               /tmp/cloudify-manager-install/packaging/fetch_requirements --edition premium -b ${CIRCLE_BRANCH} >~/fetch_requirements.log
               cat ~/fetch_requirements.log
             popd
+      - run: sudo yum install rpmdevtools -y
+      - run: sudo chmod a+wx /opt
+      - run:
+          name: Installing build dependencies
+          command: sudo yum-builddep -y packaging/install_rpm.spec
       - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
       - persist_to_workspace:
           root: ~/rpm
@@ -328,11 +318,9 @@ workflows:
       - flake8
       - py3_compat
       - fetch_rpms
-      - build_executable
       - build_rpm:
           requires:
             - fetch_rpms
-            - build_executable
       - install_manager:
           requires:
             - build_rpm
