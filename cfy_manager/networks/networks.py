@@ -50,19 +50,19 @@ def _update_metadata_file(metadata, networks):
     """
 
     old_networks = metadata['network_names']
-    new_networks = networks.keys()
+    new_networks = list(networks.keys())
     _validate_duplicate_network(old_networks, new_networks)
     if metadata.get('broker_addresses'):
-        new_brokers = networks.values()
+        new_brokers = list(networks.values())
     else:
         new_brokers = None
     if metadata.get('manager_addresses'):
-        new_managers = networks.values()
+        new_managers = list(networks.values())
     else:
         new_managers = None
 
     store_cert_metadata(
-        new_networks=networks.keys(),
+        new_networks=list(networks.keys()),
         new_brokers=new_brokers,
         new_managers=new_managers,
     )

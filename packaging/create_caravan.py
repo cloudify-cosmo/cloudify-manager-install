@@ -41,7 +41,7 @@ def _create_caravan(mappings, dest, tar_name):
     tempdir = tempfile.mkdtemp()
     metadata = {}
 
-    for wgn_path, yaml_path in mappings.iteritems():
+    for wgn_path, yaml_path in mappings.items():
         plugin_root_dir = os.path.basename(wgn_path).rsplit('.', 1)[0]
         os.mkdir(os.path.join(tempdir, plugin_root_dir))
 
