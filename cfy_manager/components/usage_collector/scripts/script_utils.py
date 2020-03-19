@@ -11,14 +11,11 @@ from logging.handlers import WatchedFileHandler
 from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
+from ..usage_collector import (USAGE_CONFIG_PATH, HOURS_INTERVAL,
+                               HOURLY_TIMESTAMP, DAILY_TIMESTAMP)
+
 BUFFER_TIME = 900
-DAYS_INTERVAL = 'interval_in_days'
-HOURS_INTERVAL = 'interval_in_hours'
-DAILY_TIMESTAMP = 'daily_timestamp'
-HOURLY_TIMESTAMP = 'hourly_timestamp'
 CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
-USAGE_PATH = '/etc/cloudify/.usage'
-USAGE_CONFIG_PATH = path.join(USAGE_PATH, 'config')
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
 

@@ -18,9 +18,7 @@ from uuid import uuid4
 from random import randint
 from os import makedirs
 from os.path import join, exists
-from .scripts.script_utils import (USAGE_PATH, USAGE_CONFIG_PATH,
-                                   DAYS_INTERVAL, HOURS_INTERVAL,
-                                   HOURLY_TIMESTAMP, DAILY_TIMESTAMP)
+
 from ... import constants
 from ...config import config
 from ...logger import get_logger
@@ -32,6 +30,12 @@ from ..service_names import USAGE_COLLECTOR
 from ...utils.install import RpmPackageHandler
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
+DAYS_INTERVAL = 'interval_in_days'
+HOURS_INTERVAL = 'interval_in_hours'
+DAILY_TIMESTAMP = 'daily_timestamp'
+HOURLY_TIMESTAMP = 'hourly_timestamp'
+USAGE_PATH = '/etc/cloudify/.usage'
+USAGE_CONFIG_PATH = join(USAGE_PATH, 'config')
 MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COLLECTOR_SCRIPTS = [('collect_cloudify_uptime', HOURS_INTERVAL),
                      ('collect_cloudify_usage', DAYS_INTERVAL)]
