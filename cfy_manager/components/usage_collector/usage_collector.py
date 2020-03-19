@@ -16,10 +16,11 @@
 import json
 from uuid import uuid4
 from random import randint
+from os import makedirs
 from os.path import join, exists
 
-from script_utils import (USAGE_CONFIG_PATH, DAYS_INTERVAL, HOURS_INTERVAL,
-                          HOURLY_TIMESTAMP, DAILY_TIMESTAMP)
+from script_utils import (USAGE_PATH, USAGE_CONFIG_PATH, DAYS_INTERVAL,
+                          HOURS_INTERVAL, HOURLY_TIMESTAMP, DAILY_TIMESTAMP)
 
 from ... import constants
 from ...config import config
@@ -92,8 +93,9 @@ class UsageCollector(BaseComponent):
         for collector, interval_type in COLLECTOR_SCRIPTS:
             interval = config[USAGE_COLLECTOR][collector][interval_type]
             usage_collector_config[interval_type] = interval
-        with open(USAGE_CONFIG_PATH, 'w') as f:
-            json.dump(usage_collector_config, f)
+        makedirs(USAGE_PATH)
+        with open(USAGE_CONFIG_PATH, 'w') as usage_config_file:
+            json.dump(usage_collector_config, usage_config_file)
 
     def _deploy_collector_scripts(self):
         logger.info('Deploying Usage Collector scripts...')
