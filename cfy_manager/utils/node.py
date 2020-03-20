@@ -13,7 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from .common import move, mkdir, chown
 from .install import is_premium_installed
@@ -43,10 +44,12 @@ def get_node_id():
             # Status reporter is not installed in community edition
             return 'COMMUNITY'
     try:
-        reporter_config = yaml.safe_load(
+        yaml = YAML(typ='safe')
+        yaml.default_flow_style = False
+        reporter_config = yaml.load(
             sudo_read(STATUS_REPORTER_CONFIGURATION_PATH)
         )
-    except yaml.YAMLError as e:
+    except YAMLError as e:
         raise InitializationError('Failed loading status reporter\'s '
                                   'configuration with the following: '
                                   '{0}'.format(e))

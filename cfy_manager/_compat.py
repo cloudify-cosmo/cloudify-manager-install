@@ -12,26 +12,32 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-
 """Python 2 + 3 compatibility utils."""
 # flake8: noqa
 
 import sys
 PY2 = sys.version_info[0] == 2
 
-
 if PY2:
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
+
     from urllib2 import HTTPError, URLError
     from urllib2 import Request, urlopen
     from urlparse import urlparse
 
 else:
+    from io import StringIO
+
     from urllib.error import HTTPError, URLError
     from urllib.request import Request, urlopen
     from urllib.parse import urlparse
 
 __all__ = [
     'PY2',
+    'StringIO',
     'HTTPError',
     'URLError',
     'Request',
