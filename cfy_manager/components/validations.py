@@ -80,7 +80,7 @@ def _get_host_total_memory():
         memory = memfile.read()
     for attribute in memory.splitlines():
         if attribute.lower().startswith('memtotal'):
-            return int(attribute.split(':')[1].strip().split(' ')[0]) / 1024
+            return int(attribute.split(':')[1].strip().split(' ')[0]) // 1024
 
 
 def _get_available_host_disk_space():
