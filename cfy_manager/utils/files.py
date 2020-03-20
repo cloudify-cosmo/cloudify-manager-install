@@ -22,6 +22,7 @@ from os.path import join, isabs
 
 from jinja2 import Environment, FileSystemLoader
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from .network import is_url, curl_download
 from .common import move, sudo, copy, remove, chown
@@ -29,7 +30,7 @@ from .common import move, sudo, copy, remove, chown
 from .._compat import StringIO
 from ..config import config
 from ..logger import get_logger
-from ..exceptions import FileError, YAMLError
+from ..exceptions import FileError
 from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
 
 logger = get_logger('Files')
@@ -201,7 +202,7 @@ def read_yaml_file(yaml_path):
             file_content = sudo_read(yaml_path)
             yaml = YAML(typ='safe', pure=True)
             return yaml.load(file_content)
-        except Exception as e:
+        except YAMLError as e:
             raise YAMLError('Failed to load yaml file {0}, due to {1}'
                             ''.format(yaml_path, str(e)))
     return None

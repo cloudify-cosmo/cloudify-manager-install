@@ -60,7 +60,3 @@ class DBManagementError(Exception):
 
 class InitializationError(Exception):
     pass
-
-
-class YAMLError(Exception):
-    """Raised when there is an YAML-related error."""

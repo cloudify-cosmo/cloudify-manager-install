@@ -2,12 +2,12 @@ from __future__ import print_function
 
 import argparse
 import json
-import yaml
 import tempfile
 import os
 import shutil
 import tarfile
 import requests
+from ruamel.yaml import YAML
 
 from cfy_manager._compat import urlopen
 
@@ -55,6 +55,8 @@ def _create_caravan(mappings, dest, tar_name):
 
         metadata[dest_wgn_path] = dest_yaml_path
 
+    yaml = YAML()
+    yaml.default_flow_style = False
     with open(os.path.join(tempdir, 'METADATA'), 'w+') as f:
         yaml.dump(metadata, f)
 

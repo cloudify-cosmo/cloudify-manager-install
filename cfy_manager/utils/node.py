@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from .common import move, mkdir, chown
 from .install import is_premium_installed
@@ -48,7 +49,7 @@ def get_node_id():
         reporter_config = yaml.load(
             sudo_read(STATUS_REPORTER_CONFIGURATION_PATH)
         )
-    except Exception as e:
+    except YAMLError as e:
         raise InitializationError('Failed loading status reporter\'s '
                                   'configuration with the following: '
                                   '{0}'.format(e))
