@@ -124,7 +124,7 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
     try:
         if PY2:
             # ip_address() requires a unicode string
-            ip_address(unicode(ip_to_validate, 'utf-8'))
+            ip_address(u'{0}'.format(ip_to_validate))
         else:
             ip_address(ip_to_validate)
     except ValueError:
