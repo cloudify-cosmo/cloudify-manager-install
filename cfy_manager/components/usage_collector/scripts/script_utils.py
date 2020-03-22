@@ -68,13 +68,14 @@ def _get_timestamp_and_interval(interval_type):
 def collect_metadata(data):
     pkg_distribution = pkg_resources.get_distribution('cloudify-rest-service')
     manager_version = pkg_distribution.version
-    with open(USAGE_CONFIG_PATH) as id_file:
-        manager_id = id_file.read().strip()
-        if path.exists(CLOUDIFY_IMAGE_INFO):
-            with open(CLOUDIFY_IMAGE_INFO) as image_file:
-                image_info = image_file.read().strip()
-        else:
-            image_info = 'rpm'
+    with open(USAGE_CONFIG_PATH) as usage_config_file:
+        usage_config = json.load(usage_config_file)
+        manager_id = usage_config.get('id')
+    if path.exists(CLOUDIFY_IMAGE_INFO):
+        with open(CLOUDIFY_IMAGE_INFO) as image_file:
+            image_info = image_file.read().strip()
+    else:
+        image_info = 'rpm'
 
     customer_id = None
     with get_storage_manager_instance() as sm:
