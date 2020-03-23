@@ -13,10 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 from uuid import uuid4
 from random import randint
-from os import makedirs
 from os.path import join, exists
 
 from ... import constants
@@ -96,12 +94,10 @@ class UsageCollector(BaseComponent):
         for collector, interval_type in COLLECTOR_SCRIPTS:
             interval = config[USAGE_COLLECTOR][collector][interval_type]
             usage_collector_config[interval_type] = interval
-        common.mkdir(USAGE_PATH, use_sudo=True)
+        files.write_to_file(usage_collector_config, USAGE_CONFIG_PATH, True)
         common.chown(constants.CLOUDIFY_USER,
                      constants.CLOUDIFY_GROUP,
                      USAGE_PATH)
-        with open(USAGE_CONFIG_PATH, 'w') as usage_config_file:
-            json.dump(usage_collector_config, usage_config_file)
 
     def _deploy_collector_scripts(self):
         logger.info('Deploying Usage Collector scripts...')
