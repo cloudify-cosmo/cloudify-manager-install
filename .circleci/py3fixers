@@ -42,3 +42,8 @@ lib2to3.fixes.fix_filter
 lib2to3.fixes.fix_map
 lib2to3.fixes.fix_zip
 lib2to3.fixes.fix_xrange
+lib2to3.fixes.fix_basestring
+libfuturize.fixes.fix_cmp
+libfuturize.fixes.fix_division_safe
+lib2to3.fixes.fix_metaclass
+libfuturize.fixes.fix_unicode_keep_u
