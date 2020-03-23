@@ -96,7 +96,7 @@ class UsageCollector(BaseComponent):
         for collector, interval_type in COLLECTOR_SCRIPTS:
             interval = config[USAGE_COLLECTOR][collector][interval_type]
             usage_collector_config[interval_type] = interval
-        makedirs(USAGE_PATH)
+        common.mkdir(USAGE_PATH, use_sudo=True)
         common.chown(constants.CLOUDIFY_USER,
                      constants.CLOUDIFY_GROUP,
                      USAGE_PATH)
