@@ -97,6 +97,9 @@ class UsageCollector(BaseComponent):
             interval = config[USAGE_COLLECTOR][collector][interval_type]
             usage_collector_config[interval_type] = interval
         makedirs(USAGE_PATH)
+        common.chown(constants.CLOUDIFY_USER,
+                     constants.CLOUDIFY_GROUP,
+                     USAGE_PATH)
         with open(USAGE_CONFIG_PATH, 'w') as usage_config_file:
             json.dump(usage_collector_config, usage_config_file)
 
