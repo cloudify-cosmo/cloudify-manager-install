@@ -58,10 +58,10 @@ def _get_timestamp_and_interval(interval_type):
     interval = usage_config.get(interval_type)
     if interval_type == HOURS_INTERVAL:
         timestamp = usage_config.get(HOURLY_TIMESTAMP)
-        interval_sec = interval*60*60
+        interval_sec = interval * 60 * 60
     else:
         timestamp = usage_config.get(DAILY_TIMESTAMP)
-        interval_sec = interval*24*60*60
+        interval_sec = interval * 24 * 60 * 60
     return timestamp, interval_sec
 
 
@@ -93,7 +93,6 @@ def collect_metadata(data):
 
 
 def send_data(data, url, interval_type):
-    # for some reason. multi hierarchy dict doesn't pass well to the end point
     with open(USAGE_CONFIG_PATH) as usage_config_file:
         usage_config = json.load(usage_config_file)
     if interval_type == HOURS_INTERVAL:
