@@ -8,6 +8,7 @@ import os
 import shutil
 import tarfile
 import requests
+import ssl
 
 PLUGINS_TO_BUNDLE = ['vSphere',
                      'OpenStack',
@@ -68,7 +69,10 @@ def _create_caravan(mappings, dest, tar_name):
 
 
 def build_caravan(dir, name, path):
-    plugins_json = urllib2.urlopen(path)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    plugins_json = urllib2.urlopen(path, context=ctx))
     plugins = json.loads(plugins_json.read())
     mapping = {}
 
