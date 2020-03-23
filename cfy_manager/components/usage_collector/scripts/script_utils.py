@@ -11,7 +11,7 @@ from logging.handlers import WatchedFileHandler
 from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
-
+DAYS_INTERVAL = 'interval_in_days'
 HOURS_INTERVAL = 'interval_in_hours'
 DAILY_TIMESTAMP = 'daily_timestamp'
 HOURLY_TIMESTAMP = 'hourly_timestamp'
