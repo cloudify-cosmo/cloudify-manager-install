@@ -35,6 +35,9 @@ REPOS = {
     },
     'cloudify-premium': {
         'build-rpm': {'cloudify-*.rpm'}
+    },
+    'cloudify-cli': {
+        'build-rpm': {'cloudify-*.rpm'}
     }
 }
 NEED_AUTH = {'cloudify-premium'}
