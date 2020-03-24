@@ -29,6 +29,7 @@ from datetime import datetime
 import argh
 import requests
 
+from .._compat import text_type
 from ..config import config
 from ..logger import get_logger
 from ..exceptions import ProcessExecutionError
@@ -44,13 +45,17 @@ from . import subprocess_preexec
 logger = get_logger('utils')
 
 
-def run(command, retries=0, stdin=b'', ignore_failures=False,
+def run(command, retries=0, stdin=u'', ignore_failures=False,
         globx=False, shell=False, env=None, stdout=None):
     # TODO: add ability to *log* output, instead of just printing to stdout
     if isinstance(command, str) and not shell:
         command = shlex.split(command)
     stderr = subprocess.PIPE
     stdout = stdout or subprocess.PIPE
+    if isinstance(stdin, text_type):
+        stdin = stdin.encode('utf-8')
+    if env:
+        env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}
     if globx:
         glob_command = []
         for arg in command:
@@ -61,6 +66,10 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
                             stderr=stderr, shell=shell, env=env,
                             preexec_fn=subprocess_preexec)
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
+    if proc.aggr_stdout is not None:
+        proc.aggr_stdout = proc.aggr_stdout.decode('utf-8')
+    if proc.aggr_stderr is not None:
+        proc.aggr_stderr = proc.aggr_stderr.decode('utf-8')
     if proc.returncode != 0:
         command_str = ' '.join(command)
         if retries:

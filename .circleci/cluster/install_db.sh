@@ -20,7 +20,7 @@ function run_db_container(){
     docker cp $CERT_FILENAME ${CURRENT_NAME}:/etc/cloudify/cert.pem
     docker cp $KEY_FILENAME ${CURRENT_NAME}:/etc/cloudify/key.pem
     docker cp ca.crt ${CURRENT_NAME}:/etc/cloudify/ca.pem
-    docker exec ${CURRENT_NAME} cfy_manager install
+    docker exec ${CURRENT_NAME} cfy_manager install --verbose
 }
 
 for i in $(seq 1 3); do

@@ -132,12 +132,13 @@ class RestService(BaseComponent):
         logger.info('Generating random hash salt and secret key...')
         security_config = config.get(FLASK_SECURITY, {})
         config[FLASK_SECURITY] = {
-            'hash_salt': base64.b64encode(os.urandom(32)),
-            'secret_key': base64.b64encode(os.urandom(32)),
+            'hash_salt': base64.b64encode(os.urandom(32)).decode('ascii'),
+            'secret_key': base64.b64encode(os.urandom(32)).decode('ascii'),
             'encoding_alphabet': self._random_alphanumeric(),
             'encoding_block_size': 24,
             'encoding_min_length': 5,
-            'encryption_key': base64.urlsafe_b64encode(os.urandom(64))
+            'encryption_key':
+                base64.urlsafe_b64encode(os.urandom(64)).decode('ascii')
         }
 
         # We want the config values to take precedence and generate the
