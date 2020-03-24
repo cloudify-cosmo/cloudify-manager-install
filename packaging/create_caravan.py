@@ -1,14 +1,15 @@
 from __future__ import print_function
 
 import argparse
-import urllib2
 import json
-import yaml
 import tempfile
 import os
 import shutil
 import tarfile
 import requests
+from ruamel.yaml import YAML
+
+from cfy_manager._compat import urlopen
 
 PLUGINS_TO_BUNDLE = ['vSphere',
                      'OpenStack',
@@ -40,7 +41,7 @@ def _create_caravan(mappings, dest, tar_name):
     tempdir = tempfile.mkdtemp()
     metadata = {}
 
-    for wgn_path, yaml_path in mappings.iteritems():
+    for wgn_path, yaml_path in mappings.items():
         plugin_root_dir = os.path.basename(wgn_path).rsplit('.', 1)[0]
         os.mkdir(os.path.join(tempdir, plugin_root_dir))
 
@@ -54,6 +55,8 @@ def _create_caravan(mappings, dest, tar_name):
 
         metadata[dest_wgn_path] = dest_yaml_path
 
+    yaml = YAML()
+    yaml.default_flow_style = False
     with open(os.path.join(tempdir, 'METADATA'), 'w+') as f:
         yaml.dump(metadata, f)
 
@@ -69,7 +72,7 @@ def _create_caravan(mappings, dest, tar_name):
 
 
 def build_caravan(dir, name, path):
-    plugins_json = urllib2.urlopen(path)
+    plugins_json = urlopen(path)
     plugins = json.loads(plugins_json.read())
     mapping = {}
 

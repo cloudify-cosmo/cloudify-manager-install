@@ -46,7 +46,7 @@ def _collect_system_data(data):
         'cpu_count': cpu_count(),
         'cpu_model': _get_cpu_model(),
         'mem_size_gb':
-            sysconf('SC_PAGE_SIZE') * sysconf('SC_PHYS_PAGES') / GIGA_SIZE
+            sysconf('SC_PAGE_SIZE') * sysconf('SC_PHYS_PAGES') // GIGA_SIZE
     }
 
 

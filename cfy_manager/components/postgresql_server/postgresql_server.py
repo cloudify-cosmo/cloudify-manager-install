@@ -17,7 +17,6 @@ import os
 import re
 import time
 import json
-import yaml
 import psutil
 import socket
 from copy import copy
@@ -27,6 +26,8 @@ from os.path import join, isdir, islink
 
 import requests
 from retrying import retry
+from ruamel.yaml import YAML
+
 
 from cfy_manager.components import sources
 from cfy_manager.exceptions import (
@@ -835,8 +836,10 @@ class PostgresqlServer(BaseComponent):
             'touch', patroni_config_path,
         ])
         common.chown(getuser(), '', patroni_config_path)
+        yaml = YAML()
+        yaml.default_flow_style = False
         with open(patroni_config_path, 'w') as f:
-            f.write(yaml.dump(patroni_conf, default_flow_style=False))
+            yaml.dump(patroni_conf, f)
 
     def _format_pg_hba_address(self, address):
         """Format the address for use in pg_hba

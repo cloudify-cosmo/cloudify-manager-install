@@ -37,7 +37,7 @@ from . import (
 )
 
 
-class ComponentsFactory:
+class ComponentsFactory(object):
     def __init__(self):
         pass
 

@@ -20,12 +20,14 @@ from glob import glob
 from tempfile import mkstemp
 from os.path import join, isabs
 
-import yaml
 from jinja2 import Environment, FileSystemLoader
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from .network import is_url, curl_download
 from .common import move, sudo, copy, remove, chown
 
+from .._compat import StringIO
 from ..config import config
 from ..logger import get_logger
 from ..exceptions import FileError
@@ -198,10 +200,11 @@ def read_yaml_file(yaml_path):
     if is_file(yaml_path):
         try:
             file_content = sudo_read(yaml_path)
-            return yaml.safe_load(file_content)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError('Failed to load yaml file {0}, due to {1}'
-                                 ''.format(yaml_path, str(e)))
+            yaml = YAML(typ='safe', pure=True)
+            return yaml.load(file_content)
+        except YAMLError as e:
+            raise YAMLError('Failed to load yaml file {0}, due to {1}'
+                            ''.format(yaml_path, str(e)))
     return None
 
 
@@ -211,9 +214,11 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
                          'instead'.format(type(updated_content)))
     yaml_content = read_yaml_file(yaml_path) or {}
     yaml_content.update(**updated_content)
-    updated_file = yaml.safe_dump(yaml_content,
-                                  default_flow_style=False)
-    write_to_file(updated_file, yaml_path)
+    stream = StringIO()
+    yaml = YAML(typ='safe')
+    yaml.default_flow_style = False
+    yaml.dump(yaml_content, stream)
+    write_to_file(stream.getvalue(), yaml_path)
     chown(user_owner,
           group_owner,
           yaml_path)

@@ -72,12 +72,12 @@ class Nginx(BaseComponent):
         hostname = config[MANAGER][HOSTNAME]
         certificates.store_cert_metadata(
             hostname,
-            new_managers=networks.values(),
-            new_networks=networks.keys(),
+            new_managers=list(networks.values()),
+            new_networks=list(networks.keys()),
         )
 
         certificates.generate_internal_ssl_cert(
-            ips=networks.values(),
+            ips=list(networks.values()),
             cn=hostname
         )
 

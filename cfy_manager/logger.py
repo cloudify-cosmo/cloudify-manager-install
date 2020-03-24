@@ -25,7 +25,7 @@ import logging
 from .constants import BASE_LOG_DIR
 from .utils import subprocess_preexec
 
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = list(range(30, 38))
 
 # The background is set with 40 plus the number of the color,
 # and the foreground with 30

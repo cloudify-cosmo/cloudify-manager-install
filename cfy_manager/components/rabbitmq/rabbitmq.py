@@ -443,13 +443,13 @@ class RabbitMQ(BaseComponent):
         rabbit_host = config[MANAGER][HOSTNAME]
         networks = config[RABBITMQ]['cluster_members'][rabbit_host]['networks']
 
-        cert_addresses = networks.values()
+        cert_addresses = list(networks.values())
         cert_addresses.append(config[RABBITMQ]['nodename'].split('@')[-1])
 
         certificates.store_cert_metadata(
             rabbit_host,
             new_brokers=cert_addresses,
-            new_networks=networks.keys(),
+            new_networks=list(networks.keys()),
             # The cfyuser won't exist yet (and may never exist if only rabbit
             # is being installed)
             owner='rabbitmq',
