@@ -28,12 +28,16 @@ if PY2:
     from urllib2 import Request, urlopen
     from urlparse import urlparse
 
+    text_type = unicode
+
 else:
     from io import StringIO
 
     from urllib.error import HTTPError, URLError
     from urllib.request import Request, urlopen
     from urllib.parse import urlparse
+
+    text_type = str
 
 __all__ = [
     'PY2',
@@ -43,4 +47,5 @@ __all__ = [
     'Request',
     'urlopen',
     'urlparse',
+    'text_type',
 ]

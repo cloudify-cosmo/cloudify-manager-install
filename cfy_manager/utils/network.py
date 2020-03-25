@@ -110,9 +110,10 @@ def get_auth_headers():
     username = security['admin_username']
     password = security['admin_password']
     return {
-        'Authorization': 'Basic ' + base64.b64encode('{0}:{1}'.format(
-            username, password)
-        ),
+        'Authorization':
+            'Basic ' + base64.b64encode(
+                '{0}:{1}'.format(username, password).encode('utf-8')
+            ).decode('ascii'),
         'tenant': 'default_tenant'
     }
 

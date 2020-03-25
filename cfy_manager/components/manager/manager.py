@@ -83,7 +83,7 @@ class Manager(BaseComponent):
     def _get_selinux_state(self):
         try:
             return subprocess.check_output(['/usr/sbin/getenforce'])\
-                .rstrip('\n\r')
+                .decode('utf-8').rstrip('\n\r')
         except OSError as e:
             logger.warning('SELinux is not installed ({0})'.format(e))
             return None
