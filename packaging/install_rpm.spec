@@ -1,4 +1,5 @@
 %define _venv /opt/cloudify/cfy_manager
+%define __python %_venv/bin/python
 %define __find_provides %{nil}
 %define __find_requires %{nil}
 %define _use_internal_dependency_generator 0
@@ -16,21 +17,16 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager-install
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python >= 2.7, python-virtualenv
-Requires:       python >= 2.7
+BuildRequires:  python3 >= 3.6, python3-devel >= 3.6
+Requires:       python3 >= 3.6
 
 %description
 Cloudify Manager installer.
 
 %build
 mkdir -p $(dirname %_venv)
-virtualenv %_venv
+python3 -m venv %_venv
 %_venv/bin/pip install ${RPM_SOURCE_DIR}
-
-# Jinja2 includes 2 files which will only be imported if async is available,
-# but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
-# we remove them.
-rm -f %_venv/lib/python2.7/site-packages/jinja2/async*.py
 
 %install
 mkdir %{buildroot}/opt
