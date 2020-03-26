@@ -7,7 +7,10 @@ import subprocess
 import sys
 import zipfile
 
-from Queue import Empty, Queue
+if sys.version_info[0] == 2:
+    from Queue import Queue, Empty
+else:
+    from queue import Queue, Empty
 from threading import Thread, Lock, Event
 
 
