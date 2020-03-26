@@ -126,7 +126,8 @@ def _create_populate_db_args_dict():
         'config': make_manager_config(),
         'premium': config[MANAGER][PREMIUM_EDITION],
         'rabbitmq_brokers': _create_rabbitmq_info(),
-        'db_nodes': _create_db_nodes_info()
+        'db_nodes': _create_db_nodes_info(),
+        'usage_collector': _create_usage_collector_info()
     }
     manager_status_reporter_password = config.get(
         MANAGER_STATUS_REPORTER, {}).get(PASSWORD)
@@ -214,6 +215,18 @@ def _create_db_nodes_info():
         'host': config[POSTGRESQL_CLIENT]['host'],
         'is_external': True
     }]
+
+
+def _create_usage_collector_info():
+    cfy_uptime = config['usage_collector']['collect_cloudify_uptime']
+    cfy_usage = config['usage_collector']['collect_cloudify_usage']
+    return {
+        'manager_id': str(uuid.uuid4().hex),
+        'hourly_timestamp': None,
+        'daily_timestamp': None,
+        'hours_interval': cfy_uptime['interval_in_hours'],
+        'days_interval': cfy_usage['interval_in_days']
+    }
 
 
 def _create_process_env(rest_config=None, authorization_config=None,
