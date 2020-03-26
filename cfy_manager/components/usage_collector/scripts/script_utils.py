@@ -1,8 +1,8 @@
-import time
 import json
 import logging
 from os import path
 import pkg_resources
+from uuid import uuid4
 
 from requests import post
 from contextlib import contextmanager
@@ -11,13 +11,8 @@ from logging.handlers import WatchedFileHandler
 from manager_rest import config, server, premium_enabled
 from manager_rest.storage import get_storage_manager, models
 
-DAYS_INTERVAL = 'interval_in_days'
-HOURS_INTERVAL = 'interval_in_hours'
-DAILY_TIMESTAMP = 'daily_timestamp'
-HOURLY_TIMESTAMP = 'hourly_timestamp'
-USAGE_PATH = '/etc/cloudify/.usage'
-USAGE_CONFIG_PATH = path.join(USAGE_PATH, 'config')
-BUFFER_TIME = 900
+
+MANAGER_ID_PATH = '/etc/cloudify/.id'
 CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
@@ -47,40 +42,26 @@ def get_storage_manager_instance():
         config.reset(config.Config())
 
 
-def needs_to_send_data(interval_type):
-    timestamp, interval_sec = _get_timestamp_and_interval(interval_type)
-    if timestamp is None:
-        return True
-    time_to_update = (timestamp + interval_sec + BUFFER_TIME) < time.time()
-    if time_to_update:
-        return True
-    return False
-
-
-def _get_timestamp_and_interval(interval_type):
-    with open(USAGE_CONFIG_PATH) as usage_config_file:
-        usage_config = json.load(usage_config_file)
-    interval = usage_config.get(interval_type)
-    if interval_type == HOURS_INTERVAL:
-        timestamp = usage_config.get(HOURLY_TIMESTAMP)
-        interval_sec = interval * 60 * 60
-    else:
-        timestamp = usage_config.get(DAILY_TIMESTAMP)
-        interval_sec = interval * 24 * 60 * 60
-    return timestamp, interval_sec
+def create_manager_id_file():
+    if path.exists(MANAGER_ID_PATH):
+        with open(MANAGER_ID_PATH) as f:
+            existing_manager_id = f.read().strip()
+            if existing_manager_id:
+                return
+    with open(MANAGER_ID_PATH, 'w') as f:
+        f.write(uuid4().hex)
 
 
 def collect_metadata(data):
     pkg_distribution = pkg_resources.get_distribution('cloudify-rest-service')
     manager_version = pkg_distribution.version
-    with open(USAGE_CONFIG_PATH) as usage_config_file:
-        usage_config = json.load(usage_config_file)
-        manager_id = usage_config.get('id')
-    if path.exists(CLOUDIFY_IMAGE_INFO):
-        with open(CLOUDIFY_IMAGE_INFO) as image_file:
-            image_info = image_file.read().strip()
-    else:
-        image_info = 'rpm'
+    with open(MANAGER_ID_PATH) as id_file:
+        manager_id = id_file.read().strip()
+        if path.exists(CLOUDIFY_IMAGE_INFO):
+            with open(CLOUDIFY_IMAGE_INFO) as image_file:
+                image_info = image_file.read().strip()
+        else:
+            image_info = 'rpm'
 
     customer_id = None
     with get_storage_manager_instance() as sm:
@@ -97,15 +78,8 @@ def collect_metadata(data):
     }
 
 
-def send_data(data, url, interval_type):
-    with open(USAGE_CONFIG_PATH) as usage_config_file:
-        usage_config = json.load(usage_config_file)
-    if interval_type == HOURS_INTERVAL:
-        usage_config[HOURLY_TIMESTAMP] = time.time()
-    else:
-        usage_config[DAILY_TIMESTAMP] = time.time()
-    with open(USAGE_CONFIG_PATH, 'w') as usage_config_file:
-        json.dump(usage_config, usage_config_file)
+def send_data(data, url):
+    # for some reason. multi hierarchy dict doesn't pass well to the end point
     logger.info('The sent data: {0}'.format(data))
     data = {'data': json.dumps(data)}
     post(url, data=data)

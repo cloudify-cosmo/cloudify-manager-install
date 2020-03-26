@@ -8,9 +8,8 @@ from manager_rest import config, server
 from manager_rest.storage import models
 from script_utils import (logger,
                           send_data,
-                          DAYS_INTERVAL,
                           collect_metadata,
-                          needs_to_send_data,
+                          create_manager_id_file,
                           RESTSERVICE_CONFIG_PATH,
                           get_storage_manager_instance)
 
@@ -103,15 +102,15 @@ def _is_clustered():
 
 
 def main():
-    if needs_to_send_data(DAYS_INTERVAL):
-        logger.info('Usage script started running')
-        data = {}
-        collect_metadata(data)
-        _collect_system_data(data)
-        _collect_cloudify_data(data)
-        _collect_cloudify_config(data)
-        send_data(data, CLOUDIFY_ENDPOINT_USAGE_DATA_URL, DAYS_INTERVAL)
-        logger.info('Usage script finished running')
+    logger.info('Usage script started running')
+    create_manager_id_file()
+    data = {}
+    collect_metadata(data)
+    _collect_system_data(data)
+    _collect_cloudify_data(data)
+    _collect_cloudify_config(data)
+    send_data(data, CLOUDIFY_ENDPOINT_USAGE_DATA_URL)
+    logger.info('Usage script finished running')
 
 
 if __name__ == '__main__':
