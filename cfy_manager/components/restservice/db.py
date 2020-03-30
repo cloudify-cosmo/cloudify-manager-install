@@ -221,6 +221,7 @@ def _create_usage_collector_info():
     cfy_uptime = config['usage_collector']['collect_cloudify_uptime']
     cfy_usage = config['usage_collector']['collect_cloudify_usage']
     return {
+        'id': 0,
         'manager_id': str(uuid.uuid4().hex),
         'hourly_timestamp': None,
         'daily_timestamp': None,
