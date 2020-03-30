@@ -197,7 +197,7 @@ class RabbitMQ(BaseComponent):
             self._rabbitmqctl(['join_cluster', join_node])
             joined = True
         except ProcessExecutionError as err:
-            if 'mnesia_not_running' in err.message:
+            if 'mnesia_not_running' in str(err):
                 raise ClusteringError(
                     'Rabbit does not appear to be running on {target}. '
                     'You may need to start rabbit on that node, or restart '
