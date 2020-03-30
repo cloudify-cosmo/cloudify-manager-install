@@ -467,8 +467,7 @@ class RestService(BaseComponent):
                         .format(response.status_code, response.content))
             except IOError as e:
                 logger.warning('Failed to upload Cloudify license `{0}` due'
-                               ' to IOError: {1}'.format(license_path,
-                                                         e.message))
+                               ' to IOError: {1}'.format(license_path, e))
 
     def install(self):
         logger.notice('Installing Rest Service...')
