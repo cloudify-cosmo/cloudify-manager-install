@@ -5,14 +5,14 @@ from os.path import expanduser
 from multiprocessing import cpu_count
 
 from manager_rest import config, server
-from manager_rest.storage import models, storage_utils
+from manager_rest.storage import models
 from script_utils import (logger,
                           send_data,
                           DAYS_LOCK,
                           DAYS_INTERVAL,
                           collect_metadata,
                           should_send_data,
-                          create_manager_id_file,
+                          unlock_usage_collector,
                           RESTSERVICE_CONFIG_PATH,
                           try_usage_collector_lock,
                           get_storage_manager_instance)
@@ -109,7 +109,6 @@ def main():
     if try_usage_collector_lock(DAYS_LOCK):
         if should_send_data(DAYS_INTERVAL):
             logger.info('Usage script started running')
-            create_manager_id_file()
             data = {}
             collect_metadata(data)
             _collect_system_data(data)
@@ -119,7 +118,7 @@ def main():
             logger.info('Usage script finished running')
         else:
             logger.info('cloudify_usage was updated by a different Manager')
-        storage_utils.unlock_table(DAYS_LOCK)
+        unlock_usage_collector(DAYS_LOCK)
     else:
         logger.info('Other Manager is currently updating cloudify_usage')
 
