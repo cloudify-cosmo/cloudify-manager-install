@@ -86,7 +86,7 @@ def try_usage_collector_lock(lock_number):
 
 
 def unlock_usage_collector(lock_number):
-    logger.info('Unlocking usage_collector')
+    logger.info('Unlocking usage_collector table')
     with _get_flask_app().app_context():
         storage_utils.unlock_table(lock_number)
 
