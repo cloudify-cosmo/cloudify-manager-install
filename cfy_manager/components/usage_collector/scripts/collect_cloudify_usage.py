@@ -108,6 +108,7 @@ def main():
     with usage_collector_lock(DAYS_LOCK) as locked:
         if not locked:
             logger.info('Other Manager is currently updating cloudify_usage')
+            return
         logger.debug('Acquired usage_collector table lock')
         if should_send_data(DAYS_INTERVAL):
             logger.info('Usage script started running')
