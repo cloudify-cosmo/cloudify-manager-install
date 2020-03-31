@@ -107,6 +107,7 @@ def _is_clustered():
 
 def main():
     if try_usage_collector_lock(DAYS_LOCK):
+        logger.info('Acquired usage_collector table lock')
         if should_send_data(DAYS_INTERVAL):
             logger.info('Usage script started running')
             data = {}

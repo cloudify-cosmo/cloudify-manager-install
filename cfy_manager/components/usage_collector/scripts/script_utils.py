@@ -12,7 +12,7 @@ from manager_rest.storage import get_storage_manager, models, storage_utils
 
 DAYS_LOCK = 1
 HOURS_LOCK = 2
-BUFFER_TIME = 120
+BUFFER_TIME = 300
 DAYS_INTERVAL = 'days_interval'
 HOURS_INTERVAL = 'hours_interval'
 CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
@@ -94,11 +94,12 @@ def unlock_usage_collector(lock_number):
 def should_send_data(interval_type):
     with get_storage_manager_instance() as sm:
         usage_collector_info = (sm.list(models.UsageCollector))[0]
-    time_now = int(time.time())
     timestamp = _get_timestamp(usage_collector_info, interval_type)
-    interval_sec = _get_interval(usage_collector_info, interval_type)
     if timestamp is None:
         return True
+
+    time_now = int(time.time())
+    interval_sec = _get_interval(usage_collector_info, interval_type)
     time_to_update = (timestamp + interval_sec) < (time_now + BUFFER_TIME)
     if time_to_update:
         return True
@@ -114,13 +115,11 @@ def _get_interval(usage_collector_info, interval_type):
 
 
 def _get_timestamp(usage_collector_info, interval_type):
-    if interval_type == HOURS_INTERVAL:
-        hourly_timestamp = usage_collector_info.hourly_timestamp
-        timestamp = hourly_timestamp if hourly_timestamp is not None else None
-    else:
-        daily_timestamp = usage_collector_info.daily_timestamp
-        timestamp = daily_timestamp if daily_timestamp is not None else None
+    interval_timestamp = (usage_collector_info.hourly_timestamp
+                          if interval_type == HOURS_INTERVAL
+                          else usage_collector_info.daily_timestamp)
 
+    timestamp = interval_timestamp if interval_timestamp is not None else None
     return timestamp
 
 

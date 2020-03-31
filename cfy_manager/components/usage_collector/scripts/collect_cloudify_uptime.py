@@ -13,6 +13,7 @@ CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
 
 def main():
     if try_usage_collector_lock(HOURS_LOCK):
+        logger.info('Acquired usage_collector table lock')
         if should_send_data(HOURS_INTERVAL):
             logger.info('Uptime script started running')
             data = {}
@@ -21,7 +22,7 @@ def main():
             logger.info('Uptime script finished running')
         else:
             logger.info('cloudify_uptime was updated by a different Manager')
-            unlock_usage_collector(HOURS_LOCK)
+        unlock_usage_collector(HOURS_LOCK)
     else:
         logger.info('Other Manager is currently updating cloudify_uptime')
 
