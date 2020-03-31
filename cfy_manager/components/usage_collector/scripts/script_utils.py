@@ -107,20 +107,15 @@ def should_send_data(interval_type):
 
 
 def _get_interval(usage_collector_info, interval_type):
-    if interval_type == HOURS_INTERVAL:
-        interval_sec = usage_collector_info.hours_interval * 60 * 60
-    else:
-        interval_sec = usage_collector_info.days_interval * 24 * 60 * 60
-    return interval_sec
+    return (usage_collector_info.hours_interval * 60 * 60
+            if interval_type == HOURS_INTERVAL
+            else usage_collector_info.days_interval * 24 * 60 * 60)
 
 
 def _get_timestamp(usage_collector_info, interval_type):
-    interval_timestamp = (usage_collector_info.hourly_timestamp
-                          if interval_type == HOURS_INTERVAL
-                          else usage_collector_info.daily_timestamp)
-
-    timestamp = interval_timestamp if interval_timestamp is not None else None
-    return timestamp
+    return (usage_collector_info.hourly_timestamp
+            if interval_type == HOURS_INTERVAL
+            else usage_collector_info.daily_timestamp)
 
 
 def _get_flask_app():
