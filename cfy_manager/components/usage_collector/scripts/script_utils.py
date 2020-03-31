@@ -7,7 +7,8 @@ from requests import post
 from contextlib import contextmanager
 from logging.handlers import WatchedFileHandler
 
-from manager_rest import config, server, premium_enabled
+from manager_rest import config, premium_enabled
+from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import get_storage_manager, models, storage_utils
 
 DAYS_LOCK = 1
@@ -120,4 +121,4 @@ def _get_timestamp(usage_collector_info, interval_type):
 
 def _get_flask_app():
     config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
-    return server.CloudifyFlaskApp()
+    return setup_flask_app()
