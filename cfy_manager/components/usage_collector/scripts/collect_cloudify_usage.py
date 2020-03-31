@@ -12,9 +12,8 @@ from script_utils import (logger,
                           DAYS_INTERVAL,
                           collect_metadata,
                           should_send_data,
-                          unlock_usage_collector,
+                          usage_collector_lock,
                           RESTSERVICE_CONFIG_PATH,
-                          try_usage_collector_lock,
                           get_storage_manager_instance)
 
 
@@ -106,8 +105,10 @@ def _is_clustered():
 
 
 def main():
-    if try_usage_collector_lock(DAYS_LOCK):
-        logger.info('Acquired usage_collector table lock')
+    with usage_collector_lock(DAYS_LOCK) as locked:
+        if not locked:
+            logger.info('Other Manager is currently updating cloudify_usage')
+        logger.debug('Acquired usage_collector table lock')
         if should_send_data(DAYS_INTERVAL):
             logger.info('Usage script started running')
             data = {}
@@ -119,9 +120,6 @@ def main():
             logger.info('Usage script finished running')
         else:
             logger.info('cloudify_usage was updated by a different Manager')
-        unlock_usage_collector(DAYS_LOCK)
-    else:
-        logger.info('Other Manager is currently updating cloudify_usage')
 
 
 if __name__ == '__main__':

@@ -80,14 +80,23 @@ def send_data(data, url, interval_type):
     post(url, data=data)
 
 
-def try_usage_collector_lock(lock_number):
-    table_name = models.UsageCollector.__tablename__
+@contextmanager
+def usage_collector_lock(lock_number):
+    locked = _try_usage_collector_lock(lock_number)
+    try:
+        yield locked
+    finally:
+        if locked:
+            _unlock_usage_collector(lock_number)
+
+
+def _try_usage_collector_lock(lock_number):
     with _get_flask_app().app_context():
-        return storage_utils.try_acquire_lock_on_table(lock_number, table_name)
+        return storage_utils.try_acquire_lock_on_table(lock_number)
 
 
-def unlock_usage_collector(lock_number):
-    logger.info('Unlocking usage_collector table')
+def _unlock_usage_collector(lock_number):
+    logger.debug('Unlocking usage_collector table')
     with _get_flask_app().app_context():
         storage_utils.unlock_table(lock_number)
 
@@ -102,9 +111,7 @@ def should_send_data(interval_type):
     time_now = int(time.time())
     interval_sec = _get_interval(usage_collector_info, interval_type)
     time_to_update = (timestamp + interval_sec) < (time_now + BUFFER_TIME)
-    if time_to_update:
-        return True
-    return False
+    return time_to_update
 
 
 def _get_interval(usage_collector_info, interval_type):
