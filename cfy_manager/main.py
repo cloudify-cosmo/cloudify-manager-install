@@ -64,6 +64,7 @@ from .logger import (
     set_file_handlers_level,
 )
 from .networks.networks import add_networks
+from .accounts import reset_admin_password
 from .status_reporter import status_reporter
 from .utils import CFY_UMASK
 from .utils.certificates import (
@@ -851,7 +852,8 @@ def main():
         update_encryption_key,
         create_internal_certs,
         create_external_certs,
-        generate_test_cert
+        generate_test_cert,
+        reset_admin_password,
     ])
 
     parser.add_commands([

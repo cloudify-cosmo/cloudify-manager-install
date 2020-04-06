@@ -102,6 +102,11 @@ def _insert_db_nodes(db_nodes):
         sm.put(models.DBNodes(**node))
 
 
+def _insert_usage_collector(usage_collector_info):
+    sm = get_storage_manager()
+    sm.put(models.UsageCollector(**usage_collector_info))
+
+
 def _insert_manager(config):
     sm = get_storage_manager()
     ca_cert = config.get('ca_cert')
@@ -257,5 +262,7 @@ if __name__ == '__main__':
         _add_provider_context(script_config['provider_context'])
     if script_config.get('db_nodes'):
         _insert_db_nodes(script_config['db_nodes'])
+    if script_config.get('usage_collector'):
+        _insert_usage_collector(script_config['usage_collector'])
 
     print(json.dumps(RETURN_DICT))
