@@ -30,7 +30,9 @@ from .components import (
     SERVICE_COMPONENTS,
     MANAGER_SERVICE,
     QUEUE_SERVICE,
-    SERVICE_INSTALLATION_ORDER
+    DATABASE_SERVICE,
+    SERVICE_INSTALLATION_ORDER,
+    sources
 )
 from .components.components_constants import (
     CLEAN_DB,
@@ -56,7 +58,7 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import BootstrapError, RPMNotFound
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -73,7 +75,11 @@ from .utils.certificates import (
     generate_ca_cert,
     _generate_ssl_certificate,
 )
-from .utils.common import run, sudo, can_lookup_hostname, allows_json_format
+from .utils.common import (
+    run, sudo, can_lookup_hostname, allows_json_format, is_installed,
+    is_manager_service_only_installed, is_all_in_one_manager
+)
+from .utils.install import yum_install, yum_remove
 from .utils.files import (
     replace_in_file,
     remove as _remove,
@@ -496,7 +502,7 @@ def _prepare_execution(verbose=False,
 
 
 def _print_finish_message():
-    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+    if is_installed(MANAGER_SERVICE):
         manager_config = config[MANAGER]
         protocol = \
             'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
@@ -702,6 +708,22 @@ def install(verbose=False,
     validate(components=components, only_install=only_install)
     set_globals(only_install=only_install)
 
+    if is_installed(MANAGER_SERVICE):
+        yum_install(sources.manager)
+        try:
+            yum_install(sources.manager_premium)
+        except RPMNotFound:  # those aren't there in the community edition
+            pass
+
+    if is_all_in_one_manager():
+        yum_install(sources.db + sources.queue)
+    elif is_manager_service_only_installed():
+        yum_install(sources.manager_cluster)
+    elif is_installed(DATABASE_SERVICE):
+        yum_install(sources.db_cluster)
+    elif is_installed(QUEUE_SERVICE):
+        yum_install(sources.queue + sources.queue_cluster)
+
     for component in components:
         if not component.skip_installation:
             component.install()
@@ -776,6 +798,19 @@ def remove(verbose=False, force=False):
             if should_stop:
                 component.stop()
             component.remove()
+
+    if is_installed(MANAGER_SERVICE):
+        yum_remove(sources.manager)
+        yum_remove(sources.manager_premium, ignore_failures=True)
+
+    if is_all_in_one_manager():
+        yum_remove(sources.db + sources.queue)
+    elif is_manager_service_only_installed():
+        yum_remove(sources.manager_cluster)
+    elif is_installed(DATABASE_SERVICE):
+        yum_remove(sources.db_cluster)
+    elif is_installed(QUEUE_SERVICE):
+        yum_remove(sources.queue + sources.queue_cluster)
 
     if _are_components_installed():
         _remove(INITIAL_INSTALL_FILE)
