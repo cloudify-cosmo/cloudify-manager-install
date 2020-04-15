@@ -24,13 +24,11 @@ from .mgmtworker import MgmtWorker  # NOQA
 from .nginx import Nginx  # NOQA
 from .postgresql_server import PostgresqlServer  # NOQA
 from .postgresql_client import PostgresqlClient  # NOQA
-from .python import Python  # NOQA
 from .rabbitmq import RabbitMQ  # NOQA
 from .restservice import RestService  # NOQA
 from .sanity import Sanity  # NOQA
 from .stage import Stage  # NOQA
 from .usage_collector import UsageCollector  # NOQA
-from .patch.patch import Patch  # NOQA
 from .status_reporter import RabbitmqStatusReporter  # NOQA
 from .status_reporter import PostgresqlStatusReporter  # NOQA
 from .status_reporter import ManagerStatusReporter  # NOQA
@@ -39,4 +37,5 @@ from .components_factory import ComponentsFactory  # NOQA
 from .service_components import SERVICE_COMPONENTS  # NOQA
 from .service_components import MANAGER_SERVICE  # NOQA
 from .service_components import QUEUE_SERVICE  # NOQA
+from .service_components import DATABASE_SERVICE  # NOQA
 from .service_components import SERVICE_INSTALLATION_ORDER  # NOQA

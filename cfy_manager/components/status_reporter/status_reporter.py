@@ -18,13 +18,11 @@ import uuid
 from ..base_component import BaseComponent
 
 from ...logger import get_logger
-from ...components import sources
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
+from ...utils.install import is_package_available
 from ...utils.node import update_status_reporter_config
 from ...utils.files import (remove_files,
-                            read_yaml_file,
-                            check_rpms_are_present)
+                            read_yaml_file)
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
                           STATUS_REPORTER_CONFIGURATION_PATH,
@@ -36,9 +34,10 @@ logger = get_logger(STATUS_REPORTER)
 
 class StatusReporter(BaseComponent):
     def __init__(self, skip_installation, reporter_type, user_name):
-        skip_installation = (skip_installation or
-                             not check_rpms_are_present(
-                                 sources.status_reporter))
+        skip_installation = (
+            skip_installation or
+            not is_package_available('cloudify-status-reporter')
+        )
         super(StatusReporter, self).__init__(skip_installation)
         self._user_name = user_name
 
@@ -48,13 +47,6 @@ class StatusReporter(BaseComponent):
 
     def _build_extra_config_flags(self):
         return ''
-
-    def install(self):
-        logger.notice('Installing Status Reporter {0}...'.format(
-            self.reporter_type))
-        yum_install(sources.status_reporter)
-        logger.notice('Status Reporter {0} successfully installed'.format(
-            self.reporter_type))
 
     def configure(self):
         logger.notice('Configuring status reporter {0}...'.format(
@@ -78,14 +70,8 @@ class StatusReporter(BaseComponent):
         return node_id
 
     def remove(self):
-        logger.notice('Removing status reporter {0}...'.format(
-            self.reporter_type))
         systemd.remove(STATUS_REPORTER)
-        yum_remove('cloudify-status-reporter')
-        logger.info('Removing status reporter directory...')
         remove_files([STATUS_REPORTER_PATH])
-        logger.notice('Status reporter {0} successfully removed'.format(
-            self.reporter_type))
 
     @staticmethod
     def _is_status_reporter_configured():
@@ -93,8 +79,7 @@ class StatusReporter(BaseComponent):
             STATUS_REPORTER_CONFIGURATION_PATH)
         return (status_reporter_configuration.get(
             STATUS_REPORTER_MANAGERS_IPS) and
-                status_reporter_configuration.get(
-                    STATUS_REPORTER_TOKEN))
+            status_reporter_configuration.get(STATUS_REPORTER_TOKEN))
 
     def start(self):
         if not (self._is_status_reporter_configured()):

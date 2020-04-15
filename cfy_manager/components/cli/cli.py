@@ -18,7 +18,6 @@ import logging
 from os.path import join, exists, expanduser
 from getpass import getuser
 
-from cfy_manager.components import sources
 from ..components_constants import SECURITY, SSL_INPUTS
 from ..base_component import BaseComponent
 from ..service_names import CLI, MANAGER
@@ -28,7 +27,6 @@ from ...logger import (get_logger,
                        get_file_handlers_level)
 from ...utils import common, certificates
 from ...constants import EXTERNAL_CERT_PATH, EXTERNAL_CA_CERT_PATH
-from ...utils.install import yum_install, yum_remove
 
 logger = get_logger(CLI)
 
@@ -37,9 +35,6 @@ class Cli(BaseComponent):
 
     def __init__(self, skip_installation):
         super(Cli, self).__init__(skip_installation)
-
-    def _install(self):
-        yum_install(sources.cli)
 
     def _set_colors(self, is_root):
         """
@@ -96,11 +91,6 @@ class Cli(BaseComponent):
             self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
 
-    def install(self):
-        logger.notice('Installing Cloudify CLI...')
-        self._install()
-        logger.notice('Cloudify CLI successfully installed')
-
     def configure(self):
         logger.notice('Configuring Cloudify CLI...')
         self._configure()
@@ -135,10 +125,6 @@ class Cli(BaseComponent):
                                'installed due to an error; skipping')
             else:
                 raise
-
-        logger.notice('Removing Cloudify CLI...')
-        yum_remove('cloudify')
-        logger.notice('Cloudify CLI successfully removed')
 
     def _deploy_external_cert(self):
         """Return the path of the external cert to use with the CLI.

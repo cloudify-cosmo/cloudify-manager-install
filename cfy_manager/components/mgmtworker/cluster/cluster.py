@@ -19,11 +19,9 @@ from ...base_component import BaseComponent
 from ...restservice.restservice import RestService
 from cfy_manager.utils.common import is_manager_service_only_installed
 
-from ....components import sources
 from ....config import config
 from ....logger import get_logger
 from ....utils.systemd import systemd
-from ....utils.install import yum_install
 from ....constants import CA_CERT_PATH, INTERNAL_REST_PORT
 from ....utils.network import get_auth_headers, wait_for_port
 from ....components.components_constants import PRIVATE_IP, HOSTNAME
@@ -57,9 +55,6 @@ class Cluster(BaseComponent):
             config[PRIVATE_IP], INTERNAL_REST_PORT, self.API_VERSION,
             config[HOSTNAME])
         requests.delete(url, headers=get_auth_headers(), verify=CA_CERT_PATH)
-
-    def install(self):
-        yum_install(sources.premium)
 
     def configure(self):
         # Need to restart the RESTSERVICE so flask could import premium

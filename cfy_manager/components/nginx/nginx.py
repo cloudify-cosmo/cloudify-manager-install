@@ -16,7 +16,6 @@
 from os.path import join, exists
 from collections import namedtuple
 
-from cfy_manager.components import sources
 from ..components_constants import (
     CONFIG,
     PRIVATE_IP,
@@ -34,7 +33,6 @@ from ...exceptions import ValidationError
 from ...utils import common
 from ...utils import certificates
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
@@ -51,7 +49,6 @@ class Nginx(BaseComponent):
         super(Nginx, self).__init__(skip_installation)
 
     def _install(self):
-        yum_install(sources.nginx)
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
         self._deploy_unit_override()
@@ -161,11 +158,9 @@ class Nginx(BaseComponent):
                         'Pass the `--clean-db` flag in order to recreate '
                         'all certificates')
 
-    def _deploy_nginx_config_files(self):
-        logger.info('Deploying Nginx configuration files...')
+    def _config_files(self):
         resource = namedtuple('Resource', 'src dst')
-
-        resources = [
+        return [
             resource(
                 src=join(CONFIG_PATH, 'http-external-rest-server.cloudify'),
                 dst='/etc/nginx/conf.d/http-external-rest-server.cloudify'
@@ -220,7 +215,9 @@ class Nginx(BaseComponent):
             )
         ]
 
-        for resource in resources:
+    def _deploy_nginx_config_files(self):
+        logger.info('Deploying Nginx configuration files...')
+        for resource in self._config_files():
             deploy(resource.src, resource.dst)
 
         # remove the default configuration which reserves localhost:80 for a
@@ -269,18 +266,13 @@ class Nginx(BaseComponent):
         logger.notice('NGINX successfully configured')
 
     def remove(self):
-        logger.notice('Removing NGINX...')
         remove_notice(NGINX)
         remove_logrotate(NGINX)
         remove_files([
-            join('/etc', NGINX),
-            join('/var/log', NGINX),
             join('/var/cache', NGINX),
             LOG_DIR,
             UNIT_OVERRIDE_PATH
-        ])
-        yum_remove(NGINX)
-        logger.notice('NGINX successfully removed')
+        ] + [resource.dst for resource in self._config_files()])
 
     def start(self):
         logger.notice('Starting NGINX...')

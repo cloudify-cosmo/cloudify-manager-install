@@ -18,7 +18,6 @@ import os
 from ...exceptions import ProcessExecutionError
 
 
-from cfy_manager.components import sources
 from ..components_constants import (
     SSL_ENABLED,
     SSL_INPUTS,
@@ -41,11 +40,6 @@ from ...utils import (
     common,
     files,
 )
-from ...utils.install import (
-    yum_install,
-    yum_remove,
-    RpmPackageHandler
-)
 
 GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
@@ -66,13 +60,6 @@ class PostgresqlClient(BaseComponent):
         super(PostgresqlClient, self).__init__(skip_installation)
 
     def _install(self):
-        logger.debug('Installing PostgreSQL Client libraries...')
-        yum_install(sources.ps_libs)
-        yum_install(sources.ps)
-
-        logger.debug('Installing python libs for PostgreSQL...')
-        yum_install(sources.psycopg2)
-
         files.copy_notice(POSTGRESQL_CLIENT)
 
         db_server_username = config[POSTGRESQL_CLIENT]['server_username']
@@ -186,14 +173,4 @@ class PostgresqlClient(BaseComponent):
         logger.notice('PostgreSQL successfully configured')
 
     def remove(self):
-        logger.notice('Removing PostgreSQL Client...')
         files.remove_notice(POSTGRESQL_CLIENT)
-        if not RpmPackageHandler.is_package_installed('postgresql95-server'):
-            yum_remove('postgresql95')
-            yum_remove('postgresql95-libs')
-            logger.notice('PostgreSQL successfully removed')
-        else:
-            logger.info(
-                'PostgreSQL Server is installed on the machine, cfy_manager '
-                'remove will wait for dependant components to be removed prior'
-                ' to removing PostgreSQL')
