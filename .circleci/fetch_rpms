@@ -34,7 +34,8 @@ REPOS = {
         'build_rpm': {'cloudify-*.rpm'},
     },
     'cloudify-premium': {
-        'build-rpm': {'cloudify-*.rpm'}
+        'build-rpm': {'cloudify-*.rpm'},
+        'build-patroni-rpm': {'*.rpm'}
     },
     'cloudify-cli': {
         'build-rpm': {'cloudify-*.rpm'}
