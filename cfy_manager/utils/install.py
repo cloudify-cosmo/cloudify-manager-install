@@ -22,53 +22,11 @@ from ..exceptions import RPMNotFound, YumError, ProcessExecutionError
 logger = get_logger('yum')
 
 
-class RpmPackageHandler(object):
-
-    def __init__(self, source_path):
-        self.source_path = source_path
-        self.package_name = self.get_rpm_package_name()
-
-    def remove_existing_rpm_package(self):
-        """Removes any version that satisfies the package name of the given
-        source path.
-        """
-        if self.is_package_installed(self.package_name):
-            logger.debug(
-                'Removing existing package sources for package '
-                'with name: {0}'.format(self.package_name))
-            sudo(['rpm', '--noscripts', '-e', self.package_name])
-
-    @staticmethod
-    def is_package_installed(name):
-        installed = run(['rpm', '-q', name], ignore_failures=True)
-        if installed.returncode == 0:
-            return True
-        return False
-
-    def is_rpm_installed(self):
-        """Returns true if provided rpm is already installed.
-        """
-        src_query = run(['rpm', '-qp', self.source_path])
-        source_name = src_query.aggr_stdout.rstrip('\n\r')
-
-        return self.is_package_installed(source_name)
-
-    def get_rpm_package_name(self):
-        """Returns the package name according to the info provided in the
-        source file.
-        """
-        split_index = ' : '
-        package_details = {}
-        package_details_query = run(['rpm', '-qpi', self.source_path])
-        rows = package_details_query.aggr_stdout.split('\n')
-        # split raw data according to the ' : ' index
-        for row in rows:
-            if split_index in row:
-                first_columb_index = row.index(split_index)
-                key = row[:first_columb_index].strip()
-                value = row[first_columb_index + len(split_index):].strip()
-                package_details[key] = value
-        return package_details['Name']
+def is_package_installed(name):
+    installed = run(['rpm', '-q', name], ignore_failures=True)
+    if installed.returncode == 0:
+        return True
+    return False
 
 
 def _yum_install(packages, disable_all_repos=True):
@@ -142,4 +100,4 @@ def pip_install(source, venv='', constraints_file=None):
 
 
 def is_premium_installed():
-    return RpmPackageHandler.is_package_installed('cloudify-premium')
+    return is_package_installed('cloudify-premium')

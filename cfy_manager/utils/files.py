@@ -179,18 +179,6 @@ def touch(file_path):
     sudo(['touch', file_path])
 
 
-def check_rpms_are_present(rpm_list):
-    if not isinstance(rpm_list, list):
-        rpm_list = [rpm_list]
-
-    for rpm in rpm_list:
-        try:
-            get_local_source_path(rpm)
-        except FileError:
-            return False
-    return True
-
-
 def read_yaml_file(yaml_path):
     """Loads a YAML file.
 
