@@ -45,6 +45,7 @@ from .components.components_constants import (
     UNCONFIGURED_INSTALL,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
+    PREMIUM_EDITION
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
@@ -58,7 +59,7 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError, RPMNotFound
+from .exceptions import BootstrapError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -685,6 +686,26 @@ def sanity_check(verbose=False, private_ip=None):
     sanity.run_sanity_check()
 
 
+def _get_packages():
+    """Yum packages to install/uninstall, based on the current config"""
+    packages = []
+    if is_installed(MANAGER_SERVICE):
+        packages += sources.manager
+        if config[MANAGER][PREMIUM_EDITION] == 'premium':
+            packages += sources.manager_premium
+
+    if is_all_in_one_manager():
+        packages += sources.db + sources.queue
+    elif is_manager_service_only_installed():
+        packages += sources.manager_cluster
+    elif is_installed(DATABASE_SERVICE):
+        packages += sources.db_cluster
+    elif is_installed(QUEUE_SERVICE):
+        packages += sources.queue + sources.queue_cluster
+
+    return packages
+
+
 @argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
 @install_args
 def install(verbose=False,
@@ -708,21 +729,7 @@ def install(verbose=False,
     validate(components=components, only_install=only_install)
     set_globals(only_install=only_install)
 
-    if is_installed(MANAGER_SERVICE):
-        yum_install(sources.manager)
-        try:
-            yum_install(sources.manager_premium)
-        except RPMNotFound:  # those aren't there in the community edition
-            pass
-
-    if is_all_in_one_manager():
-        yum_install(sources.db + sources.queue)
-    elif is_manager_service_only_installed():
-        yum_install(sources.manager_cluster)
-    elif is_installed(DATABASE_SERVICE):
-        yum_install(sources.db_cluster)
-    elif is_installed(QUEUE_SERVICE):
-        yum_install(sources.queue + sources.queue_cluster)
+    yum_install(_get_packages())
 
     for component in components:
         if not component.skip_installation:
@@ -799,18 +806,7 @@ def remove(verbose=False, force=False):
                 component.stop()
             component.remove()
 
-    if is_installed(MANAGER_SERVICE):
-        yum_remove(sources.manager)
-        yum_remove(sources.manager_premium, ignore_failures=True)
-
-    if is_all_in_one_manager():
-        yum_remove(sources.db + sources.queue)
-    elif is_manager_service_only_installed():
-        yum_remove(sources.manager_cluster)
-    elif is_installed(DATABASE_SERVICE):
-        yum_remove(sources.db_cluster)
-    elif is_installed(QUEUE_SERVICE):
-        yum_remove(sources.queue + sources.queue_cluster)
+    yum_remove(_get_packages())
 
     if _are_components_installed():
         _remove(INITIAL_INSTALL_FILE)
