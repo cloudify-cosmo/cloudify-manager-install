@@ -28,7 +28,7 @@ manager_premium = ['cloudify-premium', 'cloudify-status-reporter']
 manager_cluster = ['haproxy']
 db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
 db_cluster = [
-    'cloudify-db', 'libestr', 'libfastjson', 'rsyslog', 'etcd',
+    'libestr', 'libfastjson', 'rsyslog', 'etcd',
     'cloudify-status-reporter', 'patroni'
 ]
 queue = ['rabbitmq-server-3.7.7', 'cloudify-rabbitmq']
