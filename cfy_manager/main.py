@@ -699,7 +699,7 @@ def _get_packages():
     elif is_manager_service_only_installed():
         packages += sources.manager_cluster
     elif is_installed(DATABASE_SERVICE):
-        packages += sources.db_cluster
+        packages += sources.db + sources.db_cluster
     elif is_installed(QUEUE_SERVICE):
         packages += sources.queue + sources.queue_cluster
 
