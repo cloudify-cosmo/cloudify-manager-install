@@ -17,7 +17,7 @@ from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...exceptions import ValidationError
-from ...utils.install import RpmPackageHandler
+from ...utils.install import is_package_installed
 from ...utils.certificates import use_supplied_certificates
 from ...logger import get_logger
 
@@ -60,7 +60,7 @@ class BaseComponent(object):
                 'Validating that `{dep}` is installed for '
                 '{class_name}'.format(dep=dep,
                                       class_name=self.__class__.__name__))
-            if not RpmPackageHandler.is_package_installed(dep):
+            if not is_package_installed(dep):
                 missing_packages[dep] = reason
 
         if missing_packages:

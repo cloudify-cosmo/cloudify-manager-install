@@ -23,12 +23,10 @@ SERVICE_COMPONENTS = {
     "database_service": [
         "postgresql_server",
         "postgresql_status_reporter",
-        "patch"
     ],
     "queue_service": [
         "rabbitmq",
         "rabbitmq_status_reporter",
-        "patch"
     ],
     "manager_service": [
         "manager_status_reporter",
@@ -37,14 +35,12 @@ SERVICE_COMPONENTS = {
         "restservice",
         "manager_ip_setter",
         "nginx",
-        "python",
         "amqp_postgres",
         "stage",
         "composer",
         "mgmtworker",
         "cli",
         "usage_collector",
-        "patch",
         "sanity"
     ]
 }

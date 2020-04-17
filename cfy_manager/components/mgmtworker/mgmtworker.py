@@ -17,7 +17,6 @@ from os.path import join
 
 from .cluster.cluster import Cluster
 
-from cfy_manager.components import sources
 from ..components_constants import (
     CONFIG,
     HOME_DIR_KEY,
@@ -32,13 +31,9 @@ from ...config import config
 from ...logger import get_logger
 from ... import constants as const
 from ...utils import common, sudoers
-from ...utils.files import (
-    deploy,
-    get_local_source_path
-)
+from ...utils.files import deploy
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove, is_premium_installed
-from ...exceptions import FileError
+from ...utils.install import is_premium_installed
 
 
 HOME_DIR = '/opt/mgmtworker'
@@ -46,7 +41,7 @@ MGMTWORKER_VENV = join(HOME_DIR, 'env')
 CLUSTER_SERVICE_QUEUE = 'cluster_service_queue'
 LOG_DIR = join(const.BASE_LOG_DIR, MGMTWORKER)
 CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
-
+HOOKS_CONFIG = join(HOME_DIR, 'config', 'hooks.conf')
 logger = get_logger(MGMTWORKER)
 
 
@@ -116,29 +111,25 @@ class MgmtWorker(BaseComponent):
         common.run(['sudo', script_path])
 
     def _deploy_hooks_config(self):
-        file_name = 'hooks.conf'
-        config_dir = join(HOME_DIR, 'config')
-        hooks_config_dst = join(config_dir, file_name)
-
         # If the hooks config file already exists, do nothing. This file
         # can be altered by users, so we shouldn't overwrite it once present.
         # Can't use os.path.exists because the file is owned by cfyuser
         r = common.sudo(
-            'ls {0}'.format(hooks_config_dst), ignore_failures=True
+            'ls {0}'.format(HOOKS_CONFIG), ignore_failures=True
         )
         if r.returncode == 0:
             return
 
         deploy(
-            src=join(CONFIG_PATH, file_name),
-            dst=hooks_config_dst
+            src=join(CONFIG_PATH, 'hooks.conf'),
+            dst=HOOKS_CONFIG
         )
 
         # The user should use root to edit the hooks config file
-        common.chmod('440', hooks_config_dst)
+        common.chmod('440', HOOKS_CONFIG)
         common.chown(const.CLOUDIFY_USER,
                      const.CLOUDIFY_GROUP,
-                     hooks_config_dst)
+                     HOOKS_CONFIG)
 
     def _prepare_snapshot_permissions(self):
         self._add_snapshot_restore_sudo_commands()
@@ -159,34 +150,15 @@ class MgmtWorker(BaseComponent):
         systemd.restart(MGMTWORKER)
         self._verify_mgmtworker_alive()
 
-    def install(self):
-        logger.notice('Installing Management Worker...')
-        yum_install(sources.mgmtworker)
-
-        try:
-            get_local_source_path(sources.premium)
-        except FileError:
-            logger.info(
-                'premium package not found in manager resources package')
-            logger.notice('premium will not be installed.')
-        else:
-            logger.notice('Installing Cloudify Premium...')
-            cluster = Cluster(skip_installation=False)
-            cluster.install()
-        logger.notice('Management Worker successfully installed')
-
     def configure(self):
         logger.notice('Configuring Management Worker...')
         self._configure()
         logger.notice('Management Worker successfully configured')
 
     def remove(self):
-        logger.notice('Removing Management Worker...')
         systemd.remove(MGMTWORKER, service_file=False)
-        yum_remove('cloudify-management-worker')
         common.remove('/opt/mgmtworker')
         common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
-        logger.notice('Management Worker successfully removed')
 
     def start(self):
         logger.notice('Starting Management Worker...')

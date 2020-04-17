@@ -24,7 +24,7 @@ from ...exceptions import InputError
 from ..components_constants import SCRIPTS
 from ..base_component import BaseComponent
 from ..service_names import USAGE_COLLECTOR
-from ...utils.install import RpmPackageHandler
+from ...utils.install import is_package_installed
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 
@@ -75,7 +75,7 @@ class UsageCollector(BaseComponent):
         return True
 
     def _validate_cronie_installed(self):
-        if not RpmPackageHandler.is_package_installed('cronie'):
+        if not is_package_installed('cronie'):
             logger.warning('Package cronie is not installed,'
                            'unable to install Usage Collector')
             return False

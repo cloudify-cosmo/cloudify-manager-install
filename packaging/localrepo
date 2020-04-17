@@ -1,0 +1,7 @@
+[cloudify]
+name=Cloudify Manager local rpeo
+baseurl=file:///opt/cloudify/sources
+enabled=1
+gpgcheck=0
+protect=1
+priority=1
