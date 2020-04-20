@@ -64,7 +64,7 @@ def _add_default_user_and_tenant(amqp_manager, script_config):
 
 
 def _get_amqp_manager(script_config):
-    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as f:
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
         f.write(script_config['rabbitmq_ca_cert'])
     broker = script_config['rabbitmq_brokers'][0]
     atexit.register(os.unlink, f.name)
