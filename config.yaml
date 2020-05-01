@@ -56,8 +56,10 @@ provider_context:
     parameters:
       rules:
       - {http://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {http://getcloudify.org/spec: file:///opt/manager/resources/spec}
       - {http://cloudify.co/spec: file:///opt/manager/resources/spec}
       - {https://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {https://getcloudify.org/spec: file:///opt/manager/resources/spec}
       - {https://cloudify.co/spec: file:///opt/manager/resources/spec}
       # if this is set to true, the import resolver will try the original,
       # non-resolved URL as well, if the resolved one returns a HTTP error
