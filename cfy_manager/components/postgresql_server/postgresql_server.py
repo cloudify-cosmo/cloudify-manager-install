@@ -55,8 +55,14 @@ from ..service_names import (
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-from ...utils.systemd import systemd
-from ...utils import common, files, db, node as cloudify_node, network
+from ...utils import (
+    common,
+    files,
+    db,
+    node as cloudify_node,
+    network,
+    service
+)
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
@@ -154,8 +160,8 @@ class PostgresqlServer(BaseComponent):
             pass
 
         logger.debug('Installing PostgreSQL Server service...')
-        systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
         logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
@@ -164,7 +170,7 @@ class PostgresqlServer(BaseComponent):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
 
         logger.info('Starting PostgreSQL Server service...')
-        systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
@@ -331,6 +337,7 @@ class PostgresqlServer(BaseComponent):
         logger.notice('postgres password successfully updated')
 
     def _etcd_is_running(self):
+        # TODO handle that for supervisord
         status = common.run(['systemctl', 'is-active', 'etcd'],
                             ignore_failures=True).aggr_stdout.strip()
         return status in ('active', 'activating')
@@ -339,6 +346,7 @@ class PostgresqlServer(BaseComponent):
         # On the first node, etcd start via systemd will fail because of the
         # other nodes not being up, so we use this approach instead
         logger.info('Starting etcd')
+        # TODO handle that for supervisord
         common.sudo(['systemctl', 'start', 'etcd', '--no-block'])
         while not self._etcd_is_running():
             logger.info('Waiting for etcd to start...')
@@ -450,8 +458,8 @@ class PostgresqlServer(BaseComponent):
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
-        systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        systemd.disable(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.disable(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
@@ -537,7 +545,7 @@ class PostgresqlServer(BaseComponent):
         common.sudo(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
         logger.info('Configuring etcd')
-        systemd.enable('etcd', append_prefix=False)
+        service.enable('etcd', append_prefix=False)
         self._start_etcd()
 
         try:
@@ -674,8 +682,8 @@ class PostgresqlServer(BaseComponent):
             '/usr/lib/systemd/system/patroni.service',
             render=False,
         )
-        systemd.enable('patroni', append_prefix=False)
-        systemd.start('patroni', append_prefix=False)
+        service.enable('patroni', append_prefix=False)
+        service.start('patroni', append_prefix=False)
 
         logger.info('Activating patroni initial startup monitor.')
         self._activate_patroni_startup_check()
@@ -1433,8 +1441,8 @@ class PostgresqlServer(BaseComponent):
             if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
                 self._update_postgres_password()
 
-            systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully configured')
 
     def remove(self):
@@ -1451,26 +1459,26 @@ class PostgresqlServer(BaseComponent):
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
-        systemd.remove(SYSTEMD_SERVICE_NAME)
+        service.remove(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._start_etcd()
-            systemd.start('patroni', append_prefix=False)
-            systemd.verify_alive('patroni', append_prefix=False)
+            service.start('patroni', append_prefix=False)
+            service.verify_alive('patroni', append_prefix=False)
         else:
-            systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            systemd.stop('etcd', append_prefix=False)
-            systemd.stop('patroni', append_prefix=False)
+            service.stop('etcd', append_prefix=False)
+            service.stop('patroni', append_prefix=False)
         else:
-            systemd.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):

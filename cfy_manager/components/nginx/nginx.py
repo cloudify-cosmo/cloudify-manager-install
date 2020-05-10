@@ -30,9 +30,11 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common
-from ...utils import certificates
-from ...utils.systemd import systemd
+from ...utils import (
+    common,
+    certificates,
+    service
+)
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
@@ -48,7 +50,11 @@ class Nginx(BaseComponent):
     def _install(self):
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
-        self._deploy_unit_override()
+        if config.get('service_management') != 'supervisord':
+            self._deploy_unit_override()
+        else:
+            # TODO
+            pass
         set_logrotate(NGINX)
 
     def _deploy_unit_override(self):
@@ -242,7 +248,7 @@ class Nginx(BaseComponent):
             raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
     def _configure(self):
-        systemd.enable(NGINX, append_prefix=False)
+        service.enable(NGINX, append_prefix=False)
         self._deploy_nginx_config_files()
 
     def install(self):
@@ -253,6 +259,8 @@ class Nginx(BaseComponent):
     def configure(self):
         logger.notice('Configuring NGINX...')
         self._configure()
+        service.configure(NGINX)
+        service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 
     def remove(self):
@@ -267,11 +275,11 @@ class Nginx(BaseComponent):
     def start(self):
         logger.notice('Starting NGINX...')
         self._handle_certs()
-        systemd.start(NGINX, append_prefix=False)
-        systemd.verify_alive(NGINX, append_prefix=False)
+        service.start(NGINX, append_prefix=False)
+        service.verify_alive(NGINX, append_prefix=False)
         logger.notice('NGINX successfully started')
 
     def stop(self):
         logger.notice('Stopping NGINX...')
-        systemd.stop(NGINX, append_prefix=False)
+        service.stop(NGINX, append_prefix=False)
         logger.notice('NGINX successfully stopped')

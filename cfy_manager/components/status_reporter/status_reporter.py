@@ -18,7 +18,7 @@ import uuid
 from ..base_component import BaseComponent
 
 from ...logger import get_logger
-from ...utils.systemd import systemd
+from ...utils import service
 from ...utils.install import is_package_available
 from ...utils.node import update_status_reporter_config
 from ...utils.files import (remove_files,
@@ -54,8 +54,10 @@ class StatusReporter(BaseComponent):
         reporter_settings = {'reporter_type': self.reporter_type,
                              'extra_config_flags':
                                  self._build_extra_config_flags()}
-        systemd.configure(STATUS_REPORTER,
-                          external_configure_params=reporter_settings)
+        service.configure(
+            STATUS_REPORTER,
+            external_configure_params=reporter_settings
+        )
         logger.notice('Generating node id...')
         node_id = self._generate_basic_reporter_settings(self._user_name)
         logger.notice('Generated "{0}" node id.'.format(node_id))
@@ -70,7 +72,7 @@ class StatusReporter(BaseComponent):
         return node_id
 
     def remove(self):
-        systemd.remove(STATUS_REPORTER)
+        service.remove(STATUS_REPORTER)
         remove_files([STATUS_REPORTER_PATH])
 
     @staticmethod
@@ -89,7 +91,7 @@ class StatusReporter(BaseComponent):
                            'token')
             return
         logger.notice('Starting Status Reporter service...')
-        systemd.start(STATUS_REPORTER)
+        service.start(STATUS_REPORTER)
         logger.notice('Started Status Reporter service')
 
     def stop(self):
@@ -97,5 +99,5 @@ class StatusReporter(BaseComponent):
             logger.warning('There is no status reporter service up')
             return
         logger.notice('Stopping Status Reporter service...')
-        systemd.stop(STATUS_REPORTER)
+        service.stop(STATUS_REPORTER)
         logger.notice('Status Reporter service stopped')
