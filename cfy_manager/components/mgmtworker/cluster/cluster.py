@@ -51,7 +51,7 @@ class Cluster(BaseComponent):
     def _remove_manager_from_cluster(self):
         logger.notice('Removing manager "{0}" from cluster'
                       .format(config[MANAGER][HOSTNAME]))
-        url = 'https://{0}:{1}/api/{2}/managers/{4}'.format(
+        url = 'https://{0}:{1}/api/{2}/managers/{3}'.format(
             config[PRIVATE_IP], INTERNAL_REST_PORT, self.API_VERSION,
             config[HOSTNAME])
         requests.delete(url, headers=get_auth_headers(), verify=CA_CERT_PATH)
