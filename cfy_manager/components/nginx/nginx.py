@@ -45,9 +45,6 @@ logger = get_logger(NGINX)
 
 
 class Nginx(BaseComponent):
-    def __init__(self, skip_installation):
-        super(Nginx, self).__init__(skip_installation)
-
     def _install(self):
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
@@ -244,16 +241,9 @@ class Nginx(BaseComponent):
         if output.aggr_stdout.strip() not in {'200', '401'}:
             raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
-    def _start_and_verify_service(self):
-        logger.info('Starting NGINX service...')
-        systemd.enable(NGINX, append_prefix=False)
-        systemd.restart(NGINX, append_prefix=False)
-        systemd.verify_alive(NGINX, append_prefix=False)
-
     def _configure(self):
-        self._handle_certs()
+        systemd.enable(NGINX, append_prefix=False)
         self._deploy_nginx_config_files()
-        self._start_and_verify_service()
 
     def install(self):
         logger.notice('Installing NGINX...')
@@ -276,6 +266,7 @@ class Nginx(BaseComponent):
 
     def start(self):
         logger.notice('Starting NGINX...')
+        self._handle_certs()
         systemd.start(NGINX, append_prefix=False)
         systemd.verify_alive(NGINX, append_prefix=False)
         logger.notice('NGINX successfully started')
