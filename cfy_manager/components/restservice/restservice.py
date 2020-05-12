@@ -95,9 +95,6 @@ LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
 
 
 class RestService(BaseComponent):
-    def __init__(self, skip_installation=False):
-        super(RestService, self).__init__(skip_installation)
-
     def _make_paths(self):
         # Used in the service templates
         config[RESTSERVICE][HOME_DIR_KEY] = REST_HOME_DIR
@@ -513,24 +510,7 @@ class RestService(BaseComponent):
 
         self._make_paths()
         self._configure_restservice()
-        self._configure_db()
-        if is_premium_installed():
-            self._join_cluster_setup()
-            self._fetch_manager_reporter_token()
-        if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
-            logger.info('Removing postgres password from config.yaml')
-            config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
         systemd.configure(RESTSERVICE)
-        systemd.restart(RESTSERVICE)
-        if config[CLUSTER_JOIN]:
-            logger.info('Extra node in cluster, will verify rest-service '
-                        'after clustering configured')
-        else:
-            self._verify_restservice_alive()
-            self._upload_cloudify_license()
-        if is_premium_installed():
-            self._configure_status_reporter()
-
         logger.notice('Rest Service successfully configured')
 
     def _join_cluster_setup(self):
@@ -572,8 +552,22 @@ class RestService(BaseComponent):
 
     def start(self):
         logger.notice('Starting Restservice...')
-        systemd.start(RESTSERVICE)
-        self._verify_restservice_alive()
+        self._configure_db()
+        if is_premium_installed():
+            self._join_cluster_setup()
+            self._fetch_manager_reporter_token()
+        if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
+            logger.info('Removing postgres password from config.yaml')
+            config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
+        systemd.restart(RESTSERVICE)
+        if config[CLUSTER_JOIN]:
+            logger.info('Extra node in cluster, will verify rest-service '
+                        'after clustering configured')
+        else:
+            self._verify_restservice_alive()
+            self._upload_cloudify_license()
+        if is_premium_installed():
+            self._configure_status_reporter()
         logger.notice('Restservice successfully started')
 
     def stop(self):
