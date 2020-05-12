@@ -146,10 +146,7 @@ class Sanity(BaseComponent):
         self._remove_sanity_ssh(ssh_key_path)
         logger.notice('Sanity completed successfully')
 
-    def install(self):
-        pass
-
-    def configure(self):
+    def start(self):
         if config[SANITY]['skip_sanity'] or config[CLUSTER_JOIN]:
             logger.info('Skipping sanity check...')
             return
