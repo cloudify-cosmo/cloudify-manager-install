@@ -58,9 +58,6 @@ logger = get_logger(RABBITMQ)
 class RabbitMQ(BaseComponent):
     component_name = 'rabbitmq'
 
-    def __init__(self, skip_installation):
-        super(RabbitMQ, self).__init__(skip_installation)
-
     def _installing_manager(self):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
@@ -83,11 +80,6 @@ class RabbitMQ(BaseComponent):
         remove_file(rabbit_config_path)
         self._deploy_configuration()
         systemd.systemctl('daemon-reload')
-
-        # rabbitmq restart exits with 143 status code that is valid in
-        # this case.
-        systemd.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
 
     def _rabbitmqctl(self, command, **kwargs):
         nodename = config[RABBITMQ]['nodename']
@@ -219,8 +211,7 @@ class RabbitMQ(BaseComponent):
                 join_node,
                 config[RABBITMQ]['nodename'],
             ]
-            if not all([node in rabbit_nodes['nodes']
-                        for node in required]):
+            if not all(node in rabbit_nodes['nodes'] for node in required):
                 if attempt == max_attempts:
                     raise ClusteringError(
                         'Node did not join cluster within {num} attempts. '
@@ -478,7 +469,6 @@ class RabbitMQ(BaseComponent):
         logger.info("RabbitMQ policies configured.")
 
     def _start_rabbitmq(self):
-        logger.info("Starting RabbitMQ Service...")
         # rabbitmq restart exits with 143 status code that is valid
         # in this case.
         systemd.restart(RABBITMQ, ignore_failure=True)
@@ -502,7 +492,8 @@ class RabbitMQ(BaseComponent):
                     RABBITMQ, '127.0.0.1', SECURE_PORT)
             )
 
-    def _configure(self):
+    def configure(self):
+        logger.notice('Configuring RabbitMQ...')
         self._possibly_set_nodename()
         self._set_erlang_cookie()
         self._possibly_add_hosts_entries()
@@ -518,16 +509,6 @@ class RabbitMQ(BaseComponent):
             }
         self._generate_rabbitmq_certs()
         self._init_service()
-        if not config[RABBITMQ]['join_cluster']:
-            # Users will be synced with the cluster if we're joining one
-            self._manage_users()
-        self._start_rabbitmq()
-        self._validate_rabbitmq_running()
-        self._possibly_join_cluster()
-
-    def configure(self):
-        logger.notice('Configuring RabbitMQ...')
-        self._configure()
         logger.notice('RabbitMQ successfully configured')
 
     def remove(self):
@@ -539,8 +520,12 @@ class RabbitMQ(BaseComponent):
 
     def start(self):
         logger.notice('Starting RabbitMQ...')
-        systemd.start(RABBITMQ)
+        self._start_rabbitmq()
+        if not config[RABBITMQ]['join_cluster']:
+            # Users will be synced with the cluster if we're joining one
+            self._manage_users()
         self._validate_rabbitmq_running()
+        self._possibly_join_cluster()
         logger.notice('RabbitMQ successfully started')
 
     def stop(self):
