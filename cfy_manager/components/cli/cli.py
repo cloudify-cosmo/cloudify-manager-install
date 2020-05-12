@@ -32,10 +32,6 @@ logger = get_logger(CLI)
 
 
 class Cli(BaseComponent):
-
-    def __init__(self, skip_installation):
-        super(Cli, self).__init__(skip_installation)
-
     def _set_colors(self, is_root):
         """
         Makes sure colors are enabled by default in cloudify logs via CLI
@@ -50,7 +46,8 @@ class Cli(BaseComponent):
         cmd = "sudo {0}".format(cmd) if is_root else cmd
         common.run([cmd], shell=True)
 
-    def _configure(self):
+    def start(self):
+        logger.notice('Configuring Cloudify CLI...')
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']
 
@@ -90,10 +87,6 @@ class Cli(BaseComponent):
                 common.run(root_cmd)
             self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
-
-    def configure(self):
-        logger.notice('Configuring Cloudify CLI...')
-        self._configure()
         logger.notice('Cloudify CLI successfully configured')
 
     def remove(self):
