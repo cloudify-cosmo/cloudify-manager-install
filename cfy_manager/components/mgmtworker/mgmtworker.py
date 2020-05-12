@@ -15,8 +15,6 @@
 
 from os.path import join
 
-from .cluster.cluster import Cluster
-
 from ..components_constants import (
     CONFIG,
     HOME_DIR_KEY,
@@ -46,9 +44,6 @@ logger = get_logger(MGMTWORKER)
 
 
 class MgmtWorker(BaseComponent):
-    def __init__(self, skip_installation):
-        super(MgmtWorker, self).__init__(skip_installation)
-
     def _add_snapshot_restore_sudo_commands(self):
         sudoers.allow_user_to_sudo_command(
             '/opt/nodejs/bin/npm',
@@ -95,7 +90,6 @@ class MgmtWorker(BaseComponent):
                 'cluster_service_queue_{0}'.format(config[MANAGER][HOSTNAME])
 
         self._deploy_hooks_config()
-        self._deploy_admin_token()
 
     def _deploy_admin_token(self):
         script_name = 'create-admin-token.py'
@@ -137,22 +131,11 @@ class MgmtWorker(BaseComponent):
         common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
         common.sudo(['chmod', 'g+rw', '/opt/manager'])
 
-    def _verify_mgmtworker_alive(self):
-        systemd.verify_alive(MGMTWORKER)
-
-    def _configure(self):
-        if is_premium_installed():
-            cluster = Cluster(skip_installation=False)
-            cluster.configure()
+    def configure(self):
+        logger.notice('Configuring Management Worker...')
         self._deploy_mgmtworker_config()
         systemd.configure(MGMTWORKER)
         self._prepare_snapshot_permissions()
-        systemd.restart(MGMTWORKER)
-        self._verify_mgmtworker_alive()
-
-    def configure(self):
-        logger.notice('Configuring Management Worker...')
-        self._configure()
         logger.notice('Management Worker successfully configured')
 
     def remove(self):
@@ -162,8 +145,9 @@ class MgmtWorker(BaseComponent):
 
     def start(self):
         logger.notice('Starting Management Worker...')
+        self._deploy_admin_token()
         systemd.start(MGMTWORKER)
-        self._verify_mgmtworker_alive()
+        systemd.verify_alive(MGMTWORKER)
         logger.notice('Management Worker successfully started')
 
     def stop(self):
