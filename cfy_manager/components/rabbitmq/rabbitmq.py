@@ -114,9 +114,7 @@ class RabbitMQ(BaseComponent):
         rabbitmq_username = config[RABBITMQ]['username']
         rabbitmq_password = config[RABBITMQ]['password']
         if not self.user_exists(rabbitmq_username):
-            logger.info('Creating new user and setting permissions...'.format(
-                rabbitmq_username, rabbitmq_password)
-            )
+            logger.info('Creating new user and setting permissions...')
             self._rabbitmqctl(['add_user',
                                rabbitmq_username,
                                rabbitmq_password])
