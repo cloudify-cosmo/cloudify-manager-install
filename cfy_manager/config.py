@@ -142,8 +142,8 @@ class Config(CommentedMap):
 
     def load_config(self):
         self._load_defaults_config()
-        self._load_user_config()
-        self._apply_forced_settings()
+        # self._load_user_config()
+        # self._apply_forced_settings()
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault(self.TEMP_PATHS, [])

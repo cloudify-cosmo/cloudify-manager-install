@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from os.path import exists, join
+from functools import partial
 
 from retrying import retry
 
@@ -48,13 +49,20 @@ class SystemD(object):
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
         """
-        env_dst = "/etc/sysconfig/{0}".format(service_name)
-        srv_dst = "/usr/lib/systemd/system/{0}.service".format(service_name)
+        sid = _get_full_service_name(service_name, append_prefix=True)
+        env_dst = "/etc/sysconfig/{0}".format(sid)
+        srv_dst = "/usr/lib/systemd/system/{0}.service".format(sid)
 
         service_dir_name = service_name.replace('-', '_')
         src_dir = join(COMPONENTS_DIR, service_dir_name, 'config')
-        env_src = join(src_dir, service_name)
-        srv_src = join(src_dir, '{0}.service'.format(service_name))
+        env_src = join(src_dir, sid)
+        srv_src = join(src_dir, '{0}.service'.format(sid))
+
+        logger.debug('The file location'
+                     ' for service file is {0}'.format(srv_src))
+
+        logger.debug('The file location'
+                     ' for Environment file is {0}'.format(env_src))
 
         if exists(env_src):
             logger.debug('Deploying systemd EnvironmentFile...')
@@ -70,7 +78,7 @@ class SystemD(object):
             deploy(srv_src, srv_dst, render=True)
 
         logger.debug('Enabling systemd .service...')
-        self.systemctl('enable', '{0}.service'.format(service_name))
+        self.enable('{0}.service'.format(sid))
 
     def remove(self, service_name, service_file=True):
         """Stop and disable the service, and then delete its data
@@ -109,27 +117,27 @@ class SystemD(object):
             sid = service_name
         return "/usr/lib/systemd/system/{0}.service".format(sid)
 
-    def enable(self, service_name):
+    def enable(self, service_name, ignore_failure=False):
         logger.debug('Enabling systemd service {0}...'.format(service_name))
-        self.systemctl('enable', service_name)
+        self.systemctl('enable', service_name, ignore_failure=ignore_failure)
 
     def disable(self, service_name, ignore_failure=False):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name):
+    def start(self, service_name, ignore_failure=False):
         logger.debug('Starting systemd service {0}...'.format(service_name))
-        self.systemctl('start', service_name)
+        self.systemctl('start', service_name, ignore_failure=ignore_failure)
 
     def stop(self, service_name, ignore_failure=False):
         logger.debug('Stopping systemd service {0}...'.format(service_name))
         self.systemctl('stop', service_name, ignore_failure=ignore_failure)
 
-    def restart(self, service_name):
-        self.systemctl('restart', service_name)
+    def restart(self, service_name, ignore_failure=False):
+        self.systemctl('restart', service_name, ignore_failure=ignore_failure)
 
-    def reload(self, service_name):
-        self.systemctl('reload', service_name)
+    def reload(self, service_name, ignore_failure=False):
+        self.systemctl('reload', service_name, ignore_failure=ignore_failure)
 
     def is_alive(self, service_name):
         result = self.systemctl('status', service_name, ignore_failure=True)
@@ -151,52 +159,89 @@ class Supervisord(object):
             cmd += [service]
         return run(cmd, ignore_failures=ignore_failure)
 
-    def enable(self, service_name):
-        self.supervisorctl('update', service_name)
+    def enable(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'update',
+            service_name,
+            ignore_failure=ignore_failure
+        )
 
-    def disable(self, service_name):
-        self.supervisorctl('remove', service_name)
+    def disable(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'remove',
+            service_name,
+            ignore_failure=ignore_failure
+        )
 
-    def start(self, service_name):
-        self.supervisorctl('start', service_name)
+    def start(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'start',
+            service_name,
+            ignore_failure=ignore_failure
+        )
 
-    def stop(self, service_name):
-        self.supervisorctl('stop', service_name)
+    def stop(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'stop',
+            service_name,
+            ignore_failure=ignore_failure
+        )
 
-    def restart(self, service_name):
-        self.supervisorctl('restart', service_name)
+    def restart(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'restart',
+            service_name,
+            ignore_failure=ignore_failure
+        )
+
+    def reload(self, service_name, ignore_failure=False):
+        self.supervisorctl(
+            'reread',
+            service_name,
+            ignore_failure=ignore_failure
+        )
+        self.enable(service_name, ignore_failure=ignore_failure)
 
     def is_alive(self, service_name):
         result = self.supervisorctl(
             'status', service_name, ignore_failure=True)
         return result.returncode == 0
 
-    def configure(self, service_name,
-                  user=CLOUDIFY_USER, group=CLOUDIFY_GROUP,
-                  external_configure_params=None):
+    def configure(self,
+                  service_name,
+                  user=CLOUDIFY_USER,
+                  group=CLOUDIFY_GROUP,
+                  external_configure_params=None,
+                  src_dir=None):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
         """
+        sid = _get_full_service_name(service_name, append_prefix=True)
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
 
-        service_dir_name = service_name.replace('-', '_')
-        srv_src = join(COMPONENTS_DIR, service_dir_name,
+        if src_dir is None:
+            src_dir = service_name
+        src_dir = src_dir.replace('-', '_')
+        srv_src = join(COMPONENTS_DIR, src_dir,
                        'config/supervisord.conf')
-
+        logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
             deploy(srv_src, dst, render=True,
                    additional_render_context=external_configure_params)
 
-        logger.debug('Enabling systemd .service...')
-        self.enable(service_name)
+        self.enable(sid)
+
+
+def _get_service_type():
+    return config.get('service_management')
 
 
 def _get_backend():
-    if config.get('service_management') == 'supervisord':
+    if _get_service_type() == 'supervisord':
         return Supervisord()
     else:
         return SystemD()
@@ -226,16 +271,28 @@ def stop(service_name, append_prefix=True):
     return _get_backend().stop(full_service_name)
 
 
-def restart(service_name, append_prefix=True):
+def restart(service_name, append_prefix=True, ignore_failure=False):
     full_service_name = _get_full_service_name(service_name, append_prefix)
     logger.debug('Restarting service {0}...'.format(full_service_name))
-    return _get_backend().restart(full_service_name)
+    return _get_backend().restart(
+        full_service_name,
+        ignore_failure=ignore_failure
+    )
 
 
 def remove(service_name, append_prefix=True, service_file=True):
     full_service_name = _get_full_service_name(service_name, append_prefix)
     logger.debug('Removing service {0}...'.format(full_service_name))
     return _get_backend().remove(full_service_name, service_file)
+
+
+def reload(service_name, append_prefix=True, ignore_failure=False):
+    full_service_name = _get_full_service_name(service_name, append_prefix)
+    logger.debug('Reloading service {0}...'.format(full_service_name))
+    return _get_backend().reload(
+        full_service_name,
+        ignore_failure=ignore_failure
+    )
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1000)
@@ -255,9 +312,17 @@ def is_alive(service_name, append_prefix=True):
 def configure(service_name,
               user=CLOUDIFY_USER,
               group=CLOUDIFY_GROUP,
-              external_configure_params=None):
-    full_service_name = _get_full_service_name(
-        service_name, append_prefix=True
-    )
-    return _get_backend().configure(
-        full_service_name, user, group, external_configure_params)
+              external_configure_params=None,
+              src_dir=None):
+    _configure = \
+        partial(
+            _get_backend().configure,
+            service_name,
+            user,
+            group,
+            external_configure_params
+        )
+    if _get_service_type() == 'supervisord':
+        return _configure(src_dir=src_dir)
+    else:
+        return _configure()
