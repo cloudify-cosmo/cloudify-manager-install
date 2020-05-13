@@ -88,10 +88,6 @@ class Composer(BaseComponent):
         systemd.verify_alive(COMPOSER)
         wait_for_port(COMPOSER_PORT)
 
-    def _start_and_validate_composer(self):
-        systemd.restart(COMPOSER)
-        self._verify_composer_alive()
-
     def _run_db_migrate(self):
         if config[CLUSTER_JOIN]:
             logger.debug('Joining cluster - not creating the composer db')
@@ -241,7 +237,8 @@ class Composer(BaseComponent):
     def start(self):
         logger.notice('Starting Cloudify Composer...')
         self._run_db_migrate()
-        self._start_and_validate_composer()
+        systemd.restart(COMPOSER)
+        self._verify_composer_alive()
         logger.notice('Cloudify Composer successfully started')
 
     def stop(self):

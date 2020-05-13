@@ -266,10 +266,6 @@ class Stage(BaseComponent):
         systemd.verify_alive(STAGE)
         wait_for_port(8088)
 
-    def _start_and_validate_stage(self):
-        systemd.restart(STAGE)
-        self._verify_stage_alive()
-
     def _add_snapshot_sudo_command(self):
         sudoers.allow_user_to_sudo_command(
             full_command='/opt/nodejs/bin/node',
@@ -312,7 +308,8 @@ class Stage(BaseComponent):
     def start(self):
         logger.notice('Starting Stage...')
         self._run_db_migrate()
-        self._start_and_validate_stage()
+        systemd.restart(STAGE)
+        self._verify_stage_alive()
         logger.notice('Stage successfully started')
 
     def stop(self):
