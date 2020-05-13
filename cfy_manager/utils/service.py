@@ -58,12 +58,6 @@ class SystemD(object):
         env_src = join(src_dir, sid)
         srv_src = join(src_dir, '{0}.service'.format(sid))
 
-        logger.debug('The file location'
-                     ' for service file is {0}'.format(srv_src))
-
-        logger.debug('The file location'
-                     ' for Environment file is {0}'.format(env_src))
-
         if exists(env_src):
             logger.debug('Deploying systemd EnvironmentFile...')
             deploy(env_src, env_dst, render=True,
@@ -75,7 +69,8 @@ class SystemD(object):
         # TODO: after this is done to all components, this can be removed
         if exists(srv_src):
             logger.debug('Deploying systemd .service file...')
-            deploy(srv_src, srv_dst, render=True)
+            deploy(srv_src, srv_dst, render=True,
+                   additional_render_context=external_configure_params)
 
         logger.debug('Enabling systemd .service...')
         self.enable('{0}.service'.format(sid))
@@ -318,9 +313,9 @@ def configure(service_name,
         partial(
             _get_backend().configure,
             service_name,
-            user,
-            group,
-            external_configure_params
+            user=user,
+            group=group,
+            external_configure_params=external_configure_params
         )
     if _get_service_type() == 'supervisord':
         return _configure(src_dir=src_dir)
