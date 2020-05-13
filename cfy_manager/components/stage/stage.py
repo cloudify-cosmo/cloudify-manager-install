@@ -19,17 +19,13 @@ from os.path import join
 
 from cfy_manager.components import sources
 from ..components_constants import (
-    SERVICE_USER,
-    SERVICE_GROUP,
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
-    PREMIUM_EDITION,
-    CLUSTER_JOIN
+    CLUSTER_JOIN,
 )
 from ..base_component import BaseComponent
 from ..service_names import (
-    MANAGER,
     POSTGRESQL_CLIENT,
     STAGE,
 )
@@ -44,7 +40,6 @@ from ...utils import (
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.install import yum_install, yum_remove, is_premium_installed
-from ...utils.users import create_service_user
 
 
 logger = get_logger(STAGE)
@@ -75,7 +70,7 @@ class Stage(BaseComponent):
 
     def _install(self):
         try:
-            stage_rpm = files.get_local_source_path(sources.stage)
+            files.get_local_source_path(sources.stage)
         except FileError:
             logger.info('Stage package not found in manager resources package')
             logger.notice('Stage will not be installed.')
@@ -230,7 +225,7 @@ class Stage(BaseComponent):
 
     def remove(self):
         logger.notice('Removing Stage...')
-        systemd.remove(STAGE, service_file=False))
+        systemd.remove(STAGE, service_file=False)
         yum_remove('cloudify-stage')
         yum_remove('nodejs')
         logger.notice('Stage successfully removed')
