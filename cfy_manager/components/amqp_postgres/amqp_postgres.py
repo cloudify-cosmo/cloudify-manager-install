@@ -38,16 +38,10 @@ class AmqpPostgres(BaseComponent):
         conf = config.setdefault('amqp_postgres', {})
         conf[LOG_DIR_KEY] = join(BASE_LOG_DIR, AMQP_POSTGRES)
 
-    def _configure(self):
-        logger.info('Starting AMQP-PostgreSQL Broker Service...')
-        systemd.configure(AMQP_POSTGRES)
-        systemd.restart(AMQP_POSTGRES)
-        systemd.verify_alive(AMQP_POSTGRES)
-
     def configure(self):
         logger.notice('Configuring AMQP-Postgres...')
         self._setup_log_dir()
-        self._configure()
+        systemd.configure(AMQP_POSTGRES)
         logger.notice('AMQP-Postgres successfully configured')
 
     def start(self):
