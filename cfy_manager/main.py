@@ -818,16 +818,25 @@ def remove(verbose=False, force=False):
     _print_time()
 
 
-@argh.arg('include_components', nargs='*')
-def start(include_components, verbose=False):
-    """ Start Cloudify Manager services """
-
-    _prepare_execution(verbose, include_components=include_components)
-    _validate_components_prepared('start')
-    logger.notice('Starting Cloudify Manager services...')
+def _start_components():
     for component in components:
         if not component.skip_installation:
             component.start()
+
+
+def _stop_components():
+    for component in components:
+        if not component.skip_installation:
+            component.stop()
+
+
+@argh.arg('include_components', nargs='*')
+def start(include_components, verbose=False):
+    """ Start Cloudify Manager services """
+    _prepare_execution(verbose, include_components=include_components)
+    _validate_components_prepared('start')
+    logger.notice('Starting Cloudify Manager services...')
+    _start_components()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -835,7 +844,6 @@ def start(include_components, verbose=False):
 @argh.arg('include_components', nargs='*')
 def stop(include_components, verbose=False, force=False):
     """ Stop Cloudify Manager services """
-
     _prepare_execution(verbose, include_components=include_components)
     _validate_components_prepared('stop')
     if force:
@@ -843,9 +851,7 @@ def stop(include_components, verbose=False, force=False):
                        'removed in a future version')
 
     logger.notice('Stopping Cloudify Manager services...')
-    for component in components:
-        if not component.skip_installation:
-            component.stop()
+    _stop_components()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 
@@ -859,9 +865,8 @@ def restart(include_components, verbose=False, force=False):
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
-
-    stop(include_components, verbose, force)
-    start(include_components, verbose)
+    _stop_components()
+    _start_components()
     _print_time()
 
 
