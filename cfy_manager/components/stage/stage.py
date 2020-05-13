@@ -76,9 +76,6 @@ NODE_EXECUTABLE_PATH = '/usr/bin/node'
 
 
 class Stage(BaseComponent):
-    def __init__(self, skip_installation):
-        super(Stage, self).__init__(skip_installation)
-
     def _create_paths(self):
         common.mkdir(NODEJS_DIR)
         common.mkdir(HOME_DIR)
@@ -269,30 +266,12 @@ class Stage(BaseComponent):
         systemd.verify_alive(STAGE)
         wait_for_port(8088)
 
-    def _start_and_validate_stage(self):
-        self._set_community_mode()
-        # Used in the service template
-        config[STAGE][SERVICE_USER] = STAGE_USER
-        config[STAGE][SERVICE_GROUP] = STAGE_GROUP
-        systemd.configure(STAGE,
-                          user=STAGE_USER, group=STAGE_GROUP)
-
-        logger.info('Starting Stage service...')
-        systemd.restart(STAGE)
-        self._verify_stage_alive()
-
     def _add_snapshot_sudo_command(self):
         sudoers.allow_user_to_sudo_command(
             full_command='/opt/nodejs/bin/node',
             description='Allow snapshots to restore stage',
             allow_as=STAGE_USER,
         )
-
-    def _configure(self):
-        self._set_db_url()
-        self._set_internal_manager_ip()
-        self._run_db_migrate()
-        self._start_and_validate_stage()
 
     def install(self):
         if config[STAGE]['skip_installation']:
@@ -304,7 +283,12 @@ class Stage(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Stage...')
-        self._configure()
+        self._set_db_url()
+        self._set_internal_manager_ip()
+        self._set_community_mode()
+        config[STAGE][SERVICE_USER] = STAGE_USER
+        config[STAGE][SERVICE_GROUP] = STAGE_GROUP
+        systemd.configure(STAGE, user=STAGE_USER, group=STAGE_GROUP)
         logger.notice('Stage successfully configured!')
 
     def remove(self):
@@ -323,7 +307,8 @@ class Stage(BaseComponent):
 
     def start(self):
         logger.notice('Starting Stage...')
-        systemd.start(STAGE)
+        self._run_db_migrate()
+        systemd.restart(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')
 
