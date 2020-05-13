@@ -23,8 +23,8 @@ manager:
   #
   ######################################################################################
 
-  # This is set by the installer build script. Changing this will not change the edition
-  # you are using, but may cause interesting problems.
+  # if "community", premium components won't be installed; if "premium",
+  # they will be (or throw an error if missing)
   premium_edition: set_by_installer_builder
 
   # Sets whether the first time the manager's VM is booted from a Cloudify manager image
@@ -56,8 +56,12 @@ provider_context:
     parameters:
       rules:
       - {http://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {http://www.cloudify.co/spec: file:///opt/manager/resources/spec}
+      - {http://getcloudify.org/spec: file:///opt/manager/resources/spec}
       - {http://cloudify.co/spec: file:///opt/manager/resources/spec}
       - {https://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {https://www.cloudify.co/spec: file:///opt/manager/resources/spec}
+      - {https://getcloudify.org/spec: file:///opt/manager/resources/spec}
       - {https://cloudify.co/spec: file:///opt/manager/resources/spec}
       # if this is set to true, the import resolver will try the original,
       # non-resolved URL as well, if the resolved one returns a HTTP error

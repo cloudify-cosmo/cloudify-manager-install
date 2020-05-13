@@ -27,7 +27,6 @@ import requests
 
 from . import db
 from ..._compat import HTTPError, URLError, Request, urlopen
-from ...components import sources
 from ...utils.db import run_psql_command
 from ...status_reporter import status_reporter
 from ...utils.scripts import get_encoded_user_ids
@@ -73,11 +72,10 @@ from ...utils.systemd import systemd
 from ...utils import certificates, common
 from ...exceptions import BootstrapError, NetworkError
 from ...utils.network import get_auth_headers, wait_for_port
-from ...utils.install import yum_install, yum_remove, is_premium_installed
+from ...utils.install import is_premium_installed
 from ...utils.scripts import (run_script_on_manager_venv,
                               log_script_run_results)
 from ...utils.files import (
-    check_rpms_are_present,
     deploy,
     remove_files,
     sudo_read,
@@ -471,21 +469,8 @@ class RestService(BaseComponent):
 
     def install(self):
         logger.notice('Installing Rest Service...')
-        yum_install(sources.restservice)
-        yum_install(sources.agents)
-
         self._chown_resources_dir()
-
         set_logrotate(RESTSERVICE)
-
-        if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
-            rpm = sources.haproxy
-            if check_rpms_are_present([rpm]):
-                yum_install(rpm)
-            else:
-                logger.info(
-                    'DB proxy RPM not available, skipping.'
-                )
         logger.notice('Rest Service successfully installed')
 
     def _create_process_env(self):
@@ -573,12 +558,8 @@ class RestService(BaseComponent):
         status_reporter.configure(**conf)
 
     def remove(self):
-        logger.notice('Removing Restservice...')
         systemd.remove(RESTSERVICE, service_file=False)
         remove_logrotate(RESTSERVICE)
-
-        yum_remove('cloudify-rest-service')
-        yum_remove('cloudify-agents')
 
         common.remove('/opt/manager')
 
@@ -587,9 +568,7 @@ class RestService(BaseComponent):
             common.remove('/etc/haproxy')
 
         if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
-            yum_remove('haproxy')
             remove_files(['/etc/haproxy'])
-        logger.notice('Rest Service successfully removed')
 
     def start(self):
         logger.notice('Starting Restservice...')

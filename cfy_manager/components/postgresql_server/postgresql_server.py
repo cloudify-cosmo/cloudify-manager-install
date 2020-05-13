@@ -29,7 +29,6 @@ from retrying import retry
 from ruamel.yaml import YAML
 
 
-from cfy_manager.components import sources
 from cfy_manager.exceptions import (
     BootstrapError,
     ClusteringError,
@@ -57,7 +56,6 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils import common, files, db, node as cloudify_node, network
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
@@ -950,7 +948,6 @@ class PostgresqlServer(BaseComponent):
                 'Failed to get status of {target_type} node from {url}. '
                 'Error was: {err}'.format(
                     target_type=target_type,
-                    address=address,
                     url=url,
                     err=err,
                 )
@@ -1422,41 +1419,6 @@ class PostgresqlServer(BaseComponent):
                 )
             )
 
-    def install(self):
-        logger.notice('Installing PostgreSQL Server...')
-
-        logger.debug('Installing PostgreSQL Server dependencies...')
-        yum_install(sources.libxslt)
-
-        logger.debug('Installing PostgreSQL Server...')
-        yum_install(sources.ps_libs)
-        yum_install(sources.ps)
-        yum_install(sources.ps_contrib)
-        yum_install(sources.ps_server)
-        yum_install(sources.ps_devel)
-        # As we don't support installing community as anything other than AIO,
-        # not having manager service installed means that this must be premium
-        if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
-            rpms = [
-                sources.etcd,
-                sources.patroni,
-            ]
-            log_rpms = [
-                sources.log_libestr,
-                sources.log_libfastjson,
-                sources.log_rsyslog
-            ]
-            if files.check_rpms_are_present(rpms + log_rpms):
-                for rpm in rpms:
-                    yum_install(rpm)
-                for rpm in log_rpms:
-                    yum_install(rpm, remove_existing=False)
-            else:
-                logger.info(
-                    'DB cluster component RPMs not available, skipping.'
-                )
-        logger.notice('PostgreSQL Server successfully installed')
-
     def configure(self):
         logger.notice('Configuring PostgreSQL Server...')
         files.copy_notice(POSTGRESQL_SERVER)
@@ -1477,26 +1439,19 @@ class PostgresqlServer(BaseComponent):
 
     def remove(self):
         if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
-            logger.notice('Removing cluster components')
-            yum_remove('etcd')
-            yum_remove('patroni')
             files.remove_files([
                 '/var/lib/patroni',
                 '/var/lib/etcd',
                 '/etc/patroni.conf',
                 '/etc/etcd',
             ])
-            systemd.remove('patroni', append_prefix=False)
-            logger.notice('Cluster components removed')
         logger.notice('Removing PostgreSQL...')
+        files.remove_files([
+            '/var/lib/pgsql/9.5/data',
+            '/var/lib/pgsql/9.5/backups'  # might be missing
+        ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
         systemd.remove(SYSTEMD_SERVICE_NAME)
-        files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
-        for pg_bin in PG_BINS:
-            files.remove(os.path.join('/usr/sbin', pg_bin))
-        yum_remove('postgresql95')
-        yum_remove('postgresql95-libs')
-        logger.notice('PostgreSQL successfully removed')
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')

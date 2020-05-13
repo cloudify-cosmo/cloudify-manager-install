@@ -20,12 +20,6 @@ from os.path import join
 
 import requests
 
-from cfy_manager.components.sources import (
-    erlang,
-    socat,
-    rabbitmq,
-    cloudify_rabbitmq,
-)
 from ..components_constants import (
     CONFIG,
     SERVICES_TO_INSTALL,
@@ -46,7 +40,6 @@ from ...exceptions import (
     ValidationError,
 )
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
 from ...utils.files import write_to_file, deploy
@@ -67,10 +60,6 @@ class RabbitMQ(BaseComponent):
 
     def __init__(self, skip_installation):
         super(RabbitMQ, self).__init__(skip_installation)
-
-    def _install(self):
-        for source in erlang, socat, rabbitmq, cloudify_rabbitmq:
-            yum_install(source)
 
     def _installing_manager(self):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
@@ -125,9 +114,7 @@ class RabbitMQ(BaseComponent):
         rabbitmq_username = config[RABBITMQ]['username']
         rabbitmq_password = config[RABBITMQ]['password']
         if not self.user_exists(rabbitmq_username):
-            logger.info('Creating new user and setting permissions...'.format(
-                rabbitmq_username, rabbitmq_password)
-            )
+            logger.info('Creating new user and setting permissions...')
             self._rabbitmqctl(['add_user',
                                rabbitmq_username,
                                rabbitmq_password])
@@ -538,26 +525,17 @@ class RabbitMQ(BaseComponent):
         self._validate_rabbitmq_running()
         self._possibly_join_cluster()
 
-    def install(self):
-        logger.notice('Installing RabbitMQ...')
-        self._install()
-        logger.notice('RabbitMQ successfully installed')
-
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
         self._configure()
         logger.notice('RabbitMQ successfully configured')
 
     def remove(self):
-        logger.notice('Removing RabbitMQ...')
-        yum_remove('erlang')
         logger.info('Stopping the Erlang Port Mapper Daemon...')
         sudo(['epmd', '-kill'], ignore_failures=True)
         systemd.remove(RABBITMQ, service_file=False)
-        yum_remove('socat')
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
-        logger.notice('RabbitMQ successfully removed')
 
     def start(self):
         logger.notice('Starting RabbitMQ...')

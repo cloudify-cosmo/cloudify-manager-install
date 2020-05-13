@@ -8,8 +8,11 @@ from manager_rest import config, server
 from manager_rest.storage import models
 from script_utils import (logger,
                           send_data,
+                          DAYS_LOCK,
+                          DAYS_INTERVAL,
                           collect_metadata,
-                          create_manager_id_file,
+                          should_send_data,
+                          usage_collector_lock,
                           RESTSERVICE_CONFIG_PATH,
                           get_storage_manager_instance)
 
@@ -102,15 +105,22 @@ def _is_clustered():
 
 
 def main():
-    logger.info('Usage script started running')
-    create_manager_id_file()
-    data = {}
-    collect_metadata(data)
-    _collect_system_data(data)
-    _collect_cloudify_data(data)
-    _collect_cloudify_config(data)
-    send_data(data, CLOUDIFY_ENDPOINT_USAGE_DATA_URL)
-    logger.info('Usage script finished running')
+    with usage_collector_lock(DAYS_LOCK) as locked:
+        if not locked:
+            logger.info('Other Manager is currently updating cloudify_usage')
+            return
+        logger.debug('Acquired usage_collector table lock')
+        if should_send_data(DAYS_INTERVAL):
+            logger.info('Usage script started running')
+            data = {}
+            collect_metadata(data)
+            _collect_system_data(data)
+            _collect_cloudify_data(data)
+            _collect_cloudify_config(data)
+            send_data(data, CLOUDIFY_ENDPOINT_USAGE_DATA_URL, DAYS_INTERVAL)
+            logger.info('Usage script finished running')
+        else:
+            logger.info('cloudify_usage was updated by a different Manager')
 
 
 if __name__ == '__main__':

@@ -1,18 +1,21 @@
 import json
+import time
 import logging
 from os import path
 import pkg_resources
-from uuid import uuid4
-
 from requests import post
 from contextlib import contextmanager
 from logging.handlers import WatchedFileHandler
 
-from manager_rest import config, server, premium_enabled
-from manager_rest.storage import get_storage_manager, models
+from manager_rest import config, premium_enabled
+from manager_rest.flask_utils import setup_flask_app
+from manager_rest.storage import get_storage_manager, models, storage_utils
 
-
-MANAGER_ID_PATH = '/etc/cloudify/.id'
+DAYS_LOCK = 1
+HOURS_LOCK = 2
+BUFFER_TIME = 300
+DAYS_INTERVAL = 'days_interval'
+HOURS_INTERVAL = 'hours_interval'
 CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
@@ -32,42 +35,28 @@ def get_storage_manager_instance():
     """Configure and yield a storage_manager instance.
     This is to be used only OUTSIDE of the context of the REST API.
     """
-    config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
-    app = server.CloudifyFlaskApp()
     try:
-        with app.app_context():
+        with _get_flask_app().app_context():
             sm = get_storage_manager()
             yield sm
     finally:
         config.reset(config.Config())
 
 
-def create_manager_id_file():
-    if path.exists(MANAGER_ID_PATH):
-        with open(MANAGER_ID_PATH) as f:
-            existing_manager_id = f.read().strip()
-            if existing_manager_id:
-                return
-    with open(MANAGER_ID_PATH, 'w') as f:
-        f.write(uuid4().hex)
-
-
 def collect_metadata(data):
     pkg_distribution = pkg_resources.get_distribution('cloudify-rest-service')
     manager_version = pkg_distribution.version
-    with open(MANAGER_ID_PATH) as id_file:
-        manager_id = id_file.read().strip()
-        if path.exists(CLOUDIFY_IMAGE_INFO):
-            with open(CLOUDIFY_IMAGE_INFO) as image_file:
-                image_info = image_file.read().strip()
-        else:
-            image_info = 'rpm'
+    if path.exists(CLOUDIFY_IMAGE_INFO):
+        with open(CLOUDIFY_IMAGE_INFO) as image_file:
+            image_info = image_file.read().strip()
+    else:
+        image_info = 'rpm'
 
-    customer_id = None
     with get_storage_manager_instance() as sm:
+        usage_collector_info = (sm.list(models.UsageCollector))[0]
+        manager_id = str(usage_collector_info.manager_id)
         licenses = sm.list(models.License)
-        if licenses:
-            customer_id = str(licenses[0].customer_id)
+        customer_id = str(licenses[0].customer_id) if licenses else None
 
     data['metadata'] = {
         'manager_id': manager_id,
@@ -78,8 +67,65 @@ def collect_metadata(data):
     }
 
 
-def send_data(data, url):
-    # for some reason. multi hierarchy dict doesn't pass well to the end point
+def send_data(data, url, interval_type):
+    with get_storage_manager_instance() as sm:
+        usage_collector_info = (sm.list(models.UsageCollector))[0]
+        if interval_type == HOURS_INTERVAL:
+            usage_collector_info.hourly_timestamp = int(time.time())
+        else:
+            usage_collector_info.daily_timestamp = int(time.time())
+        sm.update(usage_collector_info)
     logger.info('The sent data: {0}'.format(data))
     data = {'data': json.dumps(data)}
     post(url, data=data)
+
+
+@contextmanager
+def usage_collector_lock(lock_number):
+    locked = _try_usage_collector_lock(lock_number)
+    try:
+        yield locked
+    finally:
+        if locked:
+            _unlock_usage_collector(lock_number)
+
+
+def _try_usage_collector_lock(lock_number):
+    with _get_flask_app().app_context():
+        return storage_utils.try_acquire_lock_on_table(lock_number)
+
+
+def _unlock_usage_collector(lock_number):
+    logger.debug('Unlocking usage_collector table')
+    with _get_flask_app().app_context():
+        storage_utils.unlock_table(lock_number)
+
+
+def should_send_data(interval_type):
+    with get_storage_manager_instance() as sm:
+        usage_collector_info = (sm.list(models.UsageCollector))[0]
+    timestamp = _get_timestamp(usage_collector_info, interval_type)
+    if timestamp is None:
+        return True
+
+    time_now = int(time.time())
+    interval_sec = _get_interval(usage_collector_info, interval_type)
+    time_to_update = (timestamp + interval_sec) < (time_now + BUFFER_TIME)
+    return time_to_update
+
+
+def _get_interval(usage_collector_info, interval_type):
+    return (usage_collector_info.hours_interval * 60 * 60
+            if interval_type == HOURS_INTERVAL
+            else usage_collector_info.days_interval * 24 * 60 * 60)
+
+
+def _get_timestamp(usage_collector_info, interval_type):
+    return (usage_collector_info.hourly_timestamp
+            if interval_type == HOURS_INTERVAL
+            else usage_collector_info.daily_timestamp)
+
+
+def _get_flask_app():
+    config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
+    return setup_flask_app()

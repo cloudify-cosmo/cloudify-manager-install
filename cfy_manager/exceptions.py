@@ -60,3 +60,14 @@ class DBManagementError(Exception):
 
 class InitializationError(Exception):
     pass
+
+
+class YumError(BootstrapError):
+    def __init__(self, package, output=None):
+        self.output = output
+        super(YumError, self).__init__(package)
+
+
+class RPMNotFound(YumError):
+    def __init__(self, package):
+        super(RPMNotFound, self).__init__(package)

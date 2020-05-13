@@ -78,6 +78,9 @@ jobs:
       - run:
           name: Installing build dependencies
           command: sudo yum-builddep -y packaging/install_rpm.spec
+      - run:
+          name: set premium_edition in the packaged config.yaml
+          command: sed -i "s/set_by_installer_builder/premium/" config.yaml
       - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
       - persist_to_workspace:
           root: ~/rpm

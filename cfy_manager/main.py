@@ -30,7 +30,9 @@ from .components import (
     SERVICE_COMPONENTS,
     MANAGER_SERVICE,
     QUEUE_SERVICE,
-    SERVICE_INSTALLATION_ORDER
+    DATABASE_SERVICE,
+    SERVICE_INSTALLATION_ORDER,
+    sources
 )
 from .components.components_constants import (
     CLEAN_DB,
@@ -43,6 +45,7 @@ from .components.components_constants import (
     UNCONFIGURED_INSTALL,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
+    PREMIUM_EDITION
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
@@ -64,6 +67,7 @@ from .logger import (
     set_file_handlers_level,
 )
 from .networks.networks import add_networks
+from .accounts import reset_admin_password
 from .status_reporter import status_reporter
 from .utils import CFY_UMASK
 from .utils.certificates import (
@@ -72,7 +76,11 @@ from .utils.certificates import (
     generate_ca_cert,
     _generate_ssl_certificate,
 )
-from .utils.common import run, sudo, can_lookup_hostname, allows_json_format
+from .utils.common import (
+    run, sudo, can_lookup_hostname, allows_json_format, is_installed,
+    is_manager_service_only_installed, is_all_in_one_manager
+)
+from .utils.install import yum_install, yum_remove
 from .utils.files import (
     replace_in_file,
     remove as _remove,
@@ -495,7 +503,7 @@ def _prepare_execution(verbose=False,
 
 
 def _print_finish_message():
-    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+    if is_installed(MANAGER_SERVICE):
         manager_config = config[MANAGER]
         protocol = \
             'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
@@ -678,6 +686,26 @@ def sanity_check(verbose=False, private_ip=None):
     sanity.run_sanity_check()
 
 
+def _get_packages():
+    """Yum packages to install/uninstall, based on the current config"""
+    packages = []
+    if is_installed(MANAGER_SERVICE):
+        packages += sources.manager
+        if config[MANAGER][PREMIUM_EDITION] == 'premium':
+            packages += sources.manager_premium
+
+    if is_all_in_one_manager():
+        packages += sources.db + sources.queue
+    elif is_manager_service_only_installed():
+        packages += sources.manager_cluster
+    elif is_installed(DATABASE_SERVICE):
+        packages += sources.db + sources.db_cluster
+    elif is_installed(QUEUE_SERVICE):
+        packages += sources.queue + sources.queue_cluster
+
+    return packages
+
+
 @argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
 @install_args
 def install(verbose=False,
@@ -700,6 +728,8 @@ def install(verbose=False,
     logger.notice('Installing desired components...')
     validate(components=components, only_install=only_install)
     set_globals(only_install=only_install)
+
+    yum_install(_get_packages())
 
     for component in components:
         if not component.skip_installation:
@@ -776,6 +806,8 @@ def remove(verbose=False, force=False):
                 component.stop()
             component.remove()
 
+    yum_remove(_get_packages())
+
     if _are_components_installed():
         _remove(INITIAL_INSTALL_FILE)
 
@@ -851,7 +883,8 @@ def main():
         update_encryption_key,
         create_internal_certs,
         create_external_certs,
-        generate_test_cert
+        generate_test_cert,
+        reset_admin_password,
     ])
 
     parser.add_commands([
