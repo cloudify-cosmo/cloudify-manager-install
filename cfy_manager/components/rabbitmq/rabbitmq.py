@@ -476,7 +476,6 @@ class RabbitMQ(BaseComponent):
         if not config[RABBITMQ]['join_cluster']:
             # Policies will be obtained from the cluster if we're joining
             self._set_policies()
-            service.restart(RABBITMQ)
 
     def _validate_rabbitmq_running(self):
         logger.info('Making sure RabbitMQ is live...')
