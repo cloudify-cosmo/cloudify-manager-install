@@ -49,7 +49,6 @@ STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 CONF_DIR = join(HOME_DIR, 'conf')
-NODEJS_DIR = join('/opt', 'nodejs')
 
 # These are all the same key as the other db keys, but postgres is very strict
 # about permissions (no group or other permissions allowed)
@@ -87,11 +86,13 @@ class Stage(BaseComponent):
             logger.debug('Joining cluster - not creating the stage db')
             return
         backend_dir = join(HOME_DIR, 'backend')
+        npm_path = join('usr', 'bin', 'npm')
         common.run(
             [
                 'sudo', '-u', STAGE_USER, 'bash', '-c',
-                'cd {path}; npm run db-migrate'.format(
+                'cd {path}; {npm} run db-migrate'.format(
                     path=backend_dir,
+                    npm=npm_path,
                 ),
             ],
         )

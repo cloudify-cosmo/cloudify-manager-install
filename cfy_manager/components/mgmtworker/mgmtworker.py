@@ -51,12 +51,6 @@ class MgmtWorker(BaseComponent):
 
     def _add_snapshot_restore_sudo_commands(self):
         sudoers.allow_user_to_sudo_command(
-            '/opt/nodejs/bin/npm',
-            description='Allow web UI DB migrations during snapshot restore.',
-            allow_as='stage_user',
-        )
-
-        sudoers.allow_user_to_sudo_command(
             '/usr/bin/cfy_manager status-reporter configure '
             '--token [a-zA-Z0-9]*',
             description='Allows status reporter configuration during '
