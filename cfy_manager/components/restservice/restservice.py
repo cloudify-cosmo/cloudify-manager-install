@@ -26,7 +26,6 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ..._compat import HTTPError, URLError, Request, urlopen
 from ...utils.db import run_psql_command
 from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
@@ -43,7 +42,6 @@ from ..components_constants import (
     PASSWORD,
     CLEAN_DB,
     SECURITY,
-    CONSTANTS,
     SSL_INPUTS,
     LOG_DIR_KEY,
     HOME_DIR_KEY,
@@ -59,6 +57,8 @@ from ..components_constants import (
 )
 from ..base_component import BaseComponent
 from ..service_components import DATABASE_SERVICE, MANAGER_SERVICE
+
+
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
@@ -72,7 +72,7 @@ from ...utils import (
     common,
     service
 )
-from ...exceptions import BootstrapError, NetworkError
+from ...exceptions import BootstrapError
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.install import is_premium_installed
 from ...utils.scripts import (run_script_on_manager_venv,
@@ -212,44 +212,10 @@ class RestService(BaseComponent):
         self._deploy_restservice_files()
         self._deploy_security_configuration()
 
-    def _verify_restservice(self):
-        """To verify that the REST service is working, check the status
-
-        Not everything will be green on the status, because not all
-        services are set up yet, but we are just checking that the REST
-        service responds.
-        """
-        rest_port = config[RESTSERVICE]['port']
-        url = REST_URL.format(port=rest_port, endpoint='status')
-        wait_for_port(rest_port)
-        req = Request(url, headers=get_auth_headers())
-
-        try:
-            response = urlopen(req)
-        # keep an erroneous HTTP response to examine its status code, but still
-        # abort on fatal errors like being unable to connect at all
-        except HTTPError as e:
-            response = e
-        except URLError as e:
-            raise NetworkError(
-                'REST service returned an invalid response: {0}'.format(e))
-        if response.code != 200:
-            raise NetworkError(
-                'REST service returned an unexpected response: '
-                '{0}'.format(response.code)
-            )
-
-        try:
-            json.load(response)
-        except ValueError as e:
-            raise BootstrapError(
-                'REST service returned malformed JSON: {0}'.format(e))
-
     def _verify_restservice_alive(self):
+        logger.info('Verifying Rest service is up...')
         service.verify_alive(RESTSERVICE)
-
-        logger.info('Verifying Rest service is working as expected...')
-        self._verify_restservice()
+        wait_for_port(config[RESTSERVICE]['port'])
 
     def _configure_db(self):
         configs = {
