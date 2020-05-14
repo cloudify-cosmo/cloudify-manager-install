@@ -100,36 +100,37 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run:
-          name: Build base container
+          name: Build manager container
           command: |
             set -eux
-            docker build --tag ${IMAGE_NAME} packaging/docker
+            ls -la /tmp/workspace
+            pushd packaging/docker
+              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+              docker build --tag ${IMAGE_NAME} .
+            popd
       - run:
-          name: Run base container
+          name: Run manager container
           command: |
             set -eux
-            docker run --name ${CONTAINER_NAME} -d -v /tmp/workspace:/tmp/workspace:ro -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
-      - run:
-          name: Prepare base container
-          command: |
-            set -eux
-            docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
-      - run:
-          name: Install the created RPM
-          command: |
-            set -eux
-            docker exec -t ${CONTAINER_NAME} /bin/bash -c "yum install -y /tmp/workspace/x86_64/*.rpm"
-      - run:
-          name: Install Cloudify Manager
-          command: |
-            set -eux
-            cd packaging/docker
-            chmod +x install_manager.sh
-            ./install_manager.sh
+            docker run --name ${CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${IMAGE_NAME}
+
+            # wait for the starter service to finish. We give it a few seconds
+            # to make sure the starter service is already running, then just call
+            # `systemctl start`, because that will simply join the already-running  start
+            sleep 2
+            docker exec ${CONTAINER_NAME} systemctl start cloudify-starter
+
+            docker exec ${CONTAINER_NAME} journalctl -u cloudify-starter
+
       - run:
           name: Check Manager Status
           command: |
             .circleci/cluster/validate_status.sh ${CONTAINER_NAME}
+      - run:
+          name: Run the sanity check
+          command: |
+            docker exec ${CONTAINER_NAME} touch /opt/manager/sanity_mode
+            docker exec ${CONTAINER_NAME} cfy_manager sanity-check
 
   install_cluster:
     machine: true
@@ -142,12 +143,14 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run:
-          name: Build base container
+          name: Build manager container
           command: |
             set -eux
-            docker build --tag ${IMAGE_NAME} packaging/docker
-            cp -fr /tmp/workspace/x86_64/*.rpm .circleci/cluster
-            docker build --tag ${CLUSTER_IMAGE} .circleci/cluster
+            ls -la /tmp/workspace
+            pushd packaging/docker
+              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+              docker build --tag ${CLUSTER_IMAGE} .
+            popd
       - run:
           name: Prepare name envvars
           command: |
