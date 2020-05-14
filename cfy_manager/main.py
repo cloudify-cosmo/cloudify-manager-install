@@ -835,10 +835,26 @@ def _stop_components():
 
 
 @argh.arg('include_components', nargs='*')
-def start(include_components, verbose=False):
+@install_args
+def start(include_components,
+          verbose=False,
+          private_ip=None,
+          public_ip=None,
+          admin_password=None,
+          clean_db=False,
+          only_install=None):
     """ Start Cloudify Manager services """
-    _prepare_execution(verbose, include_components=include_components)
+    _prepare_execution(
+        verbose,
+        private_ip,
+        public_ip,
+        admin_password,
+        clean_db,
+        include_components=include_components,
+        config_write_required=True
+    )
     _validate_components_prepared('start')
+    set_globals()
     logger.notice('Starting Cloudify Manager services...')
     _start_components()
     logger.notice('Cloudify Manager services successfully started!')
