@@ -4,7 +4,7 @@ Description=Cloudify component status reporter.
 [Service]
 ExecStart=/opt/status-reporter/env/bin/cloudify_{{ reporter_type }} {{ extra_config_flags }}
 User=cfyreporter
-Group=cfyreporter
+Group=cfyuser
 TimeoutStartSec=0
 Restart=on-failure
 
