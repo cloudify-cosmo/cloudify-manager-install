@@ -44,8 +44,7 @@ def make_manager_config():
         'public_ip': config['manager']['public_ip'],
         'default_page_size': config['restservice']['default_page_size'],
         'service_management': config.setdefault(
-            'service_management', 'systemd'
-        )
+            'service_management', 'systemd')
     }
     mgmtworker_config = {
         'max_workers': config['mgmtworker']['max_workers'],
