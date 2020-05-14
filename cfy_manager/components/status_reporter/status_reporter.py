@@ -16,19 +16,27 @@
 import uuid
 
 from ..base_component import BaseComponent
+from ..service_components import MANAGER_SERVICE
 
+from ...config import config
 from ...logger import get_logger
 from ...utils import service
-from ...utils.install import is_package_available
+from ...utils.common import is_installed
+from ...utils.install import is_package_available, is_premium_installed
+
 from ...utils.node import update_status_reporter_config
 from ...utils.files import (remove_files,
                             read_yaml_file)
+from ...status_reporter import status_reporter
 from ...constants import (STATUS_REPORTER,
                           STATUS_REPORTER_PATH,
                           STATUS_REPORTER_CONFIGURATION_PATH,
                           STATUS_REPORTER_TOKEN,
                           STATUS_REPORTER_MANAGERS_IPS)
-
+from ..components_constants import (
+    CONSTANTS,
+    MANAGER_STATUS_REPORTER,
+)
 logger = get_logger(STATUS_REPORTER)
 
 
@@ -75,6 +83,16 @@ class StatusReporter(BaseComponent):
         service.remove(STATUS_REPORTER)
         remove_files([STATUS_REPORTER_PATH])
 
+    def _configure_manager_reporter(self):
+        conf = {
+            'token':
+                config[
+                    MANAGER_STATUS_REPORTER][STATUS_REPORTER_TOKEN],
+            'managers_ips': ['localhost'],
+            'ca_path': config[CONSTANTS]['ca_cert_path']
+        }
+        status_reporter.configure(**conf)
+
     @staticmethod
     def _is_status_reporter_configured():
         status_reporter_configuration = read_yaml_file(
@@ -84,6 +102,8 @@ class StatusReporter(BaseComponent):
             status_reporter_configuration.get(STATUS_REPORTER_TOKEN))
 
     def start(self):
+        if is_installed(MANAGER_SERVICE) and is_premium_installed():
+            self._configure_manager_reporter()
         if not (self._is_status_reporter_configured()):
             logger.warning('Not starting status reporter service, please '
                            'configure first the mandatory settings: '

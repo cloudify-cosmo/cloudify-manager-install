@@ -28,7 +28,6 @@ import requests
 from . import db
 from ..._compat import HTTPError, URLError, Request, urlopen
 from ...utils.db import run_psql_command
-from ...status_reporter import status_reporter
 from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
     REST_HOME_DIR,
@@ -529,17 +528,6 @@ class RestService(BaseComponent):
                     config[MANAGER][HOSTNAME]))
         self._run_syncthing_configuration_script(not to_join)
 
-    @staticmethod
-    def _configure_status_reporter():
-        conf = {
-            'token':
-                config[
-                    MANAGER_STATUS_REPORTER][constants.STATUS_REPORTER_TOKEN],
-            'managers_ips': ['localhost'],
-            'ca_path': config[CONSTANTS]['ca_cert_path']
-        }
-        status_reporter.configure(**conf)
-
     def remove(self):
         service.remove(RESTSERVICE, service_file=False)
         remove_logrotate(RESTSERVICE)
@@ -569,8 +557,6 @@ class RestService(BaseComponent):
         else:
             self._verify_restservice_alive()
             self._upload_cloudify_license()
-        if is_premium_installed():
-            self._configure_status_reporter()
         logger.notice('Restservice successfully started')
 
     def stop(self):
