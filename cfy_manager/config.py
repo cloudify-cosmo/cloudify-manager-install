@@ -113,6 +113,8 @@ class Config(CommentedMap):
             )
 
     def dump_config(self):
+        if not self.get('save_config', True):
+            return
         self.pop(self.TEMP_PATHS, None)
         try:
             with self._own_config_file():
