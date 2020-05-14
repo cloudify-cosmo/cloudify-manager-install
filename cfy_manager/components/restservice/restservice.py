@@ -543,6 +543,7 @@ class RestService(BaseComponent):
 
     def start(self):
         logger.notice('Starting Restservice...')
+        self._make_paths()
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
