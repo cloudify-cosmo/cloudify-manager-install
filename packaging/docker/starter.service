@@ -1,0 +1,9 @@
+[Unit]
+After=basic.target network.target system.slice systemd-journald.socket
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/cloudify/starter.sh
