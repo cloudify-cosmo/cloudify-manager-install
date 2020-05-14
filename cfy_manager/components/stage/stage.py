@@ -58,10 +58,6 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Stage(BaseComponent):
-    def _create_paths(self):
-        common.mkdir(HOME_DIR)
-        common.mkdir(LOG_DIR)
-
     def _set_community_mode(self):
         community_mode = '' if is_premium_installed else '-mode community'
 
