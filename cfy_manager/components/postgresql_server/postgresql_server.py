@@ -67,7 +67,7 @@ from ...utils import (
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
-SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
+SYSTEMD_SERVICE_NAME = 'postgresql-server'
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 
 # Etcd used only in clusters
