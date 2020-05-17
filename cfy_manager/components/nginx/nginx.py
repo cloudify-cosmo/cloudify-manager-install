@@ -259,8 +259,9 @@ class Nginx(BaseComponent):
     def configure(self):
         logger.notice('Configuring NGINX...')
         self._configure()
-        service.configure(NGINX)
-        service.enable(NGINX, append_prefix=False)
+        if service._get_service_type() == 'supervisord':
+            service.configure(NGINX)
+            service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 
     def remove(self):
