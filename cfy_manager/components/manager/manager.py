@@ -41,9 +41,6 @@ logger = get_logger(MANAGER)
 
 
 class Manager(BaseComponent):
-    def __init__(self, skip_installation):
-        super(Manager, self).__init__(skip_installation)
-
     def _install(self):
         self._create_cloudify_user()
         self._create_sudoers_file_and_disable_sudo_requiretty()

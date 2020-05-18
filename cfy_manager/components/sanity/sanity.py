@@ -39,8 +39,8 @@ SANITY_WEB_SERVER_PORT = 12774
 
 
 class Sanity(BaseComponent):
-    def __init__(self, skip_installation):
-        super(Sanity, self).__init__(skip_installation)
+    def __init__(self):
+        super(Sanity, self).__init__()
         random_postfix = str(uuid.uuid4())
         self.blueprint_name = '{0}_blueprint_{1}'.format(SANITY,
                                                          random_postfix)
@@ -147,8 +147,8 @@ class Sanity(BaseComponent):
         logger.notice('Sanity completed successfully')
 
     def start(self):
-        if config[SANITY]['skip_sanity'] or config[CLUSTER_JOIN]:
-            logger.info('Skipping sanity check...')
+        if config.get(CLUSTER_JOIN):
+            logger.notice('Not running the sanity check: joined a cluster')
             return
         with self._sanity_check_mode():
             self.run_sanity_check()

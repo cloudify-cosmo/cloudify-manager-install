@@ -148,9 +148,6 @@ class PostgresqlServer(BaseComponent):
     DEGRADED = 1
     DOWN = 2
 
-    def __init__(self, skip_installation):
-        super(PostgresqlServer, self).__init__(skip_installation)
-
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')

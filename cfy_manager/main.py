@@ -53,6 +53,7 @@ from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
 from .components.service_names import MANAGER, POSTGRESQL_SERVER
 from .components.validations import validate, validate_dependencies
+from .components.service_names import SANITY
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
@@ -61,7 +62,7 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import BootstrapError, FileError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -81,9 +82,10 @@ from .utils.certificates import (
 from .utils.common import (
     run, sudo, can_lookup_hostname, allows_json_format, is_installed
 )
-from .utils.install import yum_install, yum_remove
+from .utils.install import yum_install, yum_remove, is_package_available
 from .utils.files import (
     replace_in_file,
+    get_local_source_path,
     remove as _remove,
     remove_temp_files,
     touch
@@ -636,34 +638,54 @@ def _get_components(include_components=None):
 
     This looks at the config, and returns only the component objects
     that are supposed to be installed(/configured/started).
+
+    All the "should we install this" config checks are done here.
     """
     c = []
+
     if is_installed(DATABASE_SERVICE):
-        c += [
-            components.PostgresqlServer(),
-            components.PostgresqlStatusReporter()
-        ]
+        c += [components.PostgresqlServer()]
+        if (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
+                config[POSTGRESQL_SERVER]['cluster']['nodes']):
+            c += [components.PostgresqlStatusReporter()]
+
     if is_installed(QUEUE_SERVICE):
-        c += [
-            components.RabbitMQ(),
-            components.RabbitmqStatusReporter()
-        ]
+        c += [components.RabbitMQ()]
+        if config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]:
+            c += [components.RabbitmqStatusReporter()]
+
     if is_installed(MANAGER_SERVICE):
+        if is_package_available('cloudify-status-reporter'):
+            c += [components.ManagerStatusReporter()]
         c += [
-            components.ManagerStatusReporter(),
             components.Manager(),
             components.PostgresqlClient(),
             components.RestService(),
             components.ManagerIpSetter(),
             components.Nginx(),
             components.AmqpPostgres(),
-            components.Stage(),
-            components.Composer(),
+        ]
+        try:
+            get_local_source_path(sources.stage)
+        except FileError:
+            logger.notice('Stage will not be installed: package not found')
+        else:
+            c += [components.Stage()]
+        try:
+            get_local_source_path(sources.composer)
+        except FileError:
+            logger.notice('Composer will not be installed: package not found')
+        else:
+            c += [components.Composer()]
+        c += [
+
             components.MgmtWorker(),
             components.Cli(),
             components.UsageCollector(),
-            components.Sanity()
         ]
+        if not config[SANITY]['skip_sanity']:
+            c += [components.Sanity()]
+
     if include_components:
         c = _filter_components(c, include_components)
     return c
@@ -791,18 +813,13 @@ def install(verbose=False,
     yum_install(_get_packages())
 
     for component in components:
-        if not component.skip_installation:
-            component.install()
+        component.install()
 
     if not only_install:
-        # check .skip_installation at every step because a component's
-        # .install method could have changed it to false
         for component in components:
-            if not component.skip_installation:
-                component.configure()
+            component.configure()
         for component in components:
-            if not component.skip_installation:
-                component.start()
+            component.start()
 
     if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
             QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
@@ -837,12 +854,10 @@ def configure(verbose=False,
 
     if clean_db:
         for component in components:
-            if not component.skip_installation:
-                component.stop()
+            component.stop()
 
     for component in components:
-        if not component.skip_installation:
-            component.configure()
+        component.configure()
 
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
@@ -862,10 +877,9 @@ def remove(verbose=False, force=False):
     should_stop = _are_components_configured()
 
     for component in reversed(components):
-        if not component.skip_installation:
-            if should_stop:
-                component.stop()
-            component.remove()
+        if should_stop:
+            component.stop()
+        component.remove()
 
     yum_remove(_get_packages())
 

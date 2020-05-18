@@ -14,29 +14,18 @@
 #  * limitations under the License.
 
 from ...config import config
-from ..service_components import DATABASE_SERVICE
 from ...constants import STATUS_REPORTER_CONFIG_KEY
-from ..service_names import POSTGRESQL_SERVER, MANAGER
+from ..service_names import MANAGER
 from ...utils.node import update_status_reporter_config
-from ..components_constants import (PRIVATE_IP,
-                                    DB_STATUS_REPORTER,
-                                    SERVICES_TO_INSTALL)
+from ..components_constants import PRIVATE_IP, DB_STATUS_REPORTER
 
 from .status_reporter import StatusReporter
 
 
 class PostgresqlStatusReporter(StatusReporter):
-    @staticmethod
-    def _should_install():
-        # Only installing when in clustered setup
-        return (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
-                config[POSTGRESQL_SERVER]['cluster']['nodes'])
-
-    def __init__(self, skip_installation):
-        skip_installation = skip_installation or not self._should_install()
-        super(PostgresqlStatusReporter, self).__init__(skip_installation,
-                                                       'postgresql_reporter',
-                                                       DB_STATUS_REPORTER)
+    def __init__(self):
+        super(PostgresqlStatusReporter, self).__init__(
+            'postgresql_reporter', DB_STATUS_REPORTER)
 
     def configure(self):
         super(PostgresqlStatusReporter, self).configure()

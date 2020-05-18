@@ -18,8 +18,6 @@ from ..components_constants import MANAGER_STATUS_REPORTER
 
 
 class ManagerStatusReporter(StatusReporter):
-
-    def __init__(self, skip_installation):
-        super(ManagerStatusReporter, self).__init__(skip_installation,
-                                                    'manager_reporter',
-                                                    MANAGER_STATUS_REPORTER)
+    def __init__(self):
+        super(ManagerStatusReporter, self).__init__(
+            'manager_reporter', MANAGER_STATUS_REPORTER)

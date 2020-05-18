@@ -177,12 +177,6 @@ class Stage(BaseComponent):
         service.verify_alive(STAGE)
         wait_for_port(8088)
 
-    def install(self):
-        if config[STAGE]['skip_installation']:
-            logger.info('Skipping Stage installation.')
-            return
-        logger.notice('Stage successfully installed!')
-
     def configure(self):
         logger.notice('Configuring Stage...')
         self._set_db_url()
