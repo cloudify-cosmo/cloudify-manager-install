@@ -671,7 +671,7 @@ def _filter_components(components, include_components):
     This allows `cfy_manager start --include-components amqp_postgres`,
     which should only then start amqppostgres and nothing else.
 
-    This trnaslates "amqp_postgres" -> "amqppostgres", and then filters
+    This translates "amqp_postgres" -> "amqppostgres", and then filters
     the components by class name.
     """
     include_components = {
