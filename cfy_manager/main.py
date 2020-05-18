@@ -615,23 +615,23 @@ def _get_components(include_components=None):
 
     All the "should we install this" config checks are done here.
     """
-    c = []
+    _components = []
 
     if is_installed(DATABASE_SERVICE):
-        c += [components.PostgresqlServer()]
+        _components += [components.PostgresqlServer()]
         if (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
                 config[POSTGRESQL_SERVER]['cluster']['nodes']):
-            c += [components.PostgresqlStatusReporter()]
+            _components += [components.PostgresqlStatusReporter()]
 
     if is_installed(QUEUE_SERVICE):
-        c += [components.RabbitMQ()]
+        _components += [components.RabbitMQ()]
         if config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]:
-            c += [components.RabbitmqStatusReporter()]
+            _components += [components.RabbitmqStatusReporter()]
 
     if is_installed(MANAGER_SERVICE):
         if is_package_available('cloudify-status-reporter'):
-            c += [components.ManagerStatusReporter()]
-        c += [
+            _components += [components.ManagerStatusReporter()]
+        _components += [
             components.Manager(),
             components.PostgresqlClient(),
             components.RestService(),
@@ -644,25 +644,25 @@ def _get_components(include_components=None):
         except FileError:
             logger.notice('Stage will not be installed: package not found')
         else:
-            c += [components.Stage()]
+            _components += [components.Stage()]
         try:
             get_local_source_path(sources.composer)
         except FileError:
             logger.notice('Composer will not be installed: package not found')
         else:
-            c += [components.Composer()]
-        c += [
+            _components += [components.Composer()]
+        _components += [
 
             components.MgmtWorker(),
             components.Cli(),
             components.UsageCollector(),
         ]
         if not config[SANITY]['skip_sanity']:
-            c += [components.Sanity()]
+            _components += [components.Sanity()]
 
     if include_components:
-        c = _filter_components(c, include_components)
-    return c
+        _components = _filter_components(_components, include_components)
+    return _components
 
 
 def _filter_components(components, include_components):
