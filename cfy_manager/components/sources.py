@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-nodejs = 'nodejs-12.16.1-1nodesource.x86_64.rpm'
-stage = 'cloudify-stage-*.x86_64.rpm'
 composer = 'cloudify-blueprint-composer-*.tgz'
 sanity = 'cloudify-hello-world-example-*.tar.gz'
 
@@ -22,7 +20,7 @@ manager = [
     'cloudify-management-worker', 'cloudify-rest-service',
     'cloudify-cli', 'cloudify-manager-ip-setter', 'nginx',
     'python-psycopg2', 'postgresql95', 'cloudify-agents',
-    'patch'
+    'patch', 'nodejs', 'cloudify-stage'
 ]
 manager_premium = ['cloudify-premium', 'cloudify-status-reporter']
 manager_cluster = ['haproxy']

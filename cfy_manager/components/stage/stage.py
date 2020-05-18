@@ -17,7 +17,6 @@ import os
 import json
 from os.path import join
 
-from cfy_manager.components import sources
 from ..components_constants import (
     SSL_INPUTS,
     SSL_ENABLED,
@@ -31,7 +30,6 @@ from ..service_names import (
 )
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import FileError
 from ...utils import (
     certificates,
     common,
@@ -39,7 +37,7 @@ from ...utils import (
 )
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
-from ...utils.install import yum_install, yum_remove, is_premium_installed
+from ...utils.install import is_premium_installed
 
 
 logger = get_logger(STAGE)
@@ -63,20 +61,6 @@ class Stage(BaseComponent):
 
         # This is used in the stage systemd service file
         config[STAGE]['community_mode'] = community_mode
-
-    def _install(self):
-        try:
-            files.get_local_source_path(sources.stage)
-        except FileError:
-            logger.info('Stage package not found in manager resources package')
-            logger.notice('Stage will not be installed.')
-            config[STAGE]['skip_installation'] = True
-            return
-
-        logger.info('Installing NodeJS package...')
-        yum_install(sources.nodejs)
-        logger.info('Installing Stage package...')
-        yum_install(sources.stage)
 
     def _run_db_migrate(self):
         if config[CLUSTER_JOIN]:
@@ -197,8 +181,6 @@ class Stage(BaseComponent):
         if config[STAGE]['skip_installation']:
             logger.info('Skipping Stage installation.')
             return
-        logger.notice('Installing Stage...')
-        self._install()
         logger.notice('Stage successfully installed!')
 
     def configure(self):
@@ -212,8 +194,6 @@ class Stage(BaseComponent):
     def remove(self):
         logger.notice('Removing Stage...')
         systemd.remove(STAGE, service_file=False)
-        yum_remove('cloudify-stage')
-        yum_remove('nodejs')
         logger.notice('Stage successfully removed')
 
     def start(self):
