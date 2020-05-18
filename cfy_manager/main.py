@@ -26,6 +26,7 @@ from traceback import format_exception
 
 import argh
 
+from . import components
 from .components import (
     ComponentsFactory,
     SERVICE_COMPONENTS,
@@ -153,8 +154,6 @@ DB_NODE_ID_HELP_MSG = (
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
 )
-
-components = []
 
 
 @argh.decorators.arg('-s', '--sans', help=TEST_CA_GENERATE_SAN_HELP_TEXT,
@@ -630,6 +629,62 @@ def _create_component_objects(include_components):
             ComponentsFactory.create_component(component_name,
                                                skip_installation)
         )
+
+
+def _get_components(include_components=None):
+    """Get the component objects based on the config.
+
+    This looks at the config, and returns only the component objects
+    that are supposed to be installed(/configured/started).
+    """
+    c = []
+    if is_installed(DATABASE_SERVICE):
+        c += [
+            components.PostgresqlServer(),
+            components.PostgresqlStatusReporter()
+        ]
+    if is_installed(QUEUE_SERVICE):
+        c += [
+            components.RabbitMQ(),
+            components.RabbitmqStatusReporter()
+        ]
+    if is_installed(MANAGER_SERVICE):
+        c += [
+            components.ManagerStatusReporter(),
+            components.Manager(),
+            components.PostgresqlClient(),
+            components.RestService(),
+            components.ManagerIpSetter(),
+            components.Nginx(),
+            components.AmqpPostgres(),
+            components.Stage(),
+            components.Composer(),
+            components.MgmtWorker(),
+            components.Cli(),
+            components.UsageCollector(),
+            components.Sanity()
+        ]
+    if include_components:
+        c = _filter_components(c, include_components)
+    return c
+
+
+def _filter_components(components, include_components):
+    """Filter the components list based on the includes given by the user.
+
+    This allows `cfy_manager start --include-components amqp_postgres`,
+    which should only then start amqppostgres and nothing else.
+
+    This trnaslates "amqp_postgres" -> "amqppostgres", and then filters
+    the components by class name.
+    """
+    include_components = {
+        ''.join(name.lower().split('_')) for name in include_components
+    }
+    return [
+        component for component in components
+        if component.__class__.__name__.lower() in include_components
+    ]
 
 
 def _remove_rabbitmq_service_unit():
