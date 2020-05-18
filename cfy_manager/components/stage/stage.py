@@ -67,7 +67,7 @@ class Stage(BaseComponent):
             logger.debug('Joining cluster - not creating the stage db')
             return
         backend_dir = join(HOME_DIR, 'backend')
-        npm_path = join('usr', 'bin', 'npm')
+        npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
                 'sudo', '-u', STAGE_USER, 'bash', '-c',
