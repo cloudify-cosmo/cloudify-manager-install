@@ -36,7 +36,6 @@ from cfy_manager.exceptions import (
     DBManagementError,
     ProcessExecutionError,
 )
-from .. import MANAGER_SERVICE, DATABASE_SERVICE
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
@@ -50,7 +49,9 @@ from ..components_constants import (
 from ..base_component import BaseComponent
 from ..service_names import (
     POSTGRESQL_SERVER,
-    MANAGER
+    MANAGER,
+    MANAGER_SERVICE,
+    DATABASE_SERVICE
 )
 from ... import constants
 from ...config import config

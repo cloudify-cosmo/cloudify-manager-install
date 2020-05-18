@@ -32,7 +32,4 @@ from .usage_collector import UsageCollector  # NOQA
 from .status_reporter import RabbitmqStatusReporter  # NOQA
 from .status_reporter import PostgresqlStatusReporter  # NOQA
 from .status_reporter import ManagerStatusReporter  # NOQA
-
-DATABASE_SERVICE = 'database_service'
-QUEUE_SERVICE = 'queue_service'
-MANAGER_SERVICE = 'manager_service'
+from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE  # NOQA

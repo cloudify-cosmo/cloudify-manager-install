@@ -26,7 +26,6 @@ from collections import namedtuple
 import requests
 
 from . import db
-from .. import DATABASE_SERVICE, MANAGER_SERVICE
 from ...utils.db import run_psql_command
 from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
@@ -60,7 +59,9 @@ from ..base_component import BaseComponent
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
-    POSTGRESQL_CLIENT
+    POSTGRESQL_CLIENT,
+    DATABASE_SERVICE,
+    MANAGER_SERVICE
 )
 from ... import constants
 from ...config import config

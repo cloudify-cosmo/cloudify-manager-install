@@ -24,7 +24,6 @@ from ipaddress import ip_address
 from distutils.version import LooseVersion
 
 from cfy_manager.utils.common import is_installed
-from . import DATABASE_SERVICE, MANAGER_SERVICE
 from .components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
@@ -41,7 +40,9 @@ from .components_constants import (
 from .service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER
+    POSTGRESQL_SERVER,
+    DATABASE_SERVICE,
+    MANAGER_SERVICE
 )
 
 from .._compat import PY2
