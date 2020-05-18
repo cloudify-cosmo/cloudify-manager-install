@@ -42,14 +42,15 @@ class SystemD(object):
                   service_name,
                   user=CLOUDIFY_USER,
                   group=CLOUDIFY_GROUP,
-                  external_configure_params=None):
+                  external_configure_params=None,
+                  append_prefix=True):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
         """
-        sid = _get_full_service_name(service_name, append_prefix=True)
+        sid = _get_full_service_name(service_name, append_prefix=append_prefix)
         env_dst = "/etc/sysconfig/{0}".format(sid)
         srv_dst = "/usr/lib/systemd/system/{0}.service".format(sid)
 
@@ -207,14 +208,17 @@ class Supervisord(object):
                   user=CLOUDIFY_USER,
                   group=CLOUDIFY_GROUP,
                   external_configure_params=None,
-                  src_dir=None):
+                  src_dir=None,
+                  append_prefix=True):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
         """
-        sid = _get_full_service_name(service_name, append_prefix=True)
+        logger.info('Service Name before {}'.format(service_name))
+        sid = _get_full_service_name(service_name, append_prefix=append_prefix)
+        logger.info('Service Name after {}'.format(service_name))
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
 
         if src_dir is None:
@@ -228,6 +232,7 @@ class Supervisord(object):
             deploy(srv_src, dst, render=True,
                    additional_render_context=external_configure_params)
 
+        logger.info('sid Name after {}'.format(sid))
         self.enable(sid)
 
 
@@ -308,6 +313,7 @@ def configure(service_name,
               user=CLOUDIFY_USER,
               group=CLOUDIFY_GROUP,
               external_configure_params=None,
+              append_prefix=True,
               src_dir=None):
     _configure = \
         partial(
@@ -315,7 +321,8 @@ def configure(service_name,
             service_name,
             user=user,
             group=group,
-            external_configure_params=external_configure_params
+            external_configure_params=external_configure_params,
+            append_prefix=append_prefix
         )
     if _get_service_type() == 'supervisord':
         return _configure(src_dir=src_dir)

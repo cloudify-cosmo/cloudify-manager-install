@@ -260,7 +260,7 @@ class Nginx(BaseComponent):
         logger.notice('Configuring NGINX...')
         self._configure()
         if service._get_service_type() == 'supervisord':
-            service.configure(NGINX)
+            service.configure(NGINX, append_prefix=False)
             service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 

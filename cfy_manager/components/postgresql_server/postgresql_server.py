@@ -1431,7 +1431,7 @@ class PostgresqlServer(BaseComponent):
         logger.notice('Configuring PostgreSQL Server...')
         files.copy_notice(POSTGRESQL_SERVER)
         if service._get_service_type() == 'supervisord':
-            service.configure(SYSTEMD_SERVICE_NAME)
+            service.configure(SYSTEMD_SERVICE_NAME, append_prefix=False)
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
         else:
