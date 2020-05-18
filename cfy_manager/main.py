@@ -675,7 +675,7 @@ def _filter_components(components, include_components):
     the components by class name.
     """
     include_components = {
-        ''.join(name.lower().split('_')) for name in include_components
+        name.lower().replace('_', '') for name in include_components
     }
     return [
         component for component in components
