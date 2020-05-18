@@ -90,7 +90,7 @@ class Composer(BaseComponent):
         if config[CLUSTER_JOIN]:
             logger.debug('Joining cluster - not creating the composer db')
             return
-        npm_path = join('usr', 'bin', 'npm')
+        npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
                 'sudo', '-u', COMPOSER_USER, 'bash', '-c',
