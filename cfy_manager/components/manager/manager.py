@@ -18,10 +18,10 @@ import subprocess
 from os.path import join
 from tempfile import gettempdir
 
+from .. import QUEUE_SERVICE
 from ..base_component import BaseComponent
 from ..service_names import MANAGER
 from ..components_constants import CONFIG, SERVICES_TO_INSTALL
-from ..service_components import QUEUE_SERVICE
 from ..service_names import RABBITMQ
 from ... import constants
 from ...config import config

@@ -35,7 +35,7 @@ from ..components_constants import (
     MANAGER_STATUS_REPORTER,
 )
 
-from ..service_components import DATABASE_SERVICE
+from .. import DATABASE_SERVICE
 from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,

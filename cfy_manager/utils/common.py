@@ -35,9 +35,9 @@ from ..logger import get_logger
 from ..exceptions import ProcessExecutionError
 
 from cfy_manager.components.components_constants import SERVICES_TO_INSTALL
-from cfy_manager.components.service_components import (QUEUE_SERVICE,
-                                                       MANAGER_SERVICE,
-                                                       DATABASE_SERVICE)
+from cfy_manager.components import (QUEUE_SERVICE,
+                                    MANAGER_SERVICE,
+                                    DATABASE_SERVICE)
 from cfy_manager.components.service_names import POSTGRESQL_SERVER
 
 from . import subprocess_preexec

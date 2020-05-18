@@ -24,6 +24,7 @@ from ipaddress import ip_address
 from distutils.version import LooseVersion
 
 from cfy_manager.utils.common import is_installed
+from . import DATABASE_SERVICE, MANAGER_SERVICE
 from .components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
@@ -36,10 +37,6 @@ from .components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     POSTGRES_PASSWORD,
     SERVER_PASSWORD
-)
-from .service_components import (
-    DATABASE_SERVICE,
-    MANAGER_SERVICE
 )
 from .service_names import (
     MANAGER,

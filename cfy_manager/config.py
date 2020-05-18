@@ -24,16 +24,13 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from ruamel.yaml.comments import CommentedMap
 
+from .components import DATABASE_SERVICE, MANAGER_SERVICE
 from .exceptions import InputError, BootstrapError
 from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH, CLOUDIFY_USER
 from cfy_manager.components.components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
-)
-from cfy_manager.components.service_components import (
-    DATABASE_SERVICE,
-    MANAGER_SERVICE,
 )
 from cfy_manager.components.service_names import (
     POSTGRESQL_CLIENT,

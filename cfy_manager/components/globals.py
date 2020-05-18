@@ -34,7 +34,7 @@ from .components_constants import (
     SSL_CLIENT_VERIFICATION,
     HOSTNAME,
 )
-from .service_components import QUEUE_SERVICE
+from . import QUEUE_SERVICE
 
 BROKER_IP = 'broker_ip'
 logger = get_logger('Globals')

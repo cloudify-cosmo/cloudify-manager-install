@@ -28,12 +28,9 @@ import argh
 
 from . import components
 from .components import (
-    ComponentsFactory,
-    SERVICE_COMPONENTS,
     MANAGER_SERVICE,
     QUEUE_SERVICE,
     DATABASE_SERVICE,
-    SERVICE_INSTALLATION_ORDER,
     sources
 )
 from .components.components_constants import (
@@ -493,13 +490,6 @@ def _populate_and_validate_config_values(private_ip, public_ip,
             )
 
 
-def _prepare_component_management(component, verbose):
-    setup_console_logger(verbose=verbose)
-    config.load_config()
-    return ComponentsFactory.create_component(component,
-                                              skip_installation=True)
-
-
 def _prepare_execution(verbose=False,
                        private_ip=None,
                        public_ip=None,
@@ -614,36 +604,6 @@ def _validate_components_prepared(cmd):
                 touched_file=INITIAL_INSTALL_FILE,
                 cmd=cmd
             )
-        )
-
-
-def _get_components_list(include_components):
-    """
-    Match all available services to install with all desired ones and
-    return a unique list ordered by service installation order
-    """
-    # Order the services to install by service installation order
-    ordered_services = sorted(
-        config[SERVICES_TO_INSTALL],
-        key=SERVICE_INSTALLATION_ORDER.index
-    )
-    # Can't easily use list comprehension here because this is a list of lists
-    ordered_components = []
-    for service in ordered_services:
-        for component in SERVICE_COMPONENTS[service]:
-            if not include_components or component in include_components:
-                ordered_components.append(component)
-    return ordered_components
-
-
-def _create_component_objects(include_components):
-    components_to_install = _get_components_list(include_components)
-    for component_name in components_to_install:
-        component_config = config.get(component_name, {})
-        skip_installation = component_config.get('skip_installation', False)
-        components.append(
-            ComponentsFactory.create_component(component_name,
-                                               skip_installation)
         )
 
 
@@ -775,7 +735,7 @@ def validate_command(verbose=False,
 def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _prepare_execution(verbose=verbose, private_ip=private_ip)
-    sanity = ComponentsFactory.create_component('sanity')
+    sanity = components.Sanity()
     sanity.run_sanity_check()
 
 
