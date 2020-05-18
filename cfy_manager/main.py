@@ -226,7 +226,9 @@ def brokers_add(**kwargs):
     _validate_components_prepared('brokers_add')
     join_node = kwargs['join_node']
 
-    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
     nodes = rabbitmq.list_rabbit_nodes()
@@ -263,7 +265,9 @@ def brokers_remove(**kwargs):
     Use the cfy command afterwards to unregister it from the manager cluster.
     """
     _validate_components_prepared('brokers_remove')
-    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
     remove_node = rabbitmq.add_missing_nodename_prefix(kwargs['remove_node'])
@@ -302,7 +306,9 @@ def brokers_list(**kwargs):
     Use the cfy command to list brokers registered with the manager cluster.
     """
     _validate_components_prepared('brokers_list')
-    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
     brokers = rabbitmq.list_rabbit_nodes()
@@ -337,7 +343,9 @@ def complain_about_dead_broker_cluster(nodes):
 def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     _validate_components_prepared('db_cluster_list')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
 
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         state, db_nodes = db.get_cluster_status()
@@ -365,7 +373,9 @@ def db_node_list(**kwargs):
 def db_node_add(**kwargs):
     """Add a DB cluster node."""
     _validate_components_prepared('db_node_add')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.add_cluster_node(kwargs['address'], kwargs['node_id'],
                             kwargs.get('hostname'))
@@ -382,7 +392,9 @@ def db_node_add(**kwargs):
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
                 kwargs.get('node_id') is None):
@@ -402,7 +414,9 @@ def db_node_remove(**kwargs):
 def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
     _validate_components_prepared('db_node_reinit')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.reinit_cluster_node(kwargs['address'])
     else:
@@ -417,7 +431,9 @@ def db_node_reinit(**kwargs):
 def db_node_set_master(**kwargs):
     """Switch the current DB master node."""
     _validate_components_prepared('db_node_set_master')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.set_master(kwargs['address'])
     else:
@@ -490,8 +506,7 @@ def _prepare_execution(verbose=False,
                        admin_password=None,
                        clean_db=False,
                        config_write_required=False,
-                       only_install=False,
-                       include_components=None):
+                       only_install=False):
     setup_console_logger(verbose)
 
     config.load_config()
@@ -500,7 +515,6 @@ def _prepare_execution(verbose=False,
         # but we do populate things that are not relevant.
         _populate_and_validate_config_values(private_ip, public_ip,
                                              admin_password, clean_db)
-    _create_component_objects(include_components)
 
 
 def _print_finish_message():
@@ -752,6 +766,7 @@ def validate_command(verbose=False,
         clean_db,
         config_write_required=False
     )
+    components = _get_components()
     validate(components=components)
     validate_dependencies(components=components)
 
@@ -806,6 +821,7 @@ def install(verbose=False,
         only_install=only_install,
     )
     logger.notice('Installing desired components...')
+    components = _get_components()
     validate(components=components, only_install=only_install)
     validate_dependencies(components=components)
     set_globals(only_install=only_install)
@@ -849,6 +865,7 @@ def configure(verbose=False,
 
     _validate_components_prepared('configure')
     logger.notice('Configuring desired components...')
+    components = _get_components()
     validate(components=components)
     set_globals()
 
@@ -875,7 +892,7 @@ def remove(verbose=False, force=False):
     logger.notice('Removing Cloudify Manager...')
 
     should_stop = _are_components_configured()
-
+    components = _get_components()
     for component in reversed(components):
         if should_stop:
             component.stop()
@@ -891,18 +908,6 @@ def remove(verbose=False, force=False):
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
-
-
-def _start_components():
-    for component in components:
-        if not component.skip_installation:
-            component.start()
-
-
-def _stop_components():
-    for component in components:
-        if not component.skip_installation:
-            component.stop()
 
 
 @argh.arg('include_components', nargs='*')
@@ -921,13 +926,13 @@ def start(include_components,
         public_ip,
         admin_password,
         clean_db,
-        include_components=include_components,
         config_write_required=True
     )
     _validate_components_prepared('start')
     set_globals()
     logger.notice('Starting Cloudify Manager services...')
-    _start_components()
+    for component in _get_components(include_components):
+        component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -935,14 +940,15 @@ def start(include_components,
 @argh.arg('include_components', nargs='*')
 def stop(include_components, verbose=False, force=False):
     """ Stop Cloudify Manager services """
-    _prepare_execution(verbose, include_components=include_components)
+    _prepare_execution(verbose)
     _validate_components_prepared('stop')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
 
     logger.notice('Stopping Cloudify Manager services...')
-    _stop_components()
+    for component in _get_components(include_components):
+        component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 
@@ -951,13 +957,16 @@ def stop(include_components, verbose=False, force=False):
 def restart(include_components, verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
-    _prepare_execution(verbose, include_components=include_components)
+    _prepare_execution(verbose)
     _validate_components_prepared('restart')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
-    _stop_components()
-    _start_components()
+    components = _get_components(include_components)
+    for component in components:
+        component.stop()
+    for component in components:
+        component.start()
     _print_time()
 
 
