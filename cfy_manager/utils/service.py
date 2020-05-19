@@ -216,9 +216,7 @@ class Supervisord(object):
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
         """
-        logger.info('Service Name before {}'.format(service_name))
         sid = _get_full_service_name(service_name, append_prefix=append_prefix)
-        logger.info('Service Name after {}'.format(service_name))
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
 
         if src_dir is None:
@@ -232,7 +230,6 @@ class Supervisord(object):
             deploy(srv_src, dst, render=True,
                    additional_render_context=external_configure_params)
 
-        logger.info('sid Name after {}'.format(sid))
         self.enable(sid)
 
 
