@@ -67,7 +67,7 @@ from ...utils import (
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
-SYSTEMD_SERVICE_NAME = 'postgresql-server'
+SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 
 # Etcd used only in clusters
@@ -150,33 +150,19 @@ class PostgresqlServer(BaseComponent):
     def __init__(self, skip_installation):
         super(PostgresqlServer, self).__init__(skip_installation)
 
-    def _initdb_postgresql(self):
-        # postgresql95-setup can only be used with supervisord as it depends
-        # on systemd
-        run = common.sudo
-        initdb_cmd = [
-            join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup'), 'initdb'
-        ]
-        if service._get_service_type() == 'supervisord':
-            run = common.run
-            initdb_cmd = 'su - postgres -c \"/usr/pgsql-9.5/bin/pg_ctl -D ' \
-                         '/var/lib/pgsql/9.5/data/ initdb\"'
-
-        # Run the initdb command based on the service type
+    def _init_postgresql_server(self):
+        logger.debug('Initializing PostgreSQL Server DATA folder...')
+        pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
         try:
-            run(command=initdb_cmd)
-        except Exception as err:
-            logger.info('asjdlkasjdlkasjdlkas {}'.format(err))
+            common.run([pg_ctl, 'initdb'], env={
+                'PGDATA': '/var/lib/pgsql/9.5/data'
+            })
+        except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
             pass
 
-    def _init_postgresql_server(self):
-        logger.debug('Initializing PostgreSQL Server DATA folder...')
-        self._initdb_postgresql()
-
         logger.debug('Installing PostgreSQL Server service...')
         service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        service.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
         logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
@@ -1446,7 +1432,11 @@ class PostgresqlServer(BaseComponent):
         logger.notice('Configuring PostgreSQL Server...')
         files.copy_notice(POSTGRESQL_SERVER)
         if service._get_service_type() == 'supervisord':
-            service.configure(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.configure(
+                SYSTEMD_SERVICE_NAME,
+                append_prefix=False,
+                src_dir='postgresql_server'
+            )
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
         else:
