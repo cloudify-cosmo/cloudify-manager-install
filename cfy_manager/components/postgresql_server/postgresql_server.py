@@ -152,7 +152,6 @@ class PostgresqlServer(BaseComponent):
 
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
-        pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
         try:
             initdb_cmd = 'su - postgres -c \"/usr/pgsql-9.5/bin/pg_ctl -D ' \
                          '/var/lib/pgsql/9.5/data/ initdb\"'
