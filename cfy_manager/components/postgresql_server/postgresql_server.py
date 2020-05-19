@@ -150,14 +150,29 @@ class PostgresqlServer(BaseComponent):
     def __init__(self, skip_installation):
         super(PostgresqlServer, self).__init__(skip_installation)
 
-    def _init_postgresql_server(self):
-        logger.debug('Initializing PostgreSQL Server DATA folder...')
-        postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
+    def _initdb_postgresql(self):
+        # postgresql95-setup can only be used with supervisord as it depends
+        # on systemd
+        run = common.sudo
+        initdb_cmd = [
+            join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup'), 'initdb'
+        ]
+        if service._get_service_type() == 'supervisord':
+            run = common.run
+            initdb_cmd = 'su - postgres -c \"/usr/pgsql-9.5/bin/pg_ctl -D ' \
+                         '/var/lib/pgsql/9.5/data/ initdb\"'
+
+        # Run the initdb command based on the service type
         try:
-            common.sudo(command=[postgresql95_setup, 'initdb'])
-        except Exception:
+            run(command=initdb_cmd)
+        except Exception as err:
+            logger.info('asjdlkasjdlkasjdlkas {}'.format(err))
             logger.debug('PostreSQL Server DATA folder already initialized...')
             pass
+
+    def _init_postgresql_server(self):
+        logger.debug('Initializing PostgreSQL Server DATA folder...')
+        self._initdb_postgresql()
 
         logger.debug('Installing PostgreSQL Server service...')
         service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
