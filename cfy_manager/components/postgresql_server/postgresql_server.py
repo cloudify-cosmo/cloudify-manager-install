@@ -154,7 +154,7 @@ class PostgresqlServer(BaseComponent):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
         try:
-            common.run([pg_ctl, 'initdb'], env={
+            common.sudo([pg_ctl, 'initdb'], env={
                 'PGDATA': '/var/lib/pgsql/9.5/data'
             })
         except Exception:
