@@ -52,9 +52,6 @@ class Nginx(BaseComponent):
         copy_notice(NGINX)
         if config.get('service_management') != 'supervisord':
             self._deploy_unit_override()
-        else:
-            # TODO
-            pass
         set_logrotate(NGINX)
 
     def _deploy_unit_override(self):
@@ -248,7 +245,6 @@ class Nginx(BaseComponent):
             raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
     def _configure(self):
-        service.enable(NGINX, append_prefix=False)
         self._deploy_nginx_config_files()
 
     def install(self):
@@ -261,7 +257,8 @@ class Nginx(BaseComponent):
         self._configure()
         if service._get_service_type() == 'supervisord':
             service.configure(NGINX, append_prefix=False)
-            service.enable(NGINX, append_prefix=False)
+            # Need to pass the override files
+        service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 
     def remove(self):
