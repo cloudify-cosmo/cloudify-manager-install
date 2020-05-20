@@ -168,7 +168,7 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
                 "INET-type addresses: {addresses}). This will cause "
                 "installation to fail. If you are certain that this IP address"
                 " should be used, please set the '{param}' parameter to "
-                "'false'".format(
+                "'true'".format(
                     ip=ip_to_validate,
                     addresses=', '.join(all_addresses),
                     param=SKIP_VALIDATIONS))
