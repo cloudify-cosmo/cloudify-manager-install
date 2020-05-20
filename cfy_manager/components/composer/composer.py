@@ -43,7 +43,6 @@ logger = get_logger(COMPOSER)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(COMPOSER))
 CONF_DIR = join(HOME_DIR, 'backend', 'conf')
-NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 
 # These are all the same key as the other db keys, but postgres is very strict
@@ -59,7 +58,6 @@ COMPOSER_PORT = 3000
 
 class Composer(BaseComponent):
     def _create_paths(self):
-        common.mkdir(NODEJS_DIR)
         common.mkdir(HOME_DIR)
         common.mkdir(LOG_DIR)
 
@@ -92,7 +90,7 @@ class Composer(BaseComponent):
         if config[CLUSTER_JOIN]:
             logger.debug('Joining cluster - not creating the composer db')
             return
-        npm_path = join(NODEJS_DIR, 'bin', 'npm')
+        npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
                 'sudo', '-u', COMPOSER_USER, 'bash', '-c',
@@ -205,7 +203,7 @@ class Composer(BaseComponent):
 
     def _add_snapshot_sudo_command(self):
         sudoers.allow_user_to_sudo_command(
-            full_command='/opt/nodejs/bin/npm',
+            full_command='/usr/bin/npm',
             description='Allow snapshots to restore composer',
             allow_as=COMPOSER_USER,
         )
@@ -231,7 +229,7 @@ class Composer(BaseComponent):
         files.remove_notice(COMPOSER)
         remove_logrotate(COMPOSER)
         systemd.remove(COMPOSER)
-        files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
+        files.remove_files([HOME_DIR, LOG_DIR])
         logger.notice('Cloudify Composer successfully removed')
 
     def start(self):
