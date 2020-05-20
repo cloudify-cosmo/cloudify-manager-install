@@ -79,9 +79,10 @@ LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
-PG_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
-PG_BASE_CONF_PATH = '/var/lib/pgsql/9.5/data/postgresql.conf'
-PG_CONF_PATH = '/var/lib/pgsql/9.5/data/cloudify-postgresql.conf'
+PGSQL_DATA_DIR = '/var/lib/pgsql/9.5/data'
+PG_HBA_CONF = '{0}/pg_hba.conf'.format(PGSQL_DATA_DIR)
+PG_BASE_CONF_PATH = '{0}/postgresql.conf'.format(PGSQL_DATA_DIR)
+PG_CONF_PATH = '{0}/cloudify-postgresql.conf'.format(PGSQL_DATA_DIR)
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_CA_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'root.crt')
@@ -152,11 +153,13 @@ class PostgresqlServer(BaseComponent):
 
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
+        pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
+        cmd = '\"{0} -D {1} initdb\"'.format(pg_ctl, PGSQL_DATA_DIR)
+        initdb = 'su - postgres -c {0}'.format(cmd)
         try:
-            initdb_cmd = 'su - postgres -c \"/usr/pgsql-9.5/bin/pg_ctl -D ' \
-                         '/var/lib/pgsql/9.5/data/ initdb\"'
-            common.run(initdb_cmd)
-        except Exception:
+            common.sudo(initdb)
+        except Exception as err:
+            logger.info('Print The error {0}'.format(err))
             logger.debug('PostreSQL Server DATA folder already initialized...')
             pass
 
