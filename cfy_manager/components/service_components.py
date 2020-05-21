@@ -34,12 +34,12 @@ SERVICE_COMPONENTS = {
         "restservice",
         "manager_ip_setter",
         "nginx",
+        "cli",
         "amqp_postgres",
         "stage",
         "composer",
         "mgmtworker",
         "manager_status_reporter",
-        "cli",
         "usage_collector",
         "sanity"
     ]
