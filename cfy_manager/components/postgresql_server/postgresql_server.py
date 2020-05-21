@@ -162,16 +162,12 @@ class PostgresqlServer(BaseComponent):
             logger.debug('PostreSQL Server DATA folder already initialized...')
 
         logger.debug('Installing PostgreSQL Server service...')
-        service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
         logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
         common.mkdir(LOG_DIR)
         if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
-
-        logger.info('Starting PostgreSQL Server service...')
-        service.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
@@ -1447,8 +1443,6 @@ class PostgresqlServer(BaseComponent):
             if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
                 self._update_postgres_password()
 
-            service.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            service.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully configured')
 
     def remove(self):
