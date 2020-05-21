@@ -640,12 +640,6 @@ def _get_components(include_components=None):
             components.AmqpPostgres(),
         ]
         try:
-            get_local_source_path(sources.stage)
-        except FileError:
-            logger.notice('Stage will not be installed: package not found')
-        else:
-            _components += [components.Stage()]
-        try:
             get_local_source_path(sources.composer)
         except FileError:
             logger.notice('Composer will not be installed: package not found')
