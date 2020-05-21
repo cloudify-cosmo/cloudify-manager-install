@@ -21,7 +21,7 @@ from ..components_constants import (
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
-    CLUSTER_JOIN,
+    CLUSTER_JOIN
 )
 from ..base_component import BaseComponent
 from ..service_names import (
@@ -34,8 +34,8 @@ from ...utils import (
     certificates,
     common,
     files,
+    service
 )
-from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.install import is_premium_installed
 
@@ -174,7 +174,7 @@ class Stage(BaseComponent):
             common.chmod('640', config_path)
 
     def _verify_stage_alive(self):
-        systemd.verify_alive(STAGE)
+        service.verify_alive(STAGE)
         wait_for_port(8088)
 
     def install(self):
@@ -188,22 +188,22 @@ class Stage(BaseComponent):
         self._set_db_url()
         self._set_internal_manager_ip()
         self._set_community_mode()
-        systemd.configure(STAGE, user=STAGE_USER, group=STAGE_GROUP)
+        service.configure(STAGE, user=STAGE_USER, group=STAGE_GROUP)
         logger.notice('Stage successfully configured!')
 
     def remove(self):
         logger.notice('Removing Stage...')
-        systemd.remove(STAGE, service_file=False)
+        service.remove(STAGE, service_file=False)
         logger.notice('Stage successfully removed')
 
     def start(self):
         logger.notice('Starting Stage...')
         self._run_db_migrate()
-        systemd.restart(STAGE)
+        service.restart(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')
 
     def stop(self):
         logger.notice('Stopping Stage...')
-        systemd.stop(STAGE)
+        service.stop(STAGE)
         logger.notice('Stage successfully stopped')
