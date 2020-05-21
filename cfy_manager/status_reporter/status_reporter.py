@@ -22,7 +22,7 @@ import argh
 
 from ..utils import db
 from ..config import config
-from ..utils.systemd import systemd
+from ..utils import service
 from ..utils.files import read_yaml_file
 from ..utils.install import is_premium_installed
 from ..utils.scripts import get_encoded_user_ids
@@ -130,7 +130,7 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                     ' successfully, a restart is required to activate it')
         return
     logger.info('Starting Status Reporter service...')
-    systemd.restart(STATUS_REPORTER)
+    service.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
 
 
@@ -166,7 +166,7 @@ def _get_configure_args(ca_path, log_level, managers_ip, node_id,
 def start(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Starting Status Reporter service...')
-    systemd.start(STATUS_REPORTER)
+    service.start(STATUS_REPORTER)
     logger.notice('Started Status Reporter service')
 
 
@@ -174,7 +174,7 @@ def start(verbose=False):
 def stop(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Stopping Status Reporter service...')
-    systemd.stop(STATUS_REPORTER)
+    service.stop(STATUS_REPORTER)
     logger.notice('Status Reporter service stopped')
 
 
@@ -182,7 +182,7 @@ def stop(verbose=False):
 def remove(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Removing component status reporting service...')
-    systemd.remove(STATUS_REPORTER)
+    service.remove(STATUS_REPORTER)
     logger.notice('Component status reporting service removed')
 
 

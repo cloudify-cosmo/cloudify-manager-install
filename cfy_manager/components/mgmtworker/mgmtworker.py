@@ -28,9 +28,12 @@ from ..service_names import MGMTWORKER, MANAGER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const
-from ...utils import common, sudoers
+from ...utils import (
+    common,
+    sudoers,
+    service
+)
 from ...utils.files import deploy
-from ...utils.systemd import systemd
 from ...utils.install import is_premium_installed
 
 
@@ -45,12 +48,6 @@ logger = get_logger(MGMTWORKER)
 
 class MgmtWorker(BaseComponent):
     def _add_snapshot_restore_sudo_commands(self):
-        sudoers.allow_user_to_sudo_command(
-            '/opt/nodejs/bin/npm',
-            description='Allow web UI DB migrations during snapshot restore.',
-            allow_as='stage_user',
-        )
-
         sudoers.allow_user_to_sudo_command(
             '/usr/bin/cfy_manager status-reporter configure '
             '--token [a-zA-Z0-9]*',
@@ -134,23 +131,23 @@ class MgmtWorker(BaseComponent):
     def configure(self):
         logger.notice('Configuring Management Worker...')
         self._deploy_mgmtworker_config()
-        systemd.configure(MGMTWORKER)
+        service.configure(MGMTWORKER)
         self._prepare_snapshot_permissions()
         logger.notice('Management Worker successfully configured')
 
     def remove(self):
-        systemd.remove(MGMTWORKER, service_file=False)
+        service.remove(MGMTWORKER, service_file=False)
         common.remove('/opt/mgmtworker')
         common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
 
     def start(self):
         logger.notice('Starting Management Worker...')
         self._deploy_admin_token()
-        systemd.start(MGMTWORKER)
-        systemd.verify_alive(MGMTWORKER)
+        service.start(MGMTWORKER)
+        service.verify_alive(MGMTWORKER)
         logger.notice('Management Worker successfully started')
 
     def stop(self):
         logger.notice('Stopping Management Worker...')
-        systemd.stop(MGMTWORKER)
+        service.stop(MGMTWORKER)
         logger.notice('Management Worker successfully stopped')

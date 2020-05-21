@@ -17,42 +17,27 @@ import os
 import json
 from os.path import join
 
-from cfy_manager.components import sources
 from ..components_constants import (
-    SERVICE_USER,
-    SERVICE_GROUP,
-    HOME_DIR_KEY,
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
-    PREMIUM_EDITION,
     CLUSTER_JOIN
 )
 from ..base_component import BaseComponent
 from ..service_names import (
-    MANAGER,
     POSTGRESQL_CLIENT,
     STAGE,
 )
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import FileError
-from ...constants import (
-    BASE_LOG_DIR,
-    BASE_RESOURCES_PATH,
-    CLOUDIFY_GROUP,
-    CLOUDIFY_USER,
-)
 from ...utils import (
     certificates,
     common,
     files,
-    sudoers,
+    service
 )
-from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
-from ...utils.users import create_service_user
-from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.install import is_premium_installed
 
 
 logger = get_logger(STAGE)
@@ -62,9 +47,6 @@ STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 CONF_DIR = join(HOME_DIR, 'conf')
-NODEJS_DIR = join('/opt', 'nodejs')
-LOG_DIR = join(BASE_LOG_DIR, STAGE)
-STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
 
 # These are all the same key as the other db keys, but postgres is very strict
 # about permissions (no group or other permissions allowed)
@@ -72,91 +54,20 @@ DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/stage_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/stage_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
-NODE_EXECUTABLE_PATH = '/usr/bin/node'
-
 
 class Stage(BaseComponent):
-    def _create_paths(self):
-        common.mkdir(NODEJS_DIR)
-        common.mkdir(HOME_DIR)
-        common.mkdir(LOG_DIR)
-
     def _set_community_mode(self):
-        premium_edition = config[MANAGER][PREMIUM_EDITION]
-        community_mode = '' if premium_edition else '-mode community'
+        community_mode = '' if is_premium_installed else '-mode community'
 
         # This is used in the stage systemd service file
         config[STAGE]['community_mode'] = community_mode
-
-    def _install(self):
-        try:
-            stage_tar = files.get_local_source_path(sources.stage)
-        except FileError:
-            logger.info('Stage package not found in manager resources package')
-            logger.notice('Stage will not be installed.')
-            config[STAGE]['skip_installation'] = True
-            return
-
-        self._create_paths()
-
-        logger.info('Extracting Stage package...')
-        common.untar(stage_tar, HOME_DIR)
-
-        logger.info('Creating symlink to {0}...'.format(NODE_EXECUTABLE_PATH))
-        files.ln(
-            source=join(NODEJS_DIR, 'bin', 'node'),
-            target=NODE_EXECUTABLE_PATH,
-            params='-sf'
-        )
-
-        files.copy_notice(STAGE)
-        set_logrotate(STAGE)
-        self._create_user_and_set_permissions()
-        self._install_nodejs()
-        self._deploy_scripts()
-
-        self._add_snapshot_sudo_command()
-
-    def _create_user_and_set_permissions(self):
-        create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
-        # stage user is in the cfyuser group for replication
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
-        # For snapshot restore purposes
-        common.sudo(['usermod', '-aG', STAGE_GROUP, CLOUDIFY_USER])
-
-        logger.debug('Fixing permissions...')
-        common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
-        common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
-        common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, CONF_DIR)
-
-    def _install_nodejs(self):
-        logger.info('Installing NodeJS...')
-        nodejs = files.get_local_source_path(sources.nodejs)
-        common.untar(nodejs, NODEJS_DIR)
-
-    def _deploy_script(self, script_name, description, sudo_as=STAGE_USER):
-        sudoers.deploy_sudo_command_script(
-            script_name,
-            description,
-            component=STAGE,
-            allow_as=sudo_as,
-        )
-        common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
-
-    def _deploy_scripts(self):
-        config[STAGE][HOME_DIR_KEY] = HOME_DIR
-        self._deploy_script(
-            'restore-snapshot.py',
-            'Restore stage directories from a snapshot path'
-        )
 
     def _run_db_migrate(self):
         if config[CLUSTER_JOIN]:
             logger.debug('Joining cluster - not creating the stage db')
             return
         backend_dir = join(HOME_DIR, 'backend')
-        npm_path = join(NODEJS_DIR, 'bin', 'npm')
+        npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
                 'sudo', '-u', STAGE_USER, 'bash', '-c',
@@ -263,22 +174,13 @@ class Stage(BaseComponent):
             common.chmod('640', config_path)
 
     def _verify_stage_alive(self):
-        systemd.verify_alive(STAGE)
+        service.verify_alive(STAGE)
         wait_for_port(8088)
-
-    def _add_snapshot_sudo_command(self):
-        sudoers.allow_user_to_sudo_command(
-            full_command='/opt/nodejs/bin/node',
-            description='Allow snapshots to restore stage',
-            allow_as=STAGE_USER,
-        )
 
     def install(self):
         if config[STAGE]['skip_installation']:
             logger.info('Skipping Stage installation.')
             return
-        logger.notice('Installing Stage...')
-        self._install()
         logger.notice('Stage successfully installed!')
 
     def configure(self):
@@ -286,33 +188,22 @@ class Stage(BaseComponent):
         self._set_db_url()
         self._set_internal_manager_ip()
         self._set_community_mode()
-        config[STAGE][SERVICE_USER] = STAGE_USER
-        config[STAGE][SERVICE_GROUP] = STAGE_GROUP
-        systemd.configure(STAGE, user=STAGE_USER, group=STAGE_GROUP)
+        service.configure(STAGE, user=STAGE_USER, group=STAGE_GROUP)
         logger.notice('Stage successfully configured!')
 
     def remove(self):
         logger.notice('Removing Stage...')
-        files.remove_notice(STAGE)
-        remove_logrotate(STAGE)
-        systemd.remove(STAGE)
-        files.remove_files([
-            HOME_DIR,
-            NODEJS_DIR,
-            LOG_DIR,
-            NODE_EXECUTABLE_PATH,
-            STAGE_RESOURCES
-        ])
+        service.remove(STAGE, service_file=False)
         logger.notice('Stage successfully removed')
 
     def start(self):
         logger.notice('Starting Stage...')
         self._run_db_migrate()
-        systemd.restart(STAGE)
+        service.restart(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')
 
     def stop(self):
         logger.notice('Stopping Stage...')
-        systemd.stop(STAGE)
+        service.stop(STAGE)
         logger.notice('Stage successfully stopped')
