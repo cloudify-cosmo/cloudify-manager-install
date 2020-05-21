@@ -501,8 +501,6 @@ class RabbitMQ(BaseComponent):
                     'networks': config['networks']
                 }
             }
-        if self._installing_manager():
-            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
 
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
@@ -511,6 +509,8 @@ class RabbitMQ(BaseComponent):
         self._possibly_add_hosts_entries()
         service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
         self._generate_rabbitmq_certs()
+        if self._installing_manager():
+            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         self._init_service()
         logger.notice('RabbitMQ successfully configured')
 
@@ -524,6 +524,9 @@ class RabbitMQ(BaseComponent):
     def start(self):
         logger.notice('Starting RabbitMQ...')
         self._set_config()
+        if self._installing_manager():
+            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
+
         self._start_rabbitmq()
         if not config[RABBITMQ]['join_cluster']:
             # Users will be synced with the cluster if we're joining one
