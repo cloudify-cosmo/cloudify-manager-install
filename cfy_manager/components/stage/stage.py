@@ -34,7 +34,6 @@ from ...utils import (
     certificates,
     common,
     files,
-    sudoers,
     service
 )
 from ...utils.network import wait_for_port

@@ -158,7 +158,7 @@ class PostgresqlServer(BaseComponent):
         initdb = 'su - postgres -c {0}'.format(cmd)
         try:
             common.sudo(initdb)
-        except Exception as err:
+        except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
 
         logger.debug('Installing PostgreSQL Server service...')
