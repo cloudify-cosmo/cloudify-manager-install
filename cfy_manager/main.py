@@ -689,20 +689,22 @@ def sanity_check(verbose=False, private_ip=None):
 
 def _get_packages():
     """Yum packages to install/uninstall, based on the current config"""
+    premium = config[MANAGER][PREMIUM_EDITION] == 'premium'
     packages = []
     if is_installed(MANAGER_SERVICE):
         packages += sources.manager
-        if config[MANAGER][PREMIUM_EDITION] == 'premium':
-            packages += sources.manager_premium
+        if premium:
+            packages += sources.manager_cluster + sources.manager_premium
 
-    if is_all_in_one_manager():
-        packages += sources.db + sources.queue
-    elif is_manager_service_only_installed():
-        packages += sources.manager_cluster
-    elif is_installed(DATABASE_SERVICE):
-        packages += sources.db + sources.db_cluster
-    elif is_installed(QUEUE_SERVICE):
-        packages += sources.queue + sources.queue_cluster
+    if is_installed(DATABASE_SERVICE):
+        packages += sources.db
+        if premium:
+            packages += sources.db_cluster
+
+    if is_installed(QUEUE_SERVICE):
+        packages += sources.queue
+        if premium:
+            packages += sources.queue_cluster
 
     return packages
 
