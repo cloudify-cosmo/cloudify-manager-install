@@ -19,8 +19,9 @@ from __future__ import print_function
 import os
 import sys
 import json
+import time
 import logging
-from time import time
+import subprocess
 from traceback import format_exception
 
 import argh
@@ -77,8 +78,7 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, sudo, can_lookup_hostname, allows_json_format, is_installed,
-    is_manager_service_only_installed, is_all_in_one_manager
+    run, sudo, can_lookup_hostname, allows_json_format, is_installed
 )
 from .utils.install import yum_install, yum_remove
 from .utils.files import (
@@ -91,7 +91,7 @@ from .utils.node import get_node_id
 
 logger = get_logger('Main')
 
-START_TIME = time()
+START_TIME = time.time()
 TEST_CA_ROOT_PATH = os.path.expanduser('~/.cloudify-test-ca')
 TEST_CA_CERT_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.crt')
 TEST_CA_KEY_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.key')
@@ -434,7 +434,7 @@ def get_id(json_format=None):
 
 
 def _print_time():
-    running_time = time() - START_TIME
+    running_time = time.time() - START_TIME
     m, s = divmod(running_time, 60)
     logger.notice(
         'Finished in {0} minutes and {1} seconds'.format(int(m), int(s))
@@ -892,6 +892,31 @@ def restart(include_components, verbose=False, force=False):
     _print_time()
 
 
+def _is_unit_finished(unit_name):
+    unit_details = subprocess.check_output([
+        '/bin/systemctl', 'show', unit_name]).splitlines()
+    for line in unit_details:
+        name, _, value = line.strip().partition(b'=')
+        if name == b'ExecMainExitTimestampMonotonic':
+            return int(value) > 0
+
+
+@argh.decorators.named('wait-for-starter')
+def wait_for_starter(verbose=False, timeout=180):
+    _prepare_execution(verbose, config_write_required=False)
+    deadline = time.time() + timeout
+    journalctl = subprocess.Popen([
+        '/bin/journalctl', '-fu', 'cloudify-starter.service'])
+    while time.time() < deadline:
+        if _is_unit_finished('cloudify-starter.service'):
+            break
+        else:
+            time.sleep(1)
+    else:
+        raise BootstrapError('Timed out waiting for the starter service')
+    journalctl.kill()
+
+
 def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
@@ -912,6 +937,7 @@ def main():
         create_external_certs,
         generate_test_cert,
         reset_admin_password,
+        wait_for_starter
     ])
 
     parser.add_commands([
