@@ -159,9 +159,7 @@ class PostgresqlServer(BaseComponent):
         try:
             common.sudo(initdb)
         except Exception as err:
-            logger.info('Print The error {0}'.format(err))
             logger.debug('PostreSQL Server DATA folder already initialized...')
-            pass
 
         logger.debug('Installing PostgreSQL Server service...')
         service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
