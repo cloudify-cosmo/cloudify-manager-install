@@ -26,20 +26,6 @@ from ruamel.yaml.comments import CommentedMap
 
 from .exceptions import InputError, BootstrapError
 from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH, CLOUDIFY_USER
-from cfy_manager.components.components_constants import (
-    ENABLE_REMOTE_CONNECTIONS,
-    SERVICES_TO_INSTALL,
-    SSL_ENABLED,
-)
-from cfy_manager.components.service_components import (
-    DATABASE_SERVICE,
-    MANAGER_SERVICE,
-)
-from cfy_manager.components.service_names import (
-    POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER,
-)
-
 yaml = YAML()
 
 
@@ -127,25 +113,9 @@ class Config(CommentedMap):
                 )
             )
 
-    def _apply_forced_settings(self):
-        if (
-            (
-                MANAGER_SERVICE not in self[SERVICES_TO_INSTALL]
-                and DATABASE_SERVICE in self[SERVICES_TO_INSTALL]
-            )
-            or (
-                DATABASE_SERVICE not in self[SERVICES_TO_INSTALL]
-                and MANAGER_SERVICE in self[SERVICES_TO_INSTALL]
-            )
-        ):
-            self[POSTGRESQL_SERVER][SSL_ENABLED] = True
-            self[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] = True
-            self[POSTGRESQL_CLIENT][SSL_ENABLED] = True
-
     def load_config(self):
         self._load_defaults_config()
         self._load_user_config()
-        self._apply_forced_settings()
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault(self.TEMP_PATHS, [])

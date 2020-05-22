@@ -28,10 +28,6 @@ logger = get_logger(AMQP_POSTGRES)
 
 
 class AmqpPostgres(BaseComponent):
-
-    def __init__(self, skip_installation):
-        super(AmqpPostgres, self).__init__(skip_installation)
-
     def _setup_log_dir(self):
         # Can't use AMQP_POSTGRES here because Jinja doesn't play nice
         # with `-`s

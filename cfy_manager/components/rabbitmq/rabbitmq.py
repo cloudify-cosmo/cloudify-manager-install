@@ -25,9 +25,8 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     HOSTNAME
 )
-from ..service_components import MANAGER_SERVICE
 from ..base_component import BaseComponent
-from ..service_names import RABBITMQ, MANAGER
+from ..service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
 from ...utils import certificates, common
 from ...config import config

@@ -56,9 +56,6 @@ logger = get_logger(POSTGRESQL_CLIENT)
 
 
 class PostgresqlClient(BaseComponent):
-    def __init__(self, skip_installation):
-        super(PostgresqlClient, self).__init__(skip_installation)
-
     def _install(self):
         files.copy_notice(POSTGRESQL_CLIENT)
 

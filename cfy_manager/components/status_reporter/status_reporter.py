@@ -16,14 +16,13 @@
 import uuid
 
 from ..base_component import BaseComponent
-from ..service_components import MANAGER_SERVICE
+from ..service_names import MANAGER_SERVICE
 
 from ...config import config
 from ...logger import get_logger
 from ...utils import service
 from ...utils.common import is_installed
-from ...utils.install import is_package_available, is_premium_installed
-
+from ...utils.install import is_premium_installed
 from ...utils.node import update_status_reporter_config
 from ...utils.files import (remove_files,
                             read_yaml_file)
@@ -41,12 +40,8 @@ logger = get_logger(STATUS_REPORTER)
 
 
 class StatusReporter(BaseComponent):
-    def __init__(self, skip_installation, reporter_type, user_name):
-        skip_installation = (
-            skip_installation or
-            not is_package_available('cloudify-status-reporter')
-        )
-        super(StatusReporter, self).__init__(skip_installation)
+    def __init__(self, reporter_type, user_name):
+        super(StatusReporter, self).__init__()
         self._user_name = user_name
 
         # The reporter type correlates to the name of the reporter script

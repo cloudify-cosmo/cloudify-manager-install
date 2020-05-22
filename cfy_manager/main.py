@@ -26,13 +26,11 @@ from traceback import format_exception
 
 import argh
 
+from . import components
 from .components import (
-    ComponentsFactory,
-    SERVICE_COMPONENTS,
     MANAGER_SERVICE,
     QUEUE_SERVICE,
     DATABASE_SERVICE,
-    SERVICE_INSTALLATION_ORDER,
     sources
 )
 from .components.components_constants import (
@@ -52,6 +50,7 @@ from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
 from .components.service_names import MANAGER, POSTGRESQL_SERVER
 from .components.validations import validate, validate_dependencies
+from .components.service_names import SANITY
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
@@ -60,7 +59,7 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import BootstrapError, FileError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -80,9 +79,10 @@ from .utils.certificates import (
 from .utils.common import (
     run, sudo, can_lookup_hostname, allows_json_format, is_installed
 )
-from .utils.install import yum_install, yum_remove
+from .utils.install import yum_install, yum_remove, is_package_available
 from .utils.files import (
     replace_in_file,
+    get_local_source_path,
     remove as _remove,
     remove_temp_files,
     touch
@@ -154,8 +154,6 @@ DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
 )
 
-components = []
-
 
 @argh.decorators.arg('-s', '--sans', help=TEST_CA_GENERATE_SAN_HELP_TEXT,
                      required=True)
@@ -225,7 +223,9 @@ def brokers_add(**kwargs):
     _validate_components_prepared('brokers_add')
     join_node = kwargs['join_node']
 
-    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
     nodes = rabbitmq.list_rabbit_nodes()
@@ -262,7 +262,9 @@ def brokers_remove(**kwargs):
     Use the cfy command afterwards to unregister it from the manager cluster.
     """
     _validate_components_prepared('brokers_remove')
-    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
     remove_node = rabbitmq.add_missing_nodename_prefix(kwargs['remove_node'])
@@ -301,7 +303,9 @@ def brokers_list(**kwargs):
     Use the cfy command to list brokers registered with the manager cluster.
     """
     _validate_components_prepared('brokers_list')
-    rabbitmq = _prepare_component_management('rabbitmq', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
     brokers = rabbitmq.list_rabbit_nodes()
@@ -336,7 +340,9 @@ def complain_about_dead_broker_cluster(nodes):
 def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     _validate_components_prepared('db_cluster_list')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
 
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         state, db_nodes = db.get_cluster_status()
@@ -364,7 +370,9 @@ def db_node_list(**kwargs):
 def db_node_add(**kwargs):
     """Add a DB cluster node."""
     _validate_components_prepared('db_node_add')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.add_cluster_node(kwargs['address'], kwargs['node_id'],
                             kwargs.get('hostname'))
@@ -381,7 +389,9 @@ def db_node_add(**kwargs):
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
                 kwargs.get('node_id') is None):
@@ -401,7 +411,9 @@ def db_node_remove(**kwargs):
 def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
     _validate_components_prepared('db_node_reinit')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.reinit_cluster_node(kwargs['address'])
     else:
@@ -416,7 +428,9 @@ def db_node_reinit(**kwargs):
 def db_node_set_master(**kwargs):
     """Switch the current DB master node."""
     _validate_components_prepared('db_node_set_master')
-    db = _prepare_component_management('postgresql_server', kwargs['verbose'])
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config()
+    db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.set_master(kwargs['address'])
     else:
@@ -476,21 +490,13 @@ def _populate_and_validate_config_values(private_ip, public_ip,
             )
 
 
-def _prepare_component_management(component, verbose):
-    setup_console_logger(verbose=verbose)
-    config.load_config()
-    return ComponentsFactory.create_component(component,
-                                              skip_installation=True)
-
-
 def _prepare_execution(verbose=False,
                        private_ip=None,
                        public_ip=None,
                        admin_password=None,
                        clean_db=False,
                        config_write_required=False,
-                       only_install=False,
-                       include_components=None):
+                       only_install=False):
     setup_console_logger(verbose)
 
     config.load_config()
@@ -499,7 +505,6 @@ def _prepare_execution(verbose=False,
         # but we do populate things that are not relevant.
         _populate_and_validate_config_values(private_ip, public_ip,
                                              admin_password, clean_db)
-    _create_component_objects(include_components)
 
 
 def _print_finish_message():
@@ -602,34 +607,73 @@ def _validate_components_prepared(cmd):
         )
 
 
-def _get_components_list(include_components):
+def _get_components(include_components=None):
+    """Get the component objects based on the config.
+
+    This looks at the config, and returns only the component objects
+    that are supposed to be installed(/configured/started).
+
+    All the "should we install this" config checks are done here.
     """
-    Match all available services to install with all desired ones and
-    return a unique list ordered by service installation order
-    """
-    # Order the services to install by service installation order
-    ordered_services = sorted(
-        config[SERVICES_TO_INSTALL],
-        key=SERVICE_INSTALLATION_ORDER.index
-    )
-    # Can't easily use list comprehension here because this is a list of lists
-    ordered_components = []
-    for service in ordered_services:
-        for component in SERVICE_COMPONENTS[service]:
-            if not include_components or component in include_components:
-                ordered_components.append(component)
-    return ordered_components
+    _components = []
+
+    if is_installed(DATABASE_SERVICE):
+        _components += [components.PostgresqlServer()]
+        if (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
+                config[POSTGRESQL_SERVER]['cluster']['nodes']):
+            _components += [components.PostgresqlStatusReporter()]
+
+    if is_installed(QUEUE_SERVICE):
+        _components += [components.RabbitMQ()]
+        if config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]:
+            _components += [components.RabbitmqStatusReporter()]
+
+    if is_installed(MANAGER_SERVICE):
+        _components += [
+            components.Manager(),
+            components.PostgresqlClient(),
+            components.RestService(),
+            components.ManagerIpSetter(),
+            components.Nginx(),
+            components.Cli(),
+            components.AmqpPostgres(),
+        ]
+        if is_package_available('cloudify-status-reporter'):
+            _components += [components.ManagerStatusReporter()]
+        try:
+            get_local_source_path(sources.composer)
+        except FileError:
+            logger.notice('Composer will not be installed: package not found')
+        else:
+            _components += [components.Composer()]
+        _components += [
+            components.MgmtWorker(),
+            components.UsageCollector(),
+        ]
+        if not config[SANITY]['skip_sanity']:
+            _components += [components.Sanity()]
+
+    if include_components:
+        _components = _filter_components(_components, include_components)
+    return _components
 
 
-def _create_component_objects(include_components):
-    components_to_install = _get_components_list(include_components)
-    for component_name in components_to_install:
-        component_config = config.get(component_name, {})
-        skip_installation = component_config.get('skip_installation', False)
-        components.append(
-            ComponentsFactory.create_component(component_name,
-                                               skip_installation)
-        )
+def _filter_components(components, include_components):
+    """Filter the components list based on the includes given by the user.
+
+    This allows `cfy_manager start --include-components amqp_postgres`,
+    which should only then start amqppostgres and nothing else.
+
+    This translates "amqp_postgres" -> "amqppostgres", and then filters
+    the components by class name.
+    """
+    include_components = {
+        name.lower().replace('_', '') for name in include_components
+    }
+    return [
+        component for component in components
+        if component.__class__.__name__.lower() in include_components
+    ]
 
 
 def _remove_rabbitmq_service_unit():
@@ -675,6 +719,7 @@ def validate_command(verbose=False,
         clean_db,
         config_write_required=False
     )
+    components = _get_components()
     validate(components=components)
     validate_dependencies(components=components)
 
@@ -683,7 +728,7 @@ def validate_command(verbose=False,
 def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _prepare_execution(verbose=verbose, private_ip=private_ip)
-    sanity = ComponentsFactory.create_component('sanity')
+    sanity = components.Sanity()
     sanity.run_sanity_check()
 
 
@@ -729,6 +774,7 @@ def install(verbose=False,
         only_install=only_install,
     )
     logger.notice('Installing desired components...')
+    components = _get_components()
     validate(components=components, only_install=only_install)
     validate_dependencies(components=components)
     set_globals(only_install=only_install)
@@ -736,18 +782,13 @@ def install(verbose=False,
     yum_install(_get_packages())
 
     for component in components:
-        if not component.skip_installation:
-            component.install()
+        component.install()
 
     if not only_install:
-        # check .skip_installation at every step because a component's
-        # .install method could have changed it to false
         for component in components:
-            if not component.skip_installation:
-                component.configure()
+            component.configure()
         for component in components:
-            if not component.skip_installation:
-                component.start()
+            component.start()
 
     if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
             QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
@@ -777,17 +818,16 @@ def configure(verbose=False,
 
     _validate_components_prepared('configure')
     logger.notice('Configuring desired components...')
+    components = _get_components()
     validate(components=components)
     set_globals()
 
     if clean_db:
         for component in components:
-            if not component.skip_installation:
-                component.stop()
+            component.stop()
 
     for component in components:
-        if not component.skip_installation:
-            component.configure()
+        component.configure()
 
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
@@ -805,12 +845,11 @@ def remove(verbose=False, force=False):
     logger.notice('Removing Cloudify Manager...')
 
     should_stop = _are_components_configured()
-
+    components = _get_components()
     for component in reversed(components):
-        if not component.skip_installation:
-            if should_stop:
-                component.stop()
-            component.remove()
+        if should_stop:
+            component.stop()
+        component.remove()
 
     yum_remove(_get_packages())
 
@@ -822,18 +861,6 @@ def remove(verbose=False, force=False):
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
-
-
-def _start_components():
-    for component in components:
-        if not component.skip_installation:
-            component.start()
-
-
-def _stop_components():
-    for component in components:
-        if not component.skip_installation:
-            component.stop()
 
 
 @argh.arg('include_components', nargs='*')
@@ -852,13 +879,13 @@ def start(include_components,
         public_ip,
         admin_password,
         clean_db,
-        include_components=include_components,
         config_write_required=True
     )
     _validate_components_prepared('start')
     set_globals()
     logger.notice('Starting Cloudify Manager services...')
-    _start_components()
+    for component in _get_components(include_components):
+        component.start()
     logger.notice('Cloudify Manager services successfully started!')
     _print_time()
 
@@ -866,14 +893,15 @@ def start(include_components,
 @argh.arg('include_components', nargs='*')
 def stop(include_components, verbose=False, force=False):
     """ Stop Cloudify Manager services """
-    _prepare_execution(verbose, include_components=include_components)
+    _prepare_execution(verbose)
     _validate_components_prepared('stop')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
 
     logger.notice('Stopping Cloudify Manager services...')
-    _stop_components()
+    for component in _get_components(include_components):
+        component.stop()
     logger.notice('Cloudify Manager services successfully stopped!')
     _print_time()
 
@@ -882,13 +910,16 @@ def stop(include_components, verbose=False, force=False):
 def restart(include_components, verbose=False, force=False):
     """ Restart Cloudify Manager services """
 
-    _prepare_execution(verbose, include_components=include_components)
+    _prepare_execution(verbose)
     _validate_components_prepared('restart')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
-    _stop_components()
-    _start_components()
+    components = _get_components(include_components)
+    for component in components:
+        component.stop()
+    for component in components:
+        component.start()
     _print_time()
 
 

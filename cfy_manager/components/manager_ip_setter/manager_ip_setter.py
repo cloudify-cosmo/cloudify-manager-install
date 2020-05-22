@@ -27,9 +27,6 @@ logger = get_logger(MANAGER_IP_SETTER)
 
 
 class ManagerIpSetter(BaseComponent):
-    def __init__(self, skip_installation):
-        super(ManagerIpSetter, self).__init__(skip_installation)
-
     def configure(self):
         logger.notice('Configuring Manager IP Setter...')
         if config[MANAGER]['set_manager_ip_on_boot']:

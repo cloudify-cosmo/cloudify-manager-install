@@ -32,10 +32,4 @@ from .usage_collector import UsageCollector  # NOQA
 from .status_reporter import RabbitmqStatusReporter  # NOQA
 from .status_reporter import PostgresqlStatusReporter  # NOQA
 from .status_reporter import ManagerStatusReporter  # NOQA
-
-from .components_factory import ComponentsFactory  # NOQA
-from .service_components import SERVICE_COMPONENTS  # NOQA
-from .service_components import MANAGER_SERVICE  # NOQA
-from .service_components import QUEUE_SERVICE  # NOQA
-from .service_components import DATABASE_SERVICE  # NOQA
-from .service_components import SERVICE_INSTALLATION_ORDER  # NOQA
+from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE  # NOQA

@@ -37,14 +37,12 @@ from .components_constants import (
     POSTGRES_PASSWORD,
     SERVER_PASSWORD
 )
-from .service_components import (
-    DATABASE_SERVICE,
-    MANAGER_SERVICE
-)
 from .service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER
+    POSTGRESQL_SERVER,
+    DATABASE_SERVICE,
+    MANAGER_SERVICE
 )
 
 from .._compat import PY2

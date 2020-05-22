@@ -31,7 +31,6 @@ from ..base_component import BaseComponent
 from ..service_names import COMPOSER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import FileError
 from ...constants import BASE_LOG_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import (
     common,
@@ -67,16 +66,7 @@ class Composer(BaseComponent):
         common.mkdir(LOG_DIR)
 
     def _install(self):
-        try:
-            composer_tar = files.get_local_source_path(sources.composer)
-        except FileError:
-            logger.info(
-                'Composer package not found in manager resources package')
-            logger.notice('Composer will not be installed.')
-            config[COMPOSER]['skip_installation'] = True
-            self.skip_installation = True
-            return
-
+        composer_tar = files.get_local_source_path(sources.composer)
         self._create_paths()
 
         logger.info('Installing Cloudify Composer...')
@@ -214,9 +204,6 @@ class Composer(BaseComponent):
         )
 
     def install(self):
-        if config[COMPOSER]['skip_installation']:
-            logger.notice('Skipping Cloudify Composer installation.')
-            return
         logger.notice('Installing Cloudify Composer...')
         self._install()
         logger.notice('Cloudify Composer successfully installed')

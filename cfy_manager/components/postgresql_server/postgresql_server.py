@@ -47,10 +47,11 @@ from ..components_constants import (
     SSL_ENABLED,
 )
 from ..base_component import BaseComponent
-from ..service_components import MANAGER_SERVICE, DATABASE_SERVICE
 from ..service_names import (
     POSTGRESQL_SERVER,
-    MANAGER
+    MANAGER,
+    MANAGER_SERVICE,
+    DATABASE_SERVICE
 )
 from ... import constants
 from ...config import config
@@ -147,9 +148,6 @@ class PostgresqlServer(BaseComponent):
     HEALTHY = 0
     DEGRADED = 1
     DOWN = 2
-
-    def __init__(self, skip_installation):
-        super(PostgresqlServer, self).__init__(skip_installation)
 
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')

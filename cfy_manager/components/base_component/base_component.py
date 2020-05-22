@@ -23,10 +23,8 @@ from ...logger import get_logger
 
 
 class BaseComponent(object):
-
-    def __init__(self, skip_installation=False):
+    def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
-        self.skip_installation = skip_installation
 
     def install(self):
         pass

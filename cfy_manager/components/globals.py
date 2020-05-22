@@ -23,8 +23,10 @@ from .service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     RABBITMQ,
+    POSTGRESQL_SERVER
 )
 
+from . import QUEUE_SERVICE, DATABASE_SERVICE, MANAGER_SERVICE
 from .components_constants import (
     PRIVATE_IP,
     SECURITY,
@@ -33,8 +35,9 @@ from .components_constants import (
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
     HOSTNAME,
+    ENABLE_REMOTE_CONNECTIONS
 )
-from .service_components import QUEUE_SERVICE
+
 
 BROKER_IP = 'broker_ip'
 logger = get_logger('Globals')
@@ -101,6 +104,22 @@ def _set_hostname():
         config[MANAGER][HOSTNAME] = socket.gethostname()
 
 
+def _apply_forced_settings():
+    if (
+        (
+            MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]
+            and DATABASE_SERVICE in config[SERVICES_TO_INSTALL]
+        )
+        or (
+            DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]
+            and MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
+        )
+    ):
+        config[POSTGRESQL_SERVER][SSL_ENABLED] = True
+        config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS] = True
+        config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
+
+
 def set_globals(only_install=False):
     if only_install:
         return
@@ -109,3 +128,4 @@ def set_globals(only_install=False):
     _set_constant_config()
     _set_hostname()
     _possibly_override_rabbit_local_management()
+    _apply_forced_settings()

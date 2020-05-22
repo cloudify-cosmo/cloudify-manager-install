@@ -16,23 +16,15 @@
 from ...config import config
 from ...constants import STATUS_REPORTER_CONFIG_KEY
 from ...utils.node import update_status_reporter_config
-
-from ..service_components import QUEUE_SERVICE
-from ..components_constants import SERVICES_TO_INSTALL, BROKER_STATUS_REPORTER
+from ..components_constants import BROKER_STATUS_REPORTER
 
 from .status_reporter import StatusReporter
 
 
 class RabbitmqStatusReporter(StatusReporter):
-    @staticmethod
-    def _should_install():
-        return config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]
-
-    def __init__(self, skip_installation):
-        skip_installation = skip_installation or not self._should_install()
-        super(RabbitmqStatusReporter, self).__init__(skip_installation,
-                                                     'rabbitmq_reporter',
-                                                     BROKER_STATUS_REPORTER)
+    def __init__(self):
+        super(RabbitmqStatusReporter, self).__init__(
+            'rabbitmq_reporter', BROKER_STATUS_REPORTER)
 
     def configure(self):
         super(RabbitmqStatusReporter, self).configure()

@@ -17,8 +17,10 @@ from .common import sudo
 from ..config import config
 from ..constants import POSTGRESQL_CLIENT_CERT_PATH, POSTGRESQL_CLIENT_KEY_PATH
 
-from cfy_manager.components.service_names import POSTGRESQL_CLIENT
-from cfy_manager.components.service_components import DATABASE_SERVICE
+from cfy_manager.components.service_names import (
+    POSTGRESQL_CLIENT,
+    DATABASE_SERVICE
+)
 from cfy_manager.components.components_constants import (
     SSL_ENABLED,
     SERVICES_TO_INSTALL,

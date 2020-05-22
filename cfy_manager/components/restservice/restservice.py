@@ -56,13 +56,12 @@ from ..components_constants import (
     HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..service_components import DATABASE_SERVICE, MANAGER_SERVICE
-
-
 from ..service_names import (
     MANAGER,
     RESTSERVICE,
-    POSTGRESQL_CLIENT
+    POSTGRESQL_CLIENT,
+    DATABASE_SERVICE,
+    MANAGER_SERVICE
 )
 from ... import constants
 from ...config import config
