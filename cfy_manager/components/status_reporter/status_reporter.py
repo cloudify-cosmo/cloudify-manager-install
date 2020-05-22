@@ -16,7 +16,7 @@
 import uuid
 
 from ..base_component import BaseComponent
-from ..service_components import MANAGER_SERVICE
+from ..service_names import MANAGER_SERVICE
 
 from ...config import config
 from ...logger import get_logger
