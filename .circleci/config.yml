@@ -1,4 +1,17 @@
 version: 2.1
+
+commands:
+  wait_for_container:
+    parameters:
+      container_name:
+        type: string
+        description: envvar containing the cloudify container name to wait for
+    steps:
+      - run:
+          name: Waiting for << parameters.container_name >> to start
+          command: |
+            docker exec ${<< parameters.container_name >>} cfy_manager wait-for-starter
+
 jobs:
   fetch_rpms:
     docker:
@@ -100,36 +113,30 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run:
-          name: Build base container
+          name: Build manager container
           command: |
             set -eux
-            docker build --tag ${IMAGE_NAME} packaging/docker
+            ls -la /tmp/workspace
+            pushd packaging/docker
+              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+              docker build --tag ${IMAGE_NAME} .
+            popd
       - run:
-          name: Run base container
+          name: Run manager container
           command: |
             set -eux
-            docker run --name ${CONTAINER_NAME} -d -v /tmp/workspace:/tmp/workspace:ro -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
-      - run:
-          name: Prepare base container
-          command: |
-            set -eux
-            docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
-      - run:
-          name: Install the created RPM
-          command: |
-            set -eux
-            docker exec -t ${CONTAINER_NAME} /bin/bash -c "yum install -y /tmp/workspace/x86_64/*.rpm"
-      - run:
-          name: Install Cloudify Manager
-          command: |
-            set -eux
-            cd packaging/docker
-            chmod +x install_manager.sh
-            ./install_manager.sh
+            docker run --name ${CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${IMAGE_NAME}
+      - wait_for_container:
+          container_name: CONTAINER_NAME
       - run:
           name: Check Manager Status
           command: |
             .circleci/cluster/validate_status.sh ${CONTAINER_NAME}
+      - run:
+          name: Run the sanity check
+          command: |
+            docker exec ${CONTAINER_NAME} touch /opt/manager/sanity_mode
+            docker exec ${CONTAINER_NAME} cfy_manager sanity-check
 
   install_cluster:
     machine: true
@@ -142,12 +149,14 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run:
-          name: Build base container
+          name: Build manager container
           command: |
             set -eux
-            docker build --tag ${IMAGE_NAME} packaging/docker
-            cp -fr /tmp/workspace/x86_64/*.rpm .circleci/cluster
-            docker build --tag ${CLUSTER_IMAGE} .circleci/cluster
+            ls -la /tmp/workspace
+            pushd packaging/docker
+              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+              docker build --tag ${CLUSTER_IMAGE} .
+            popd
       - run:
           name: Prepare name envvars
           command: |
@@ -158,69 +167,115 @@ jobs:
             echo "export DB3_NAME=${CONTAINER_NAME}_db3" >> $BASH_ENV
             echo "export QUEUE1_NAME=${CONTAINER_NAME}_queue_1" >> $BASH_ENV
             echo "export QUEUE2_NAME=${CONTAINER_NAME}_queue_2" >> $BASH_ENV
+            echo "export MANAGER1_IP=172.22.0.3" >> $BASH_ENV
+            echo "export MANAGER2_IP=172.22.0.4" >> $BASH_ENV
+            echo "export DB1_IP=172.22.0.5" >> $BASH_ENV
+            echo "export DB2_IP=172.22.0.6" >> $BASH_ENV
+            echo "export DB3_IP=172.22.0.7" >> $BASH_ENV
+            echo "export QUEUE1_IP=172.22.0.8" >> $BASH_ENV
+            echo "export QUEUE2_IP=172.22.0.9" >> $BASH_ENV
       - run:
-          name: Run base container
-          command: |
-            set -eux
-            function run_container {
-              docker run --name $1 -d -v /tmp/workspace:/tmp/workspace:ro -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${CLUSTER_IMAGE}
-            }
-            run_container ${MANAGER1_NAME}
-            run_container ${MANAGER2_NAME}
-            run_container ${QUEUE1_NAME}
-            run_container ${QUEUE2_NAME}
-            run_container ${DB1_NAME}
-            run_container ${DB2_NAME}
-            run_container ${DB3_NAME}
-            docker exec -d ${MANAGER1_NAME} sh -c "systemctl start sshd"
-            docker exec -d ${MANAGER2_NAME} sh -c "systemctl start sshd"
-      - run:
-          name: Prepare ip envvars
-          command: |
-            IP_FORMAT='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
-            QUEUE1_IP=$(docker inspect --format="$IP_FORMAT" ${QUEUE1_NAME})
-            QUEUE2_IP=$(docker inspect --format="$IP_FORMAT" ${QUEUE2_NAME})
-            DB1_IP=$(docker inspect --format="$IP_FORMAT" ${DB1_NAME})
-            DB2_IP=$(docker inspect --format="$IP_FORMAT" ${DB2_NAME})
-            DB3_IP=$(docker inspect --format="$IP_FORMAT" ${DB3_NAME})
-            MANAGER1_IP=$(docker inspect --format="$IP_FORMAT" ${MANAGER1_NAME})
-            MANAGER2_IP=$(docker inspect --format="$IP_FORMAT" ${MANAGER2_NAME})
-
-            echo "export MANAGER1_IP=${MANAGER1_IP}" >> $BASH_ENV
-            echo "export MANAGER2_IP=${MANAGER2_IP}" >> $BASH_ENV
-            echo "export DB1_IP=${DB1_IP}" >> $BASH_ENV
-            echo "export DB2_IP=${DB2_IP}" >> $BASH_ENV
-            echo "export DB3_IP=${DB3_IP}" >> $BASH_ENV
-            echo "export QUEUE1_IP=${QUEUE1_IP}" >> $BASH_ENV
-            echo "export QUEUE2_IP=${QUEUE2_IP}" >> $BASH_ENV
+          name: Create a docker network
+          command: docker network create --subnet=172.22.0.0/24 net1
       - run:
           name: generate certs
           command: /bin/bash .circleci/cluster/create_certs.sh
       - run:
-          name: Install the queue containers
+          name: Install queue1
           command: |
             set -eux
             sed -e "s/CONTAINER_IP/${QUEUE1_IP}/g" \
               -e "s/QUEUE2_IP/${QUEUE2_IP}/" \
               .circleci/cluster/queue1_config.yaml > queue1_config.yaml
+
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${QUEUE1_NAME} \
+              --network net1 --ip ${QUEUE1_IP} \
+              -v $(pwd)/queue1_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/queue1_key.pem:/etc/cloudify/queue_key.pem \
+              -v $(pwd)/queue1_cert.pem:/etc/cloudify/queue_cert.pem \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: QUEUE1_NAME
+      - run:
+          name: Install queue2
+          command: |
             sed -e "s/CONTAINER_IP/${QUEUE2_IP}/g" \
               -e "s/QUEUE1_IP/${QUEUE1_IP}/" \
               .circleci/cluster/queue2_config.yaml > queue2_config.yaml
-
-            docker cp ca.crt ${QUEUE1_NAME}:/etc/cloudify/ca.pem
-            docker cp queue1_config.yaml ${QUEUE1_NAME}:/etc/cloudify/config.yaml
-            docker cp queue1_key.pem ${QUEUE1_NAME}:/etc/cloudify/queue_key.pem
-            docker cp queue1_cert.pem ${QUEUE1_NAME}:/etc/cloudify/queue_cert.pem
-            docker exec ${QUEUE1_NAME} cfy_manager install
-
-            docker cp ca.crt ${QUEUE2_NAME}:/etc/cloudify/ca.pem
-            docker cp queue2_config.yaml ${QUEUE2_NAME}:/etc/cloudify/config.yaml
-            docker cp queue2_key.pem ${QUEUE2_NAME}:/etc/cloudify/queue_key.pem
-            docker cp queue2_cert.pem ${QUEUE2_NAME}:/etc/cloudify/queue_cert.pem
-            docker exec ${QUEUE2_NAME} cfy_manager install
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${QUEUE2_NAME} \
+              --network net1 --ip ${QUEUE2_IP} \
+              -v $(pwd)/queue2_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/queue2_key.pem:/etc/cloudify/queue_key.pem \
+              -v $(pwd)/queue2_cert.pem:/etc/cloudify/queue_cert.pem \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: QUEUE2_NAME
       - run:
-          name: Install the DB containers
-          command: /bin/bash .circleci/cluster/install_db.sh
+          name: Install db1
+          command: |
+            sed -e "s/CONTAINER_IP/${DB1_IP}/g" \
+                  -e "s/DB1_IP/${DB1_IP}/g" \
+                  -e "s/DB2_IP/${DB2_IP}/g" \
+                  -e "s/DB3_IP/${DB3_IP}/g" \
+                  .circleci/cluster/db_config.yaml > db1_config.yaml
+
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${DB1_NAME} \
+              --network net1 --ip ${DB1_IP} \
+              -v $(pwd)/db1_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/db1_key.pem:/etc/cloudify/key.pem \
+              -v $(pwd)/db1_cert.pem:/etc/cloudify/cert.pem \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: DB1_NAME
+      - run:
+          name: Install db2
+          command: |
+            sed -e "s/CONTAINER_IP/${DB2_IP}/g" \
+                  -e "s/DB1_IP/${DB1_IP}/g" \
+                  -e "s/DB2_IP/${DB2_IP}/g" \
+                  -e "s/DB3_IP/${DB3_IP}/g" \
+                  .circleci/cluster/db_config.yaml > db2_config.yaml
+
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${DB2_NAME} \
+              --network net1 --ip ${DB2_IP} \
+              -v $(pwd)/db2_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/db2_key.pem:/etc/cloudify/key.pem \
+              -v $(pwd)/db2_cert.pem:/etc/cloudify/cert.pem \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: DB2_NAME
+      - run:
+          name: Install db3
+          command: |
+            sed -e "s/CONTAINER_IP/${DB3_IP}/g" \
+                  -e "s/DB1_IP/${DB1_IP}/g" \
+                  -e "s/DB2_IP/${DB2_IP}/g" \
+                  -e "s/DB3_IP/${DB3_IP}/g" \
+                  .circleci/cluster/db_config.yaml > db3_config.yaml
+
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${DB3_NAME} \
+              --network net1 --ip ${DB3_IP} \
+              -v $(pwd)/db3_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/db3_key.pem:/etc/cloudify/key.pem \
+              -v $(pwd)/db3_cert.pem:/etc/cloudify/cert.pem \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: DB3_NAME
       - run:
           name: Prepare node_id envvars for the status reporter
           command: |
@@ -236,9 +291,8 @@ jobs:
             echo "export DB2_NODE=${DB2_NODE}" >> $BASH_ENV
             echo "export DB3_NODE=${DB3_NODE}" >> $BASH_ENV
       - run:
-          name: Install the first manager container
+          name: Install manager1
           command: |
-            set -eux
             sed -e "s/CONTAINER_IP/${MANAGER1_IP}/g" \
               -e "s/QUEUE1_IP/${QUEUE1_IP}/g" \
               -e "s/QUEUE2_IP/${QUEUE2_IP}/g" \
@@ -251,21 +305,25 @@ jobs:
               -e "s/DB2_NODE/${DB2_NODE}/g" \
               -e "s/DB3_NODE/${DB3_NODE}/g" \
               .circleci/cluster/manager1_config.yaml > manager1_config.yaml
-            docker cp manager1_config.yaml ${CONTAINER_NAME}_1:/etc/cloudify/config.yaml
 
-            docker cp ca.crt ${MANAGER1_NAME}:/etc/cloudify/ca.pem
-            docker cp manager_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/cert.pem
-            docker cp manager_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/key.pem
-
-            docker cp external_cert_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_cert.pem
-            docker cp external_key_1.pem ${MANAGER1_NAME}:/etc/cloudify/external_key.pem
-            docker cp db_client_1_key.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_key.pem
-            docker cp db_client_1_cert.pem ${MANAGER1_NAME}:/etc/cloudify/postgres_client_cert.pem
-            docker exec ${MANAGER1_NAME} cfy_manager install --verbose
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${MANAGER1_NAME} \
+              --network net1 --ip ${MANAGER1_IP} \
+              -v $(pwd)/manager1_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/manager_1_key.pem:/etc/cloudify/key.pem \
+              -v $(pwd)/manager_1_cert.pem:/etc/cloudify/cert.pem \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              -v $(pwd)/external_cert_1.pem:/etc/cloudify/external_cert.pem \
+              -v $(pwd)/external_key_1.pem:/etc/cloudify/external_key.pem \
+              -v $(pwd)/db_client_1_key.pem:/etc/cloudify/postgres_client_key.pem \
+              -v $(pwd)/db_client_1_cert.pem:/etc/cloudify/postgres_client_cert.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: MANAGER1_NAME
       - run:
-          name: install manager2
+          name: Install manager2
           command: |
-            set -eux
             sed -e "s/CONTAINER_IP/${MANAGER2_IP}/g" \
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
@@ -274,18 +332,23 @@ jobs:
               -e "s/DB2_NODE/${DB2_NODE}/g" \
               -e "s/DB3_NODE/${DB3_NODE}/g" \
               .circleci/cluster/manager2_config.yaml > manager2_config.yaml
-            docker cp manager2_config.yaml ${MANAGER2_NAME}:/etc/cloudify/config.yaml
-            docker cp ca.crt ${MANAGER2_NAME}:/etc/cloudify/ca.pem
-            # encrypting the key to also test key passwords in config.yaml
-            openssl rsa -aes256 -passout pass:secret_ca_password -in ca.key  -out ca.encrypted.key
-            docker cp ca.encrypted.key ${MANAGER2_NAME}:/etc/cloudify/ca_key.pem
 
-            docker cp external_cert_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_cert.pem
-            docker cp external_key_2.pem ${MANAGER2_NAME}:/etc/cloudify/external_key.pem
-            docker cp db_client_2_key.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_key.pem
-            docker cp db_client_2_cert.pem ${MANAGER2_NAME}:/etc/cloudify/postgres_client_cert.pem
-            set +x
-            docker exec ${MANAGER2_NAME} cfy_manager install --verbose
+            openssl rsa -aes256 -passout pass:secret_ca_password -in ca.key -out ca.encrypted.key
+
+            docker run \
+              -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
+              --name ${MANAGER2_NAME} \
+              --network net1 --ip ${MANAGER2_IP} \
+              -v $(pwd)/manager2_config.yaml:/etc/cloudify/config.yaml \
+              -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
+              -v $(pwd)/ca.encrypted.key:/etc/cloudify/ca_key.pem \
+              -v $(pwd)/external_cert_2.pem:/etc/cloudify/external_cert.pem \
+              -v $(pwd)/external_key_2.pem:/etc/cloudify/external_key.pem \
+              -v $(pwd)/db_client_2_key.pem:/etc/cloudify/postgres_client_key.pem \
+              -v $(pwd)/db_client_2_cert.pem:/etc/cloudify/postgres_client_cert.pem \
+              ${CLUSTER_IMAGE}
+      - wait_for_container:
+          container_name: MANAGER2_NAME
       - run:
           name: Configuring status reporters of brokers
           command: |

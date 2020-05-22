@@ -273,7 +273,7 @@ def _validate_user_has_sudo_permissions():
         )
 
 
-def _validate_dependencies(components):
+def validate_dependencies(components):
     logger.info('Validating dependencies...')
 
     components_str = ', '.join([component.__class__.__name__
@@ -704,9 +704,6 @@ def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         # Inputs always need to be validated, otherwise the install won't work
         _validate_inputs()
-
-    # These dependencies also need to always be validated
-    _validate_dependencies(components)
 
     if config[VALIDATIONS][SKIP_VALIDATIONS] or skip_validations:
         logger.info('Skipping validations')

@@ -29,17 +29,17 @@ SERVICE_COMPONENTS = {
         "rabbitmq_status_reporter",
     ],
     "manager_service": [
-        "manager_status_reporter",
         "manager",
         "postgresql_client",
         "restservice",
         "manager_ip_setter",
         "nginx",
+        "cli",
         "amqp_postgres",
         "stage",
         "composer",
         "mgmtworker",
-        "cli",
+        "manager_status_reporter",
         "usage_collector",
         "sanity"
     ]
