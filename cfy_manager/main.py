@@ -629,16 +629,17 @@ def _get_components(include_components=None):
             _components += [components.RabbitmqStatusReporter()]
 
     if is_installed(MANAGER_SERVICE):
-        if is_package_available('cloudify-status-reporter'):
-            _components += [components.ManagerStatusReporter()]
         _components += [
             components.Manager(),
             components.PostgresqlClient(),
             components.RestService(),
             components.ManagerIpSetter(),
             components.Nginx(),
+            components.Cli(),
             components.AmqpPostgres(),
         ]
+        if is_package_available('cloudify-status-reporter'):
+            _components += [components.ManagerStatusReporter()]
         try:
             get_local_source_path(sources.composer)
         except FileError:
@@ -646,9 +647,7 @@ def _get_components(include_components=None):
         else:
             _components += [components.Composer()]
         _components += [
-
             components.MgmtWorker(),
-            components.Cli(),
             components.UsageCollector(),
         ]
         if not config[SANITY]['skip_sanity']:
