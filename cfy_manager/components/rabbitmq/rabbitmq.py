@@ -13,9 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import json
 import time
+import base64
 import socket
+import hashlib
 from os.path import join
 
 import requests
@@ -445,37 +448,6 @@ class RabbitMQ(BaseComponent):
             sign_key=sign_key,
         )
 
-    def _set_rabbitmq_policy(self, name, expression, policy, priority):
-        policy = json.dumps(policy)
-        logger.debug('Setting policy {0} on queues {1} to {2}'.format(
-            name, expression, policy))
-        # shlex screws this up because we need to pass json and shlex
-        # strips quotes so we explicitly pass it as a list.
-        self._rabbitmqctl(['set_policy',
-                           name,
-                           expression,
-                           policy,
-                           '--apply-to',
-                           'queues',
-                           '--priority',
-                           str(priority)])
-
-    def _set_policies(self):
-        policies = config[RABBITMQ]['policies']
-        logger.info("Setting RabbitMQ Policies...")
-        for policy in policies:
-            self._set_rabbitmq_policy(**policy)
-        logger.info("RabbitMQ policies configured.")
-
-    def _start_rabbitmq(self):
-        # rabbitmq restart exits with 143 status code that is valid
-        # in this case.
-        service.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
-        if not config[RABBITMQ]['join_cluster']:
-            # Policies will be obtained from the cluster if we're joining
-            self._set_policies()
-
     def _validate_rabbitmq_running(self):
         logger.info('Making sure RabbitMQ is live...')
         service.verify_alive(RABBITMQ)
@@ -520,16 +492,54 @@ class RabbitMQ(BaseComponent):
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
 
+    def _rabbitmq_hash(self, password):
+        salt = os.urandom(4)
+        hashed = hashlib.sha256(salt + password.encode('utf-8')).digest()
+        return base64.b64encode(salt + hashed).decode('utf-8')
+
+    def _write_definitions_file(self):
+        write_to_file({
+            'vhosts': [{'name': '/'}],
+            'users': [{
+                'hashing_algorithm': 'rabbit_password_hashing_sha256',
+                'name': config[RABBITMQ]['username'],
+                'password_hash': self._rabbitmq_hash(
+                    config[RABBITMQ]['password']),
+                'tags': 'administrator'
+            }],
+            'permissions': [{
+                'user': config[RABBITMQ]['username'],
+                'vhost': '/',
+                'configure': '.*',
+                'write': '.*',
+                'read': '.*'
+            }],
+            'policies': [{
+                'name': policy['name'],
+                'vhost': policy.get('vhost', '/'),
+                'pattern': policy['expression'],
+                'priority': policy.get('priority', 1),
+                'apply-to': (policy.get('apply-to') or
+                             policy.get('apply_to') or 'queues'),
+                'definition': policy['policy']
+            } for policy in config[RABBITMQ]['policies']]
+        }, '/etc/cloudify/rabbitmq/definitions.json', json_dump=True)
+        common.chown(
+            'rabbitmq', 'rabbitmq', '/etc/cloudify/rabbitmq/definitions.json')
+
     def start(self):
         logger.notice('Starting RabbitMQ...')
         self._set_config()
         if self._installing_manager():
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
 
-        self._start_rabbitmq()
         if not config[RABBITMQ]['join_cluster']:
-            # Users will be synced with the cluster if we're joining one
-            self._manage_users()
+            self._write_definitions_file()
+        # rabbitmq start exits with 143 status code that is valid
+        # in this case.
+        service.restart(RABBITMQ, ignore_failure=True)
+        wait_for_port(SECURE_PORT)
+
         self._validate_rabbitmq_running()
         self._possibly_join_cluster()
         logger.notice('RabbitMQ successfully started')
