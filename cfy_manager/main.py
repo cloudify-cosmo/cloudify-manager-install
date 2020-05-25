@@ -638,6 +638,7 @@ def _get_components(include_components=None):
             components.Cli(),
             components.AmqpPostgres(),
             components.MgmtWorker(),
+            components.Stage(),
         ]
         try:
             get_local_source_path(sources.composer)
