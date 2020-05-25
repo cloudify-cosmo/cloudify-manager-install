@@ -637,17 +637,18 @@ def _get_components(include_components=None):
             components.Nginx(),
             components.Cli(),
             components.AmqpPostgres(),
+            components.MgmtWorker(),
+            components.Stage(),
         ]
-        if is_package_available('cloudify-status-reporter'):
-            _components += [components.ManagerStatusReporter()]
         try:
             get_local_source_path(sources.composer)
         except FileError:
             logger.notice('Composer will not be installed: package not found')
         else:
             _components += [components.Composer()]
+        if is_package_available('cloudify-status-reporter'):
+            _components += [components.ManagerStatusReporter()]
         _components += [
-            components.MgmtWorker(),
             components.UsageCollector(),
         ]
         if not config[SANITY]['skip_sanity']:
