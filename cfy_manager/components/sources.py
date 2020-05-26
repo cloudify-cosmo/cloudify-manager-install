@@ -21,7 +21,9 @@ manager = [
     'python-psycopg2', 'postgresql95', 'cloudify-agents',
     'patch', 'nodejs', 'cloudify-stage'
 ]
-manager_premium = ['cloudify-premium', 'cloudify-status-reporter', 'cloudify-composer']
+manager_premium = [
+    'cloudify-premium', 'cloudify-status-reporter', 'cloudify-composer'
+]
 manager_cluster = ['haproxy']
 db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
 db_cluster = [

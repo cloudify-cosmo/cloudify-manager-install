@@ -59,7 +59,7 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError, FileError
+from .exceptions import BootstrapError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -82,7 +82,6 @@ from .utils.common import (
 from .utils.install import yum_install, yum_remove, is_package_available
 from .utils.files import (
     replace_in_file,
-    get_local_source_path,
     remove as _remove,
     remove_temp_files,
     touch
