@@ -26,7 +26,6 @@ RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager
 COPY $config /etc/cloudify/config.yaml
 RUN cfy_manager install --only-install --verbose
 
-COPY starter.sh /opt/cloudify/starter.sh
 COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
 RUN systemctl enable cloudify-starter.service
 
