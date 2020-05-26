@@ -32,7 +32,7 @@ COMPONENTS_DEPENDENCIES = {
     'default': ['sudo', 'logrotate', 'yum', 'python-setuptools',
                 'python-backports', 'python-backports-ssl_match_hostname'],
     'Cli': ['sed'],
-    'Composer': ['systemd-sysv', 'tar'],
+    'Composer': ['systemd-sysv'],
     'AmqpPostgres': ['systemd-sysv'],
     'Manager': [],
     'ManagerIpSetter': ['systemd-sysv'],
