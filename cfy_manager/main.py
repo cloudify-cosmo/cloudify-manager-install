@@ -17,6 +17,7 @@
 from __future__ import print_function
 
 import os
+import re
 import sys
 import json
 import time
@@ -949,6 +950,40 @@ def wait_for_starter(verbose=False, timeout=180):
     journalctl.kill()
 
 
+def _guess_private_ip():
+    ip_a = subprocess.check_output(['ip', 'a', 's'])
+    # `ip a s` output includes `inet <IP HERE>/cidr` several times
+    inets = [
+        addr for addr in re.findall('inet ([^/]+)', ip_a)
+        if not addr.startswith(('127.', '169.254.'))
+    ]
+    if not inets:
+        raise BootstrapError('No non-local ip addresses found')
+    return inets[0]
+
+
+@argh.decorators.named('image-starter')
+def image_starter(verbose=False):
+    """Guess the IPs if needed and run cfy_manager configure + start
+
+    This is to be used as a "starter service" for an image: with a
+    preinstalled image, set this to run on boot, and it will start
+    a configured manager.
+    """
+    _prepare_execution(verbose, config_write_required=False)
+    config.load_config()
+    command = [sys.executable, '-m', 'cfy_manager.main']
+    args = []
+    private_ip = config[MANAGER].get(PRIVATE_IP)
+    if not private_ip:
+        private_ip = _guess_private_ip()
+        args += ['--private-ip', private_ip]
+    if not config[MANAGER].get(PUBLIC_IP):
+        args += ['--public-ip', PUBLIC_IP]
+    subprocess.check_call(command + ['configure'] + args)
+    subprocess.check_call(command + ['start'] + args)
+
+
 def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
@@ -969,6 +1004,7 @@ def main():
         create_external_certs,
         generate_test_cert,
         reset_admin_password,
+        image_starter,
         wait_for_starter
     ])
 
