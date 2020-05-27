@@ -952,7 +952,7 @@ def wait_for_starter(verbose=False, timeout=180):
 
 
 def _guess_private_ip():
-    ip_a = subprocess.check_output(['ip', 'a', 's'])
+    ip_a = subprocess.check_output(['ip', 'a', 's']).decode('utf-8', 'replace')
     # `ip a s` output includes `inet <IP HERE>/cidr` several times
     inets = [
         addr for addr in re.findall('inet ([^/]+)', ip_a)
