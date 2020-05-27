@@ -182,7 +182,16 @@ class Stage(BaseComponent):
         self._set_db_url()
         self._set_internal_manager_ip()
         self._set_community_mode()
-        service.configure(STAGE, user=STAGE_USER, group=STAGE_GROUP)
+        external_configure_params = {}
+        if service._get_service_type() == 'supervisord':
+            external_configure_params['service_user'] = STAGE_USER
+            external_configure_params['service_group'] = STAGE_GROUP
+        service.configure(
+            STAGE,
+            user=STAGE_USER,
+            group=STAGE_GROUP,
+            external_configure_params=external_configure_params
+        )
         logger.notice('Stage successfully configured!')
 
     def remove(self):
