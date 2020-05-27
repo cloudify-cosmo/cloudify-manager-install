@@ -156,12 +156,6 @@ class Composer(BaseComponent):
         service.verify_alive(COMPOSER)
         wait_for_port(3000)
 
-    def install(self):
-        if config[COMPOSER]['skip_installation']:
-            logger.notice('Skipping Cloudify Composer installation.')
-            return
-        logger.notice('Cloudify Composer successfully installed')
-
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         self._update_composer_config()

@@ -48,9 +48,13 @@ from .components.components_constants import (
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
-from .components.service_names import MANAGER, POSTGRESQL_SERVER
+from .components.service_names import (
+    COMPOSER,
+    MANAGER,
+    POSTGRESQL_SERVER,
+    SANITY
+)
 from .components.validations import validate, validate_dependencies
-from .components.service_names import SANITY
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
@@ -639,6 +643,10 @@ def _get_components(include_components=None):
             components.MgmtWorker(),
             components.Stage(),
         ]
+        if not config[COMPOSER]['skip_installation']:
+            _components += [
+                components.Composer(),
+            ]
         if is_package_available('cloudify-status-reporter'):
             _components += [components.ManagerStatusReporter()]
         _components += [
