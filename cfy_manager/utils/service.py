@@ -60,7 +60,6 @@ class SystemD(object):
         srv_src = join(src_dir, '{0}.service'.format(sid))
 
         if exists(env_src):
-            logger.info('Print The config for stage {0}'.format(config))
             logger.debug('Deploying systemd EnvironmentFile...')
             deploy(env_src, env_dst, render=True,
                    additional_render_context=external_configure_params)
@@ -227,7 +226,6 @@ class Supervisord(object):
                        'config/supervisord.conf')
         logger.info('srv %s', srv_src)
         if exists(srv_src):
-            logger.info('Print The config for stage {0}'.format(config))
             logger.debug('Deploying supervisord service file...')
             deploy(srv_src, dst, render=True,
                    additional_render_context=external_configure_params)
