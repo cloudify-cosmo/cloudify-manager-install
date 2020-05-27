@@ -49,9 +49,13 @@ from .components.components_constants import (
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
-from .components.service_names import MANAGER, POSTGRESQL_SERVER
+from .components.service_names import (
+    COMPOSER,
+    MANAGER,
+    POSTGRESQL_SERVER,
+    SANITY
+)
 from .components.validations import validate, validate_dependencies
-from .components.service_names import SANITY
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
@@ -60,7 +64,7 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError, FileError
+from .exceptions import BootstrapError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -83,7 +87,6 @@ from .utils.common import (
 from .utils.install import yum_install, yum_remove, is_package_available
 from .utils.files import (
     replace_in_file,
-    get_local_source_path,
     remove as _remove,
     remove_temp_files,
     touch
@@ -641,12 +644,10 @@ def _get_components(include_components=None):
             components.MgmtWorker(),
             components.Stage(),
         ]
-        try:
-            get_local_source_path(sources.composer)
-        except FileError:
-            logger.notice('Composer will not be installed: package not found')
-        else:
-            _components += [components.Composer()]
+        if not config[COMPOSER]['skip_installation']:
+            _components += [
+                components.Composer(),
+            ]
         if is_package_available('cloudify-status-reporter'):
             _components += [components.ManagerStatusReporter()]
         _components += [

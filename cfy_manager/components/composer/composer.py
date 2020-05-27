@@ -16,12 +16,9 @@
 import os
 import json
 
-from os.path import join, dirname
+from os.path import join
 
-from cfy_manager.components import sources
 from ..components_constants import (
-    SERVICE_USER,
-    SERVICE_GROUP,
     SSL_INPUTS,
     SSL_ENABLED,
     SSL_CLIENT_VERIFICATION,
@@ -31,23 +28,21 @@ from ..base_component import BaseComponent
 from ..service_names import COMPOSER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
-from ...constants import BASE_LOG_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import (
     common,
     files,
-    sudoers,
     certificates,
     service
 )
 from ...utils.network import wait_for_port
-from ...utils.logrotate import set_logrotate, remove_logrotate
-from ...utils.users import create_service_user
 
 logger = get_logger(COMPOSER)
 
+COMPOSER_USER = '{0}_user'.format(COMPOSER)
+COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
+
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(COMPOSER))
 CONF_DIR = join(HOME_DIR, 'backend', 'conf')
-LOG_DIR = join(BASE_LOG_DIR, COMPOSER)
 
 # These are all the same key as the other db keys, but postgres is very strict
 # about permissions (no group or other permissions allowed)
@@ -55,31 +50,8 @@ DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/composer_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/composer_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
-COMPOSER_USER = '{0}_user'.format(COMPOSER)
-COMPOSER_GROUP = '{0}_group'.format(COMPOSER)
-COMPOSER_PORT = 3000
-
 
 class Composer(BaseComponent):
-    def _create_paths(self):
-        common.mkdir(HOME_DIR)
-        common.mkdir(LOG_DIR)
-
-    def _install(self):
-        composer_tar = files.get_local_source_path(sources.composer)
-        self._create_paths()
-
-        logger.info('Installing Cloudify Composer...')
-        common.untar(composer_tar, HOME_DIR)
-
-        files.copy_notice(COMPOSER)
-        set_logrotate(COMPOSER)
-        self._create_user_and_set_permissions()
-        self._add_snapshot_sudo_command()
-
-    def _verify_composer_alive(self):
-        service.verify_alive(COMPOSER)
-        wait_for_port(COMPOSER_PORT)
 
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):
@@ -95,22 +67,6 @@ class Composer(BaseComponent):
                 ),
             ],
         )
-
-    def _create_user_and_set_permissions(self):
-        create_service_user(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-        # composer user is in the cfyuser group for replication
-        common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, COMPOSER_USER])
-        # adding cfyuser to the composer group so that its files are r/w for
-        # snapshots
-        common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
-
-        logger.debug('Fixing permissions...')
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, LOG_DIR)
-
-        common.chmod('g+w', CONF_DIR)
-        common.chmod('g+w', dirname(CONF_DIR))
-        common.chown(CLOUDIFY_USER, CLOUDIFY_USER, CONF_DIR)
 
     def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
@@ -196,32 +152,19 @@ class Composer(BaseComponent):
         common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
 
-    def _add_snapshot_sudo_command(self):
-        sudoers.allow_user_to_sudo_command(
-            full_command='/usr/bin/npm',
-            description='Allow snapshots to restore composer',
-            allow_as=COMPOSER_USER,
-        )
-
-    def install(self):
-        logger.notice('Installing Cloudify Composer...')
-        self._install()
-        logger.notice('Cloudify Composer successfully installed')
+    def _verify_composer_alive(self):
+        service.verify_alive(COMPOSER)
+        wait_for_port(3000)
 
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         self._update_composer_config()
-        config[COMPOSER][SERVICE_USER] = COMPOSER_USER
-        config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
         service.configure(COMPOSER, user=COMPOSER_USER, group=COMPOSER_GROUP)
         logger.notice('Cloudify Composer successfully configured')
 
     def remove(self):
         logger.notice('Removing Cloudify Composer...')
-        files.remove_notice(COMPOSER)
-        remove_logrotate(COMPOSER)
-        service.remove(COMPOSER)
-        files.remove_files([HOME_DIR, LOG_DIR])
+        service.remove(COMPOSER, service_file=False)
         logger.notice('Cloudify Composer successfully removed')
 
     def start(self):
