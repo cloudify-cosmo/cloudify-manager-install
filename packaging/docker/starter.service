@@ -6,4 +6,4 @@ WantedBy=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/opt/cloudify/starter.sh
+ExecStart=/usr/bin/cfy_manager image-starter
