@@ -25,7 +25,8 @@ DEPENDENCIES_ERROR_MESSAGES = {
     'python-setuptools': 'required by python',
     'python-backports': 'required by python',
     'python-backports-ssl_match_hostname': 'required by python',
-    'openssh-server': 'required by the sanity check'
+    'openssh-server': 'required by the sanity check',
+    'curl': 'required by Prometheus installation scripts',
 }
 
 COMPONENTS_DEPENDENCIES = {
@@ -49,5 +50,6 @@ COMPONENTS_DEPENDENCIES = {
     'Patch': [],
     'ManagerStatusReporter': [],
     'RabbitmqStatusReporter': [],
-    'PostgresqlStatusReporter': []
+    'PostgresqlStatusReporter': [],
+    'Prometheus': ['curl'],
 }

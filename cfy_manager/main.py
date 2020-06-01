@@ -32,6 +32,7 @@ from .components import (
     MANAGER_SERVICE,
     QUEUE_SERVICE,
     DATABASE_SERVICE,
+    PROMETHEUS,
     sources
 )
 from .components.components_constants import (
@@ -73,6 +74,7 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
+from .components.prometheus import prometheus
 from .status_reporter import status_reporter
 from .utils import CFY_UMASK
 from .utils.certificates import (
@@ -656,6 +658,9 @@ def _get_components(include_components=None):
         if not config[SANITY]['skip_sanity']:
             _components += [components.Sanity()]
 
+    if is_installed(PROMETHEUS):
+        _components += [components.Prometheus()]
+
     if include_components:
         _components = _filter_components(_components, include_components)
     return _components
@@ -1032,6 +1037,11 @@ def main():
         status_reporter.configure,
         status_reporter.get_tokens
     ], namespace='status-reporter')
+
+    parser.add_commands([
+        prometheus.start,
+        prometheus.stop,
+    ], namespace='prometheus')
 
     parser.add_commands([
         get_id
