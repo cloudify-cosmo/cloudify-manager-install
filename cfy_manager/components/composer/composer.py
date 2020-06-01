@@ -159,7 +159,16 @@ class Composer(BaseComponent):
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         self._update_composer_config()
-        service.configure(COMPOSER, user=COMPOSER_USER, group=COMPOSER_GROUP)
+        external_configure_params = {}
+        if service._get_service_type() == 'supervisord':
+            external_configure_params['service_user'] = COMPOSER_USER
+            external_configure_params['service_group'] = COMPOSER_GROUP
+        service.configure(
+            COMPOSER,
+            user=COMPOSER_USER,
+            group=COMPOSER_GROUP,
+            external_configure_params=external_configure_params
+        )
         logger.notice('Cloudify Composer successfully configured')
 
     def remove(self):
