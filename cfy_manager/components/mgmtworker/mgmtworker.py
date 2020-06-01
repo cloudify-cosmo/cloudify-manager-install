@@ -48,6 +48,13 @@ logger = get_logger(MGMTWORKER)
 
 class MgmtWorker(BaseComponent):
     def _add_snapshot_restore_sudo_commands(self):
+        for user in ['stage_user', 'composer_user']:
+            sudoers.allow_user_to_sudo_command(
+                '/usr/bin/node',
+                description='Allow web UI DB migrations during snapshots.',
+                allow_as=user,
+            )
+
         sudoers.allow_user_to_sudo_command(
             '/usr/bin/cfy_manager status-reporter configure '
             '--token [a-zA-Z0-9]*',
