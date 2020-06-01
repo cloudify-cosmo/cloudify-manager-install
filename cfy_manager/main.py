@@ -980,7 +980,8 @@ def image_starter(verbose=False):
         private_ip = _guess_private_ip()
         args += ['--private-ip', private_ip]
     if not config[MANAGER].get(PUBLIC_IP):
-        args += ['--public-ip', PUBLIC_IP]
+        # if public ip is not given, default it to the same as private
+        args += ['--public-ip', private_ip]
     subprocess.check_call(command + ['configure'] + args)
     subprocess.check_call(command + ['start'] + args)
 
