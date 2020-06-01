@@ -53,18 +53,18 @@ def is_port_open(port, host='localhost'):
     return sock.connect_ex((host, port)) == 0
 
 
-def wait_for_port(port, host='localhost'):
+def wait_for_port(port, host='localhost', retries=24):
     """Helper function to wait for a port to open before continuing"""
     counter = 1
 
     logger.info('Waiting for {0}:{1} to become available...'.format(
         host, port))
 
-    for tries in range(24):
+    for tries in range(retries):
         if not is_port_open(port, host=host):
             logger.info(
                 '{0}:{1} is not available yet, retrying... '
-                '({2}/24)'.format(host, port, counter))
+                '({2}/{3})'.format(host, port, counter, retries))
             sleep(2)
             counter += 1
             continue

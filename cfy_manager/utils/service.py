@@ -193,7 +193,6 @@ class Supervisord(object):
     def reload(self, service_name, ignore_failure=False):
         self.supervisorctl(
             'reread',
-            service_name,
             ignore_failure=ignore_failure
         )
         self.enable(service_name, ignore_failure=ignore_failure)

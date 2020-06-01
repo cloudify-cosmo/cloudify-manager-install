@@ -56,6 +56,8 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Stage(BaseComponent):
+    retries = 100
+
     def _set_community_mode(self):
         community_mode = '' if is_premium_installed else '-mode community'
 
@@ -175,7 +177,7 @@ class Stage(BaseComponent):
 
     def _verify_stage_alive(self):
         service.verify_alive(STAGE)
-        wait_for_port(8088)
+        wait_for_port(8088, retries=self.retries)
 
     def configure(self):
         logger.notice('Configuring Stage...')
@@ -202,7 +204,7 @@ class Stage(BaseComponent):
     def start(self):
         logger.notice('Starting Stage...')
         self._run_db_migrate()
-        service.restart(STAGE)
+        service.start(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')
 
