@@ -1,6 +1,6 @@
 FROM centos:7
 
-ARG rpm_file=cloudify-manager-install.rpm
+ARG rpm_file
 ARG config=config.yaml
 ARG uid=1500
 ARG gid=1500
@@ -20,16 +20,26 @@ RUN yum install -y openssl-1.0.2k libselinux-utils \
     openssh-server
 
 EXPOSE 80 443 5672 53333
+COPY $config /tmp/config.yaml
 
-COPY $rpm_file /tmp/cloudify-manager-install.rpm
-RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager-install.rpm
-COPY $config /etc/cloudify/config.yaml
-RUN cfy_manager install --only-install --verbose
+# `curl && yum install && rm` is the method that results in the lowest
+# overhead for the image size, even smaller than `yum install $url`.
+# All of this is in a single RUN layer so that intermediate files don't
+# increase the image size.
+RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
+    && yum install -y /tmp/cloudify-manager-install.rpm \
+    && rm /tmp/cloudify-manager-install.rpm \
+    && cp /tmp/config.yaml /etc/cloudify/config.yaml \
+    && cfy_manager install --only-install --verbose \
+    && rm -fr /opt/cloudify/sources -fr \
+    && rm /etc/yum.repos.d/Cloudify-Local.repo \
+    && yum autoremove -y \
+    && yum clean all
 
 COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
 RUN systemctl enable cloudify-starter.service
 
-RUN usermod -aG cfyuser rabbitmq
+RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
 
 STOPSIGNAL SIGRTMIN+3
