@@ -25,7 +25,11 @@ from ..components_constants import (
 )
 from ..service_names import PROMETHEUS
 from ... import constants
-from ...config import config
+from ...constants import (
+    # CLOUDIFY_HOME_DIR,
+    CLOUDIFY_USER,
+    CLOUDIFY_GROUP
+)
 from ...exceptions import ProcessExecutionError
 from ...logger import get_logger, setup_console_logger
 from ...utils import common, files, service
@@ -38,9 +42,9 @@ PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
 PROMETHEUS_PORT = 9090
 PROMETHEUS_VERSION = '2.18.1'
 GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
-PROMETHEUS_USER = PROMETHEUS_GROUP = 'prometheus'
-PROMETHEUS_USER_ID = PROMETHEUS_GROUP_ID = '90'
-PROMETHEUS_USER_COMMENT = 'Prometheus Server'
+# PROMETHEUS_USER = PROMETHEUS_GROUP = 'prometheus'
+# PROMETHEUS_USER_ID = PROMETHEUS_GROUP_ID = '90'
+# PROMETHEUS_USER_COMMENT = 'Prometheus Server'
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 
 # PROMETHEUS_CTL = 'prometheusctl'
@@ -58,8 +62,7 @@ class Prometheus(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring PostgreSQL Server...')
-        service.configure(PROMETHEUS,
-                          user=PROMETHEUS_USER, group=PROMETHEUS_GROUP)
+        service.configure(PROMETHEUS, append_prefix=False)
         self._init_service()
         logger.notice('Prometheus successfully configured')
 
@@ -85,7 +88,7 @@ class Prometheus(BaseComponent):
 
     def stop(self):
         logger.notice('Stopping Prometheus...')
-        service.stop(PROMETHEUS)
+        service.stop(PROMETHEUS, append_prefix=False)
         logger.notice('Prometheus successfully stopped')
 
     def join_cluster(self, join_node, restore_users_on_fail=False):
@@ -95,66 +98,24 @@ class Prometheus(BaseComponent):
             )
         )
 
-    def _deploy_configuration(self):
-        logger.info('Would deploy Prometheus config')
-
-    def _init_service(self):
-        logger.info('Would initialize Prometheus...')
-
     def _install(self):
-        prometheus_username = config[PROMETHEUS]['username']
-        if prometheus_username == PROMETHEUS_USER or not prometheus_username:
-            config[PROMETHEUS]['username'] = PROMETHEUS_USER
-            self._create_system_group()
-            self._create_system_user()
         self._create_directories()
         working_dir = join(sep, 'tmp', 'prometheus')
         common.mkdir(working_dir)
         archive_file_name = self._download_release(working_dir,
                                                    PROMETHEUS_VERSION)
         self._unpack_release(working_dir, archive_file_name)
-        self._copy_files(working_dir)
+        self._install_files(working_dir)
         common.remove(working_dir)
-
-    def _create_system_group(self):
-        logger.notice('Creating {0} group'.format(PROMETHEUS_GROUP))
-        try:
-            common.sudo(['groupadd',
-                         '-g', PROMETHEUS_GROUP_ID,
-                         '-o', '-r',
-                         PROMETHEUS_GROUP])
-        except ProcessExecutionError as ex:
-            # Return code 9 for non-unique user/group
-            if ex.return_code != GROUP_USER_ALREADY_EXISTS_EXIT_CODE:
-                raise ex
-            else:
-                logger.info(
-                    'Group {0} already exists'.format(PROMETHEUS_GROUP))
-
-    def _create_system_user(self):
-        logger.notice('Creating {0} user'.format(PROMETHEUS_USER))
-        try:
-            common.sudo(['useradd', '-m', '-N',
-                         '-g', PROMETHEUS_GROUP_ID,
-                         '-o', '-r',
-                         # '-d', PROMETHEUS_USER_HOME_DIR,
-                         '-s', '/sbin/nologin',
-                         '-c', PROMETHEUS_USER_COMMENT,
-                         '-u', PROMETHEUS_USER_ID, PROMETHEUS_USER])
-        except ProcessExecutionError as ex:
-            # Return code 9 for non-unique user/group
-            if ex.return_code != GROUP_USER_ALREADY_EXISTS_EXIT_CODE:
-                raise ex
-            else:
-                logger.info('User {0} already exists'.format(PROMETHEUS_USER))
 
     def _create_directories(self):
         logger.notice('Creating Prometheus directories')
         common.mkdir(PROMETHEUS_DATA_DIR, use_sudo=True)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_DATA_DIR)
         for dir_name in ('rules', 'rules.d', 'files_sd',):
             common.mkdir('{0}/{1}'.format(PROMETHEUS_CONFIG_DIR, dir_name),
                          use_sudo=True)
-        # chown prometheus:prometheus ^^
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
 
     def _download_release(self, directory, version):
         logger.notice(
@@ -181,7 +142,7 @@ class Prometheus(BaseComponent):
             logger.error('Error unpacking downloaded release: %s', ex)
             raise
 
-    def _copy_files(self, directory):
+    def _install_files(self, directory):
         logger.notice(
             'Copying Prometheus binaries and default configuration')
         bin_dir = join('usr', 'local', 'bin')
@@ -190,12 +151,36 @@ class Prometheus(BaseComponent):
             common.copy(join(directory, 'promtool'), bin_dir)
             common.copy(join(directory, 'prometheus.yml'),
                         PROMETHEUS_CONFIG_PATH)
+            common.copy(join(directory, 'consoles'),
+                        PROMETHEUS_CONFIG_DIR)
+            common.copy(join(directory, 'console_libraries'),
+                        PROMETHEUS_CONFIG_DIR)
         except ProcessExecutionError as ex:
             logger.error('Error copying files: %s', ex)
             raise
 
+    def _init_service(self):
+        logger.info('Initializing Prometheus...')
+        self._deploy_configuration()
+        service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
+
+    def _deploy_configuration(self):
+        logger.info('Would deploy Prometheus config')
+        self._copy_service_configuration()
+        self._copy_prometheus_configuration()
+
+    def _copy_service_configuration(self):
+        logger.notice('Adding Prometheus service configuration...')
+        common.copy(join(CONFIG_PATH, 'prometheus.service'),
+                    join(sep, 'etc', 'systemd', 'system'))
+
+    def _copy_prometheus_configuration(self):
+        logger.notice('Adding Cloudify Prometheus configuration...')
+        common.copy(join(CONFIG_PATH, 'prometheus.yml'),
+                    PROMETHEUS_CONFIG_PATH)
+
     def _start_prometheus(self):
-        service.restart(PROMETHEUS, ignore_failure=True)
+        service.restart(PROMETHEUS, append_prefix=False, ignore_failure=True)
         wait_for_port(PROMETHEUS_PORT)
         # if not config[PROMETHEUS]['join_cluster']:
         #     # Policies will be obtained from the cluster if we're joining
@@ -204,7 +189,7 @@ class Prometheus(BaseComponent):
 
     def _validate_prometheus_running(self):
         logger.info('Making sure Prometheus is live...')
-        service.verify_alive(PROMETHEUS)
+        service.verify_alive(PROMETHEUS, append_prefix=False)
         # if not is_port_open(PROMETHEUS_PORT, host='127.0.0.1'):
         #     raise NetworkError(
         #         '{0} error: port {1}:{2} was not open'.format(
@@ -216,7 +201,7 @@ class Prometheus(BaseComponent):
 def start(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Starting Prometheus service...')
-    service.start(PROMETHEUS)
+    service.start(PROMETHEUS, append_prefix=False)
     logger.notice('Prometheus service started')
 
 
@@ -224,5 +209,5 @@ def start(verbose=False):
 def stop(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Stopping Prometheus service...')
-    service.stop(PROMETHEUS)
+    service.stop(PROMETHEUS, append_prefix=False)
     logger.notice('Prometheus service stopped')
