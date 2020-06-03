@@ -17,7 +17,6 @@ ExecStart=/usr/local/bin/prometheus \
   --web.console.libraries=/etc/prometheus/console_libraries \
   --web.listen-address=0.0.0.0:9090 \
   --web.external-url=
-
 SyslogIdentifier=prometheus
 Restart=always
 
