@@ -39,21 +39,6 @@ def _yum_install(packages, disable_all_repos=True):
     sudo(install_cmd)
 
 
-def is_package_available(package, disable_all_repos=True):
-    command = ['yum', '-q', 'list', '--disablerepo=*',
-               '--enablerepo=cloudify', package]
-    if not disable_all_repos:
-        command.remove('--disablerepo=*')
-    try:
-        sudo(command)
-    except ProcessExecutionError as e:
-        if re.search('^Error: No matching', e.aggr_stderr, re.MULTILINE):
-            return False
-        raise YumError(package, e.aggr_stdout)
-    else:
-        return True
-
-
 def yum_install(packages, disable_all_repos=True):
     """Installs a package using yum.
 

@@ -84,7 +84,7 @@ from .utils.certificates import (
 from .utils.common import (
     run, sudo, can_lookup_hostname, allows_json_format, is_installed
 )
-from .utils.install import yum_install, yum_remove, is_package_available
+from .utils.install import yum_install, yum_remove, is_package_installed
 from .utils.files import (
     replace_in_file,
     remove as _remove,
@@ -648,7 +648,7 @@ def _get_components(include_components=None):
             _components += [
                 components.Composer(),
             ]
-        if is_package_available('cloudify-status-reporter'):
+        if is_package_installed('cloudify-status-reporter'):
             _components += [components.ManagerStatusReporter()]
         _components += [
             components.UsageCollector(),
@@ -777,12 +777,12 @@ def install(verbose=False,
         only_install=only_install,
     )
     logger.notice('Installing desired components...')
+    set_globals(only_install=only_install)
+    yum_install(_get_packages())
+
     components = _get_components()
     validate(components=components, only_install=only_install)
     validate_dependencies(components=components)
-    set_globals(only_install=only_install)
-
-    yum_install(_get_packages())
 
     for component in components:
         component.install()
