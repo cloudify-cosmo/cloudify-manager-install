@@ -20,3 +20,4 @@ services_to_install:
 - manager_service
 
 save_config: false
+service_management: supervisord
