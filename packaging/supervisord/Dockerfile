@@ -14,7 +14,7 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs sudo openssh-server openssh-clients
+    systemd-sysv initscripts tcp_wrappers-libs sudo openssh-server
 RUN easy_install supervisor
 
 EXPOSE 80 443 53333
@@ -24,7 +24,6 @@ COPY $config /etc/cloudify/config.yaml
 
 RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager-install.rpm
 RUN cfy_manager install --only-install --verbose
-RUN ssh-keygen -A -v
 RUN chmod a+wx /var/run
 RUN chmod 755 /etc/cloudify
 RUN mkdir /run/cloudify-restservice
@@ -32,5 +31,4 @@ RUN chown cfyuser. /run/cloudify-restservice && chmod 755 /run/cloudify-restserv
 RUN mkdir /etc/supervisord.d
 
 COPY supervisord.conf /etc/supervisord.conf
-COPY sshd.conf /etc/supervisord.d/
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
