@@ -52,8 +52,6 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Composer(BaseComponent):
-    retries = 100
-
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the composer db')
@@ -155,7 +153,7 @@ class Composer(BaseComponent):
 
     def _verify_composer_alive(self):
         service.verify_alive(COMPOSER)
-        wait_for_port(3000, retries=self.retries)
+        wait_for_port(3000)
 
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
