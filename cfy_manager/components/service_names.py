@@ -32,6 +32,7 @@ STAGE = 'stage'
 USAGE_COLLECTOR = 'usage_collector'
 PROMETHEUS = 'prometheus'
 NODE_EXPORTER = 'node_exporter'
+BLACKBOX_EXPORTER = 'blackbox_exporter'
 POSTGRES_EXPORTER = 'postgres_exporter'
 RABBITMQ_EXPORTER = 'rabbitmq_exporter'
 

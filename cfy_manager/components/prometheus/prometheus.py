@@ -23,8 +23,13 @@ from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
 )
-from ..service_names import (PROMETHEUS, NODE_EXPORTER, POSTGRES_EXPORTER,
-                             RABBITMQ_EXPORTER, )
+from ..service_names import (
+    PROMETHEUS,
+    NODE_EXPORTER,
+    BLACKBOX_EXPORTER,
+    POSTGRES_EXPORTER,
+    RABBITMQ_EXPORTER,
+)
 from ... import constants
 from ...config import config
 from ...constants import (
@@ -46,6 +51,7 @@ SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
 # PROMETHEUS_PORT = 9090
 PROMETHEUS_VERSION = '2.18.1'
 NODE_EXPORTER_VERSION = '1.0.0'
+BLACKBOX_EXPORTER_VERSION = '0.16.0'
 POSTGRES_EXPORTER_VERSION = '0.8.0'
 RABBITMQ_EXPORTER_VERSION = '1.0.0-RC7'
 GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
@@ -61,6 +67,7 @@ class Prometheus(BaseComponent):
     def install(self):
         _install_prometheus()
         _install_node_exporter()
+        _install_blackbox_exporter()
         _install_postgres_exporter()
         _install_rabbitmq_exporter()
 
@@ -69,6 +76,7 @@ class Prometheus(BaseComponent):
         _deploy_configuration()
         service.configure(PROMETHEUS, append_prefix=False)
         service.configure(NODE_EXPORTER, append_prefix=False)
+        service.configure(BLACKBOX_EXPORTER, append_prefix=False)
         service.configure(POSTGRES_EXPORTER, append_prefix=False)
         service.configure(RABBITMQ_EXPORTER, append_prefix=False)
         logger.notice('Prometheus successfully configured')
@@ -80,10 +88,14 @@ class Prometheus(BaseComponent):
             PROMETHEUS_CONFIG_DIR,
         ], ignore_failure=True)
         files.remove_files([join(BIN_DIR, file_name) for file_name in
-                            ('prometheus', 'promtool', 'node_exporter',
-                             'postgres_exporter', 'rabbitmq_exporter',)],
+                            ('prometheus', 'promtool',
+                             NODE_EXPORTER,
+                             BLACKBOX_EXPORTER,
+                             POSTGRES_EXPORTER,
+                             RABBITMQ_EXPORTER,)],
                            ignore_failure=True)
         service.remove(NODE_EXPORTER, append_prefix=False)
+        service.remove(BLACKBOX_EXPORTER, append_prefix=False)
         service.remove(POSTGRES_EXPORTER, append_prefix=False)
         service.remove(RABBITMQ_EXPORTER, append_prefix=False)
         service.remove(PROMETHEUS, append_prefix=False)
@@ -96,13 +108,16 @@ class Prometheus(BaseComponent):
         # wait_for_port(config[PROMETHEUS]['port'])
         service.restart(NODE_EXPORTER, append_prefix=False,
                         ignore_failure=True)
-        # wait_for_port(config[PROMETHEUS][NODE_EXPORTER]['port'])
+        # wait_for_port(config[PROMETHEUS][NODE_EXPORTER]['metrics_port'])
+        service.restart(BLACKBOX_EXPORTER, append_prefix=False,
+                        ignore_failure=True)
+        # wait_for_port(config[PROMETHEUS][BLACKBOX_EXPORTER]['metrics_port'])
         service.restart(POSTGRES_EXPORTER, append_prefix=False,
                         ignore_failure=True)
-        # wait_for_port(config[PROMETHEUS][POSTGRES_EXPORTER]['port'])
+        # wait_for_port(config[PROMETHEUS][POSTGRES_EXPORTER]['metrics_port'])
         service.restart(RABBITMQ_EXPORTER, append_prefix=False,
                         ignore_failure=True)
-        # wait_for_port(config[PROMETHEUS][RABBITMQ_EXPORTER]['port'])
+        # wait_for_port(config[PROMETHEUS][RABBITMQ_EXPORTER]['metrics_port'])
         _validate_prometheus_running()
         logger.notice('Prometheus and exporters successfully started')
 
@@ -110,6 +125,7 @@ class Prometheus(BaseComponent):
         logger.notice('Stopping Prometheus and exporters...')
         service.stop(PROMETHEUS, append_prefix=False)
         service.stop(NODE_EXPORTER, append_prefix=False)
+        service.stop(BLACKBOX_EXPORTER, append_prefix=False)
         service.stop(POSTGRES_EXPORTER, append_prefix=False)
         service.stop(RABBITMQ_EXPORTER, append_prefix=False)
         logger.notice('Prometheus and exporters successfully stopped')
@@ -173,8 +189,6 @@ def _copy_prometheus(src_dir):
     common.copy(join(src_dir, 'promtool'), BIN_DIR)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                  join(BIN_DIR, 'promtool'))
-    files.deploy(join(src_dir, 'prometheus.yml'),
-                 PROMETHEUS_CONFIG_PATH)
     common.copy(join(src_dir, 'consoles'),
                 PROMETHEUS_CONFIG_DIR)
     common.copy(join(src_dir, 'console_libraries'),
@@ -185,6 +199,37 @@ def _copy_prometheus(src_dir):
 def _unpack_exporter_archive(archive_file_name, dest_dir):
     logger.notice('Unpacking exporter archive {0}'.format(archive_file_name))
     common.untar(archive_file_name, dest_dir)
+
+
+def _install_blackbox_exporter():
+    logger.notice('Installing Blackbox Exporter...')
+    working_dir = _create_directory(join(sep, 'tmp', 'blackbox_exporter'))
+    archive_file_name = _download_blackbox_exporter(
+        BLACKBOX_EXPORTER_VERSION, working_dir)
+    _unpack_exporter_archive(archive_file_name, working_dir)
+    _copy_blackbox_exporter(working_dir)
+    common.remove(working_dir)
+    logger.notice('Blackbox Exporter successfully installed')
+
+
+def _download_blackbox_exporter(version, dest_dir):
+    logger.notice('Downloading Blackbox Exporter v{0} to {1}'.format(version,
+                                                                     dest_dir))
+    tarball_url = '{0}/v{1}/blackbox_exporter-{1}.{2}'.format(
+        'https://github.com/prometheus/blackbox_exporter/releases/download',
+        version, 'linux-amd64.tar.gz')
+    archive_file_name = join(dest_dir,
+                             'blackbox_exporter-{0}.tar.gz'.format(
+                                 version))
+    common.run(['curl', '-L', '-o', archive_file_name, tarball_url])
+    return archive_file_name
+
+
+def _copy_blackbox_exporter(src_dir):
+    logger.notice('Copying Blackbox Exporter binaries')
+    common.copy(join(src_dir, 'blackbox_exporter'), BIN_DIR)
+    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
+                 join(BIN_DIR, 'blackbox_exporter'))
 
 
 def _install_node_exporter():
@@ -305,6 +350,9 @@ def _deploy_services_configuration():
     files.deploy(join(CONFIG_PATH, '{0}.service'.format(NODE_EXPORTER)),
                  join(SYSTEMD_CONFIG_DIR,
                       '{0}.service'.format(NODE_EXPORTER)))
+    files.deploy(join(CONFIG_PATH, '{0}.service'.format(BLACKBOX_EXPORTER)),
+                 join(SYSTEMD_CONFIG_DIR,
+                      '{0}.service'.format(BLACKBOX_EXPORTER)))
     files.deploy(join(CONFIG_PATH, '{0}.service'.format(POSTGRES_EXPORTER)),
                  join(SYSTEMD_CONFIG_DIR,
                       '{0}.service'.format(POSTGRES_EXPORTER)))
