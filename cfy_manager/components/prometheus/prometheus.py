@@ -31,16 +31,17 @@ from ..service_names import (
     RABBITMQ_EXPORTER,
 )
 from ... import constants
-from ...config import config
+# from ...config import config
 from ...constants import (
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
 )
-from ...exceptions import NetworkError
+# from ...exceptions import NetworkError
 from ...logger import get_logger, setup_console_logger
 from ...utils import common, files, service
+
 # from ...utils.network import wait_for_port
-from ...utils.network import is_port_open
+# from ...utils.network import is_port_open
 
 LOG_DIR = join(constants.BASE_LOG_DIR, PROMETHEUS)
 BIN_DIR = join(sep, 'usr', 'local', 'bin')
@@ -48,15 +49,12 @@ CONFIG_PATH = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
 SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
-# PROMETHEUS_PORT = 9090
 PROMETHEUS_VERSION = '2.18.1'
 NODE_EXPORTER_VERSION = '1.0.0'
 BLACKBOX_EXPORTER_VERSION = '0.16.0'
 POSTGRES_EXPORTER_VERSION = '0.8.0'
 RABBITMQ_EXPORTER_VERSION = '1.0.0-RC7'
-GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
-# PROMETHEUS_CTL = 'promtool'
 
 logger = get_logger(PROMETHEUS)
 
