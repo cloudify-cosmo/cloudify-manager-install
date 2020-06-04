@@ -23,7 +23,7 @@ from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
 )
-from ..service_names import PROMETHEUS, POSTGRES_EXPORTER
+from ..service_names import PROMETHEUS, POSTGRES_EXPORTER, RABBITMQ_EXPORTER
 from ... import constants
 from ...constants import (
     # CLOUDIFY_HOME_DIR,
@@ -43,6 +43,7 @@ SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
 PROMETHEUS_PORT = 9090
 PROMETHEUS_VERSION = '2.18.1'
 POSTGRES_EXPORTER_VERSION = '0.8.0'
+RABBITMQ_EXPORTER_VERSION = '1.0.0-RC7'
 GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
 # PROMETHEUS_USER = PROMETHEUS_GROUP = 'prometheus'
 # PROMETHEUS_USER_ID = PROMETHEUS_GROUP_ID = '90'
@@ -59,12 +60,14 @@ class Prometheus(BaseComponent):
     def install(self):
         _install_prometheus()
         _install_postgres_exporter()
+        _install_rabbitmq_exporter()
 
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
         _deploy_configuration()
         service.configure(PROMETHEUS, append_prefix=False)
         service.configure(POSTGRES_EXPORTER, append_prefix=False)
+        service.configure(RABBITMQ_EXPORTER, append_prefix=False)
         logger.notice('Prometheus successfully configured')
 
     def remove(self):
@@ -74,22 +77,25 @@ class Prometheus(BaseComponent):
             PROMETHEUS_CONFIG_DIR,
         ], ignore_failure=True)
         files.remove_files([join(BIN_DIR, file_name) for file_name in
-                            ('prometheus', 'promtool', 'postgres_exporter',)],
+                            ('prometheus', 'promtool', 'postgres_exporter',
+                             'rabbitmq_exporter',)],
                            ignore_failure=True)
         # files.remove_notice(PROMETHEUS)
         service.remove(POSTGRES_EXPORTER, append_prefix=False)
+        service.remove(RABBITMQ_EXPORTER, append_prefix=False)
         service.remove(PROMETHEUS, append_prefix=False)
         logger.notice('Successfully removed Prometheus files...')
 
     def start(self):
         logger.notice('Starting Prometheus...')
-        self._start_prometheus()
-        self._start_postgres_exporter()
+        _start_prometheus()
+        _start_postgres_exporter()
+        _start_rabbitmq_exporter()
         # if not config[PROMETHEUS]['join_cluster']:
         #     # Users will be synced with the cluster if we're joining one
         #     self._manage_users()
-        self._validate_prometheus_running()
         # self._possibly_join_cluster()
+        _validate_prometheus_running()
         logger.notice('Prometheus successfully started')
 
     def stop(self):
@@ -103,27 +109,6 @@ class Prometheus(BaseComponent):
                 target_node=join_node,
             )
         )
-
-    def _start_prometheus(self):
-        service.restart(PROMETHEUS, append_prefix=False, ignore_failure=True)
-        wait_for_port(PROMETHEUS_PORT)
-
-    def _start_postgres_exporter(self):
-        service.restart(POSTGRES_EXPORTER, append_prefix=False,
-                        ignore_failure=True)
-        # if not config[PROMETHEUS]['join_cluster']:
-        #     # Policies will be obtained from the cluster if we're joining
-        #     self._set_policies()
-        #     systemd.restart(PROMETHEUS)
-
-    def _validate_prometheus_running(self):
-        logger.info('Making sure Prometheus is live...')
-        service.verify_alive(PROMETHEUS, append_prefix=False)
-        # if not is_port_open(PROMETHEUS_PORT, host='127.0.0.1'):
-        #     raise NetworkError(
-        #         '{0} error: port {1}:{2} was not open'.format(
-        #             PROMETHEUS, '127.0.0.1', PROMETHEUS_PORT)
-        #     )
 
 
 @argh.arg('-v', '--verbose', help=constants.VERBOSE_HELP_MSG, default=False)
@@ -240,6 +225,44 @@ def _copy_postgres_exporter(src_dir):
                  join(BIN_DIR, 'postgres_exporter'))
 
 
+def _install_rabbitmq_exporter():
+    logger.info('Installing RabbitMQ Exporter...')
+    working_dir = _create_directory(join(sep, 'tmp', 'rabbitmq_exporter'))
+    archive_file_name = _download_rabbitmq_exporter(
+        RABBITMQ_EXPORTER_VERSION, working_dir)
+    _unpack_rabbitmq_exporter(archive_file_name, working_dir)
+    _copy_rabbitmq_exporter(working_dir)
+    common.remove(working_dir)
+    logger.notice('RabbitMQ Exporter successfully installed')
+
+
+def _download_rabbitmq_exporter(version, dest_dir):
+    logger.notice(
+        'Downloading RabbitMQ Exporter v{0} to {1}'.format(version,
+                                                           dest_dir))
+    tarball_url = '{0}/v{1}/rabbitmq_exporter-{1}.{2}'.format(
+        'https://github.com/kbudde/rabbitmq_exporter/releases/download',
+        version, 'linux-amd64.tar.gz')
+    archive_file_name = join(dest_dir,
+                             'rabbitmq_exporter-{0}.tar.gz'.format(
+                                 version))
+    common.run(['curl', '-L', '-o', archive_file_name, tarball_url])
+    return archive_file_name
+
+
+def _unpack_rabbitmq_exporter(archive_file_name, dest_dir, ):
+    logger.notice('Unpacking RabbitMQ Exporter archive {0}'.format(
+        archive_file_name))
+    common.untar(archive_file_name, dest_dir)
+
+
+def _copy_rabbitmq_exporter(src_dir):
+    logger.notice('Copying RabbitMQ Exporter binaries')
+    common.copy(join(src_dir, 'rabbitmq_exporter'), BIN_DIR)
+    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
+                 join(BIN_DIR, 'rabbitmq_exporter'))
+
+
 def _deploy_configuration():
     logger.info('Initializing Prometheus...')
     _deploy_services_configuration()
@@ -249,18 +272,19 @@ def _deploy_configuration():
                    append_prefix=False, ignore_failure=True)
     service.reload(POSTGRES_EXPORTER,
                    append_prefix=False, ignore_failure=True)
+    service.reload(RABBITMQ_EXPORTER,
+                   append_prefix=False, ignore_failure=True)
 
 
 def _deploy_services_configuration():
     logger.notice('Adding Prometheus service configuration...')
+    # TODO: use files.deploy instead of common.copy here:
     common.copy(join(CONFIG_PATH, 'prometheus.service'),
                 join(sep, 'etc', 'systemd', 'system'))
-    # common.copy(join(CONFIG_PATH, 'postgres_exporter.service'),
-    #             join(sep, 'etc', 'systemd', 'system'))
     files.deploy(join(CONFIG_PATH, 'postgres_exporter.service'),
                  join(SYSTEMD_CONFIG_DIR, 'postgres_exporter.service'))
-    # common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-    #              SYSTEMD_CONFIG_DIR)
+    files.deploy(join(CONFIG_PATH, 'rabbitmq_exporter.service'),
+                 join(SYSTEMD_CONFIG_DIR, 'rabbitmq_exporter.service'))
 
 
 def _copy_prometheus_configuration():
@@ -276,3 +300,36 @@ def _copy_prometheus_rules():
     common.copy(join(CONFIG_PATH, 'rabbitmq.rules'),
                 join(PROMETHEUS_CONFIG_DIR, 'rules'))
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
+
+
+def _start_prometheus():
+    service.restart(PROMETHEUS, append_prefix=False, ignore_failure=True)
+    wait_for_port(PROMETHEUS_PORT)
+
+
+def _start_postgres_exporter():
+    service.restart(POSTGRES_EXPORTER, append_prefix=False,
+                    ignore_failure=True)
+    # if not config[PROMETHEUS]['join_cluster']:
+    #     # Policies will be obtained from the cluster if we're joining
+    #     self._set_policies()
+    #     systemd.restart(PROMETHEUS)
+
+
+def _start_rabbitmq_exporter():
+    service.restart(RABBITMQ_EXPORTER, append_prefix=False,
+                    ignore_failure=True)
+    # if not config[PROMETHEUS]['join_cluster']:
+    #     # Policies will be obtained from the cluster if we're joining
+    #     self._set_policies()
+    #     systemd.restart(PROMETHEUS)
+
+
+def _validate_prometheus_running():
+    logger.info('Making sure Prometheus is live...')
+    service.verify_alive(PROMETHEUS, append_prefix=False)
+    # if not is_port_open(PROMETHEUS_PORT, host='127.0.0.1'):
+    #     raise NetworkError(
+    #         '{0} error: port {1}:{2} was not open'.format(
+    #             PROMETHEUS, '127.0.0.1', PROMETHEUS_PORT)
+    #     )

@@ -1,0 +1,18 @@
+[Unit]
+Description=Prometheus exporter for RabbitMQ
+Documentation=https://github.com/kbudde/rabbitmq_exporter
+Wants=network-online.target
+After=network-online.target[Service]
+
+[Service]
+Type=simple
+Environment="RABBIT_USER={{ prometheus.rabbitmq.username }} RABBIT_PASSWORD={{ prometheus.rabbitmq.password }} RABBIT_URL={{ prometheus.rabbitmq.url }}"
+User=cfyuser
+Group=cfyuser
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/rabbitmq_exporter
+SyslogIdentifier=prometheus_rabbitmq_exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
