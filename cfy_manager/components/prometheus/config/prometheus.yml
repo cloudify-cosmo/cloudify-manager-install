@@ -34,9 +34,12 @@ scrape_configs:
       module: [http_2xx]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
-          - http://localhost/
-          - https://localhost/
-          - https://localhost/api/v3/
+          - http://{{ manager.private_ip }}:3000/  # Cloudify composer
+          - http://{{ manager.private_ip }}:8088/  # Cloudify stage
+          - http://{{ manager.private_ip }}:8100/  # Cloudify rest
+          - http://{{ manager.private_ip }}:53229  # Cloudify resources
+          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }} # Cloudify rest and ui internal
+          - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

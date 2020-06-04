@@ -562,6 +562,28 @@ usage_collector:
     # Sets the interval between running the usage collector in days
     interval_in_days: 1
 
+prometheus:
+  port: 9090
+  #services_to_monitor:
+  #  - node
+  #  - blackbox
+  #  - postgresql
+  #  - rabbitmq
+  node_exporter:
+    metrics_port: 9100
+  blackbox_exporter:
+    metrics_port: 9115
+  postgres_exporter:
+    username: postgres
+    password: postgres
+    sslmode: disable
+    metrics_port: 9187
+  rabbitmq_exporter:
+    rabbit_url: http://127.0.0.1:15671/
+    username: cloudify
+    password: c10udify
+    metrics_port: 9419
+
 flask_security: {}
 
 # list of services - manager_service, queue_service, database_service
@@ -571,6 +593,7 @@ flask_security: {}
 #   - database_service
 #   - queue_service
 #   - manager_service
+#   - prometheus
 services_to_install:
 - database_service
 - queue_service

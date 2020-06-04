@@ -6,11 +6,12 @@ After=network-online.target[Service]
 
 [Service]
 Type=simple
-Environment="DATA_SOURCE_NAME=postgresql://{{ prometheus.postgres_exporter.username }}:{{ prometheus.postgres_exporter.password }}@localhost:5432/?sslmode={{ prometheus.postgres_exporter.sslmode }} PG_EXPORTER_WEB_LISTEN_ADDRESS=:{{ prometheus.postgres_exporter.metrics_port }}"
+Environment="DATA_SOURCE_NAME=postgresql://{{ prometheus.postgres_exporter.username }}:{{ prometheus.postgres_exporter.password }}@localhost:5432/?sslmode={{ prometheus.postgres_exporter.sslmode }}"
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStart=/usr/local/bin/postgres_exporter
+ExecStart=/usr/local/bin/postgres_exporter \
+  --web.listen-address=127.0.0.1:{{ prometheus.postgres_exporter.metrics_port }}e
 SyslogIdentifier=postgres_exporter
 Restart=always
 

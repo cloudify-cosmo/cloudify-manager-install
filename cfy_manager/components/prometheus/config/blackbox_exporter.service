@@ -9,7 +9,8 @@ Type=simple
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStart=/usr/local/bin/blackbox_exporter --web.listen-address=":{{ prometheus.blackbox_exporter.metrics_port }}"
+ExecStart=/usr/local/bin/blackbox_exporter \
+  --web.listen-address=127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}
 SyslogIdentifier=blackbox_exporter
 Restart=always
 
