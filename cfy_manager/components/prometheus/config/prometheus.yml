@@ -22,14 +22,15 @@ rule_files:
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
-  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:{{ prometheus.port }}']
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
   - job_name: 'postgresql'
     static_configs:
-      - targets: ['localhost:9187']
+      - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']
   - job_name: 'rabbitmq'
-    # As of RabbitMQ 3.8.0 https://github.com/rabbitmq/rabbitmq-prometheus is also available
     static_configs:
-      - targets: ['localhost:9419']
+      - targets: ['localhost:{{ prometheus.rabbitmq_exporter.metrics_port }}']

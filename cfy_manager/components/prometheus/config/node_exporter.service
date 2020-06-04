@@ -1,0 +1,18 @@
+[Unit]
+Description=Prometheus exporter for hardware and OS metrics exposed by *NIX kernels
+Documentation=https://github.com/prometheus/node_exporter
+Wants=network-online.target
+After=network-online.target[Service]
+
+[Service]
+Type=simple
+#Environment="DATA_SOURCE_NAME=node://{{ prometheus.node_exporter.username }}:{{ prometheus.node_exporter.password }}@localhost:5432/?sslmode={{ prometheus.node_exporter.sslmode }}"
+User=cfyuser
+Group=cfyuser
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/node_exporter
+SyslogIdentifier=node_exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -6,12 +6,12 @@ After=network-online.target[Service]
 
 [Service]
 Type=simple
-Environment="RABBIT_USER={{ prometheus.rabbitmq_exporter.username }} RABBIT_PASSWORD={{ prometheus.rabbitmq_exporter.password }} RABBIT_URL={{ prometheus.rabbitmq_exporter.url }}"
+Environment="RABBIT_USER={{ prometheus.rabbitmq_exporter.username }} RABBIT_PASSWORD={{ prometheus.rabbitmq_exporter.password }} RABBIT_URL={{ prometheus.rabbitmq_exporter.url }} PUBLISH_PORT={{ prometheus.rabbitmq_exporter.metrics_port }}"
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/rabbitmq_exporter
-SyslogIdentifier=prometheus_rabbitmq_exporter
+SyslogIdentifier=rabbitmq_exporter
 Restart=always
 
 [Install]
