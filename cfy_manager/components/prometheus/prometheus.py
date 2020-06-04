@@ -178,8 +178,8 @@ def _copy_prometheus(src_dir):
     common.copy(join(src_dir, 'promtool'), BIN_DIR)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                  join(BIN_DIR, 'promtool'))
-    common.copy(join(src_dir, 'prometheus.yml'),
-                PROMETHEUS_CONFIG_PATH)
+    files.deploy(join(src_dir, 'prometheus.yml'),
+                 PROMETHEUS_CONFIG_PATH)
     common.copy(join(src_dir, 'consoles'),
                 PROMETHEUS_CONFIG_DIR)
     common.copy(join(src_dir, 'console_libraries'),
@@ -289,8 +289,8 @@ def _deploy_services_configuration():
 
 def _copy_prometheus_configuration():
     logger.notice('Adding Cloudify Prometheus configuration...')
-    common.copy(join(CONFIG_PATH, 'prometheus.yml'),
-                PROMETHEUS_CONFIG_PATH)
+    files.deploy(join(CONFIG_PATH, 'prometheus.yml'),
+                 PROMETHEUS_CONFIG_PATH)
 
 
 def _copy_prometheus_rules():

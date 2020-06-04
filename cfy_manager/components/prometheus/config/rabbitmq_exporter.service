@@ -6,7 +6,7 @@ After=network-online.target[Service]
 
 [Service]
 Type=simple
-Environment="RABBIT_USER={{ prometheus.rabbitmq.username }} RABBIT_PASSWORD={{ prometheus.rabbitmq.password }} RABBIT_URL={{ prometheus.rabbitmq.url }}"
+Environment="RABBIT_USER={{ prometheus.rabbitmq_exporter.username }} RABBIT_PASSWORD={{ prometheus.rabbitmq_exporter.password }} RABBIT_URL={{ prometheus.rabbitmq_exporter.url }}"
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
