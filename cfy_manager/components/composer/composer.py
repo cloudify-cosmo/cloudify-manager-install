@@ -178,7 +178,7 @@ class Composer(BaseComponent):
     def start(self):
         logger.notice('Starting Cloudify Composer...')
         self._run_db_migrate()
-        service.start(COMPOSER)
+        service.restart(COMPOSER)
         self._verify_composer_alive()
         logger.notice('Cloudify Composer successfully started')
 

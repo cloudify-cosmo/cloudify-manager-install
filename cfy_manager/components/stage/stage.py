@@ -202,7 +202,7 @@ class Stage(BaseComponent):
     def start(self):
         logger.notice('Starting Stage...')
         self._run_db_migrate()
-        service.start(STAGE)
+        service.restart(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')
 

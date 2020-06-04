@@ -17,7 +17,7 @@ RUN yum install -y openssl-1.0.2k libselinux-utils \
     systemd-sysv initscripts tcp_wrappers-libs sudo openssh-server
 RUN easy_install supervisor
 
-EXPOSE 80 443 53333
+EXPOSE 80 443 5672 53333
 
 COPY $rpm_file /tmp/cloudify-manager-install.rpm
 COPY $config /etc/cloudify/config.yaml
