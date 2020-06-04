@@ -52,7 +52,6 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Composer(BaseComponent):
-
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the composer db')
@@ -159,7 +158,16 @@ class Composer(BaseComponent):
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         self._update_composer_config()
-        service.configure(COMPOSER, user=COMPOSER_USER, group=COMPOSER_GROUP)
+        external_configure_params = {}
+        if service._get_service_type() == 'supervisord':
+            external_configure_params['service_user'] = COMPOSER_USER
+            external_configure_params['service_group'] = COMPOSER_GROUP
+        service.configure(
+            COMPOSER,
+            user=COMPOSER_USER,
+            group=COMPOSER_GROUP,
+            external_configure_params=external_configure_params
+        )
         logger.notice('Cloudify Composer successfully configured')
 
     def remove(self):

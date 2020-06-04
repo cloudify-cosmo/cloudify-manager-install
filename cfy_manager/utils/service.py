@@ -193,7 +193,6 @@ class Supervisord(object):
     def reload(self, service_name, ignore_failure=False):
         self.supervisorctl(
             'reread',
-            service_name,
             ignore_failure=ignore_failure
         )
         self.enable(service_name, ignore_failure=ignore_failure)
@@ -229,6 +228,7 @@ class Supervisord(object):
             logger.debug('Deploying supervisord service file...')
             deploy(srv_src, dst, render=True,
                    additional_render_context=external_configure_params)
+            chown(user, group, dst)
 
         self.enable(sid)
 

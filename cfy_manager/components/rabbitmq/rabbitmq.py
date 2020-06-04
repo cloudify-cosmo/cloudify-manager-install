@@ -155,7 +155,6 @@ class RabbitMQ(BaseComponent):
 
         if cookie:
             write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
-            write_to_file(cookie.strip(), '/etc/cloudify/.erlang.cookie')
             sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
 
     def _possibly_join_cluster(self):
