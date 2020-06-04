@@ -1,5 +1,5 @@
 [Unit]
-Description=Prometheus blackbox exporter which allows probing of endpoints over HTTP(s), DNS, TCP and ICMP
+Description=Prometheus blackbox exporter
 Documentation=https://github.com/prometheus/blackbox_exporter
 Wants=network-online.target
 After=network-online.target[Service]
@@ -9,7 +9,7 @@ Type=simple
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStart=/usr/local/bin/blacbox_exporter
+ExecStart=/usr/local/bin/blackbox_exporter --web.listen-address=":{{ prometheus.blackbox_exporter.metrics_port }}"
 SyslogIdentifier=blackbox_exporter
 Restart=always
 

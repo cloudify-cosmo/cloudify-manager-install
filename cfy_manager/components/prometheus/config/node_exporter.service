@@ -6,11 +6,10 @@ After=network-online.target[Service]
 
 [Service]
 Type=simple
-#Environment="DATA_SOURCE_NAME=node://{{ prometheus.node_exporter.username }}:{{ prometheus.node_exporter.password }}@localhost:5432/?sslmode={{ prometheus.node_exporter.sslmode }}"
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStart=/usr/local/bin/node_exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=":{{ prometheus.node_exporter.metrics_port }}"
 SyslogIdentifier=node_exporter
 Restart=always
 

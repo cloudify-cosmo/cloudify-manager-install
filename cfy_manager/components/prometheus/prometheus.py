@@ -379,11 +379,11 @@ def _copy_prometheus_rules():
 def _validate_prometheus_running():
     logger.info('Making sure Prometheus is live...')
     service.verify_alive(PROMETHEUS, append_prefix=False)
-    if not is_port_open(config[PROMETHEUS]['port'], host='127.0.0.1'):
-        raise NetworkError(
-            '{0} error: port {1}:{2} was not open'.format(
-                PROMETHEUS, '127.0.0.1', config[PROMETHEUS]['port'])
-        )
+    # if not is_port_open(config[PROMETHEUS]['port'], host='127.0.0.1'):
+    #     raise NetworkError(
+    #         '{0} error: port {1}:{2} was not open'.format(
+    #             PROMETHEUS, '127.0.0.1', config[PROMETHEUS]['port'])
+    #     )
 
 
 @argh.arg('-v', '--verbose', help=constants.VERBOSE_HELP_MSG, default=False)
