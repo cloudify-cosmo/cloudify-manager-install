@@ -1,3 +1,0 @@
-location ~ ^/(targets|alerts)(/.*)?$ {
-    include "/etc/nginx/conf.d/metrics-proxy.cloudify";
-}

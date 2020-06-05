@@ -6,13 +6,17 @@ After=network-online.target[Service]
 
 [Service]
 Type=simple
-Environment="RABBIT_USER={{ prometheus.rabbitmq_exporter.username }} RABBIT_PASSWORD={{ prometheus.rabbitmq_exporter.password }} RABBIT_URL={{ prometheus.rabbitmq_exporter.rabbit_url }}"
+Environment="RABBIT_USER={{ prometheus.rabbitmq_exporter.username }}" \
+  "RABBIT_PASSWORD={{ prometheus.rabbitmq_exporter.password }}" \
+  "RABBIT_URL={{ prometheus.rabbitmq_exporter.rabbit_url }}" \
+  "SKIPVERIFY=true" \
+  "PUBLISH_PORT={{ prometheus.rabbitmq_exporter.metrics_port }}"
+# SKIPVERIFY just for this POC
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/rabbitmq_exporter
-SyslogIdentifier=rabbitmq_exporter \
-  --web.listen-address=127.0.0.1:{{ prometheus.rabbitmq_exporter.metrics_port }}
+SyslogIdentifier=rabbitmq_exporter
 Restart=always
 
 [Install]

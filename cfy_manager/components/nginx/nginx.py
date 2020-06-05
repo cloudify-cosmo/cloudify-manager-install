@@ -213,12 +213,8 @@ class Nginx(BaseComponent):
                 dst='/etc/nginx/conf.d/logs-conf.cloudify',
             ),
             resource(
-                src=join(CONFIG_PATH, 'metrics-location.cloudify'),
-                dst='/etc/nginx/conf.d/metrics-location.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'metrics-proxy.cloudify'),
-                dst='/etc/nginx/conf.d/metrics-proxy.cloudify',
+                src=join(CONFIG_PATH, 'redirect-to-monitoring.cloudify'),
+                dst='/etc/nginx/conf.d/redirect-to-monitoring.cloudify',
             ),
         ]
 
