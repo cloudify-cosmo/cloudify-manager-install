@@ -141,10 +141,15 @@ def _create_directory(directory, use_sudo=True):
     return directory
 
 
-def _download_release(base_url, name, version, dest_dir):
-    logger.notice('Downloading {0}-{1} to {2}'.format(name, version, dest_dir))
-    tarball_url = '{0}/{1}/releases/download/v{2}/{1}-{2}.{3}'.format(
-        base_url, name, version, 'linux-amd64.tar.gz')
+def _download_release(dest_dir, base_url, name=None, version=None):
+    if name and version:
+        logger.notice(
+            'Downloading {0}-{1} to {2}'.format(name, version, dest_dir))
+        tarball_url = '{0}/{1}/releases/download/v{2}/{1}-{2}.{3}'.format(
+            base_url, name, version, 'linux-amd64.tar.gz')
+    else:
+        logger.notice('Downloading {0} to {1}'.format(base_url, dest_dir))
+        tarball_url = base_url
     archive_file_name = join(dest_dir, '{0}-{1}.tar.gz'.format(name, version))
     common.run(['curl', '-L', '-o', archive_file_name, tarball_url])
     return archive_file_name
@@ -159,7 +164,10 @@ def _install_prometheus():
     logger.notice('Installing Prometheus...')
     _create_prometheus_directories()
     working_dir = _create_directory(join(sep, 'tmp', 'prometheus'))
-    archive_file_name = _download_prometheus(PROMETHEUS_VERSION, working_dir)
+    archive_file_name = _download_release(working_dir,
+                                          'https://github.com/prometheus',
+                                          PROMETHEUS,
+                                          PROMETHEUS_VERSION)
     _unpack_archive(archive_file_name, working_dir)
     _copy_prometheus(working_dir)
     common.remove(working_dir)
@@ -173,15 +181,6 @@ def _create_prometheus_directories():
     for dir_name in ('rules', 'rules.d', 'files_sd', 'exporters',):
         _create_directory(join(PROMETHEUS_CONFIG_DIR, dir_name))
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
-
-
-def _download_prometheus(version, dest_dir):
-    logger.notice('Downloading Prometheus v{0} to {1}'.format(version,
-                                                              dest_dir))
-    return _download_release('https://github.com/prometheus',
-                             PROMETHEUS,
-                             PROMETHEUS_VERSION,
-                             dest_dir)
 
 
 def _copy_prometheus(src_dir):
@@ -202,21 +201,14 @@ def _copy_prometheus(src_dir):
 def _install_blackbox_exporter():
     logger.notice('Installing Blackbox Exporter...')
     working_dir = _create_directory(join(sep, 'tmp', 'blackbox_exporter'))
-    archive_file_name = _download_blackbox_exporter(
-        BLACKBOX_EXPORTER_VERSION, working_dir)
+    archive_file_name = _download_release(working_dir,
+                                          'https://github.com/prometheus',
+                                          BLACKBOX_EXPORTER,
+                                          BLACKBOX_EXPORTER_VERSION)
     _unpack_archive(archive_file_name, working_dir)
     _copy_blackbox_exporter(working_dir)
     common.remove(working_dir)
     logger.notice('Blackbox Exporter successfully installed')
-
-
-def _download_blackbox_exporter(version, dest_dir):
-    logger.notice('Downloading Blackbox Exporter v{0} to {1}'.format(version,
-                                                                     dest_dir))
-    return _download_release('https://github.com/prometheus',
-                             BLACKBOX_EXPORTER,
-                             BLACKBOX_EXPORTER_VERSION,
-                             dest_dir)
 
 
 def _copy_blackbox_exporter(src_dir):
@@ -233,21 +225,14 @@ def _copy_blackbox_exporter(src_dir):
 def _install_node_exporter():
     logger.notice('Installing Node Exporter...')
     working_dir = _create_directory(join(sep, 'tmp', 'node_exporter'))
-    archive_file_name = _download_node_exporter(
-        NODE_EXPORTER_VERSION, working_dir)
+    archive_file_name = _download_release(working_dir,
+                                          'https://github.com/prometheus',
+                                          NODE_EXPORTER,
+                                          NODE_EXPORTER_VERSION)
     _unpack_archive(archive_file_name, working_dir)
     _copy_node_exporter(working_dir)
     common.remove(working_dir)
     logger.notice('Node Exporter successfully installed')
-
-
-def _download_node_exporter(version, dest_dir):
-    logger.notice('Downloading Node Exporter v{0} to {1}'.format(version,
-                                                                 dest_dir))
-    return _download_release('https://github.com/prometheus',
-                             NODE_EXPORTER,
-                             NODE_EXPORTER_VERSION,
-                             dest_dir)
 
 
 def _copy_node_exporter(src_dir):
@@ -260,22 +245,16 @@ def _copy_node_exporter(src_dir):
 def _install_postgres_exporter():
     logger.notice('Installing PostgreSQL Exporter...')
     working_dir = _create_directory(join(sep, 'tmp', 'postgres_exporter'))
-    archive_file_name = _download_postgres_exporter(
-        POSTGRES_EXPORTER_VERSION, working_dir)
+    archive_file_name = _download_release(
+        working_dir,
+        'https://github.com/wrouesnel/{0}/releases/download/'
+        'v{1}/{0}_v{1}_linux-amd64.tar.gz'.format(
+            POSTGRES_EXPORTER,
+            POSTGRES_EXPORTER_VERSION))
     _unpack_archive(archive_file_name, working_dir)
     _copy_postgres_exporter(working_dir)
     common.remove(working_dir)
     logger.notice('PostgreSQL Exporter successfully installed')
-
-
-def _download_postgres_exporter(version, dest_dir):
-    logger.notice(
-        'Downloading PostgreSQL Exporter v{0} to {1}'.format(version,
-                                                             dest_dir))
-    return _download_release('https://github.com/wrouesnel',
-                             POSTGRES_EXPORTER,
-                             POSTGRES_EXPORTER_VERSION,
-                             dest_dir)
 
 
 def _copy_postgres_exporter(src_dir):
@@ -290,22 +269,14 @@ def _install_rabbitmq_exporter():
     # is also available
     logger.notice('Installing RabbitMQ Exporter...')
     working_dir = _create_directory(join(sep, 'tmp', 'rabbitmq_exporter'))
-    archive_file_name = _download_rabbitmq_exporter(
-        RABBITMQ_EXPORTER_VERSION, working_dir)
+    archive_file_name = _download_release(working_dir,
+                                          'https://github.com/kbudde',
+                                          RABBITMQ_EXPORTER,
+                                          RABBITMQ_EXPORTER_VERSION)
     _unpack_archive(archive_file_name, working_dir)
     _copy_rabbitmq_exporter(working_dir)
     common.remove(working_dir)
     logger.notice('RabbitMQ Exporter successfully installed')
-
-
-def _download_rabbitmq_exporter(version, dest_dir):
-    logger.notice(
-        'Downloading RabbitMQ Exporter v{0} to {1}'.format(version,
-                                                           dest_dir))
-    return _download_release('https://github.com/kbudde',
-                             NODE_EXPORTER,
-                             NODE_EXPORTER_VERSION,
-                             dest_dir)
 
 
 def _copy_rabbitmq_exporter(src_dir):
