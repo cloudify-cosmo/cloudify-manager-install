@@ -347,8 +347,8 @@ def _deploy_configuration():
 def _deploy_services_configuration():
     logger.notice('Adding Prometheus service configuration...')
     # TODO: use files.deploy instead of common.copy here:
-    common.copy(join(CONFIG_PATH, 'prometheus.service'),
-                join(sep, 'etc', 'systemd', 'system'))
+    files.deploy(join(CONFIG_PATH, 'prometheus.service'),
+                 join(SYSTEMD_CONFIG_DIR, 'prometheus.service'))
     files.deploy(join(CONFIG_PATH, '{0}.service'.format(NODE_EXPORTER)),
                  join(SYSTEMD_CONFIG_DIR,
                       '{0}.service'.format(NODE_EXPORTER)))
