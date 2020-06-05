@@ -1,5 +1,5 @@
 [Unit]
-Description=Prometheus exporter for hardware and OS metrics exposed by *NIX kernels
+Description=Prometheus exporter for hardware and OS metrics
 Documentation=https://github.com/prometheus/node_exporter
 Wants=network-online.target
 After=network-online.target[Service]

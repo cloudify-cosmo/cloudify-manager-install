@@ -1,5 +1,5 @@
 [Unit]
-Description=Prometheus blackbox exporter
+Description=Prometheus blackbox exporter (HTTP/HTTPS/TCP pings)
 Documentation=https://github.com/prometheus/blackbox_exporter
 Wants=network-online.target
 After=network-online.target[Service]
