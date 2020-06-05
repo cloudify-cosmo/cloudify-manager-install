@@ -11,7 +11,7 @@ User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/postgres_exporter \
-  --web.listen-address=127.0.0.1:{{ prometheus.postgres_exporter.metrics_port }}e
+  --web.listen-address=127.0.0.1:{{ prometheus.postgres_exporter.metrics_port }}
 SyslogIdentifier=postgres_exporter
 Restart=always
 

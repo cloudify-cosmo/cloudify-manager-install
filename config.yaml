@@ -579,7 +579,8 @@ prometheus:
     sslmode: disable
     metrics_port: 9187
   rabbitmq_exporter:
-    rabbit_url: http://127.0.0.1:15671/
+    rabbitmq_url: https://127.0.0.1:15671
+    rabbitmq_ca_cert: ''
     username: cloudify
     password: c10udify
     metrics_port: 9419

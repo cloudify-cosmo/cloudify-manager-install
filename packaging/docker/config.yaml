@@ -18,9 +18,14 @@ prometheus:
   ca_cert: /etc/cloudify/ssl/cloudify_internal_ca_cert.pem
 
 services_to_install:
-- database_service
-- queue_service
-- manager_service
-- prometheus
+  - database_service
+  - queue_service
+  - manager_service
+  - prometheus
+
+prometheus:
+  rabbitmq_exporter:
+    rabbitmq_ca_cert: /etc/cloudify/ssl/cloudify_internal_ca_cert.pem
+
 
 save_config: false
