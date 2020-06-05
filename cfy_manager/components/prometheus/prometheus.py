@@ -157,8 +157,8 @@ def _create_prometheus_directories():
     logger.notice('Creating Prometheus directories')
     _create_directory(PROMETHEUS_DATA_DIR)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_DATA_DIR)
-    for dir_name in ('rules', 'rules.d', 'files_sd',):
-        _create_directory('{0}/{1}'.format(PROMETHEUS_CONFIG_DIR, dir_name))
+    for dir_name in ('rules', 'rules.d', 'files_sd', 'exporters',):
+        _create_directory(join(PROMETHEUS_CONFIG_DIR, dir_name))
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
 
 
@@ -228,6 +228,10 @@ def _copy_blackbox_exporter(src_dir):
     common.copy(join(src_dir, 'blackbox_exporter'), BIN_DIR)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                  join(BIN_DIR, 'blackbox_exporter'))
+    common.copy(join(src_dir, 'blackbox.yml'),
+                join(PROMETHEUS_CONFIG_DIR, 'exporters'))
+    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
+                 join(PROMETHEUS_CONFIG_DIR, 'exporters', 'blackbox.yml'))
 
 
 def _install_node_exporter():

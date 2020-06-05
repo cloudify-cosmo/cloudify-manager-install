@@ -37,8 +37,8 @@ scrape_configs:
           - http://{{ manager.private_ip }}:3000/  # Cloudify composer
           - http://{{ manager.private_ip }}:8088/  # Cloudify stage
           - http://{{ manager.private_ip }}:8100/  # Cloudify rest
-          - http://{{ manager.private_ip }}:53229  # Cloudify resources
-          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }} # Cloudify rest and ui internal
+          - http://{{ manager.private_ip }}:53229/  # Cloudify resources
+          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify rest and ui internal
           - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
     relabel_configs:
       - source_labels: [__address__]
