@@ -51,6 +51,7 @@ LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
+RABBITMQ_ENV_PATH = '/etc/rabbitmq/rabbitmq-env.conf'
 SECURE_PORT = 5671
 
 RABBITMQ_CTL = 'rabbitmqctl'
@@ -68,6 +69,12 @@ class RabbitMQ(BaseComponent):
         deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
 
+    def _deploy_env(self):
+        # This will make 'sudo rabbitmqctl' work without specifying node name
+        logger.info('Deploying RabbitMQ env')
+        deploy(join(CONFIG_PATH, 'rabbitmq-env.conf'), RABBITMQ_ENV_PATH)
+        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENV_PATH)
+
     def _init_service(self):
         logger.info('Initializing RabbitMQ...')
         rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
@@ -81,6 +88,7 @@ class RabbitMQ(BaseComponent):
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
         self._deploy_configuration()
+        self._deploy_env()
         service.reload(RABBITMQ, ignore_failure=True)
 
     def _rabbitmqctl(self, command, **kwargs):
