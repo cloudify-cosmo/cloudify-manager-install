@@ -7,18 +7,6 @@ global:
   external_labels:
     monitor: cloudify
 
-# Alertmanager configuration
-#alerting:
-#  alertmanagers:
-#    - static_configs:
-#        - targets:
-#          # - alertmanager:9093
-
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
-rule_files:
-  - "rules/postgresql.rules"
-  - "rules/rabbitmq.rules"
-
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
@@ -28,16 +16,14 @@ scrape_configs:
   - job_name: 'node'
     static_configs:
       - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
-  - job_name: 'blackbox'
+  - job_name: 'blackbox_http_200'
     metrics_path: /probe
     params:
-      module: [http_2xx]  # Look for a HTTP 200 respose
+      module: [http_200]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
           - http://{{ manager.private_ip }}:3000/  # Cloudify composer
           - http://{{ manager.private_ip }}:8088/  # Cloudify stage
-          - http://{{ manager.private_ip }}:8100/  # Cloudify rest
-          - http://{{ manager.private_ip }}:53229/  # Cloudify resources
           - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify rest and ui internal
           - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
     relabel_configs:
@@ -46,7 +32,22 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: 127.0.0.1:9115  # The blackbox exporter's real hostname:port.
+        replacement: {{ manager.public_ip }}:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+  - job_name: 'http_400'
+    metrics_path: /probe
+    params:
+      module: [http_400]  # Look for a HTTP 400 respose
+    static_configs:
+      - targets:
+          - http://{{ manager.private_ip }}:8100/  # Cloudify rest
+          - http://{{ manager.private_ip }}:53229/  # Cloudify resources
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: {{ manager.public_ip }}:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
   - job_name: 'postgresql'
     static_configs:
       - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']

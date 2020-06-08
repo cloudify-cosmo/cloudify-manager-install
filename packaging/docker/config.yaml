@@ -24,8 +24,7 @@ services_to_install:
   - prometheus
 
 prometheus:
-  rabbitmq_exporter:
-    rabbitmq_ca_cert: /etc/cloudify/ssl/cloudify_internal_ca_cert.pem
+  ca_cert: /etc/cloudify/ssl/cloudify_internal_ca_cert.pem
 
 
 save_config: false

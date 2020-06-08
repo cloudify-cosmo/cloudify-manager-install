@@ -564,11 +564,6 @@ usage_collector:
 
 prometheus:
   port: 9090
-  #services_to_monitor:
-  #  - node
-  #  - blackbox
-  #  - postgresql
-  #  - rabbitmq
   node_exporter:
     metrics_port: 9100
   blackbox_exporter:
@@ -580,10 +575,10 @@ prometheus:
     metrics_port: 9187
   rabbitmq_exporter:
     rabbitmq_url: https://127.0.0.1:15671
-    rabbitmq_ca_cert: ''
     username: cloudify
     password: c10udify
     metrics_port: 9419
+  ca_cert: ''
 
 flask_security: {}
 

@@ -1,0 +1,14 @@
+modules:
+  http_200:
+    prober: http
+    http:
+      tls_config:
+        insecure_skip_verify: false
+        ca_file: {{ prometheus.ca_cert }}
+  http_400:
+    prober: http
+    http:
+      valid_status_codes: [400,]
+      tls_config:
+        insecure_skip_verify: false
+        ca_file: {{ prometheus.ca_cert }}

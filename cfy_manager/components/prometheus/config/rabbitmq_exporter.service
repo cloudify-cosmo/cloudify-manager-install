@@ -9,7 +9,7 @@ Type=simple
 Environment="RABBIT_USER={{ prometheus.rabbitmq_exporter.username }}" \
   "RABBIT_PASSWORD={{ prometheus.rabbitmq_exporter.password }}" \
   "RABBIT_URL={{ prometheus.rabbitmq_exporter.rabbitmq_url }}" \
-  "CAFILE={{ prometheus.rabbitmq_exporter.rabbitmq_ca_cert }}" \
+  "CAFILE={{ prometheus.ca_cert }}" \
   "PUBLISH_PORT={{ prometheus.rabbitmq_exporter.metrics_port }}"
 # "SKIPVERIFY=true" \
 # SKIPVERIFY just for this POC
