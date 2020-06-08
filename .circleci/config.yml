@@ -103,6 +103,40 @@ jobs:
           path: ~/rpm/x86_64
           destination: /
 
+  build_prometheus_rpms:
+    working_directory: /tmp/cloudify-manager-install-prometheus
+    docker:
+      - image: rpmbuild/centos7
+    steps:
+      - checkout
+      - run:
+          name: Set version environment variables
+          command: cat packaging/version_info >> $BASH_ENV
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Link items from workspace under rpm sources dir
+          command: |
+            rm ~/rpm -fr
+            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install-prometheus/rpms
+            ln -s /tmp/cloudify-manager-install-prometheus ~/rpm
+      - run: sudo yum install rpmdevtools -y
+      - run:
+          name: Installing build dependencies
+          command: sudo yum-builddep -y packaging/install_rpm.spec
+      - run: rpmbuild -bb packaging/prometheus.spec
+      - run: rpmbuild -bb packaging/prometheus_node_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_postgres_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_rabbitmq_exporter.spec
+      - persist_to_workspace:
+          root: ~/rpm
+          paths:
+            - x86_64
+      - store_artifacts:
+          path: ~/rpm/x86_64
+          destination: /
+
   install_manager:
     machine: true
     environment:
@@ -392,15 +426,18 @@ workflows:
       - flake8
       - py3_compat
       - fetch_rpms
+      - build_prometheus_rpms
       - build_rpm:
           requires:
             - fetch_rpms
       - install_manager:
           requires:
             - build_rpm
+            - build_prometheus_rpms
       - install_cluster:
           requires:
             - build_rpm
+            - build_prometheus_rpms
 
   nightly:
     triggers:

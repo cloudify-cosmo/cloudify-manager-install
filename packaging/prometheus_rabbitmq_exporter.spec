@@ -1,8 +1,8 @@
 %define _tmpdir /tmp/rabbitmq_exporter
-%define _url    https://github.com/rabbitmq_exporter/releases/download/v1.0.0-RC7/rabbitmq_exporter-1.0.0-RC7.linux-amd64.tar.gz
+%define _url    https://github.com/kbudde/rabbitmq_exporter/releases/download/v1.0.0-RC7/rabbitmq_exporter-1.0.0-RC7.linux-amd64.tar.gz
 Name:           rabbitmq_exporter
-Version:        1.0.0-RC7
-Release:        1%{?dist}
+Version:        1.0.0
+Release:        RC7%{?dist}
 Summary:        Prometheus rabbitmq_exporter
 Group:          Applications/Multimedia
 License:        MIT

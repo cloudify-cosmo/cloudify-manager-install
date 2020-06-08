@@ -33,7 +33,3 @@ rm -rf %{_tmpdir}
 %attr(755,root,wheel)/usr/local/bin/promtool
 %attr(755,root,wheel)/etc/prometheus/consoles/
 %attr(755,root,wheel)/etc/prometheus/console_libraries/
-
-
-
-install -m 755 -d /tmp/prometheus/consoles /home/centos/rpmbuild/BUILDROOT/prometheus-2.18.1-1.el7.x86_64/etc/prometheus
