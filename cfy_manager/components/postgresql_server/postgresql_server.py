@@ -332,7 +332,10 @@ class PostgresqlServer(BaseComponent):
         logger.notice('postgres password successfully updated')
 
     def _etcd_is_running(self):
-        status = service.is_active('etcd').aggr_stdout.strip()
+        status = service.is_active(
+            'etcd',
+            append_prefix=False
+        ).aggr_stdout.strip()
         return status in ('active', 'activating')
 
     def _start_etcd(self):
