@@ -19,12 +19,14 @@ from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
 from ...utils.certificates import use_supplied_certificates
+from ...utils import service
 from ...logger import get_logger
 
 
 class BaseComponent(object):
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
+        self.service_type = service._get_service_type()
 
     def install(self):
         pass
