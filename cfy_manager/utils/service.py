@@ -158,7 +158,7 @@ class SystemD(object):
         return result.returncode == 0
 
     def is_active(self, service_name):
-        return self.systemctl('status', service_name, ignore_failure=True)
+        return self.systemctl('is-active', service_name, ignore_failure=True)
 
 
 def _get_full_service_name(service_name, append_prefix):
