@@ -430,14 +430,13 @@ workflows:
       - build_rpm:
           requires:
             - fetch_rpms
+            - build_prometheus_rpms
       - install_manager:
           requires:
             - build_rpm
-            - build_prometheus_rpms
       - install_cluster:
           requires:
             - build_rpm
-            - build_prometheus_rpms
 
   nightly:
     triggers:

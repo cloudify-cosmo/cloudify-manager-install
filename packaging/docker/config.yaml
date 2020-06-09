@@ -23,8 +23,4 @@ services_to_install:
   - manager_service
   - prometheus
 
-prometheus:
-  ca_cert: /etc/cloudify/ssl/cloudify_internal_ca_cert.pem
-
-
 save_config: false
