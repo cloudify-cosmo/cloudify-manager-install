@@ -113,13 +113,17 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run:
+          name: Serve the manager-install rpm on http
+          command: |
+            cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+            docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
+      - run:
           name: Build manager container
           command: |
             set -eux
             ls -la /tmp/workspace
             pushd packaging/docker
-              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
-              docker build --tag ${IMAGE_NAME} .
+              docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${IMAGE_NAME} .
             popd
       - run:
           name: Run manager container
@@ -149,13 +153,17 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run:
+          name: Serve the manager-install rpm on http
+          command: |
+            cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+            docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
+      - run:
           name: Build manager container
           command: |
             set -eux
             ls -la /tmp/workspace
             pushd packaging/docker
-              cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
-              docker build --tag ${CLUSTER_IMAGE} .
+              docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${CLUSTER_IMAGE} .
             popd
       - run:
           name: Prepare name envvars
