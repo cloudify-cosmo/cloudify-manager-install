@@ -8,14 +8,6 @@ location ~ ^/monitoring {
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
 
-    sub_filter_types text/html;
-    sub_filter_once off;
-    sub_filter '="/' '="/monitoring/';
-    sub_filter 'var PATH_PREFIX = "";' 'var PATH_PREFIX = "/monitoring";';
-
-    rewrite ^/monitoring/?$ /monitoring/graph; # `redirect` loses port in case of ssh tunnel
-    rewrite ^/monitoring/(.*)$ /$1 break;
-
     gzip on;
     gzip_types application/json;
     gzip_min_length 1000;

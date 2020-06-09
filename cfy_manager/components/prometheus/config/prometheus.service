@@ -15,8 +15,8 @@ ExecStart=/usr/local/bin/prometheus \
   --storage.tsdb.path=/var/lib/prometheus \
   --web.console.templates=/etc/prometheus/consoles \
   --web.console.libraries=/etc/prometheus/console_libraries \
-  --web.listen-address={{ manager.private_ip }}:{{ prometheus.port }} \
-  --web.external-url=
+  --web.listen-address=127.0.0.1:{{ prometheus.port }} \
+  --web.external-url=http://{{ manager.private_ip }}/monitoring
 SyslogIdentifier=prometheus
 Restart=always
 
