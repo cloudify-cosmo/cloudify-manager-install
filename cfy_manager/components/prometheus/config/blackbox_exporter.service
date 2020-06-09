@@ -2,7 +2,7 @@
 Description=Prometheus blackbox exporter (HTTP/HTTPS/TCP pings)
 Documentation=https://github.com/prometheus/blackbox_exporter
 Wants=network-online.target
-After=network-online.target[Service]
+After=network-online.target
 
 [Service]
 Type=simple
