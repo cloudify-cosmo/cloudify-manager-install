@@ -31,7 +31,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && rm /tmp/cloudify-manager-install.rpm \
     && cp /tmp/config.yaml /etc/cloudify/config.yaml \
     && cfy_manager install --only-install --verbose \
-    && rm -fr /opt/cloudify/sources -fr \
+    && rm -fr /opt/cloudify/sources/*.rpm -fr \
     && rm /etc/yum.repos.d/Cloudify-Local.repo \
     && yum autoremove -y \
     && yum clean all
