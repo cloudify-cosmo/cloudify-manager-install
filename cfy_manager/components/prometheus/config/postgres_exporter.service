@@ -2,7 +2,7 @@
 Description=Prometheus exporter for PostgreSQL
 Documentation=https://github.com/wrouesnel/postgres_exporter
 Wants=network-online.target
-After=network-online.target[Service]
+After=network-online.target
 
 [Service]
 Type=simple
