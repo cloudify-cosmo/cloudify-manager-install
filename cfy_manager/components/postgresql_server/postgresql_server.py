@@ -332,11 +332,9 @@ class PostgresqlServer(BaseComponent):
         logger.notice('postgres password successfully updated')
 
     def _etcd_is_running(self):
-        status = service.is_active(
-            'etcd',
-            append_prefix=False
-        ).aggr_stdout.strip()
-        return status in ('active', 'activating')
+        status = service.is_active('etcd', append_prefix=False)
+        # Add new status 'running' for supervisord
+        return status in ('running', 'active', 'activating')
 
     def _start_etcd(self):
         # On the first node, etcd start via systemd will fail because of the
@@ -763,13 +761,22 @@ class PostgresqlServer(BaseComponent):
         # Similarly to the current snapshot post restore commands, this will
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
-        common.sudo(
-            [
-                'systemd-run',
-                '--unit', 'patroni_startup_check',
-                '/opt/patroni/bin/patroni_startup_check',
-            ]
-        )
+        if self.service_type == 'supervisord':
+            service.configure(
+                'patroni_startup_check',
+                append_prefix=False,
+                src_dir='postgresql_server',
+                config_path='config/supervisord/patroni_startup_check.conf'
+            )
+            service.start('patroni_startup_check', append_prefix=False)
+        else:
+            common.sudo(
+                [
+                    'systemd-run',
+                    '--unit', 'patroni_startup_check',
+                    '/opt/patroni/bin/patroni_startup_check',
+                ]
+            )
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]

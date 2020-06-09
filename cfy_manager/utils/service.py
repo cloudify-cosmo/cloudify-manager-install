@@ -158,7 +158,13 @@ class SystemD(object):
         return result.returncode == 0
 
     def is_active(self, service_name):
-        return self.systemctl('is-active', service_name, ignore_failure=True)
+        response = self.systemctl(
+            'is-active',
+            service_name,
+            ignore_failure=True
+        )
+        status = response.aggr_stdout.strip()
+        return status
 
 
 def _get_full_service_name(service_name, append_prefix):
@@ -233,7 +239,16 @@ class Supervisord(object):
         return result.returncode == 0
 
     def is_active(self, service_name):
-        return self.supervisorctl('status', service_name, ignore_failure=True)
+        response = self.supervisorctl(
+            'status', service_name,
+            ignore_failure=True
+        )
+        # Output of `supervisorctl -c /etc/supervisord.conf status SERVICE`
+        # is on the following format
+        # "SERVICE                          EXITED    Jun 09 09:35 AM"
+        # Remove new line and then split the output to get the desired status
+        status = response.aggr_stdout.strip().split()[1]
+        return status.lower()
 
     def configure(self,
                   service_name,
