@@ -2,7 +2,7 @@
 Description=Prometheus exporter for hardware and OS metrics
 Documentation=https://github.com/prometheus/node_exporter
 Wants=network-online.target
-After=network-online.target[Service]
+After=network-online.target
 
 [Service]
 Type=simple
