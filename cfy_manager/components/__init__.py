@@ -33,4 +33,4 @@ from .usage_collector import UsageCollector  # NOQA
 from .status_reporter import RabbitmqStatusReporter  # NOQA
 from .status_reporter import PostgresqlStatusReporter  # NOQA
 from .status_reporter import ManagerStatusReporter  # NOQA
-from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE, PROMETHEUS  # NOQA
+from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE, MONITORING_SERVICE  # NOQA

@@ -74,6 +74,8 @@ jobs:
           command: |
             rm ~/rpm -fr
             ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install/rpms
+            cp -a /tmp/workspace/x86_64/prometheus-*.rpm /tmp/cloudify-manager-install/rpms/
+            cp -a /tmp/workspace/x86_64/*_exporter-*.rpm /tmp/cloudify-manager-install/rpms/
             ln -s /tmp/cloudify-manager-install ~/rpm
       - run:
           name: set up cloudify-premium deploy key
@@ -149,7 +151,7 @@ jobs:
       - run:
           name: Serve the manager-install rpm on http
           command: |
-            cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+            cp /tmp/workspace/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
             docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
       - run:
           name: Build manager container
@@ -189,7 +191,7 @@ jobs:
       - run:
           name: Serve the manager-install rpm on http
           command: |
-            cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+            cp /tmp/workspace/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
             docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
       - run:
           name: Build manager container
