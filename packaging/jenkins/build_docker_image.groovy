@@ -31,7 +31,7 @@ pipeline {
                     }
                 }
                 copyArtifacts(
-                    projectName: 'dir_manager/_temp_build_rpm',
+                    projectName: 'dir_manager/build_manager_install_rpm_pipeline',
                     selector: params.RPM_BUILD_NUMBER ? specific(params.RPM_BUILD_NUMBER) : lastSuccessful(),
                     target: 'packaging/docker'
                 )
