@@ -589,7 +589,7 @@ flask_security: {}
 #   - database_service
 #   - queue_service
 #   - manager_service
-#   - prometheus
+#   - monitoring_service
 services_to_install:
 - database_service
 - queue_service

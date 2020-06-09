@@ -26,11 +26,6 @@ DEPENDENCIES_ERROR_MESSAGES = {
     'python-backports': 'required by python',
     'python-backports-ssl_match_hostname': 'required by python',
     'openssh-server': 'required by the sanity check',
-    # 'prometheus': 'required for monitoring (status reporter agent)',
-    # 'blackbox_exporter': 'used for monitoring HTTP services',
-    # 'node_exporter': 'used for monitoring VMs',
-    # 'postgres_exporter': 'used for monitoring PostgreSQL',
-    # 'rabbitmq_exporter': 'used for monitoring RabbitMQ',
 }
 
 COMPONENTS_DEPENDENCIES = {
@@ -56,6 +51,4 @@ COMPONENTS_DEPENDENCIES = {
     'RabbitmqStatusReporter': [],
     'PostgresqlStatusReporter': [],
     'Prometheus': [],
-    # 'Prometheus': ['prometheus', 'blackbox_exporter', 'node_exporter',
-    #                'postgres_exporter', 'rabbitmq_exporter'],
 }

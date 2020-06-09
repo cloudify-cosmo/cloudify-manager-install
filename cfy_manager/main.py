@@ -74,7 +74,6 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
-from .components.prometheus import prometheus
 from .status_reporter import status_reporter
 from .utils import CFY_UMASK
 from .utils.certificates import (
@@ -1042,11 +1041,6 @@ def main():
         status_reporter.configure,
         status_reporter.get_tokens
     ], namespace='status-reporter')
-
-    parser.add_commands([
-        prometheus.start,
-        prometheus.stop,
-    ], namespace='prometheus')
 
     parser.add_commands([
         get_id

@@ -22,8 +22,10 @@ scrape_configs:
       module: [http_200]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
-          - http://{{ manager.private_ip }}:3000/  # Cloudify composer
-          - http://{{ manager.private_ip }}:8088/  # Cloudify stage
+          - http://127.0.0.1:3000/  # Cloudify composer
+          - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
+          - http://127.0.0.1:8088/  # Cloudify stage
+          - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
           - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify rest and ui internal
           - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
     relabel_configs:
@@ -39,8 +41,8 @@ scrape_configs:
       module: [http_400]  # Look for a HTTP 400 respose
     static_configs:
       - targets:
-          - http://{{ manager.private_ip }}:8100/  # Cloudify rest
-          - http://{{ manager.private_ip }}:53229/  # Cloudify resources
+          - http://127.0.0.1:8100/  # Cloudify rest
+          - http://127.0.0.1:53229/  # Cloudify resources
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

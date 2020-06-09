@@ -17,8 +17,6 @@
 from os import sep
 from os.path import join
 
-import argh
-
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
@@ -35,7 +33,7 @@ from ...constants import (
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
 )
-from ...logger import get_logger, setup_console_logger
+from ...logger import get_logger
 from ...utils import common, files, service
 
 CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
@@ -45,11 +43,6 @@ SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
-PROMETHEUS_VERSION = '2.18.1'
-NODE_EXPORTER_VERSION = '1.0.0'
-BLACKBOX_EXPORTER_VERSION = '0.16.0'
-POSTGRES_EXPORTER_VERSION = '0.8.0'
-RABBITMQ_EXPORTER_VERSION = '1.0.0-RC7'
 
 EXPORTERS = [
     {
@@ -191,17 +184,3 @@ def _deploy_services_configuration():
 def _validate_prometheus_running():
     logger.info('Making sure Prometheus is live...')
     service.verify_alive(PROMETHEUS, append_prefix=False)
-
-
-@argh.arg('-v', '--verbose', help=constants.VERBOSE_HELP_MSG, default=False)
-def start(verbose=False):
-    setup_console_logger(verbose=verbose)
-    prometheus = Prometheus()
-    prometheus.start()
-
-
-@argh.arg('-v', '--verbose', help=constants.VERBOSE_HELP_MSG, default=False)
-def stop(verbose=False):
-    setup_console_logger(verbose=verbose)
-    prometheus = Prometheus()
-    prometheus.stop()
