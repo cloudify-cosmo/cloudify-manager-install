@@ -13,7 +13,7 @@ location ~ ^/monitoring {
     sub_filter '="/' '="/monitoring/';
     sub_filter 'var PATH_PREFIX = "";' 'var PATH_PREFIX = "/monitoring";';
 
-    rewrite ^/monitoring/?$ /monitoring/graph; # `redirect` looses port in case of ssh tunnel
+    rewrite ^/monitoring/?$ /monitoring/graph; # `redirect` loses port in case of ssh tunnel
     rewrite ^/monitoring/(.*)$ /$1 break;
 
     gzip on;
