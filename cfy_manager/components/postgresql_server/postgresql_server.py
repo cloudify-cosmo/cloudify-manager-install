@@ -1466,6 +1466,7 @@ class PostgresqlServer(BaseComponent):
             service.start('patroni', append_prefix=False)
             service.verify_alive('patroni', append_prefix=False)
         else:
+            service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
             service.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
             service.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully started')
