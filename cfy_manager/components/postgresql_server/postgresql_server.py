@@ -22,7 +22,6 @@ import socket
 from copy import copy
 from getpass import getuser
 from tempfile import mkstemp
-from functools import partial
 from os.path import join, isdir, islink
 
 import requests
@@ -456,17 +455,21 @@ class PostgresqlServer(BaseComponent):
 
     def _configure_patroni(self):
         logger.info('Starting patroni')
-        _configure = partial(
-            service.configure,
-            'patroni',
-            src_dir='postgresql_server',
-            append_prefix=False,
-            render=False
-        )
         if self.service_type == 'supervisord':
-            _configure(config_path='config/supervisord/patroni.conf')
+            service.configure(
+                'patroni',
+                src_dir='postgresql_server',
+                append_prefix=False,
+                render=False,
+                config_path='config/supervisord/patroni.conf'
+            )
         else:
-            _configure()
+            service.configure(
+                'patroni',
+                src_dir='postgresql_server',
+                append_prefix=False,
+                render=False,
+            )
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
@@ -748,19 +751,12 @@ class PostgresqlServer(BaseComponent):
         return etcd_members
 
     def _deploy_patroni_startup_check(self):
-        additional_render_context = {
-            'service_manager': 'systemctl',
-        }
-
-        if self.service_type == 'supervisord':
-            additional_render_context = {
-                'service_manager': 'supervisorctl',
-                'service_args': '-c /etc/supervisord.conf'
-            }
         files.deploy(
             os.path.join(SCRIPTS_PATH, 'patroni_startup_check'),
             '/opt/patroni/bin/patroni_startup_check',
-            additional_render_context=additional_render_context
+            additional_render_context={
+                'service_manager': self.service_type
+            }
         )
         common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
         common.chmod('500', '/opt/patroni/bin/patroni_startup_check')
@@ -1186,10 +1182,10 @@ class PostgresqlServer(BaseComponent):
 
     def _restart_manager_db_dependent_services(self):
         logger.info('Restarting DB proxy service.')
-        common.sudo(['systemctl', 'restart', 'haproxy'])
+        service.restart('haproxy')
         self.logger.info('Restarting DB-dependent services.')
-        common.sudo(['systemctl', 'restart', 'cloudify-amqp-postgres'])
-        common.sudo(['systemctl', 'restart', 'cloudify-restservice'])
+        service.restart('amqp-postgres')
+        service.restart('restservice')
 
     def _node_is_in_db(self, node_id):
         result = db.run_psql_command(

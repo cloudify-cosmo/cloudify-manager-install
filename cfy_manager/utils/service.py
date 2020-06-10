@@ -36,14 +36,15 @@ class SystemD(object):
             service='',
             retries=0,
             ignore_failure=False,
-            options=[]
+            options=None
     ):
+        options = options or []
         systemctl_cmd = ['systemctl', action]
         if service:
             systemctl_cmd.append(service)
         # If options are passed to the systemctl action
         if options:
-            systemctl_cmd += options
+            systemctl_cmd.extend(options)
         return sudo(systemctl_cmd, retries=retries,
                     ignore_failures=ignore_failure)
 
@@ -134,7 +135,7 @@ class SystemD(object):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name, ignore_failure=False, options=[]):
+    def start(self, service_name, ignore_failure=False, options=None):
         logger.debug('Starting systemd service {0}...'.format(service_name))
         self.systemctl(
             'start',
@@ -158,13 +159,11 @@ class SystemD(object):
         return result.returncode == 0
 
     def is_active(self, service_name):
-        response = self.systemctl(
+        return self.systemctl(
             'is-active',
             service_name,
             ignore_failure=True
-        )
-        status = response.aggr_stdout.strip()
-        return status
+        ).aggr_stdout.strip()
 
 
 def _get_full_service_name(service_name, append_prefix):
@@ -179,15 +178,16 @@ class Supervisord(object):
             action,
             service='',
             ignore_failure=False,
-            options=[]
+            options=None
     ):
+        options = options or []
         cmd = [
             'supervisorctl', '-c', '/etc/supervisord.conf', action
         ]
         if service:
             cmd += [service]
         if options:
-            cmd += options
+            cmd.extend(options)
         return run(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
@@ -204,7 +204,7 @@ class Supervisord(object):
             ignore_failure=ignore_failure
         )
 
-    def start(self, service_name, ignore_failure=False, options=[]):
+    def start(self, service_name, ignore_failure=False, options=None):
         self.supervisorctl(
             'start',
             service_name,
@@ -239,16 +239,14 @@ class Supervisord(object):
         return result.returncode == 0
 
     def is_active(self, service_name):
-        response = self.supervisorctl(
-            'status', service_name,
-            ignore_failure=True
-        )
         # Output of `supervisorctl -c /etc/supervisord.conf status SERVICE`
         # is on the following format
         # "SERVICE                          EXITED    Jun 09 09:35 AM"
         # Remove new line and then split the output to get the desired status
-        status = response.aggr_stdout.strip().split()[1]
-        return status.lower()
+        return self.supervisorctl(
+            'status', service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip().split()[1].lower()
 
     def configure(self,
                   service_name,
@@ -283,7 +281,10 @@ class Supervisord(object):
 
 
 def _get_service_type():
-    return config.get('service_management')
+    service_type = config.get('service_management')
+    if not service_type:
+        service_type = 'systemd'
+    return service_type
 
 
 def _get_backend():
@@ -305,7 +306,7 @@ def disable(service_name, append_prefix=True):
     return _get_backend().disable(full_service_name)
 
 
-def start(service_name, append_prefix=True, options=[]):
+def start(service_name, append_prefix=True, options=None):
     full_service_name = _get_full_service_name(service_name, append_prefix)
     logger.debug('Starting service {0}...'.format(full_service_name))
     return _get_backend().start(full_service_name, options=options)
