@@ -340,7 +340,12 @@ class PostgresqlServer(BaseComponent):
         # On the first node, etcd start via systemd will fail because of the
         # other nodes not being up, so we use this approach instead
         logger.info('Starting etcd')
-        service.start('etcd', append_prefix=False, options=['--no-block'])
+        # Systemd only support adding "--no-block"
+        options = ['--no-block']
+        if self.service_type == 'supervisord':
+            options = []
+
+        service.start('etcd', append_prefix=False, options=options)
         while not self._etcd_is_running():
             logger.info('Waiting for etcd to start...')
             time.sleep(1)
@@ -562,7 +567,10 @@ class PostgresqlServer(BaseComponent):
                 user='etcd',
                 group='etcd',
                 src_dir='postgresql_server',
-                config_path='config/supervisord/etcd.conf'
+                config_path='config/supervisord/etcd.conf',
+                external_configure_params={
+                    'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+                }
             )
         else:
             service.enable('etcd', append_prefix=False)
