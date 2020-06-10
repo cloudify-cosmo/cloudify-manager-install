@@ -26,9 +26,12 @@ RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager
 RUN cfy_manager install --only-install --verbose
 RUN chmod a+wx /var/run
 RUN chmod 755 /etc/cloudify
-RUN mkdir /run/cloudify-restservice
-RUN chown cfyuser. /run/cloudify-restservice && chmod 755 /run/cloudify-restservice
+#RUN mkdir /run/cloudify-restservice
+#RUN chown cfyuser. /run/cloudify-restservice && chmod 755 /run/cloudify-restservice
 RUN mkdir /etc/supervisord.d
 
 COPY supervisord.conf /etc/supervisord.conf
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+COPY rsyslog.conf /etc/supervisord.d/
+#CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+CMD tail -f /dev/null
+#CMD ["CMD", "tail" , "-f", "/dev/null"]
