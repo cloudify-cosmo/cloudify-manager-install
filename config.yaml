@@ -570,7 +570,6 @@ prometheus:
     metrics_port: 9115
   postgres_exporter:
     username: ''
-    password: ''
     sslmode: disable
     metrics_port: 9187
   rabbitmq_exporter:

@@ -20,6 +20,7 @@ from os.path import join
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
+    CONSTANTS,
 )
 from ..service_names import (
     PROMETHEUS,
@@ -27,8 +28,12 @@ from ..service_names import (
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
     RABBITMQ_EXPORTER,
+
+    POSTGRESQL_CLIENT,
+    RABBITMQ,
 )
 from ... import constants
+from ...config import config
 from ...constants import (
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
@@ -146,9 +151,36 @@ def _chown_resources_dir():
 
 
 def _deploy_configuration():
+    if PROMETHEUS in config:
+        _update_config()
     _deploy_prometheus_configuration()
     _deploy_exporters_configuration()
     _deploy_services_configuration()
+
+
+def _update_config():
+    if POSTGRES_EXPORTER in config[PROMETHEUS]:
+        if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
+                not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'username': config[POSTGRESQL_CLIENT]['server_username']})
+        if ('password' in config[PROMETHEUS][POSTGRES_EXPORTER] and
+                not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'password': config[POSTGRESQL_CLIENT]['server_password']})
+    if RABBITMQ_EXPORTER in config[PROMETHEUS]:
+        if ('username' in config[PROMETHEUS][RABBITMQ_EXPORTER] and
+                not config[PROMETHEUS][RABBITMQ_EXPORTER]['username']):
+            config[PROMETHEUS][RABBITMQ_EXPORTER].update(
+                {'username': config[RABBITMQ]['username']})
+        if ('password' in config[PROMETHEUS][RABBITMQ_EXPORTER] and
+                not config[PROMETHEUS][RABBITMQ_EXPORTER]['password']):
+            config[PROMETHEUS][RABBITMQ_EXPORTER].update({
+                'password': config[RABBITMQ]['password']})
+    if ('ca_cert_path' not in config[PROMETHEUS] or
+            not config[PROMETHEUS]['ca_cert_path']):
+        config[PROMETHEUS].update(
+            {'ca_cert_path': config[CONSTANTS]['ca_cert_path']})
 
 
 def _deploy_prometheus_configuration():

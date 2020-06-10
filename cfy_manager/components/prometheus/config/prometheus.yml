@@ -11,8 +11,10 @@ global:
 # Here it's Prometheus itself.
 scrape_configs:
   - job_name: 'prometheus'
+    scheme: {{ manager.external_rest_protocol }}
+    metrics_path: /monitoring/metrics
     static_configs:
-      - targets: ['localhost:{{ prometheus.port }}']
+      - targets: ['{{ manager.public_ip }}:{{ manager.external_rest_port }}']
   - job_name: 'node'
     static_configs:
       - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
@@ -22,9 +24,9 @@ scrape_configs:
       module: [http_200]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
-          - http://127.0.0.1:3000/  # Cloudify composer
+          - http://localhost:3000/  # Cloudify composer
           - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
-          - http://127.0.0.1:8088/  # Cloudify stage
+          - http://localhost:8088/  # Cloudify stage
           - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
           - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify rest and ui internal
           - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
@@ -34,7 +36,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: {{ manager.public_ip }}:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+        replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
   - job_name: 'http_400'
     metrics_path: /probe
     params:
@@ -49,7 +51,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: {{ manager.public_ip }}:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+        replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
   - job_name: 'postgresql'
     static_configs:
       - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']
