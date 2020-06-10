@@ -23,7 +23,10 @@ from .service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     RABBITMQ,
-    POSTGRESQL_SERVER
+    POSTGRESQL_SERVER,
+    PROMETHEUS,
+    POSTGRES_EXPORTER,
+    RABBITMQ_EXPORTER,
 )
 
 from . import QUEUE_SERVICE, DATABASE_SERVICE, MANAGER_SERVICE
@@ -97,6 +100,29 @@ def _set_constant_config():
                 constants.POSTGRESQL_CLIENT_KEY_PATH
 
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
+
+    if PROMETHEUS in config:
+        if POSTGRES_EXPORTER in config[PROMETHEUS]:
+            if ('username' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
+                    not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
+                config[PROMETHEUS][POSTGRES_EXPORTER]['username'] = \
+                    config[POSTGRESQL_CLIENT]['server_username']
+            if ('password' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
+                    not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
+                config[PROMETHEUS][POSTGRES_EXPORTER]['username'] = \
+                    config[POSTGRESQL_CLIENT]['server_password']
+        if RABBITMQ_EXPORTER in config[PROMETHEUS]:
+            if ('username' not in config[PROMETHEUS][RABBITMQ_EXPORTER] or
+                    not config[PROMETHEUS][RABBITMQ_EXPORTER]['username']):
+                config[PROMETHEUS][RABBITMQ_EXPORTER]['username'] = \
+                    config[RABBITMQ]['username']
+            if ('password' not in config[PROMETHEUS][RABBITMQ_EXPORTER] or
+                    not config[PROMETHEUS][RABBITMQ_EXPORTER]['password']):
+                config[PROMETHEUS][RABBITMQ_EXPORTER]['username'] = \
+                    config[RABBITMQ]['password']
+        if ('ca_cert_path' not in config[PROMETHEUS] or
+                not config[PROMETHEUS]['ca_cert_path']):
+            config[PROMETHEUS]['ca_cert_path'] = const_conf['ca_cert_path']
 
 
 def _set_hostname():

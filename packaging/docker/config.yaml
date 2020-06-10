@@ -14,9 +14,6 @@ sanity:
 postgresql_client:
   server_username: postgres
 
-prometheus:
-  ca_cert: /etc/cloudify/ssl/cloudify_internal_ca_cert.pem
-
 services_to_install:
   - database_service
   - queue_service

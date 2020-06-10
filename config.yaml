@@ -569,16 +569,16 @@ prometheus:
   blackbox_exporter:
     metrics_port: 9115
   postgres_exporter:
-    username: postgres
-    password: postgres
+    username: ''
+    password: ''
     sslmode: disable
     metrics_port: 9187
   rabbitmq_exporter:
     rabbitmq_url: https://127.0.0.1:15671
-    username: cloudify
-    password: c10udify
+    username: ''
+    password: ''
     metrics_port: 9419
-  ca_cert: ''
+  ca_cert_path: ''
 
 flask_security: {}
 
