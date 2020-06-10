@@ -6,7 +6,7 @@ pipeline {
         }
     }
     parameters {
-        string(name: 'VERSION'. description: 'Cloudify version number, for use as a RPM Version (eg. 5.1.0)')
+        string(name: 'VERSION', description: 'Cloudify version number, for use as a RPM Version (eg. 5.1.0)')
         string(name: 'PRERELEASE', description: 'Cloudify milestone version number, for use as a RPM Release (eg. .dev1)')
         string(name: 'BRANCH', defaultValue: 'master')
         choice(name: 'EDITION', choices: 'premium\ncommunity')
