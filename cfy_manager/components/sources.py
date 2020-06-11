@@ -30,5 +30,5 @@ db_cluster = [
     'libestr', 'libfastjson', 'rsyslog', 'etcd',
     'cloudify-status-reporter', 'patroni'
 ]
-queue = ['rabbitmq-server-3.7.7', 'cloudify-rabbitmq']
+queue = ['rabbitmq-server-3.8.4', 'cloudify-rabbitmq']
 queue_cluster = ['cloudify-status-reporter']
