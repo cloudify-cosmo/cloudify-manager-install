@@ -21,6 +21,7 @@ import socket
 import hashlib
 from os.path import join
 
+from retrying import retry
 import requests
 
 from ..components_constants import (
@@ -455,6 +456,8 @@ class RabbitMQ(BaseComponent):
             sign_key=sign_key,
         )
 
+    # Give rabbit time to finish starting
+    @retry(stop_max_attempt_number=20, wait_fixed=3000)
     def _validate_rabbitmq_running(self):
         logger.info('Making sure RabbitMQ is live...')
         service.verify_alive(RABBITMQ)
