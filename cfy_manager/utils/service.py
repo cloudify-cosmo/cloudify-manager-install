@@ -31,10 +31,20 @@ logger = get_logger('SystemD')
 
 class SystemD(object):
     @staticmethod
-    def systemctl(action, service='', retries=0, ignore_failure=False):
+    def systemctl(
+            action,
+            service='',
+            retries=0,
+            ignore_failure=False,
+            options=None
+    ):
+        options = options or []
         systemctl_cmd = ['systemctl', action]
         if service:
             systemctl_cmd.append(service)
+        # If options are passed to the systemctl action
+        if options:
+            systemctl_cmd.extend(options)
         return sudo(systemctl_cmd, retries=retries,
                     ignore_failures=ignore_failure)
 
@@ -43,7 +53,10 @@ class SystemD(object):
                   user=CLOUDIFY_USER,
                   group=CLOUDIFY_GROUP,
                   external_configure_params=None,
-                  append_prefix=True):
+                  config_path='config',
+                  src_dir=None,
+                  append_prefix=True,
+                  render=True):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
@@ -54,20 +67,22 @@ class SystemD(object):
         env_dst = "/etc/sysconfig/{0}".format(sid)
         srv_dst = "/usr/lib/systemd/system/{0}.service".format(sid)
 
-        service_dir_name = service_name.replace('-', '_')
-        src_dir = join(COMPONENTS_DIR, service_dir_name, 'config')
+        if src_dir is None:
+            src_dir = service_name
+
+        service_dir_name = src_dir.replace('-', '_')
+        src_dir = join(COMPONENTS_DIR, service_dir_name, config_path)
         env_src = join(src_dir, sid)
         srv_src = join(src_dir, '{0}.service'.format(sid))
 
         if exists(env_src):
             logger.debug('Deploying systemd EnvironmentFile...')
-            deploy(env_src, env_dst, render=True,
+            deploy(env_src, env_dst, render=render,
                    additional_render_context=external_configure_params)
             chown(user, group, env_dst)
 
         # components that have had their service file moved to a RPM, won't
         # have the file here.
-        # TODO: after this is done to all components, this can be removed
         if exists(srv_src):
             logger.debug('Deploying systemd .service file...')
             deploy(srv_src, srv_dst, render=True,
@@ -84,7 +99,6 @@ class SystemD(object):
 
         # components that have had their unit file moved to the RPM, will
         # also remove it during RPM uninstall
-        # TODO: remove this after all components have been changed to use RPMs
         if service_file:
             remove_file(self.get_service_file_path(service_name))
 
@@ -121,9 +135,14 @@ class SystemD(object):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name, ignore_failure=False):
+    def start(self, service_name, ignore_failure=False, options=None):
         logger.debug('Starting systemd service {0}...'.format(service_name))
-        self.systemctl('start', service_name, ignore_failure=ignore_failure)
+        self.systemctl(
+            'start',
+            service_name,
+            ignore_failure=ignore_failure,
+            options=options
+        )
 
     def stop(self, service_name, ignore_failure=False):
         logger.debug('Stopping systemd service {0}...'.format(service_name))
@@ -139,6 +158,13 @@ class SystemD(object):
         result = self.systemctl('status', service_name, ignore_failure=True)
         return result.returncode == 0
 
+    def is_active(self, service_name):
+        return self.systemctl(
+            'is-active',
+            service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip()
+
 
 def _get_full_service_name(service_name, append_prefix):
     if append_prefix:
@@ -147,12 +173,21 @@ def _get_full_service_name(service_name, append_prefix):
 
 
 class Supervisord(object):
-    def supervisorctl(self, action, service='', ignore_failure=False):
+    def supervisorctl(
+            self,
+            action,
+            service='',
+            ignore_failure=False,
+            options=None
+    ):
+        options = options or []
         cmd = [
             'supervisorctl', '-c', '/etc/supervisord.conf', action
         ]
         if service:
             cmd += [service]
+        if options:
+            cmd.extend(options)
         return run(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
@@ -169,11 +204,12 @@ class Supervisord(object):
             ignore_failure=ignore_failure
         )
 
-    def start(self, service_name, ignore_failure=False):
+    def start(self, service_name, ignore_failure=False, options=None):
         self.supervisorctl(
             'start',
             service_name,
-            ignore_failure=ignore_failure
+            ignore_failure=ignore_failure,
+            options=options
         )
 
     def stop(self, service_name, ignore_failure=False):
@@ -202,13 +238,25 @@ class Supervisord(object):
             'status', service_name, ignore_failure=True)
         return result.returncode == 0
 
+    def is_active(self, service_name):
+        # Output of `supervisorctl -c /etc/supervisord.conf status SERVICE`
+        # is on the following format
+        # "SERVICE                          EXITED    Jun 09 09:35 AM"
+        # Remove new line and then split the output to get the desired status
+        return self.supervisorctl(
+            'status', service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip().split()[1].lower()
+
     def configure(self,
                   service_name,
                   user=CLOUDIFY_USER,
                   group=CLOUDIFY_GROUP,
                   external_configure_params=None,
+                  config_path='config/supervisord.conf',
                   src_dir=None,
-                  append_prefix=True):
+                  append_prefix=True,
+                  render=True):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
@@ -221,12 +269,11 @@ class Supervisord(object):
         if src_dir is None:
             src_dir = service_name
         src_dir = src_dir.replace('-', '_')
-        srv_src = join(COMPONENTS_DIR, src_dir,
-                       'config/supervisord.conf')
+        srv_src = join(COMPONENTS_DIR, src_dir, config_path)
         logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
-            deploy(srv_src, dst, render=True,
+            deploy(srv_src, dst, render=render,
                    additional_render_context=external_configure_params)
             chown(user, group, dst)
 
@@ -234,7 +281,10 @@ class Supervisord(object):
 
 
 def _get_service_type():
-    return config.get('service_management')
+    service_type = config.get('service_management')
+    if not service_type:
+        service_type = 'systemd'
+    return service_type
 
 
 def _get_backend():
@@ -256,10 +306,10 @@ def disable(service_name, append_prefix=True):
     return _get_backend().disable(full_service_name)
 
 
-def start(service_name, append_prefix=True):
+def start(service_name, append_prefix=True, options=None):
     full_service_name = _get_full_service_name(service_name, append_prefix)
     logger.debug('Starting service {0}...'.format(full_service_name))
-    return _get_backend().start(full_service_name)
+    return _get_backend().start(full_service_name, options=options)
 
 
 def stop(service_name, append_prefix=True):
@@ -306,11 +356,18 @@ def is_alive(service_name, append_prefix=True):
     return _get_backend().is_alive(full_service_name)
 
 
+def is_active(service_name, append_prefix=True):
+    full_service_name = _get_full_service_name(service_name, append_prefix)
+    return _get_backend().is_active(full_service_name)
+
+
 def configure(service_name,
               user=CLOUDIFY_USER,
               group=CLOUDIFY_GROUP,
               external_configure_params=None,
               append_prefix=True,
+              config_path=None,
+              render=True,
               src_dir=None):
     _configure = \
         partial(
@@ -319,9 +376,11 @@ def configure(service_name,
             user=user,
             group=group,
             external_configure_params=external_configure_params,
-            append_prefix=append_prefix
+            append_prefix=append_prefix,
+            render=render,
+            src_dir=src_dir
         )
-    if _get_service_type() == 'supervisord':
-        return _configure(src_dir=src_dir)
+    if config_path:
+        return _configure(config_path=config_path)
     else:
         return _configure()

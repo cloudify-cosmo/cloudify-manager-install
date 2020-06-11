@@ -1,20 +1,48 @@
 #! /usr/bin/env bash
 
-check_and_maybe_fix_patroni() {
+SERVICE_MANAGER="{{service_manager}}"
+
+function check_patroni_log() {
+  patroni_message=$1
+  if [ "$SERVICE_MANAGER" == "supervisord" ]; then
+       # supervisord log messages from patroni to /var/log/cloudify/supervisord.log
+       local check_command=$(grep "$patroni_message" /var/log/cloudify/supervisord.log)
+  else
+       # systemctl log messages from patroni can be fetched using journalctl
+       local check_command=$(journalctl -u patroni | tail | grep "$patroni_message")
+  fi
+  echo "$check_command"
+}
+
+function run_service_command() {
+  action=$1
+  service_name=$2
+
+  if [ "$SERVICE_MANAGER" == "supervisord" ]; then
+       local service_command=$(supervisorctl -c /etc/supervisord.conf "$action" "$service_name")
+  else
+       local service_command=$(systemctl "$action" "$service_name")
+  fi
+
+  echo "$service_command"
+}
+
+function check_and_maybe_fix_patroni() {
   NODE_IP="{{ manager.private_ip }}"
   # Check whether patroni is started and has failed to start postgres
   # This may indicate that a (rare) issue has occurred where postgres can't be started properly...
-  if systemctl status patroni && journalctl -u patroni | tail | grep 'Is another postmaster'; then
+  if [ ! -z "$(run_service_command "status" "patroni")" ] && [ ! -z "$(check_patroni_log "Is another postmaster")" ]; then
     echo "$(date): Initial startup is unhealthy, restarting and reinitializing." >> /var/log/cloudify/db_cluster/patroni/startup_check.log
     # ...so we will restart it and then ensure this node is properly repaired.
-    systemctl restart patroni
+    res=$(run_service_command "restart" "patroni")
+    echo "$res"
     cfy_manager dbs reinit -a ${NODE_IP}
   fi
 }
 
-while ! journalctl -u patroni | tail | grep 'Future log output will appear'; do
+while [ -z "$(check_patroni_log "Future log output will appear")" ]; do
   check_and_maybe_fix_patroni
-  if ! journalctl -u patroni | tail | grep 'Future log output will appear'; then
+  if [ -z "$(check_patroni_log "Future log output will appear")" ]; then
     echo "$(date): Waiting for patroni initial startup to complete healthily..." >> /var/log/cloudify/db_cluster/patroni/startup_check.log
     sleep 3
   fi

@@ -143,7 +143,6 @@ logger = get_logger(POSTGRESQL_SERVER)
 
 class PostgresqlServer(BaseComponent):
     component_name = 'postgresql_server'
-
     # Status codes for listing nodes
     HEALTHY = 0
     DEGRADED = 1
@@ -332,17 +331,20 @@ class PostgresqlServer(BaseComponent):
         logger.notice('postgres password successfully updated')
 
     def _etcd_is_running(self):
-        # TODO handle that for supervisord
-        status = common.run(['systemctl', 'is-active', 'etcd'],
-                            ignore_failures=True).aggr_stdout.strip()
-        return status in ('active', 'activating')
+        status = service.is_active('etcd', append_prefix=False)
+        # Add new status 'running' for supervisord
+        return status in ('running', 'active', 'activating')
 
     def _start_etcd(self):
         # On the first node, etcd start via systemd will fail because of the
         # other nodes not being up, so we use this approach instead
         logger.info('Starting etcd')
-        # TODO handle that for supervisord
-        common.sudo(['systemctl', 'start', 'etcd', '--no-block'])
+        # Systemd only support adding "--no-block"
+        options = ['--no-block']
+        if self.service_type == 'supervisord':
+            options = []
+
+        service.start('etcd', append_prefix=False, options=options)
         while not self._etcd_is_running():
             logger.info('Waiting for etcd to start...')
             time.sleep(1)
@@ -451,6 +453,24 @@ class PostgresqlServer(BaseComponent):
             'Etcd not up yet, this is likely the first node.'
         )
 
+    def _configure_patroni(self):
+        logger.info('Starting patroni')
+        if self.service_type == 'supervisord':
+            service.configure(
+                'patroni',
+                src_dir='postgresql_server',
+                append_prefix=False,
+                render=False,
+                config_path='config/supervisord/patroni.conf'
+            )
+        else:
+            service.configure(
+                'patroni',
+                src_dir='postgresql_server',
+                append_prefix=False,
+                render=False,
+            )
+
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
@@ -519,13 +539,16 @@ class PostgresqlServer(BaseComponent):
         os.close(fd)
         with open(tmp_path, 'w') as etcd_rsyslog:
             etcd_rsyslog.write(
-                "if $programname == 'systemd' and $rawmsg contains 'Etcd'"
+                "if $programname == '{service_type}'"
+                " and $rawmsg contains 'Etcd'"
                 " then {logpath}\n"
                 "if $programname == 'etcd' then {logpath}\n& stop\n".format(
-                    logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log')
+                    logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log'),
+                    service_type=self.service_type
                 ))
         common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
-        common.sudo(['service', 'rsyslog', 'restart'])
+        # Restart the rsyslog
+        service.restart('rsyslog', append_prefix=False)
 
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()
@@ -540,7 +563,20 @@ class PostgresqlServer(BaseComponent):
         common.sudo(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
         logger.info('Configuring etcd')
-        service.enable('etcd', append_prefix=False)
+        if self.service_type == 'supervisord':
+            service.configure(
+                'etcd',
+                append_prefix=False,
+                user='etcd',
+                group='etcd',
+                src_dir='postgresql_server',
+                config_path='config/supervisord/etcd.conf',
+                external_configure_params={
+                    'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+                }
+            )
+        else:
+            service.enable('etcd', append_prefix=False)
         self._start_etcd()
 
         try:
@@ -601,7 +637,7 @@ class PostgresqlServer(BaseComponent):
                     common.remove(ETCD_DATA_DIR)
                     common.mkdir(ETCD_DATA_DIR)
                     common.chown('etcd', 'etcd', ETCD_DATA_DIR)
-                    common.sudo(['systemctl', 'restart', 'etcd'])
+                    service.restart('etcd', append_prefix=False)
             else:
                 # In case multiple nodes are being installed at the same time,
                 # check whether we should be setting up auth
@@ -672,14 +708,9 @@ class PostgresqlServer(BaseComponent):
                          '/usr/sbin'])
 
         logger.info('Starting patroni')
-        files.deploy(
-            os.path.join(CONFIG_PATH, 'patroni.service'),
-            '/usr/lib/systemd/system/patroni.service',
-            render=False,
-        )
+        self._configure_patroni()
         service.enable('patroni', append_prefix=False)
         service.start('patroni', append_prefix=False)
-
         logger.info('Activating patroni initial startup monitor.')
         self._activate_patroni_startup_check()
         logger.info('Patroni started.')
@@ -723,6 +754,9 @@ class PostgresqlServer(BaseComponent):
         files.deploy(
             os.path.join(SCRIPTS_PATH, 'patroni_startup_check'),
             '/opt/patroni/bin/patroni_startup_check',
+            additional_render_context={
+                'service_manager': self.service_type
+            }
         )
         common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
         common.chmod('500', '/opt/patroni/bin/patroni_startup_check')
@@ -731,13 +765,22 @@ class PostgresqlServer(BaseComponent):
         # Similarly to the current snapshot post restore commands, this will
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
-        common.sudo(
-            [
-                'systemd-run',
-                '--unit', 'patroni_startup_check',
-                '/opt/patroni/bin/patroni_startup_check',
-            ]
-        )
+        if self.service_type == 'supervisord':
+            service.configure(
+                'patroni_startup_check',
+                append_prefix=False,
+                src_dir='postgresql_server',
+                config_path='config/supervisord/patroni_startup_check.conf'
+            )
+            service.start('patroni_startup_check', append_prefix=False)
+        else:
+            common.sudo(
+                [
+                    'systemd-run',
+                    '--unit', 'patroni_startup_check',
+                    '/opt/patroni/bin/patroni_startup_check',
+                ]
+            )
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]
@@ -1139,10 +1182,10 @@ class PostgresqlServer(BaseComponent):
 
     def _restart_manager_db_dependent_services(self):
         logger.info('Restarting DB proxy service.')
-        common.sudo(['systemctl', 'restart', 'haproxy'])
+        service.restart('haproxy')
         self.logger.info('Restarting DB-dependent services.')
-        common.sudo(['systemctl', 'restart', 'cloudify-amqp-postgres'])
-        common.sudo(['systemctl', 'restart', 'cloudify-restservice'])
+        service.restart('amqp-postgres')
+        service.restart('restservice')
 
     def _node_is_in_db(self, node_id):
         result = db.run_psql_command(
@@ -1425,11 +1468,12 @@ class PostgresqlServer(BaseComponent):
     def configure(self):
         logger.notice('Configuring PostgreSQL Server...')
         files.copy_notice(POSTGRESQL_SERVER)
-        if service._get_service_type() == 'supervisord':
+        if self.service_type == 'supervisord':
             service.configure(
                 SYSTEMD_SERVICE_NAME,
                 append_prefix=False,
-                src_dir='postgresql_server'
+                src_dir='postgresql_server',
+                config_path='config/supervisord/postgresql-9.5.conf'
             )
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
