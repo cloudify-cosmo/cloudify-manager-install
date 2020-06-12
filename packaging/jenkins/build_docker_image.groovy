@@ -6,6 +6,7 @@ pipeline {
         string(name: 'CLOUDIFY_TAG')
         string(name: 'RPM_BUILD_NUMBER')
         choice(name: 'IMAGE_TYPE', choices: "manager-aio\npostgresql\nrabbitmq\nmanager-worker")
+        choice(name: 'EDITION', choices: 'premium\ncommunity')
     }
     stages {
         stage('Build image'){
@@ -55,6 +56,7 @@ pipeline {
                     ).trim()
                 }
                 sh """echo "${services}" > packaging/docker/config.yaml"""
+                sh """echo "manager: {edition: ${EDITION}}" >> packaging/docker/config.yaml
                 sh """
                     docker build --network host -t ${label} --build-arg rpm_file=http://localhost:${HTTP_PORT}/cloudify-manager-install.rpm packaging/docker
                 """
