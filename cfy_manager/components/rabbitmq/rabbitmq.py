@@ -487,7 +487,8 @@ class RabbitMQ(BaseComponent):
         logger.notice('Configuring RabbitMQ...')
         self._set_erlang_cookie()
         self._set_config()
-        self._possibly_add_hosts_entries()
+        if not common.is_all_in_one_manager():
+            self._possibly_add_hosts_entries()
         service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
         self._generate_rabbitmq_certs()
         if self._installing_manager():
