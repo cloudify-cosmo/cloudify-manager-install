@@ -105,27 +105,19 @@ class SystemD(object):
         remove_file(self.get_vars_file_path(service_name))
 
     @staticmethod
-    def get_vars_file_path(service_name, append_prefix=True):
+    def get_vars_file_path(service_name):
         """Returns the path to a systemd environment variables file
         for a given service_name. (e.g. /etc/sysconfig/cloudify-rabbitmq)
         """
-        if append_prefix:
-            sid = 'cloudify-{0}'.format(service_name)
-        else:
-            sid = service_name
-        return '/etc/sysconfig/{0}'.format(sid)
+        return '/etc/sysconfig/{0}'.format(service_name)
 
     @staticmethod
-    def get_service_file_path(service_name, append_prefix=True):
+    def get_service_file_path(service_name):
         """Returns the path to a systemd service file
         for a given service_name.
         (e.g. /usr/lib/systemd/system/cloudify-rabbitmq.service)
         """
-        if append_prefix:
-            sid = 'cloudify-{0}'.format(service_name)
-        else:
-            sid = service_name
-        return "/usr/lib/systemd/system/{0}.service".format(sid)
+        return "/usr/lib/systemd/system/{0}.service".format(service_name)
 
     def enable(self, service_name, ignore_failure=False):
         logger.debug('Enabling systemd service {0}...'.format(service_name))
