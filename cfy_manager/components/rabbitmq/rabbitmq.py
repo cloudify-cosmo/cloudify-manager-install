@@ -502,6 +502,7 @@ class RabbitMQ(BaseComponent):
         service.remove(RABBITMQ, service_file=False)
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
+        sudo(['rm', '-rf', '/etc/rabbitmq'])
 
     def _rabbitmq_hash(self, password):
         salt = os.urandom(4)
