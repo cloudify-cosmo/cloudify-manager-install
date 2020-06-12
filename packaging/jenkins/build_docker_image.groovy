@@ -7,6 +7,7 @@ pipeline {
         string(name: 'RPM_BUILD_NUMBER')
         choice(name: 'IMAGE_TYPE', choices: "manager-aio\npostgresql\nrabbitmq\nmanager-worker")
         choice(name: 'EDITION', choices: 'premium\ncommunity')
+        string(name: 'BRANCH', defaultValue: 'master')
     }
     stages {
         stage('Build image'){
