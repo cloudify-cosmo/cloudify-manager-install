@@ -590,5 +590,6 @@ services_to_install:
 - database_service
 - queue_service
 - manager_service
+- monitoring_service
 
 unconfigured_install: true
