@@ -21,6 +21,7 @@ from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
     CONSTANTS,
+    SERVICES_TO_INSTALL,
 )
 from ..service_names import (
     PROMETHEUS,
@@ -28,6 +29,11 @@ from ..service_names import (
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
     POSTGRESQL_CLIENT,
+
+    DATABASE_SERVICE,
+    MANAGER_SERVICE,
+    MONITORING_SERVICE,
+    QUEUE_SERVICE,
 )
 from ... import constants
 from ...config import config
@@ -46,25 +52,39 @@ PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
 
-EXPORTERS = [
+AVAILABLE_EXPORTERS = [
     {
         'name': BLACKBOX_EXPORTER,
         'description': 'Blackbox Exporter',
         'deploy_config': {
             'blackbox.yml':
-                join(PROMETHEUS_CONFIG_DIR, 'exporters', 'blackbox.yml')}
+                join(PROMETHEUS_CONFIG_DIR, 'exporters', 'blackbox.yml')
+        },
+        'for': (MANAGER_SERVICE,),
     },
     {
         'name': NODE_EXPORTER,
         'description': 'Node Exporter',
+        'for': (
+            DATABASE_SERVICE, MANAGER_SERVICE, MONITORING_SERVICE,
+            QUEUE_SERVICE,)
     },
     {
         'name': POSTGRES_EXPORTER,
         'description': 'Postgres Exporter',
+        'for': (DATABASE_SERVICE,),
     },
 ]
 
+
 logger = get_logger(PROMETHEUS)
+
+
+def _prometheus_exporters():
+    # generate exporters required for configured services
+    return (exporter for exporter in AVAILABLE_EXPORTERS if
+            any(s for s in exporter.get('for', []) if
+                s in config.get(SERVICES_TO_INSTALL, [])))
 
 
 class Prometheus(BaseComponent):
@@ -78,7 +98,7 @@ class Prometheus(BaseComponent):
         service.configure(PROMETHEUS, append_prefix=False)
         service.reload(PROMETHEUS,
                        append_prefix=False, ignore_failure=True)
-        for exporter in EXPORTERS:
+        for exporter in _prometheus_exporters():
             service.configure(exporter['name'], append_prefix=False)
             service.reload(exporter['name'], append_prefix=False,
                            ignore_failure=True)
@@ -89,8 +109,10 @@ class Prometheus(BaseComponent):
         remove_files_list = [PROMETHEUS_DATA_DIR, ]
         for dir_name in ('rules', 'rules.d', 'files_sd', 'exporters',):
             remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, dir_name))
+        for file_name in ('prometheus.yml',):
+            remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, file_name))
         files.remove_files(remove_files_list, ignore_failure=True)
-        for exporter in EXPORTERS:
+        for exporter in _prometheus_exporters():
             service.remove(exporter['name'], append_prefix=False)
         service.remove(PROMETHEUS, append_prefix=False)
         logger.notice('Successfully removed Prometheus and exporters files')
@@ -99,7 +121,7 @@ class Prometheus(BaseComponent):
         logger.notice('Starting Prometheus and exporters...')
         service.restart(PROMETHEUS, append_prefix=False,
                         ignore_failure=True)
-        for exporter in EXPORTERS:
+        for exporter in _prometheus_exporters():
             service.restart(exporter['name'], append_prefix=False,
                             ignore_failure=True)
         _validate_prometheus_running()
@@ -108,7 +130,7 @@ class Prometheus(BaseComponent):
     def stop(self):
         logger.notice('Stopping Prometheus and exporters...')
         service.stop(PROMETHEUS, append_prefix=False)
-        for exporter in EXPORTERS:
+        for exporter in _prometheus_exporters():
             service.stop(exporter['name'], append_prefix=False)
         logger.notice('Prometheus and exporters successfully stopped')
 
@@ -136,7 +158,7 @@ def _chown_resources_dir():
                  join(BIN_DIR, 'prometheus'))
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                  join(BIN_DIR, 'promtool'))
-    for exporter in EXPORTERS:
+    for exporter in _prometheus_exporters():
         common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                      join(BIN_DIR, exporter['name']))
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
@@ -175,7 +197,7 @@ def _deploy_prometheus_configuration():
 
 
 def _deploy_exporters_configuration():
-    for exporter in EXPORTERS:
+    for exporter in _prometheus_exporters():
         if 'deploy_config' not in exporter:
             continue
         logger.notice(
@@ -190,7 +212,7 @@ def _deploy_services_configuration():
         'Deploying Prometheus and exporters service configuration...')
     files.deploy(join(CONFIG_DIR, 'prometheus.service'),
                  join(SYSTEMD_CONFIG_DIR, 'prometheus.service'))
-    for exporter in EXPORTERS:
+    for exporter in _prometheus_exporters():
         files.deploy(join(CONFIG_DIR,
                           '{0}.service'.format(exporter['name'])),
                      join(SYSTEMD_CONFIG_DIR,
