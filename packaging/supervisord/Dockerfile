@@ -30,6 +30,10 @@ RUN mkdir /run/cloudify-restservice
 RUN chown cfyuser. /run/cloudify-restservice && chmod 755 /run/cloudify-restservice
 RUN mkdir /etc/supervisord.d
 
+RUN groupadd supervisor
+RUN usermod -a -G supervisor cfyuser
+RUN usermod -a -G supervisor cfyreporter
+
 COPY supervisord.conf /etc/supervisord.conf
 COPY rsyslog.conf /etc/supervisord.d/
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]

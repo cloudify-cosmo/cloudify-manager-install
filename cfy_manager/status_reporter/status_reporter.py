@@ -130,6 +130,7 @@ def configure(managers_ips=None, user_name='', token='', ca_path='',
                     ' successfully, a restart is required to activate it')
         return
     logger.info('Starting Status Reporter service...')
+    config.load_config()
     service.restart(STATUS_REPORTER)
     logger.notice('Status Reporter successfully configured')
 
@@ -166,6 +167,7 @@ def _get_configure_args(ca_path, log_level, managers_ip, node_id,
 def start(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Starting Status Reporter service...')
+    config.load_config()
     service.start(STATUS_REPORTER)
     logger.notice('Started Status Reporter service')
 
@@ -174,6 +176,7 @@ def start(verbose=False):
 def stop(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Stopping Status Reporter service...')
+    config.load_config()
     service.stop(STATUS_REPORTER)
     logger.notice('Status Reporter service stopped')
 
@@ -182,6 +185,7 @@ def stop(verbose=False):
 def remove(verbose=False):
     setup_console_logger(verbose=verbose)
     logger.notice('Removing component status reporting service...')
+    config.load_config()
     service.remove(STATUS_REPORTER)
     logger.notice('Component status reporting service removed')
 
