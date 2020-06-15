@@ -27,10 +27,7 @@ from ..service_names import (
     NODE_EXPORTER,
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
-    RABBITMQ_EXPORTER,
-
     POSTGRESQL_CLIENT,
-    RABBITMQ,
 )
 from ... import constants
 from ...config import config
@@ -64,10 +61,6 @@ EXPORTERS = [
     {
         'name': POSTGRES_EXPORTER,
         'description': 'Postgres Exporter',
-    },
-    {
-        'name': RABBITMQ_EXPORTER,
-        'description': 'RabbitMQ Exporter',
     },
 ]
 
@@ -168,15 +161,6 @@ def _update_config():
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'password': config[POSTGRESQL_CLIENT]['server_password']})
-    if RABBITMQ_EXPORTER in config[PROMETHEUS]:
-        if ('username' in config[PROMETHEUS][RABBITMQ_EXPORTER] and
-                not config[PROMETHEUS][RABBITMQ_EXPORTER]['username']):
-            config[PROMETHEUS][RABBITMQ_EXPORTER].update(
-                {'username': config[RABBITMQ]['username']})
-        if ('password' in config[PROMETHEUS][RABBITMQ_EXPORTER] and
-                not config[PROMETHEUS][RABBITMQ_EXPORTER]['password']):
-            config[PROMETHEUS][RABBITMQ_EXPORTER].update({
-                'password': config[RABBITMQ]['password']})
     if ('ca_cert_path' not in config[PROMETHEUS] or
             not config[PROMETHEUS]['ca_cert_path']):
         config[PROMETHEUS].update(

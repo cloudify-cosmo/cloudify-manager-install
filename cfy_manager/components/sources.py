@@ -33,7 +33,6 @@ db_cluster = [
 queue = ['rabbitmq-server-3.8.4', 'cloudify-rabbitmq']
 queue_cluster = ['cloudify-status-reporter']
 prometheus = [
-    'prometheus', 'node_exporter', 'blackbox_exporter',
-    'postgres_exporter', 'rabbitmq_exporter',
+    'prometheus', 'node_exporter', 'blackbox_exporter', 'postgres_exporter',
 ]
 prometheus_cluster = []

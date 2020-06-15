@@ -130,7 +130,6 @@ jobs:
       - run: rpmbuild -bb packaging/prometheus_node_exporter.spec
       - run: rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
       - run: rpmbuild -bb packaging/prometheus_postgres_exporter.spec
-      - run: rpmbuild -bb packaging/prometheus_rabbitmq_exporter.spec
       - persist_to_workspace:
           root: ~/rpm
           paths:

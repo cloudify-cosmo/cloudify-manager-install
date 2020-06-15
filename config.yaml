@@ -572,11 +572,8 @@ prometheus:
     username: ''
     sslmode: disable
     metrics_port: 9187
-  rabbitmq_exporter:
-    rabbitmq_url: https://127.0.0.1:15671
-    username: ''
-    password: ''
-    metrics_port: 9419
+  rabbitmq_prometheus:
+    metrics_port: 15692
   ca_cert_path: ''
 
 flask_security: {}
