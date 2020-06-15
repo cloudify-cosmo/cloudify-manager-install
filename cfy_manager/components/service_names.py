@@ -30,8 +30,12 @@ RESTSERVICE = 'restservice'
 SANITY = 'sanity'
 STAGE = 'stage'
 USAGE_COLLECTOR = 'usage_collector'
-
+PROMETHEUS = 'prometheus'
+NODE_EXPORTER = 'node_exporter'
+BLACKBOX_EXPORTER = 'blackbox_exporter'
+POSTGRES_EXPORTER = 'postgres_exporter'
 
 DATABASE_SERVICE = 'database_service'
 QUEUE_SERVICE = 'queue_service'
 MANAGER_SERVICE = 'manager_service'
+MONITORING_SERVICE = 'monitoring_service'
