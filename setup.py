@@ -51,10 +51,10 @@ setup(
     zip_safe=False,
     package_data={'': extra_files},
     install_requires=[
-        'ruamel.yaml==0.15.94',
+        'ruamel.yaml==0.16.10',
         'Jinja2==2.10.1',
         'argh==0.26.2',
-        'netifaces==0.10.6',
+        'netifaces==0.10.9',
         'ipaddress==1.0.19',
         'psutil==3.3.0',
         'requests>=2.18,<3.0.0',

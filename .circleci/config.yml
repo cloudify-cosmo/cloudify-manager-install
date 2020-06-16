@@ -74,6 +74,8 @@ jobs:
           command: |
             rm ~/rpm -fr
             ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install/rpms
+            cp -a /tmp/workspace/x86_64/prometheus-*.rpm /tmp/cloudify-manager-install/rpms/
+            cp -a /tmp/workspace/x86_64/*_exporter-*.rpm /tmp/cloudify-manager-install/rpms/
             ln -s /tmp/cloudify-manager-install ~/rpm
       - run:
           name: set up cloudify-premium deploy key
@@ -103,6 +105,39 @@ jobs:
           path: ~/rpm/x86_64
           destination: /
 
+  build_prometheus_rpms:
+    working_directory: /tmp/cloudify-manager-install-prometheus
+    docker:
+      - image: rpmbuild/centos7
+    steps:
+      - checkout
+      - run:
+          name: Set version environment variables
+          command: cat packaging/version_info >> $BASH_ENV
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Link items from workspace under rpm sources dir
+          command: |
+            rm ~/rpm -fr
+            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install-prometheus/rpms
+            ln -s /tmp/cloudify-manager-install-prometheus ~/rpm
+      - run: sudo yum install rpmdevtools -y
+      - run:
+          name: Installing build dependencies
+          command: sudo yum-builddep -y packaging/install_rpm.spec
+      - run: rpmbuild -bb packaging/prometheus.spec
+      - run: rpmbuild -bb packaging/prometheus_node_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_postgres_exporter.spec
+      - persist_to_workspace:
+          root: ~/rpm
+          paths:
+            - x86_64
+      - store_artifacts:
+          path: ~/rpm/x86_64
+          destination: /
+
   install_manager:
     machine: true
     environment:
@@ -115,7 +150,7 @@ jobs:
       - run:
           name: Serve the manager-install rpm on http
           command: |
-            cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+            cp /tmp/workspace/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
             docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
       - run:
           name: Build manager container
@@ -155,7 +190,7 @@ jobs:
       - run:
           name: Serve the manager-install rpm on http
           command: |
-            cp /tmp/workspace/x86_64/*.rpm cloudify-manager-install.rpm
+            cp /tmp/workspace/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
             docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
       - run:
           name: Build manager container
@@ -392,9 +427,11 @@ workflows:
       - flake8
       - py3_compat
       - fetch_rpms
+      - build_prometheus_rpms
       - build_rpm:
           requires:
             - fetch_rpms
+            - build_prometheus_rpms
       - install_manager:
           requires:
             - build_rpm

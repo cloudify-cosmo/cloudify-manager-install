@@ -13,9 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, exists
 from collections import namedtuple
+from os.path import join, exists
 
+from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
     PRIVATE_IP,
@@ -24,20 +25,18 @@ from ..components_constants import (
     CLEAN_DB,
     HOSTNAME
 )
-from ..base_component import BaseComponent
 from ..service_names import NGINX, MANAGER
 from ... import constants
 from ...config import config
-from ...logger import get_logger
 from ...exceptions import ValidationError
+from ...logger import get_logger
 from ...utils import (
     common,
     certificates,
     service
 )
-from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
-
+from ...utils.logrotate import set_logrotate, remove_logrotate
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
@@ -212,7 +211,11 @@ class Nginx(BaseComponent):
             resource(
                 src=join(CONFIG_PATH, 'logs-conf.cloudify'),
                 dst='/etc/nginx/conf.d/logs-conf.cloudify',
-            )
+            ),
+            resource(
+                src=join(CONFIG_PATH, 'redirect-to-monitoring.cloudify'),
+                dst='/etc/nginx/conf.d/redirect-to-monitoring.cloudify',
+            ),
         ]
 
     def _deploy_nginx_config_files(self):

@@ -53,6 +53,7 @@ HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 RABBITMQ_ENV_PATH = '/etc/rabbitmq/rabbitmq-env.conf'
+RABBITMQ_ENABLED_PLUGINS = '/etc/cloudify/rabbitmq/enabled_plugins'
 SECURE_PORT = 5671
 
 RABBITMQ_CTL = 'rabbitmqctl'
@@ -69,6 +70,8 @@ class RabbitMQ(BaseComponent):
         logger.info('Deploying RabbitMQ config')
         deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
+        deploy(join(CONFIG_PATH, 'enabled_plugins'), RABBITMQ_ENABLED_PLUGINS)
+        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENABLED_PLUGINS)
 
     def _deploy_env(self):
         # This will make 'sudo rabbitmqctl' work without specifying node name
@@ -487,7 +490,8 @@ class RabbitMQ(BaseComponent):
         logger.notice('Configuring RabbitMQ...')
         self._set_erlang_cookie()
         self._set_config()
-        self._possibly_add_hosts_entries()
+        if not common.is_all_in_one_manager():
+            self._possibly_add_hosts_entries()
         service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
         self._generate_rabbitmq_certs()
         if self._installing_manager():
@@ -501,6 +505,7 @@ class RabbitMQ(BaseComponent):
         service.remove(RABBITMQ, service_file=False)
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
+        sudo(['rm', '-rf', '/etc/rabbitmq'])
 
     def _rabbitmq_hash(self, password):
         salt = os.urandom(4)

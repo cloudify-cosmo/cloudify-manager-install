@@ -32,6 +32,7 @@ from .components import (
     MANAGER_SERVICE,
     QUEUE_SERVICE,
     DATABASE_SERVICE,
+    MONITORING_SERVICE,
     sources
 )
 from .components.components_constants import (
@@ -656,6 +657,9 @@ def _get_components(include_components=None):
         if not config[SANITY]['skip_sanity']:
             _components += [components.Sanity()]
 
+    if is_installed(MONITORING_SERVICE):
+        _components += [components.Prometheus()]
+
     if include_components:
         _components = _filter_components(_components, include_components)
     return _components
@@ -753,6 +757,11 @@ def _get_packages():
         packages += sources.queue
         if premium:
             packages += sources.queue_cluster
+
+    if is_installed(MONITORING_SERVICE):
+        packages += sources.prometheus
+        if premium:
+            packages += sources.prometheus_cluster
 
     return packages
 

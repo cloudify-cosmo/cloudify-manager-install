@@ -1,0 +1,19 @@
+[Unit]
+Description=Prometheus exporter for PostgreSQL
+Documentation=https://github.com/wrouesnel/postgres_exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Environment="DATA_SOURCE_NAME=postgresql://{% if prometheus.postgres_exporter.username %}{{ prometheus.postgres_exporter.username }}{% if prometheus.postgres_exporter.password %}:{{ prometheus.postgres_exporter.password }}{% endif %}@{% endif %}localhost:5432/?sslmode={{ prometheus.postgres_exporter.sslmode }}"
+User=cfyuser
+Group=cfyuser
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/postgres_exporter \
+  --web.listen-address=127.0.0.1:{{ prometheus.postgres_exporter.metrics_port }}
+SyslogIdentifier=postgres_exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

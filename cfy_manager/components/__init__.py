@@ -24,6 +24,7 @@ from .mgmtworker import MgmtWorker  # NOQA
 from .nginx import Nginx  # NOQA
 from .postgresql_server import PostgresqlServer  # NOQA
 from .postgresql_client import PostgresqlClient  # NOQA
+from .prometheus import Prometheus  # NOQA
 from .rabbitmq import RabbitMQ  # NOQA
 from .restservice import RestService  # NOQA
 from .sanity import Sanity  # NOQA
@@ -32,4 +33,4 @@ from .usage_collector import UsageCollector  # NOQA
 from .status_reporter import RabbitmqStatusReporter  # NOQA
 from .status_reporter import PostgresqlStatusReporter  # NOQA
 from .status_reporter import ManagerStatusReporter  # NOQA
-from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE  # NOQA
+from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE, MONITORING_SERVICE  # NOQA

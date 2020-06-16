@@ -173,6 +173,8 @@ class Composer(BaseComponent):
     def remove(self):
         logger.notice('Removing Cloudify Composer...')
         service.remove(COMPOSER, service_file=False)
+        logger.notice('Removing Composer data....')
+        common.sudo(['rm', '-rf', '/opt/cloudify-composer'])
         logger.notice('Cloudify Composer successfully removed')
 
     def start(self):
