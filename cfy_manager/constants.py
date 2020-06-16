@@ -96,3 +96,12 @@ WHERE username
 VERBOSE_HELP_MSG = (
     "Used to give more verbose output."
 )
+
+CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
+CERT_FILE_NAME = 'new_node_cert.pem'
+KEY_FILE_NAME = 'new_node_key.pem'
+CA_CERT_FILE_NAME = 'new_ca_cert.pem'
+
+CERT_FILE_PATH = CERTS_TMP_DIR_PATH + CERT_FILE_NAME
+KEY_FILE_PATH = CERTS_TMP_DIR_PATH + KEY_FILE_NAME
+CA_CERT_FILE_PATH = CERTS_TMP_DIR_PATH + CA_CERT_FILE_NAME

@@ -464,14 +464,58 @@ def use_supplied_certificates(component_name,
         logger.debug('No user-supplied certificates were present.')
         return False
 
+    configuring_files_in_correct_location(logger,
+                                          cert_src,
+                                          cert_destination,
+                                          key_src,
+                                          key_destination,
+                                          ca_src,
+                                          ca_destination,
+                                          key_pass,
+                                          owner,
+                                          group,
+                                          key_perms,
+                                          cert_perms)
+
+    if update_config:
+        logger.info('Updating configured certification locations.')
+        if cert_destination:
+            config_section[cert_path] = cert_destination
+        if key_destination:
+            config_section[key_path] = key_destination
+        if ca_destination:
+            config_section[ca_path] = ca_destination
+            # If there was a password, we've now removed it
+            config_section[key_password] = ''
+
+    # Supplied certificates were used
+    return True
+
+
+def configuring_files_in_correct_location(logger,
+                                          cert_src,
+                                          cert_destination,
+                                          key_src,
+                                          key_destination,
+                                          ca_src,
+                                          ca_destination,
+                                          key_pass=None,
+                                          owner=CLOUDIFY_USER,
+                                          group=CLOUDIFY_GROUP,
+                                          key_perms='440',
+                                          cert_perms='444',
+                                          keep_old_files=False):
     # Put the files in the correct place
     logger.info('Ensuring files are in correct locations.')
 
     if cert_destination and cert_src != cert_destination:
+        _keep_old_certs(keep_old_files, cert_destination)
         copy(cert_src, cert_destination)
     if key_destination and key_src != key_destination:
+        _keep_old_certs(keep_old_files, key_destination)
         copy(key_src, key_destination)
     if ca_destination and ca_src != ca_destination:
+        _keep_old_certs(keep_old_files, ca_destination)
         if ca_src:
             copy(ca_src, ca_destination)
         else:
@@ -496,16 +540,12 @@ def use_supplied_certificates(component_name,
         if path:
             sudo(['chmod', cert_perms, path])
 
-    if update_config:
-        logger.info('Updating configured certification locations.')
-        if cert_destination:
-            config_section[cert_path] = cert_destination
-        if key_destination:
-            config_section[key_path] = key_destination
-        if ca_destination:
-            config_section[ca_path] = ca_destination
-            # If there was a password, we've now removed it
-            config_section[key_password] = ''
 
-    # Supplied certificates were used
-    return True
+def _keep_old_certs(keep_old_file, old_file_path):
+    # TODO: Verify that we want to keep old certs
+    if keep_old_file and os.path.exists(old_file_path):
+        old_files_dir = os.path.dirname(old_file_path)+'/old_certs'
+        if not os.path.exists(old_files_dir):
+            os.mkdir(old_files_dir)
+        basename = os.path.basename(old_file_path)
+        os.rename(old_file_path, old_files_dir+'/{0}'.format(basename))
