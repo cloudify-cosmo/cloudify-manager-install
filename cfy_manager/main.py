@@ -67,7 +67,10 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
     BROKER_CA_LOCATION,
     BROKER_CERT_LOCATION,
-    BROKER_KEY_LOCATION
+    BROKER_KEY_LOCATION,
+    CERT_FILE_PATH,
+    KEY_FILE_PATH,
+    CA_CERT_FILE_PATH
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -100,10 +103,6 @@ from .utils.files import (
     touch
 )
 from .utils.node import get_node_id
-
-from cloudify.constants import (CERT_FILE_PATH,
-                                KEY_FILE_PATH,
-                                CA_CERT_FILE_PATH)
 
 logger = get_logger('Main')
 
