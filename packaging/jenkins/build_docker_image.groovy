@@ -57,7 +57,7 @@ pipeline {
                     ).trim()
                 }
                 sh """echo "${services}" > packaging/docker/config.yaml"""
-                sh """echo "manager: {edition: ${EDITION}}" >> packaging/docker/config.yaml"""
+                sh """echo "manager: {premium_edition: ${EDITION}}" >> packaging/docker/config.yaml"""
                 sh """
                     docker build --network host -t ${label} --build-arg rpm_file=http://localhost:${HTTP_PORT}/cloudify-manager-install.rpm packaging/docker
                 """
