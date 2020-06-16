@@ -387,6 +387,20 @@ def check_certificates(config_section, section_path,
     return cert_filename, key_filename, ca_filename, password
 
 
+def validate_new_certs_for_replacement(cert_filename,
+                                       key_filename,
+                                       ca_filename,
+                                       validate_cert_key_match=True,
+                                       validate_ca_file=True):
+    """ Validate the provided certs for replacement"""
+    if validate_cert_key_match:
+        _check_cert_key_match(cert_filename, key_filename)
+    if validate_ca_file:
+        _check_ssl_file(ca_filename, kind='Cert')
+
+    _check_signed_by(ca_filename, cert_filename)
+
+
 def _check_internal_ca_cert():
     ssl_inputs = config[SSL_INPUTS]
     if ssl_inputs['ca_key_path'] and ssl_inputs['ca_cert_path']:
