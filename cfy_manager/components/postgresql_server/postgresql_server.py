@@ -541,7 +541,7 @@ class PostgresqlServer(BaseComponent):
             etcd_rsyslog.write(
                 "if $programname == '{service_type}'"
                 " and $rawmsg contains 'Etcd'"
-                " then {logpath}\n"
+                " then {logpath}\n& stop\n"
                 "if $programname == 'etcd' then {logpath}\n& stop\n".format(
                     logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log'),
                     service_type=self.service_type
