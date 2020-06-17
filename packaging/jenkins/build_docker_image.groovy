@@ -15,19 +15,19 @@ pipeline {
                 script {
                     switch (params.IMAGE_TYPE) {
                         case "manager-aio":
-                            services = 'services_to_install: [database_service, queue_service, manager_service]'
+                            services = 'services_to_install: [database_service, queue_service, manager_service, monitoring_service]'
                             label = 'cloudify-manager-aio'
                             break
                         case "postgresql":
-                            services = 'services_to_install: [database_service]'
+                            services = 'services_to_install: [database_service, monitoring_service]'
                             label = 'cloudify-db'
                             break
                         case "rabbitmq":
-                            services = 'services_to_install: [queue_service]'
+                            services = 'services_to_install: [queue_service, monitoring_service]'
                             label = 'cloudify-queue'
                             break
                         case 'manager-worker':
-                            services = 'services_to_install: [manager_service]'
+                            services = 'services_to_install: [manager_service, monitoring_service]'
                             label = 'cloudify-manager-worker'
                             break
                     }
