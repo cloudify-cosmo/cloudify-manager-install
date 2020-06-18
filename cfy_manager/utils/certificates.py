@@ -438,6 +438,11 @@ def use_supplied_certificates(component_name,
 
     Returns True if supplied certificates were used.
     """
+
+    if using_config:
+        assert ((cert_src is None) and (key_src is None) and
+                (ca_src is None) and (key_pass is None))
+
     key_path = prefix + 'key_path'
     cert_path = prefix + 'cert_path'
     ca_path = prefix + 'ca_path'
