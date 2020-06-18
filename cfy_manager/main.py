@@ -63,6 +63,9 @@ from .constants import (
     INITIAL_INSTALL_FILE,
     STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
+    NEW_BROKER_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CA_CERT_FILE_PATH
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -1012,6 +1015,25 @@ def replace_certificates():
             return
 
     # TODO: replace certificcates on db
+
+
+def _replace_certificates_on_manager():
+    _replace_broker_ca()
+    _replace_postgresql_client_certs()
+
+
+def _replace_broker_ca():
+    if os.path.exists(NEW_BROKER_CA_CERT_FILE_PATH):
+        components.Manager().replace_certificates()
+
+
+def _replace_postgresql_client_certs():
+    replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+    replacing_cert_and_key = os.path.exists(
+        NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
+    if replacing_ca or replacing_cert_and_key:
+        components.PostgresqlClient().replace_certificates(
+            replacing_ca, replacing_cert_and_key)
 
 
 def main():
