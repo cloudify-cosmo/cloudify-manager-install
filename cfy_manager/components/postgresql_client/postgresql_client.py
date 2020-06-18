@@ -17,7 +17,7 @@ import os
 
 from ...exceptions import ProcessExecutionError
 
-
+from ..validations import validate_new_certs_for_replacement
 from ..components_constants import (
     SSL_ENABLED,
     SSL_INPUTS,
@@ -31,7 +31,10 @@ from ...constants import (
     POSTGRESQL_CA_CERT_PATH,
     CLOUDIFY_HOME_DIR,
     CLOUDIFY_USER,
-    CLOUDIFY_GROUP
+    CLOUDIFY_GROUP,
+    NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH
 )
 from ...config import config
 from ...logger import get_logger
@@ -154,6 +157,50 @@ class PostgresqlClient(BaseComponent):
                     prefix='postgresql_client_',
                     key_perms='400',
                 )
+
+    def replace_certificates(self, replacing_ca, replacing_cert_and_key):
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            self._validate_new_certs()
+            if replacing_ca:
+                certificates.use_supplied_certificates(
+                    POSTGRESQL_CLIENT,
+                    self.logger,
+                    using_config=False,
+                    ca_src=NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                    ca_destination=POSTGRESQL_CA_CERT_PATH
+                )
+            if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
+                    replacing_cert_and_key):
+                certificates.use_supplied_certificates(
+                    logger=self.logger,
+                    using_config=False,
+                    cert_src=NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+                    key_src=NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
+                    cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
+                    key_destination=POSTGRESQL_CLIENT_KEY_PATH,
+                    key_perms='400'
+                )
+
+    def _validate_new_certs(self):
+        cert_filename, key_filename = None, None
+        validate_cert_key_match = False
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            cert_filename, key_filename, validate_cert_key_match = \
+                self.get_cert_and_key_filenames(
+                    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+                    NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
+                    POSTGRESQL_CLIENT_CERT_PATH,
+                    POSTGRESQL_CLIENT_KEY_PATH)
+
+        ca_filename, validate_ca = self.get_ca_filename(
+            NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+            POSTGRESQL_CA_CERT_PATH)
+
+        validate_new_certs_for_replacement(cert_filename,
+                                           key_filename,
+                                           ca_filename,
+                                           validate_cert_key_match,
+                                           validate_ca)
 
     def _configure(self):
         self._create_postgres_pgpass_files()
