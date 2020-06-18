@@ -410,8 +410,8 @@ def create_external_certs(private_ip=None,
     )
 
 
-def use_supplied_certificates(component_name,
-                              logger,
+def use_supplied_certificates(component_name=None,
+                              logger=None,
                               cert_destination=None,
                               key_destination=None,
                               ca_destination=None,
@@ -441,13 +441,14 @@ def use_supplied_certificates(component_name,
 
     if using_config:
         assert ((cert_src is None) and (key_src is None) and
-                (ca_src is None) and (key_pass is None))
+                (ca_src is None) and (key_pass is None) and
+                component_name is not None)
 
     key_path = prefix + 'key_path'
     cert_path = prefix + 'cert_path'
     ca_path = prefix + 'ca_path'
     key_password = prefix + 'key_password'
-    config_section = config[component_name]
+    config_section = None
 
     if just_ca_cert:
         ca_path = cert_path
@@ -455,6 +456,7 @@ def use_supplied_certificates(component_name,
         cert_path = None
 
     if using_config:
+        config_section = config[component_name]
         section_path = component_name
         if sub_component:
             config_section = config_section[sub_component]

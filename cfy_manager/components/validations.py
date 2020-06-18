@@ -387,9 +387,9 @@ def check_certificates(config_section, section_path,
     return cert_filename, key_filename, ca_filename, password
 
 
-def validate_new_certs_for_replacement(cert_filename,
-                                       key_filename,
-                                       ca_filename,
+def validate_new_certs_for_replacement(cert_filename=None,
+                                       key_filename=None,
+                                       ca_filename=None,
                                        validate_cert_key_match=True,
                                        validate_ca_file=True):
     """ Validate the provided certs for replacement"""
@@ -397,8 +397,8 @@ def validate_new_certs_for_replacement(cert_filename,
         _check_cert_key_match(cert_filename, key_filename)
     if validate_ca_file:
         _check_ssl_file(ca_filename, kind='Cert')
-
-    _check_signed_by(ca_filename, cert_filename)
+        if cert_filename:
+            _check_signed_by(ca_filename, cert_filename)
 
 
 def _check_internal_ca_cert():
