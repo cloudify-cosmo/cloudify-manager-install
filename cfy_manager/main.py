@@ -56,21 +56,13 @@ from .components.service_names import (
     POSTGRESQL_SERVER,
     SANITY
 )
-from .components.validations import (validate,
-                                     validate_dependencies,
-                                     validate_new_certs_for_replacement)
+from .components.validations import validate, validate_dependencies
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
     STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
-    BROKER_CA_LOCATION,
-    BROKER_CERT_LOCATION,
-    BROKER_KEY_LOCATION,
-    CERT_FILE_PATH,
-    KEY_FILE_PATH,
-    CA_CERT_FILE_PATH
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -89,7 +81,6 @@ from .utils.certificates import (
     create_external_certs,
     generate_ca_cert,
     _generate_ssl_certificate,
-    configuring_files_in_correct_locations
 )
 from .utils.common import (
     run, sudo, can_lookup_hostname, allows_json_format, is_installed,
@@ -1010,58 +1001,18 @@ def image_starter(verbose=False):
 @argh.decorators.named('replace-certificates')
 def replace_certificates():
     """ Replacing the certificates on the current instance """
+    _prepare_execution()
     if is_all_in_one_manager():
-        pass
+        return
     else:
         if is_installed(DATABASE_SERVICE):
-            _replace_certificates_on_db()
+            components.PostgresqlServer()
         elif is_installed(QUEUE_SERVICE):
-            _replace_certificates_on_broker()
+            components.RabbitMQ().replace_certificates()
         else:
-            _replace_certificates_on_manager()
+            return
 
-
-def _replace_certificates_on_db():
-    pass
-
-
-def _replace_certificates_on_broker():
-    cert_filename, key_filename, validate_cert = \
-        _get_cert_and_key_filenames(QUEUE_SERVICE)
-    ca_filename, validate_ca = _get_ca_filename(QUEUE_SERVICE)
-
-    validate_new_certs_for_replacement(cert_filename, key_filename,
-                                       ca_filename, validate_cert, validate_ca)
-
-    configuring_files_in_correct_locations(logger,
-                                           cert_filename,
-                                           BROKER_CERT_LOCATION,
-                                           key_filename,
-                                           BROKER_KEY_LOCATION,
-                                           ca_filename,
-                                           BROKER_CA_LOCATION,
-                                           owner='rabbitmq',
-                                           group='rabbitmq')
-
-
-def _get_cert_and_key_filenames(service_name):
-    if os.path.exists(CERT_FILE_PATH):
-        return CERT_FILE_PATH, KEY_FILE_PATH, True
-
-    if service_name == QUEUE_SERVICE:
-        return BROKER_CERT_LOCATION, BROKER_KEY_LOCATION, False
-
-
-def _get_ca_filename(service_name):
-    if os.path.exists(CA_CERT_FILE_PATH):
-        return CA_CERT_FILE_PATH, True
-
-    if service_name == QUEUE_SERVICE:
-        return BROKER_CA_LOCATION, False
-
-
-def _replace_certificates_on_manager():
-    pass
+    # TODO: replace certificcates on db
 
 
 def main():
