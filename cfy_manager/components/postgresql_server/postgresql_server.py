@@ -499,6 +499,12 @@ class PostgresqlServer(BaseComponent):
                 render=False,
             )
 
+    def handle_certificates(self,
+                            using_config=True,
+                            cert_src=None,
+                            key_src=None,
+                            ca_src=None,
+                            key_pass=None):
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
@@ -519,6 +525,11 @@ class PostgresqlServer(BaseComponent):
             owner=ETCD_USER,
             group=ETCD_GROUP,
             key_perms='400',
+            using_config=using_config,
+            cert_src=cert_src,
+            key_src=key_src,
+            ca_src=ca_src,
+            key_pass=key_pass
         )
         self.use_supplied_certificates(
             cert_destination=PATRONI_REST_CERT_PATH,
@@ -526,6 +537,11 @@ class PostgresqlServer(BaseComponent):
             owner=POSTGRES_USER,
             group=POSTGRES_GROUP,
             key_perms='400',
+            using_config=using_config,
+            cert_src=cert_src,
+            key_src=key_src,
+            ca_src=ca_src,
+            key_pass=key_pass
         )
         self.use_supplied_certificates(
             cert_destination=PATRONI_DB_CERT_PATH,
@@ -534,7 +550,35 @@ class PostgresqlServer(BaseComponent):
             owner=POSTGRES_USER,
             group=POSTGRES_GROUP,
             key_perms='400',
+            using_config=using_config,
+            cert_src=cert_src,
+            key_src=key_src,
+            ca_src=ca_src,
+            key_pass=key_pass
         )
+
+    def replace_certificates(self):
+        super(PostgresqlServer, self).replace_instance_certificates(
+            ETCD_SERVER_CERT_PATH,
+            ETCD_SERVER_KEY_PATH,
+            ETCD_CA_PATH,
+            POSTGRES_SERVICE_NAME
+        )
+
+    def _configure_cluster(self):
+        logger.info('Disabling postgres (will be managed by patroni)')
+        service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
+        service.disable(POSTGRES_SERVICE_NAME, append_prefix=False)
+
+        logger.info('Deploying cluster certificates')
+        # We need access to the certs, which by default we don't have
+        common.chmod('a+x', '/var/lib/patroni')
+        # We currently use the same certificates for etcd, patroni,
+        # and postgres. This should be a reasonable starting approach as
+        # these reside on the same machine and all have the same impact if
+        # compromised (full access to data directly or via injected
+        # configuration changes).
+        self.handle_certificates(using_config=True)
         common.chmod('a-x', '/var/lib/patroni')
 
         logger.info('Deploying patroni initial startup monitor.')
