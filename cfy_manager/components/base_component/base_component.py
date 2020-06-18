@@ -15,6 +15,7 @@
 
 import os
 
+from ..validations import validate_new_certs_for_replacement
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...constants import (CLOUDIFY_USER,
@@ -122,16 +123,46 @@ class BaseComponent(object):
         )
 
     @staticmethod
-    def get_cert_and_key_filenames(default_cert_location,
-                                   default_key_location):
+    def _get_cert_and_key_filenames(default_cert_location,
+                                    default_key_location):
         if os.path.exists(CERT_FILE_PATH):
             return CERT_FILE_PATH, KEY_FILE_PATH, True
 
         return default_cert_location, default_key_location, False
 
     @staticmethod
-    def get_ca_filename(default_ca_location):
+    def _get_ca_filename(default_ca_location):
         if os.path.exists(CA_CERT_FILE_PATH):
             return CA_CERT_FILE_PATH, True
 
         return default_ca_location, False
+
+    def handle_certificates(self,
+                            using_config,
+                            cert_src=None,
+                            key_src=None,
+                            ca_src=None,
+                            key_pass=None):
+        pass
+
+    def replace_instance_certificates(self,
+                                      default_cert_location,
+                                      default_key_location,
+                                      default_ca_location,
+                                      service_name):
+        cert_filename, key_filename, validate_cert = \
+            self._get_cert_and_key_filenames(default_cert_location,
+                                             default_key_location)
+
+        ca_filename, validate_ca = self._get_ca_filename(default_ca_location)
+
+        validate_new_certs_for_replacement(cert_filename, key_filename,
+                                           ca_filename, validate_cert,
+                                           validate_ca)
+
+        self.handle_certificates(using_config=False,
+                                 cert_src=cert_filename,
+                                 key_src=key_filename,
+                                 ca_src=ca_filename)
+
+        service.reload(service_name, ignore_failure=True)
