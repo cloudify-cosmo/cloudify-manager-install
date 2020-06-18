@@ -89,7 +89,7 @@ from .utils.certificates import (
     create_external_certs,
     generate_ca_cert,
     _generate_ssl_certificate,
-    configuring_files_in_correct_location
+    configuring_files_in_correct_locations
 )
 from .utils.common import (
     run, sudo, can_lookup_hostname, allows_json_format, is_installed,
@@ -1033,15 +1033,15 @@ def _replace_certificates_on_broker():
     validate_new_certs_for_replacement(cert_filename, key_filename,
                                        ca_filename, validate_cert, validate_ca)
 
-    configuring_files_in_correct_location(logger,
-                                          cert_filename,
-                                          BROKER_CERT_LOCATION,
-                                          key_filename,
-                                          BROKER_KEY_LOCATION,
-                                          ca_filename,
-                                          BROKER_CA_LOCATION,
-                                          owner='rabbitmq',
-                                          group='rabbitmq')
+    configuring_files_in_correct_locations(logger,
+                                           cert_filename,
+                                           BROKER_CERT_LOCATION,
+                                           key_filename,
+                                           BROKER_KEY_LOCATION,
+                                           ca_filename,
+                                           BROKER_CA_LOCATION,
+                                           owner='rabbitmq',
+                                           group='rabbitmq')
 
 
 def _get_cert_and_key_filenames(service_name):
