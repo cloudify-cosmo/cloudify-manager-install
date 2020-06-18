@@ -1060,12 +1060,11 @@ def run_init():
 @argh.decorators.named('replace-certificates')
 def replace_certificates():
     """ Replacing the certificates on the current instance """
-    _prepare_execution()
     if is_all_in_one_manager():
         return
     else:
         if is_installed(DATABASE_SERVICE):
-            components.PostgresqlServer()
+            components.PostgresqlServer().replace_certificates()
         elif is_installed(QUEUE_SERVICE):
             components.RabbitMQ().replace_certificates()
         else:

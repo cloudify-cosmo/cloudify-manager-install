@@ -31,7 +31,6 @@ from ..components_constants import (
     HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..validations import validate_new_certs_for_replacement
 from ..service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
 from ...utils import certificates, common
@@ -404,7 +403,7 @@ class RabbitMQ(BaseComponent):
             logger.info('Updated /etc/hosts')
 
     def _generate_rabbitmq_certs(self):
-        supplied = self._handle_certificates(using_config=True)
+        supplied = self.handle_certificates(using_config=True)
 
         if supplied:
             logger.info('Using supplied certificates.')
@@ -462,12 +461,12 @@ class RabbitMQ(BaseComponent):
             sign_key=sign_key,
         )
 
-    def _handle_certificates(self,
-                             using_config=True,
-                             cert_src=None,
-                             key_src=None,
-                             ca_src=None,
-                             key_pass=None):
+    def handle_certificates(self,
+                            using_config=True,
+                            cert_src=None,
+                            key_src=None,
+                            ca_src=None,
+                            key_pass=None):
         return self.use_supplied_certificates(
             cert_destination=constants.BROKER_CERT_LOCATION,
             key_destination=constants.BROKER_KEY_LOCATION,
@@ -482,23 +481,12 @@ class RabbitMQ(BaseComponent):
         )
 
     def replace_certificates(self):
-        cert_filename, key_filename, validate_cert = \
-            self.get_cert_and_key_filenames(constants.BROKER_CERT_LOCATION,
-                                            constants.BROKER_KEY_LOCATION)
-
-        ca_filename, validate_ca = \
-            self.get_ca_filename(constants.BROKER_CA_LOCATION)
-
-        validate_new_certs_for_replacement(cert_filename, key_filename,
-                                           ca_filename, validate_cert,
-                                           validate_ca)
-
-        self._handle_certificates(using_config=False,
-                                  cert_src=cert_filename,
-                                  key_src=key_filename,
-                                  ca_src=ca_filename)
-
-        service.reload(RABBITMQ, ignore_failure=True)
+        super(RabbitMQ, self).replace_instance_certificates(
+            constants.BROKER_CERT_LOCATION,
+            constants.BROKER_KEY_LOCATION,
+            constants.BROKER_CA_LOCATION,
+            RABBITMQ
+        )
 
     # Give rabbit time to finish starting
     @retry(stop_max_attempt_number=20, wait_fixed=3000)
