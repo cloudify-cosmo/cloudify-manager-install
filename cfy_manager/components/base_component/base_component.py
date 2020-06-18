@@ -20,9 +20,9 @@ from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...constants import (CLOUDIFY_USER,
                           CLOUDIFY_GROUP,
-                          CERT_FILE_PATH,
-                          KEY_FILE_PATH,
-                          CA_CERT_FILE_PATH)
+                          NEW_CERT_FILE_PATH,
+                          NEW_KEY_FILE_PATH,
+                          NEW_CA_CERT_FILE_PATH)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
 from ...utils.certificates import use_supplied_certificates
@@ -123,17 +123,19 @@ class BaseComponent(object):
         )
 
     @staticmethod
-    def _get_cert_and_key_filenames(default_cert_location,
-                                    default_key_location):
-        if os.path.exists(CERT_FILE_PATH):
-            return CERT_FILE_PATH, KEY_FILE_PATH, True
+    def get_cert_and_key_filenames(new_cert_location,
+                                   new_key_location,
+                                   default_cert_location,
+                                   default_key_location):
+        if os.path.exists(new_cert_location):
+            return new_cert_location, new_key_location, True
 
         return default_cert_location, default_key_location, False
 
     @staticmethod
-    def _get_ca_filename(default_ca_location):
-        if os.path.exists(CA_CERT_FILE_PATH):
-            return CA_CERT_FILE_PATH, True
+    def get_ca_filename(new_ca_location, default_ca_location):
+        if os.path.exists(new_ca_location):
+            return new_ca_location, True
 
         return default_ca_location, False
 
@@ -151,10 +153,13 @@ class BaseComponent(object):
                                       default_ca_location,
                                       service_name):
         cert_filename, key_filename, validate_cert = \
-            self._get_cert_and_key_filenames(default_cert_location,
-                                             default_key_location)
+            self.get_cert_and_key_filenames(NEW_CERT_FILE_PATH,
+                                            NEW_KEY_FILE_PATH,
+                                            default_cert_location,
+                                            default_key_location)
 
-        ca_filename, validate_ca = self._get_ca_filename(default_ca_location)
+        ca_filename, validate_ca = self.get_ca_filename(NEW_CA_CERT_FILE_PATH,
+                                                        default_ca_location)
 
         validate_new_certs_for_replacement(cert_filename, key_filename,
                                            ca_filename, validate_cert,
