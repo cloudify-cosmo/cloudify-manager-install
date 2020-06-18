@@ -13,9 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
-from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
+from ...constants import (CLOUDIFY_USER,
+                          CLOUDIFY_GROUP,
+                          CERT_FILE_PATH,
+                          KEY_FILE_PATH,
+                          CA_CERT_FILE_PATH)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
 from ...utils.certificates import use_supplied_certificates
@@ -92,7 +98,12 @@ class BaseComponent(object):
                                   owner=CLOUDIFY_USER,
                                   group=CLOUDIFY_GROUP,
                                   key_perms='440',
-                                  cert_perms='444'):
+                                  cert_perms='444',
+                                  using_config=True,
+                                  cert_src=None,
+                                  key_src=None,
+                                  ca_src=None,
+                                  key_pass=None):
         return use_supplied_certificates(
             component_name=self.component_name,
             logger=self.logger,
@@ -103,4 +114,24 @@ class BaseComponent(object):
             group=group,
             key_perms=key_perms,
             cert_perms=cert_perms,
+            using_config=using_config,
+            cert_src=cert_src,
+            key_src=key_src,
+            ca_src=ca_src,
+            key_pass=key_pass
         )
+
+    @staticmethod
+    def get_cert_and_key_filenames(default_cert_location,
+                                   default_key_location):
+        if os.path.exists(CERT_FILE_PATH):
+            return CERT_FILE_PATH, KEY_FILE_PATH, True
+
+        return default_cert_location, default_key_location, False
+
+    @staticmethod
+    def get_ca_filename(default_ca_location):
+        if os.path.exists(CA_CERT_FILE_PATH):
+            return CA_CERT_FILE_PATH, True
+
+        return default_ca_location, False

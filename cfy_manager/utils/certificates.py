@@ -426,7 +426,12 @@ def use_supplied_certificates(component_name,
                               prefix='',
                               just_ca_cert=False,
                               update_config=True,
-                              sub_component=None):
+                              sub_component=None,
+                              using_config=True,
+                              cert_src=None,
+                              key_src=None,
+                              ca_src=None,
+                              key_pass=None):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -441,73 +446,34 @@ def use_supplied_certificates(component_name,
     cert_path = prefix + 'cert_path'
     ca_path = prefix + 'ca_path'
     key_password = prefix + 'key_password'
+    config_section = config[component_name]
 
     if just_ca_cert:
         ca_path = cert_path
         key_path = None
         cert_path = None
 
-    config_section = config[component_name]
-    section_path = component_name
-    if sub_component:
-        config_section = config_section[sub_component]
-        section_path = section_path + '.' + sub_component
+    if using_config:
+        section_path = component_name
+        if sub_component:
+            config_section = config_section[sub_component]
+            section_path = section_path + '.' + sub_component
 
-    cert_src, key_src, ca_src, key_pass = check_certificates(
-        config_section,
-        section_path,
-        cert_path=cert_path,
-        key_path=key_path,
-        ca_path=ca_path,
-        key_password=key_password,
-        require_non_ca_certs=False,
-    )
+        cert_src, key_src, ca_src, key_pass = check_certificates(
+            config_section,
+            section_path,
+            cert_path=cert_path,
+            key_path=key_path,
+            ca_path=ca_path,
+            key_password=key_password,
+            require_non_ca_certs=False,
+        )
 
     if not any([cert_src, key_src, ca_src, key_pass]):
         # No certificates supplied, so not using them
         logger.debug('No user-supplied certificates were present.')
         return False
 
-    configuring_files_in_correct_locations(logger,
-                                           cert_src,
-                                           cert_destination,
-                                           key_src,
-                                           key_destination,
-                                           ca_src,
-                                           ca_destination,
-                                           key_pass,
-                                           owner,
-                                           group,
-                                           key_perms,
-                                           cert_perms)
-
-    if update_config:
-        logger.info('Updating configured certification locations.')
-        if cert_destination:
-            config_section[cert_path] = cert_destination
-        if key_destination:
-            config_section[key_path] = key_destination
-        if ca_destination:
-            config_section[ca_path] = ca_destination
-            # If there was a password, we've now removed it
-            config_section[key_password] = ''
-
-    # Supplied certificates were used
-    return True
-
-
-def configuring_files_in_correct_locations(logger,
-                                           cert_src,
-                                           cert_destination,
-                                           key_src,
-                                           key_destination,
-                                           ca_src,
-                                           ca_destination,
-                                           key_pass=None,
-                                           owner=CLOUDIFY_USER,
-                                           group=CLOUDIFY_GROUP,
-                                           key_perms='440',
-                                           cert_perms='444'):
     # Put the files in the correct place
     logger.info('Ensuring files are in correct locations.')
 
@@ -540,12 +506,16 @@ def configuring_files_in_correct_locations(logger,
         if path:
             sudo(['chmod', cert_perms, path])
 
+    if using_config and update_config:
+        logger.info('Updating configured certification locations.')
+        if cert_destination:
+            config_section[cert_path] = cert_destination
+        if key_destination:
+            config_section[key_path] = key_destination
+        if ca_destination:
+            config_section[ca_path] = ca_destination
+            # If there was a password, we've now removed it
+            config_section[key_password] = ''
 
-def _keep_old_certs(keep_old_file, old_file_path):
-    # TODO: Verify that we want to keep old certs
-    if keep_old_file and os.path.exists(old_file_path):
-        old_files_dir = os.path.dirname(old_file_path)+'/old_certs'
-        if not os.path.exists(old_files_dir):
-            os.mkdir(old_files_dir)
-        basename = os.path.basename(old_file_path)
-        os.rename(old_file_path, old_files_dir+'/{0}'.format(basename))
+    # Supplied certificates were used
+    return True
