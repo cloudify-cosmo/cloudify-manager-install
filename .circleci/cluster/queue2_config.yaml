@@ -19,4 +19,4 @@ rabbitmq:
 
 services_to_install:
  - queue_service
- - monitoring_service
+# - monitoring_service
