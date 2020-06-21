@@ -48,6 +48,7 @@ from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
 from ...utils.files import write_to_file, deploy
 
+
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
@@ -461,10 +462,8 @@ class RabbitMQ(BaseComponent):
 
     def handle_certificates(self,
                             using_config=True,
-                            cert_src=None,
-                            key_src=None,
-                            ca_src=None,
-                            key_pass=None):
+                            *args,
+                            **kwargs):
 
         certificate = {
             'cert_destination': constants.BROKER_CERT_LOCATION,
@@ -475,15 +474,16 @@ class RabbitMQ(BaseComponent):
         }
 
         if using_config:
-            self.use_supplied_certificates(**certificate)
+            return self.use_supplied_certificates(**certificate)
         else:
-            src_certs = {'cert_src': cert_src, 'key_src': key_src,
-                         'ca_src': ca_src, 'key_pass': key_pass}
+            src_certs = {'cert_src': kwargs.get('cert_src'),
+                         'key_src': kwargs.get('key_src'),
+                         'ca_src': kwargs.get('ca_src')}
             certificate.update(src_certs)
-            self.configure_certs_in_correct_locations(**certificate)
+            return self.configure_certs_in_correct_locations(**certificate)
 
     def replace_certificates(self):
-        super(RabbitMQ, self).replace_instance_certificates(
+        self.replace_instance_certificates(
             RABBITMQ,
             constants.BROKER_CERT_LOCATION,
             constants.BROKER_KEY_LOCATION,

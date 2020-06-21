@@ -407,14 +407,7 @@ class RestService(BaseComponent):
 
     def _configure_db_proxy(self):
         self._set_haproxy_connect_any(True)
-
-        certificates.use_supplied_certificates(
-            component_name='postgresql_client',
-            logger=self.logger,
-            ca_destination='/etc/haproxy/ca.crt',
-            owner='haproxy',
-            group='haproxy',
-        )
+        self.handle_certificates(using_config=True)
 
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
@@ -432,6 +425,32 @@ class RestService(BaseComponent):
         else:
             service.enable('haproxy', append_prefix=False)
         service.restart('haproxy', append_prefix=False)
+        self._wait_for_haproxy_startup()
+
+    def handle_certificates(self,
+                            using_config,
+                            *args,
+                            **kwargs):
+        certificate = {
+            'logger': self.logger,
+            'ca_destination': '/etc/haproxy/ca.crt',
+            'owner': 'haproxy',
+            'group': 'haproxy'
+        }
+
+        if using_config:
+            certificate.update({'component_name': 'postgresql_client'})
+            certificates.use_supplied_certificates(**certificate)
+        else:
+            certificate.update({
+                'ca_src': constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+            })
+            certificates.configuring_certs_in_correct_locations(**certificate)
+
+    def replace_certificates(self):
+        # The certificate was validated in the PostgresqlClient component
+        self.handle_certificates(using_config=False)
+        service.reload('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
 
     @staticmethod

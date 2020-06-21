@@ -473,19 +473,13 @@ class PostgresqlServer(BaseComponent):
 
     def handle_certificates(self,
                             using_config=True,
-                            cert_src=None,
-                            key_src=None,
-                            ca_src=None,
-                            key_pass=None):
+                            *args,
+                            **kwargs):
         # We currently use the same certificates for etcd, patroni,
         # and postgres. This should be a reasonable starting approach as
         # these reside on the same machine and all have the same impact if
         # compromised (full access to data directly or via injected
         # configuration changes).
-
-        if using_config:
-            assert (cert_src is None and key_src is None and
-                    ca_src is None and key_pass is None)
 
         etcd_certs = {
             'cert_destination': ETCD_SERVER_CERT_PATH,
@@ -518,13 +512,14 @@ class PostgresqlServer(BaseComponent):
             if using_config:
                 self.use_supplied_certificates(**certificate)
             else:
-                src_certs = {'cert_src': cert_src, 'key_src': key_src,
-                             'ca_src': ca_src, 'key_pass': key_pass}
+                src_certs = {'cert_src': kwargs.get('cert_src'),
+                             'key_src': kwargs.get('key_src'),
+                             'ca_src': kwargs.get('ca_src')}
                 certificate.update(src_certs)
                 self.configure_certs_in_correct_locations(**certificate)
 
     def replace_certificates(self):
-        super(PostgresqlServer, self).replace_instance_certificates(
+        self.replace_instance_certificates(
             SYSTEMD_SERVICE_NAME,
             ETCD_SERVER_CERT_PATH,
             ETCD_SERVER_KEY_PATH,
