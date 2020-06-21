@@ -456,6 +456,7 @@ class RestService(BaseComponent):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
             'bootstrap_cluster': bootstrap_cluster,
+            'service_management': self.service_type
         }
         script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
         result = run_script_on_manager_venv(script_path,
