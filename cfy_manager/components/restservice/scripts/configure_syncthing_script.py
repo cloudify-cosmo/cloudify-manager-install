@@ -36,7 +36,7 @@ def run_syncthing_configuration(
         managers_list = sm.list(models.Manager)
         controller.add_manager(managers_list)
         syncthing.wait_for_replication()
-    syncthing_service.finish()
+    syncthing.finish()
 
 
 def file_path(path):
