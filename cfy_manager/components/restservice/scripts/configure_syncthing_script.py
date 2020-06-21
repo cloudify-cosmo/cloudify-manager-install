@@ -28,15 +28,14 @@ def run_syncthing_configuration(
         hostname,
         bootstrap_cluster,
         service_management):
-    syncthing_service = syncthing(service_management)
-    syncthing_service.configure(bootstrap_cluster)
-    syncthing_service.start(hostname)
+    syncthing.configure(bootstrap_cluster, service_management)
+    syncthing.start(hostname, service_management)
 
     if not bootstrap_cluster:
         sm = get_storage_manager()
         managers_list = sm.list(models.Manager)
         controller.add_manager(managers_list)
-        syncthing_service.wait_for_replication()
+        syncthing.wait_for_replication()
     syncthing_service.finish()
 
 
