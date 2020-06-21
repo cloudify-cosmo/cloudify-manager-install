@@ -60,7 +60,11 @@ from .constants import (
     INITIAL_CONFIGURE_FILE,
     NEW_BROKER_CA_CERT_FILE_PATH,
     NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
-    NEW_POSTGRESQL_CA_CERT_FILE_PATH
+    NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_CERT_FILE_PATH,
+    NEW_CA_CERT_FILE_PATH,
+    NEW_EXTERNAL_CERT_FILE_PATH,
+    NEW_EXTERNAL_CA_CERT_FILE_PATH
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -1062,12 +1066,14 @@ def replace_certificates():
         else:
             return
 
-    # TODO: replace certificcates on db
+    # TODO: Handle certificates metadata
+    # TODO: Replace certificates in the db table
 
 
 def _replace_certificates_on_manager():
     _replace_broker_ca()
     _replace_postgresql_client_certs()
+    _replace_nginx_certificates()
 
 
 def _replace_broker_ca():
@@ -1082,6 +1088,17 @@ def _replace_postgresql_client_certs():
     if replacing_ca or replacing_cert_and_key:
         components.PostgresqlClient().replace_certificates(
             replacing_ca, replacing_cert_and_key)
+        if replacing_ca:
+            components.RestService().replace_certificates()
+
+
+def _replace_nginx_certificates():
+    replacing_internal_certs = (os.path.exists(NEW_CERT_FILE_PATH) or
+                                os.path.exists(NEW_CA_CERT_FILE_PATH))
+    replacing_external_certs = (os.path.exists(NEW_EXTERNAL_CERT_FILE_PATH) or
+                                os.path.exists(NEW_EXTERNAL_CA_CERT_FILE_PATH))
+    components.Nginx().replace_certificates(replacing_internal_certs,
+                                            replacing_external_certs)
 
 
 def main():

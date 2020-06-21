@@ -157,21 +157,29 @@ class BaseComponent(object):
 
     def handle_certificates(self,
                             using_config,
-                            cert_src=None,
-                            key_src=None,
-                            ca_src=None):
+                            *args,
+                            **kwargs):
         pass
 
     def replace_instance_certificates(self,
                                       service_name,
                                       default_cert_location,
                                       default_key_location,
-                                      default_ca_location):
+                                      default_ca_location,
+                                      *args,
+                                      **kwargs):
+        new_cert_location = (kwargs.get('new_cert_location') or
+                             NEW_CERT_FILE_PATH)
+        new_key_location = (kwargs.get('new_key_location') or
+                            NEW_KEY_FILE_PATH)
+        new_ca_location = (kwargs.get('new_ca_location') or
+                           NEW_CA_CERT_FILE_PATH)
+
         cert_filename, key_filename = self.get_cert_and_key_filenames(
-            NEW_CERT_FILE_PATH, NEW_KEY_FILE_PATH,
+            new_cert_location, new_key_location,
             default_cert_location, default_key_location)
 
-        ca_filename = self.get_ca_filename(NEW_CA_CERT_FILE_PATH,
+        ca_filename = self.get_ca_filename(new_ca_location,
                                            default_ca_location)
 
         validate_certificates(cert_filename, key_filename, ca_filename)
@@ -179,7 +187,9 @@ class BaseComponent(object):
         self.handle_certificates(using_config=False,
                                  cert_src=cert_filename,
                                  key_src=key_filename,
-                                 ca_src=ca_filename)
+                                 ca_src=ca_filename,
+                                 *args,
+                                 **kwargs)
 
         service.reload(service_name, ignore_failure=True)
         service.verify_alive(service_name)
