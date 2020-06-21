@@ -477,52 +477,60 @@ class PostgresqlServer(BaseComponent):
                             key_src=None,
                             ca_src=None,
                             key_pass=None):
-        self.use_supplied_certificates(
-            cert_destination=ETCD_SERVER_CERT_PATH,
-            key_destination=ETCD_SERVER_KEY_PATH,
-            ca_destination=ETCD_CA_PATH,
-            owner=ETCD_USER,
-            group=ETCD_GROUP,
-            key_perms='400',
-            using_config=using_config,
-            cert_src=cert_src,
-            key_src=key_src,
-            ca_src=ca_src,
-            key_pass=key_pass
-        )
-        self.use_supplied_certificates(
-            cert_destination=PATRONI_REST_CERT_PATH,
-            key_destination=PATRONI_REST_KEY_PATH,
-            owner=POSTGRES_USER,
-            group=POSTGRES_GROUP,
-            key_perms='400',
-            using_config=using_config,
-            cert_src=cert_src,
-            key_src=key_src,
-            ca_src=ca_src,
-            key_pass=key_pass
-        )
-        self.use_supplied_certificates(
-            cert_destination=PATRONI_DB_CERT_PATH,
-            key_destination=PATRONI_DB_KEY_PATH,
-            ca_destination=PATRONI_DB_CA_PATH,
-            owner=POSTGRES_USER,
-            group=POSTGRES_GROUP,
-            key_perms='400',
-            using_config=using_config,
-            cert_src=cert_src,
-            key_src=key_src,
-            ca_src=ca_src,
-            key_pass=key_pass
-        )
+        # We currently use the same certificates for etcd, patroni,
+        # and postgres. This should be a reasonable starting approach as
+        # these reside on the same machine and all have the same impact if
+        # compromised (full access to data directly or via injected
+        # configuration changes).
+
+        if using_config:
+            assert (cert_src is None and key_src is None and
+                    ca_src is None and key_pass is None)
+
+        etcd_certs = {
+            'cert_destination': ETCD_SERVER_CERT_PATH,
+            'key_destination': ETCD_SERVER_KEY_PATH,
+            'ca_destination': ETCD_CA_PATH,
+            'owner': ETCD_USER,
+            'group': ETCD_GROUP,
+            'key_perms': '400'
+        }
+
+        patroni_rest_certs = {
+            'cert_destination': PATRONI_REST_CERT_PATH,
+            'key_destination': PATRONI_REST_KEY_PATH,
+            'owner': POSTGRES_USER,
+            'group': POSTGRES_GROUP,
+            'key_perms': '400',
+        }
+
+        patroni_db_certs = {
+            'cert_destination': PATRONI_DB_CERT_PATH,
+            'key_destination': PATRONI_DB_KEY_PATH,
+            'ca_destination': PATRONI_DB_CA_PATH,
+            'owner': POSTGRES_USER,
+            'group': POSTGRES_GROUP,
+            'key_perms': '400'
+        }
+
+        postgresql_certs = [etcd_certs, patroni_rest_certs, patroni_db_certs]
+        for certificate in postgresql_certs:
+            if using_config:
+                self.use_supplied_certificates(**certificate)
+            else:
+                src_certs = {'cert_src': cert_src, 'key_src': key_src,
+                             'ca_src': ca_src, 'key_pass': key_pass}
+                certificate.update(src_certs)
+                self.configure_certs_in_correct_locations(**certificate)
 
     def replace_certificates(self):
         super(PostgresqlServer, self).replace_instance_certificates(
+            SYSTEMD_SERVICE_NAME,
             ETCD_SERVER_CERT_PATH,
             ETCD_SERVER_KEY_PATH,
-            ETCD_CA_PATH,
-            SYSTEMD_SERVICE_NAME
+            ETCD_CA_PATH
         )
+        # TODO: In the AIO case we have the function _configure_ssl
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
@@ -532,11 +540,6 @@ class PostgresqlServer(BaseComponent):
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
         common.chmod('a+x', '/var/lib/patroni')
-        # We currently use the same certificates for etcd, patroni,
-        # and postgres. This should be a reasonable starting approach as
-        # these reside on the same machine and all have the same impact if
-        # compromised (full access to data directly or via injected
-        # configuration changes).
         self.handle_certificates(using_config=True)
         common.chmod('a-x', '/var/lib/patroni')
 

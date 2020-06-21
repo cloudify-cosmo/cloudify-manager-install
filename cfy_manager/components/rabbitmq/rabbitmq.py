@@ -465,25 +465,29 @@ class RabbitMQ(BaseComponent):
                             key_src=None,
                             ca_src=None,
                             key_pass=None):
-        return self.use_supplied_certificates(
-            cert_destination=constants.BROKER_CERT_LOCATION,
-            key_destination=constants.BROKER_KEY_LOCATION,
-            ca_destination=constants.BROKER_CA_LOCATION,
-            owner='rabbitmq',
-            group='rabbitmq',
-            using_config=using_config,
-            cert_src=cert_src,
-            key_src=key_src,
-            ca_src=ca_src,
-            key_pass=key_pass
-        )
+
+        certificate = {
+            'cert_destination': constants.BROKER_CERT_LOCATION,
+            'key_destination': constants.BROKER_KEY_LOCATION,
+            'ca_destination': constants.BROKER_CA_LOCATION,
+            'owner': 'rabbitmq',
+            'group': 'rabbitmq',
+        }
+
+        if using_config:
+            self.use_supplied_certificates(**certificate)
+        else:
+            src_certs = {'cert_src': cert_src, 'key_src': key_src,
+                         'ca_src': ca_src, 'key_pass': key_pass}
+            certificate.update(src_certs)
+            self.configure_certs_in_correct_locations(**certificate)
 
     def replace_certificates(self):
         super(RabbitMQ, self).replace_instance_certificates(
+            RABBITMQ,
             constants.BROKER_CERT_LOCATION,
             constants.BROKER_KEY_LOCATION,
-            constants.BROKER_CA_LOCATION,
-            RABBITMQ
+            constants.BROKER_CA_LOCATION
         )
 
     # Give rabbit time to finish starting
