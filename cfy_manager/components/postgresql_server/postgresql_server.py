@@ -547,7 +547,14 @@ class PostgresqlServer(BaseComponent):
                     service_type=self.service_type
                 ))
         common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
-        # Restart the rsyslog
+        # Configure the rsyslog for supervisord
+        if self.service_type == 'supervisord':
+            service.configure(
+                'rsyslog',
+                src_dir='postgresql_server',
+                config_path='config/supervisord/rsyslog.conf',
+                append_prefix=False,
+            )
         service.restart('rsyslog', append_prefix=False)
 
         # create custom postgresql conf file with log settings
@@ -1254,7 +1261,6 @@ class PostgresqlServer(BaseComponent):
             ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
             stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
         )
-
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
         if not self._node_is_in_db(node_id):
