@@ -103,12 +103,12 @@ class Nginx(BaseComponent):
         So it is an error to provide only the CA cert, and then not provide
         the internal cert+key.
         """
-        cert_destination = constants.INTERNAL_CERT_PATH,
-        key_destination = constants.INTERNAL_KEY_PATH,
+        cert_destination = constants.INTERNAL_CERT_PATH
+        key_destination = constants.INTERNAL_KEY_PATH
         if using_config:
             logger.info('Handling internal certificate...')
             deployed = self.handle_certificates(
-                using_config=False,
+                using_config=True,
                 cert_destination=cert_destination,
                 key_destination=key_destination,
                 prefix='internal_'
@@ -146,9 +146,13 @@ class Nginx(BaseComponent):
                                 'ca_destination': constants.CA_CERT_PATH})
             certificates.configuring_certs_in_correct_locations(**certificate)
 
-    def replace_certificates(self,
-                             replacing_internal_certs,
-                             replacing_external_certs):
+    def replace_certificates(self):
+        replacing_internal_certs = (
+                exists(constants.NEW_CERT_FILE_PATH) or
+                exists(constants.NEW_CA_CERT_FILE_PATH))
+        replacing_external_certs = (
+                exists(constants.NEW_EXTERNAL_CERT_FILE_PATH) or
+                exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH))
         if replacing_internal_certs:
             self._handle_internal_cert(using_config=False)
         if replacing_external_certs:
@@ -161,12 +165,12 @@ class Nginx(BaseComponent):
         )
 
     def _handle_external_cert(self, using_config):
-        cert_destination = constants.EXTERNAL_CERT_PATH,
-        key_destination = constants.EXTERNAL_KEY_PATH,
+        cert_destination = constants.EXTERNAL_CERT_PATH
+        key_destination = constants.EXTERNAL_KEY_PATH
         if using_config:
             logger.info('Handling external certificate...')
             deployed = self.handle_certificates(
-                using_config=False,
+                using_config=True,
                 cert_destination=cert_destination,
                 key_destination=key_destination,
                 prefix='external_',

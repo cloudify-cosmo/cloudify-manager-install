@@ -63,13 +63,6 @@ from .constants import (
     INITIAL_INSTALL_FILE,
     STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
-    NEW_BROKER_CA_CERT_FILE_PATH,
-    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
-    NEW_POSTGRESQL_CA_CERT_FILE_PATH,
-    NEW_CERT_FILE_PATH,
-    NEW_CA_CERT_FILE_PATH,
-    NEW_EXTERNAL_CERT_FILE_PATH,
-    NEW_EXTERNAL_CA_CERT_FILE_PATH
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -90,8 +83,7 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, sudo, can_lookup_hostname, allows_json_format, is_installed,
-    is_all_in_one_manager
+    run, sudo, can_lookup_hostname, allows_json_format, is_installed
 )
 from .utils.install import yum_install, yum_remove, is_package_installed
 from .utils.files import (
@@ -1007,49 +999,20 @@ def image_starter(verbose=False):
 @argh.decorators.named('replace-certificates')
 def replace_certificates():
     """ Replacing the certificates on the current instance """
-    if is_all_in_one_manager():
-        return
-    else:
-        if is_installed(DATABASE_SERVICE):
-            components.PostgresqlServer().replace_certificates()
-        elif is_installed(QUEUE_SERVICE):
-            components.RabbitMQ().replace_certificates()
-        else:
-            return
+    installed_components = _get_components()
+    for component in installed_components:
+        if _has_replace_certificates_attr(component):
+            component.replace_certificates()
 
+    # TODO: Check if the AIO case is different
     # TODO: Handle certificates metadata
     # TODO: Replace certificates in the db table
+    # TODO: Handle LDAP
 
 
-def _replace_certificates_on_manager():
-    _replace_broker_ca()
-    _replace_postgresql_client_certs()
-    _replace_nginx_certificates()
-
-
-def _replace_broker_ca():
-    if os.path.exists(NEW_BROKER_CA_CERT_FILE_PATH):
-        components.Manager().replace_certificates()
-
-
-def _replace_postgresql_client_certs():
-    replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
-    replacing_cert_and_key = os.path.exists(
-        NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
-    if replacing_ca or replacing_cert_and_key:
-        components.PostgresqlClient().replace_certificates(
-            replacing_ca, replacing_cert_and_key)
-        if replacing_ca:
-            components.RestService().replace_certificates()
-
-
-def _replace_nginx_certificates():
-    replacing_internal_certs = (os.path.exists(NEW_CERT_FILE_PATH) or
-                                os.path.exists(NEW_CA_CERT_FILE_PATH))
-    replacing_external_certs = (os.path.exists(NEW_EXTERNAL_CERT_FILE_PATH) or
-                                os.path.exists(NEW_EXTERNAL_CA_CERT_FILE_PATH))
-    components.Nginx().replace_certificates(replacing_internal_certs,
-                                            replacing_external_certs)
+def _has_replace_certificates_attr(component):
+    return (hasattr(component, 'replace_certificates') and
+            callable(getattr(component, 'replace_certificates')))
 
 
 def main():

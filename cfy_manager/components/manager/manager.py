@@ -127,13 +127,14 @@ class Manager(BaseComponent):
 
     @staticmethod
     def replace_certificates():
-        validate_certificates(
-            ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            validate_certificates(
+                ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
 
-        configuring_certs_in_correct_locations(
-            logger,
-            ca_src=constants.NEW_BROKER_CA_CERT_FILE_PATH,
-            ca_destination=constants.BROKER_CA_LOCATION)
+            configuring_certs_in_correct_locations(
+                logger,
+                ca_src=constants.NEW_BROKER_CA_CERT_FILE_PATH,
+                ca_destination=constants.BROKER_CA_LOCATION)
 
     def _configure(self):
         self._prepare_certificates()
