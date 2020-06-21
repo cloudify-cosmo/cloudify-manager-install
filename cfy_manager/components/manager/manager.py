@@ -19,14 +19,15 @@ from os.path import join
 from tempfile import gettempdir
 
 from ..base_component import BaseComponent
-from ..validations import validate_new_certs_for_replacement
+from ..validations import validate_certificates
 from ..service_names import MANAGER, RABBITMQ, QUEUE_SERVICE
 from ..components_constants import CONFIG, SERVICES_TO_INSTALL
 from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, service
-from ...utils.certificates import use_supplied_certificates
+from ...utils.certificates import (use_supplied_certificates,
+                                   configuring_certs_in_correct_locations)
 from ...utils.files import (replace_in_file,
                             remove_files,
                             touch)
@@ -120,15 +121,13 @@ class Manager(BaseComponent):
 
     @staticmethod
     def replace_certificates():
-        validate_new_certs_for_replacement(
+        validate_certificates(
             ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
 
-        use_supplied_certificates(
-            component_name=RABBITMQ,
-            logger=logger,
-            using_config=False,
-            ca_destination=constants.BROKER_CA_LOCATION,
-            ca_src=constants.NEW_BROKER_CA_CERT_FILE_PATH)
+        configuring_certs_in_correct_locations(
+            logger,
+            ca_src=constants.NEW_BROKER_CA_CERT_FILE_PATH,
+            ca_destination=constants.BROKER_CA_LOCATION)
 
     def _configure(self):
         self._prepare_certificates()

@@ -98,22 +98,15 @@ VERBOSE_HELP_MSG = (
 )
 
 NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
-NEW_CERT_FILE_NAME = 'new_node_cert.pem'
-NEW_KEY_FILE_NAME = 'new_node_key.pem'
-NEW_CA_CERT_FILE_NAME = 'new_ca_cert.pem'
-NEW_BROKER_CA_CERT_FILE_NAME = 'new_rabbitmq_ca_cert.pem'
-NEW_POSTGRESQL_CA_CERT_FILE_NAME = 'new_postgresql_ca_cert.pem'
-NEW_POSTGRESQL_CLIENT_CERT_FILE_NAME = 'new_postgresql_client_cert.pem'
-NEW_POSTGRESQL_CLIENT_KEY_FILE_NAME = 'new_postgresql_client_key.pem'
 
-NEW_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + NEW_CERT_FILE_NAME
-NEW_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + NEW_KEY_FILE_NAME
-NEW_CA_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + NEW_CA_CERT_FILE_NAME
+NEW_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_node_cert.pem'
+NEW_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_node_key.pem'
+NEW_CA_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_ca_cert.pem'
 NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                NEW_BROKER_CA_CERT_FILE_NAME)
+                                'new_rabbitmq_ca_cert.pem')
 NEW_POSTGRESQL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                    NEW_POSTGRESQL_CA_CERT_FILE_NAME)
+                                    'new_postgresql_ca_cert.pem')
 NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                        NEW_POSTGRESQL_CLIENT_CERT_FILE_NAME)
+                                        'new_postgresql_client_cert.pem')
 NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                       NEW_POSTGRESQL_CLIENT_KEY_FILE_NAME)
+                                       'new_postgresql_client_key.pem')
