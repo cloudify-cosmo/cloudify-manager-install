@@ -112,6 +112,10 @@ NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
 NEW_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_node_cert.pem'
 NEW_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_node_key.pem'
 NEW_CA_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_ca_cert.pem'
+NEW_EXTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_cert.pem'
+NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
+NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                  'new_external_ca_cert.pem')
 NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                 'new_rabbitmq_ca_cert.pem')
 NEW_POSTGRESQL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
