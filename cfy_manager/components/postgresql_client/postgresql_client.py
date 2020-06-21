@@ -182,7 +182,10 @@ class PostgresqlClient(BaseComponent):
             })
             certificates.configuring_certs_in_correct_locations(**certificate)
 
-    def replace_certificates(self, replacing_ca, replacing_cert_and_key):
+    def replace_certificates(self):
+        replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_cert_and_key = os.path.exists(
+            NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             self._validate_new_certs()
             if replacing_ca:
