@@ -28,15 +28,18 @@ def run_syncthing_configuration(
         hostname,
         bootstrap_cluster,
         service_management):
-    syncthing.configure(bootstrap_cluster, service_management)
-    syncthing.start(hostname, service_management)
+    syncthing.configure(
+        bootstrap_cluster,
+        service_management=service_management
+    )
+    syncthing.start(hostname, service_management=service_management)
 
     if not bootstrap_cluster:
         sm = get_storage_manager()
         managers_list = sm.list(models.Manager)
         controller.add_manager(managers_list)
         syncthing.wait_for_replication()
-    syncthing.finish()
+    syncthing.finish(service_management=service_management)
 
 
 def file_path(path):
