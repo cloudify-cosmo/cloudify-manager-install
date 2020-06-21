@@ -15,7 +15,7 @@
 
 import os
 
-from ..validations import validate_new_certs_for_replacement
+from ..validations import validate_certificates
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...constants import (CLOUDIFY_USER,
@@ -25,7 +25,8 @@ from ...constants import (CLOUDIFY_USER,
                           NEW_CA_CERT_FILE_PATH)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
-from ...utils.certificates import use_supplied_certificates
+from ...utils.certificates import (use_supplied_certificates,
+                                   configuring_certs_in_correct_locations)
 from ...utils import service
 from ...logger import get_logger
 
@@ -99,12 +100,7 @@ class BaseComponent(object):
                                   owner=CLOUDIFY_USER,
                                   group=CLOUDIFY_GROUP,
                                   key_perms='440',
-                                  cert_perms='444',
-                                  using_config=True,
-                                  cert_src=None,
-                                  key_src=None,
-                                  ca_src=None,
-                                  key_pass=None):
+                                  cert_perms='444'):
         return use_supplied_certificates(
             component_name=self.component_name,
             logger=self.logger,
@@ -115,11 +111,33 @@ class BaseComponent(object):
             group=group,
             key_perms=key_perms,
             cert_perms=cert_perms,
-            using_config=using_config,
+        )
+
+    def configure_certs_in_correct_locations(self,
+                                             cert_src,
+                                             cert_destination,
+                                             key_src,
+                                             key_destination,
+                                             ca_src,
+                                             ca_destination,
+                                             key_pass=None,
+                                             owner=CLOUDIFY_USER,
+                                             group=CLOUDIFY_GROUP,
+                                             key_perms='440',
+                                             cert_perms='444'):
+        return configuring_certs_in_correct_locations(
+            logger=self.logger,
             cert_src=cert_src,
+            cert_destination=cert_destination,
             key_src=key_src,
+            key_destination=key_destination,
             ca_src=ca_src,
-            key_pass=key_pass
+            ca_destination=ca_destination,
+            key_pass=key_pass,
+            owner=owner,
+            group=group,
+            key_perms=key_perms,
+            cert_perms=cert_perms
         )
 
     @staticmethod
@@ -128,42 +146,35 @@ class BaseComponent(object):
                                    default_cert_location,
                                    default_key_location):
         if os.path.exists(new_cert_location):
-            return new_cert_location, new_key_location, True
+            return new_cert_location, new_key_location
 
-        return default_cert_location, default_key_location, False
+        return default_cert_location, default_key_location
 
     @staticmethod
     def get_ca_filename(new_ca_location, default_ca_location):
-        if os.path.exists(new_ca_location):
-            return new_ca_location, True
-
-        return default_ca_location, False
+        return (new_ca_location if os.path.exists(new_ca_location)
+                else default_ca_location)
 
     def handle_certificates(self,
                             using_config,
                             cert_src=None,
                             key_src=None,
-                            ca_src=None,
-                            key_pass=None):
+                            ca_src=None):
         pass
 
     def replace_instance_certificates(self,
+                                      service_name,
                                       default_cert_location,
                                       default_key_location,
-                                      default_ca_location,
-                                      service_name):
-        cert_filename, key_filename, validate_cert = \
-            self.get_cert_and_key_filenames(NEW_CERT_FILE_PATH,
-                                            NEW_KEY_FILE_PATH,
-                                            default_cert_location,
-                                            default_key_location)
+                                      default_ca_location):
+        cert_filename, key_filename = self.get_cert_and_key_filenames(
+            NEW_CERT_FILE_PATH, NEW_KEY_FILE_PATH,
+            default_cert_location, default_key_location)
 
-        ca_filename, validate_ca = self.get_ca_filename(NEW_CA_CERT_FILE_PATH,
-                                                        default_ca_location)
+        ca_filename = self.get_ca_filename(NEW_CA_CERT_FILE_PATH,
+                                           default_ca_location)
 
-        validate_new_certs_for_replacement(cert_filename, key_filename,
-                                           ca_filename, validate_cert,
-                                           validate_ca)
+        validate_certificates(cert_filename, key_filename, ca_filename)
 
         self.handle_certificates(using_config=False,
                                  cert_src=cert_filename,
@@ -171,3 +182,4 @@ class BaseComponent(object):
                                  ca_src=ca_filename)
 
         service.reload(service_name, ignore_failure=True)
+        service.verify_alive(service_name)
