@@ -26,7 +26,6 @@ RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager
 RUN cfy_manager install --only-install --verbose
 RUN chmod a+wx /var/run
 RUN chmod 755 /etc/cloudify
-RUN chown cfyuser. /run/cloudify-restservice && chmod 755 /run/cloudify-restservice
 RUN mkdir /etc/supervisord.d
 
 RUN groupadd supervisor
