@@ -19,7 +19,6 @@ from __future__ import print_function
 import os
 import re
 import sys
-import json
 import time
 import logging
 import subprocess
@@ -78,7 +77,7 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, sudo, can_lookup_hostname, allows_json_format, is_installed
+    run, sudo, can_lookup_hostname, is_installed
 )
 from .utils.install import yum_install, yum_remove, is_package_installed
 from .utils.files import (

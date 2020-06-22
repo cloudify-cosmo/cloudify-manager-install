@@ -26,12 +26,9 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ...utils.db import run_psql_command
-from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
-    SELECT_USER_TOKENS_QUERY,
     REST_SECURITY_CONFIG_PATH,
     REST_AUTHORIZATION_CONFIG_PATH
 )

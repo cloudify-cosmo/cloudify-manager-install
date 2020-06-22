@@ -1328,7 +1328,6 @@ class PostgresqlServer(BaseComponent):
             if self._node_is_in_db(node_id):
                 self._remove_node_from_db(node_id)
 
-            cloudify_node.archive_status_report('db', node_id)
             self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):
