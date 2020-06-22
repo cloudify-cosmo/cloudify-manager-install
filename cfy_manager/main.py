@@ -618,8 +618,6 @@ def _get_components(include_components=None):
             _components += [
                 components.Composer(),
             ]
-        if is_package_installed('cloudify-status-reporter'):
-            _components += [components.ManagerStatusReporter()]
         _components += [
             components.UsageCollector(),
         ]
