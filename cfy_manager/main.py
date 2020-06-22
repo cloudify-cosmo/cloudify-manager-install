@@ -659,6 +659,8 @@ def _get_components(include_components=None):
 
     if is_installed(MONITORING_SERVICE):
         _components += [components.Prometheus()]
+        if not is_installed(MANAGER_SERVICE):
+            _components += [components.Nginx()]
 
     if include_components:
         _components = _filter_components(_components, include_components)

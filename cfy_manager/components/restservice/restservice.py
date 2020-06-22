@@ -61,7 +61,8 @@ from ..service_names import (
     RESTSERVICE,
     POSTGRESQL_CLIENT,
     DATABASE_SERVICE,
-    MANAGER_SERVICE
+    MANAGER_SERVICE,
+    MONITORING_SERVICE
 )
 from ... import constants
 from ...config import config
@@ -318,7 +319,9 @@ class RestService(BaseComponent):
 
     @staticmethod
     def _is_in_cluster_mode():
-        return config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE]
+        return (config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE] or
+                config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE,
+                                                MONITORING_SERVICE])
 
     def _generate_status_reporter_passwords(self):
         if not is_premium_installed():

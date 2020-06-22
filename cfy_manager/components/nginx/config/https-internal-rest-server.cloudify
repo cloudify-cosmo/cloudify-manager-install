@@ -9,7 +9,7 @@ server {
   ssl_certificate_key {{ constants.internal_key_path }};
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
-
+{% if 'manager_service' in services_to_install %}
   # serve the UI
   include "/etc/nginx/conf.d/ui-locations.cloudify";
 
@@ -20,5 +20,8 @@ server {
   include "/etc/nginx/conf.d/rest-location.cloudify";
 
   # Serves the File Server (backed by the cloudify-resources upstream).
-  include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
+  include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";{% endif %}
+{% if 'monitoring_service' in services_to_install %}
+  # serve the Prometheus monitoring (backed by cloudify-monitoring upstream).
+  include "/etc/nginx/conf.d/redirect-to-monitoring.cloudify";{% endif %}
 }

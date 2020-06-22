@@ -23,9 +23,10 @@ from ..components_constants import (
     PUBLIC_IP,
     SSL_INPUTS,
     CLEAN_DB,
-    HOSTNAME
+    HOSTNAME,
+    SERVICES_TO_INSTALL
 )
-from ..service_names import NGINX, MANAGER
+from ..service_names import NGINX, MANAGER, MANAGER_SERVICE, MONITORING_SERVICE
 from ... import constants
 from ...config import config
 from ...exceptions import ValidationError
@@ -158,65 +159,52 @@ class Nginx(BaseComponent):
                         'all certificates')
 
     def _config_files(self):
+        do_monitoring = MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL)
+        do_manager = MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL)
         resource = namedtuple('Resource', 'src dst')
-        return [
-            resource(
-                src=join(CONFIG_PATH, 'http-external-rest-server.cloudify'),
-                dst='/etc/nginx/conf.d/http-external-rest-server.cloudify'
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'https-external-rest-server.cloudify'),
-                dst='/etc/nginx/conf.d/https-external-rest-server.cloudify'
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'https-internal-rest-server.cloudify'),
-                dst='/etc/nginx/conf.d/https-internal-rest-server.cloudify'
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'https-file-server.cloudify'),
-                dst='/etc/nginx/conf.d/https-file-server.cloudify'
-            ),
+        resources_list = [
             resource(
                 src=join(CONFIG_PATH, 'nginx.conf'),
                 dst='/etc/nginx/nginx.conf'
             ),
-            resource(
-                src=join(CONFIG_PATH, 'cloudify.conf'),
-                dst='/etc/nginx/conf.d/cloudify.conf',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'rest-location.cloudify'),
-                dst='/etc/nginx/conf.d/rest-location.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'rest-proxy.cloudify'),
-                dst='/etc/nginx/conf.d/rest-proxy.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'fileserver-location.cloudify'),
-                dst='/etc/nginx/conf.d/fileserver-location.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'redirect-to-fileserver.cloudify'),
-                dst='/etc/nginx/conf.d/redirect-to-fileserver.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'ui-locations.cloudify'),
-                dst='/etc/nginx/conf.d/ui-locations.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'composer-location.cloudify'),
-                dst='/etc/nginx/conf.d/composer-location.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'logs-conf.cloudify'),
-                dst='/etc/nginx/conf.d/logs-conf.cloudify',
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'redirect-to-monitoring.cloudify'),
-                dst='/etc/nginx/conf.d/redirect-to-monitoring.cloudify',
-            ),
         ]
+        resources_list += [
+            resource(
+                src=join(CONFIG_PATH, file_name),
+                dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
+            file_name in [
+                'https-internal-rest-server.cloudify',
+                'cloudify.conf',
+                'logs-conf.cloudify',
+            ]
+        ]
+        if do_manager:
+            resources_list += [
+                resource(
+                    src=join(CONFIG_PATH, file_name),
+                    dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
+                file_name in [
+                    'http-external-rest-server.cloudify',
+                    'https-external-rest-server.cloudify',
+                    'https-internal-rest-server.cloudify',
+                    'https-file-server.cloudify',
+                    'cloudify.conf',
+                    'rest-location.cloudify',
+                    'rest-proxy.cloudify',
+                    'fileserver-location.cloudify',
+                    'redirect-to-fileserver.cloudify',
+                    'ui-locations.cloudify',
+                    'composer-location.cloudify',
+                ]
+            ]
+        if do_monitoring:
+            resources_list += [
+                resource(
+                    src=join(CONFIG_PATH, 'redirect-to-monitoring.cloudify'),
+                    dst='/etc/nginx/conf.d/redirect-to-monitoring.cloudify'
+                ),
+            ]
+        return resources_list
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')

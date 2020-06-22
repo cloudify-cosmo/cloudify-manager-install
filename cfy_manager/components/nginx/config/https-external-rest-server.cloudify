@@ -21,9 +21,6 @@ server {
 
   # Serves the File Server (backed by the cloudify-resources upstream).
   include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
-
-  # serve the Prometheus monitoring (backed by cloudify-monitoring upstream).
-  include "/etc/nginx/conf.d/redirect-to-monitoring.cloudify";
 }
 
 {#

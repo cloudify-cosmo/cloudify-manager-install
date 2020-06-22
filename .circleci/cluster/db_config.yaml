@@ -29,5 +29,9 @@ postgresql_server:
     postgres:
       replicator_password: 'somesecretvalue123!'
 
+ssl_inputs:
+  internal_cert_path: /etc/cloudify/cert.pem
+  internal_key_path: /etc/cloudify/key.pem
+
 services_to_install:
 - database_service
