@@ -51,7 +51,13 @@ from ...utils.files import write_to_file, deploy
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
+SCRIPS_PATH = join(
+    constants.COMPONENTS_DIR,
+    RABBITMQ,
+    SCRIPTS,
+)
 RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
+RABBITMQ_SERVER_SCRIPT = '/var/lib/rabbitmq/start_rabbitmq_server.sh'
 RABBITMQ_ENV_PATH = '/etc/rabbitmq/rabbitmq-env.conf'
 RABBITMQ_ENABLED_PLUGINS = '/etc/cloudify/rabbitmq/enabled_plugins'
 SECURE_PORT = 5671
@@ -486,10 +492,24 @@ class RabbitMQ(BaseComponent):
                 }
             }
 
+    def _configure_rabbitmq_wrapper_script(self):
+        deploy(
+            join(
+                SCRIPS_PATH,
+                'start_rabbitmq_server.sh'
+            ),
+            '/var/lib/rabbitmq/',
+            render=False
+        )
+        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_SERVER_SCRIPT)
+        common.chmod('755', RABBITMQ_SERVER_SCRIPT)
+
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
         self._set_erlang_cookie()
         self._set_config()
+        if self.service_type == 'supervisord':
+            self._configure_rabbitmq_wrapper_script()
         if not common.is_all_in_one_manager():
             self._possibly_add_hosts_entries()
         service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
