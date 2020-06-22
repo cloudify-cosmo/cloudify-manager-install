@@ -23,16 +23,12 @@ from ..components_constants import (
     AGENT,
     SCRIPTS,
     HOSTNAME,
-    PASSWORD,
     SECURITY,
     ADMIN_USERNAME,
     ADMIN_PASSWORD,
     PREMIUM_EDITION,
     PROVIDER_CONTEXT,
-    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
 )
 
 from ..service_names import (
@@ -50,7 +46,6 @@ from ...logger import get_logger
 from ...exceptions import ValidationError
 
 from ...utils.files import temp_copy
-from ...utils.node import get_node_id
 from ...utils import common, db as utils_db
 from ...utils.scripts import run_script_on_manager_venv
 
@@ -129,31 +124,6 @@ def _create_populate_db_args_dict():
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info()
     }
-    manager_status_reporter_password = config.get(
-        MANAGER_STATUS_REPORTER, {}).get(PASSWORD)
-    if manager_status_reporter_password:
-        args_dict['manager_status_reporter_username'] = MANAGER_STATUS_REPORTER
-        args_dict['manager_status_reporter_password'] = \
-            manager_status_reporter_password
-        args_dict['manager_status_reporter_role'] = MANAGER_STATUS_REPORTER
-        args_dict['manager_status_reporter_user_id'] = 90000
-    db_status_reporter_password = config.get(
-        DB_STATUS_REPORTER, {}).get(PASSWORD)
-    if db_status_reporter_password:
-        args_dict['db_status_reporter_username'] = DB_STATUS_REPORTER
-        args_dict['db_status_reporter_password'] = db_status_reporter_password
-        args_dict['db_status_reporter_role'] = DB_STATUS_REPORTER
-        args_dict['db_status_reporter_user_id'] = 90001
-    broker_status_reporter_password = config.get(
-        BROKER_STATUS_REPORTER, {}).get(PASSWORD)
-    if broker_status_reporter_password:
-        args_dict['broker_status_reporter_username'] = \
-            BROKER_STATUS_REPORTER
-        args_dict['broker_status_reporter_password'] = \
-            broker_status_reporter_password
-        args_dict['broker_status_reporter_role'] = \
-            BROKER_STATUS_REPORTER
-        args_dict['broker_status_reporter_user_id'] = 90002
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
         with open(rabbitmq_ca_cert_path) as f:
@@ -162,12 +132,6 @@ def _create_populate_db_args_dict():
 
 
 def _create_rabbitmq_info():
-    node_id = None
-
-    # In all-in-one the node_id is identical for every service
-    if common.is_all_in_one_manager():
-        node_id = get_node_id()
-
     return [
         {
             'name': name,
@@ -181,7 +145,6 @@ def _create_rabbitmq_info():
             'params': None,
             'networks': broker[NETWORKS],
             'is_external': broker.get('node_id') is None,
-            'node_id': node_id or broker.get('node_id', str(uuid.uuid4()))
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
@@ -191,7 +154,6 @@ def _create_db_nodes_info():
     if common.is_all_in_one_manager():
         return [{
             'name': config[MANAGER][HOSTNAME],
-            'node_id': get_node_id(),
             'host': config[NETWORKS]['default'],
             'is_external': False
         }]
@@ -262,21 +224,9 @@ def _run_script(script_name, script_input=None, configs=None):
 
 
 def populate_db(configs):
-    reporter_to_conf_key = {
-        'db_status_reporter_token': DB_STATUS_REPORTER,
-        'broker_status_reporter_token': BROKER_STATUS_REPORTER,
-        'manager_status_reporter_token': MANAGER_STATUS_REPORTER
-    }
-
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_populate_db_args_dict()
-    script_output = _run_script(
-        'create_tables_and_add_defaults.py', args_dict, configs)
-    tokens = json.loads(script_output)
-
-    for reporter in tokens:
-        conf_key = reporter_to_conf_key[reporter]
-        config[conf_key][constants.STATUS_REPORTER_TOKEN] = tokens[reporter]
+    _run_script('create_tables_and_add_defaults.py', args_dict, configs)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
@@ -288,7 +238,6 @@ def insert_manager(configs):
             'hostname': config[MANAGER][HOSTNAME],
             'private_ip': config['manager']['private_ip'],
             'networks': config[NETWORKS],
-            'node_id': get_node_id(),
             'last_seen': common.get_formatted_timestamp()
         }
     }

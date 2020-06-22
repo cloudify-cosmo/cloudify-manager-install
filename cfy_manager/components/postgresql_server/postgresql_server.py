@@ -60,7 +60,6 @@ from ...utils import (
     common,
     files,
     db,
-    node as cloudify_node,
     network,
     service
 )

@@ -41,11 +41,8 @@ from .components.components_constants import (
     PUBLIC_IP,
     PRIVATE_IP,
     ADMIN_PASSWORD,
-    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
     UNCONFIGURED_INSTALL,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
     PREMIUM_EDITION
 )
 from .components.globals import set_globals
@@ -61,7 +58,6 @@ from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
-    STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
@@ -74,7 +70,6 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
-from .status_reporter import status_reporter
 from .utils import CFY_UMASK
 from .utils.certificates import (
     create_internal_certs,
@@ -92,7 +87,6 @@ from .utils.files import (
     remove_temp_files,
     touch
 )
-from .utils.node import get_node_id
 
 logger = get_logger('Main')
 
@@ -442,16 +436,6 @@ def db_node_set_master(**kwargs):
         logger.info('There is no database cluster associated with this node.')
 
 
-@allows_json_format()
-def get_id(json_format=None):
-    """Get Cloudify's auto-generated id for this node"""
-    node_id = get_node_id()
-    if json_format:
-        print(json.dumps({'node_id': node_id}))
-    else:
-        print('The node id is: {0}'.format(node_id))
-
-
 def _print_time():
     running_time = time.time() - START_TIME
     m, s = divmod(running_time, 60)
@@ -531,24 +515,10 @@ def _print_finish_message():
 
 def print_credentials_to_screen():
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-    db_status_reporter_token = config.get(
-        DB_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
-    broker_status_reporter_token = config.get(
-        BROKER_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
 
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
     logger.notice('Admin password: %s', password)
-    if db_status_reporter_token:
-        logger.notice('Database Status Reported token: %s',
-                      db_status_reporter_token)
-    if broker_status_reporter_token:
-        logger.notice('Queue Service Status Reported token: %s',
-                      broker_status_reporter_token)
-    for reporter in (MANAGER_STATUS_REPORTER,
-                     DB_STATUS_REPORTER,
-                     BROKER_STATUS_REPORTER):
-        config.pop(reporter, None)
     set_file_handlers_level(current_level)
 
 
@@ -1035,19 +1005,6 @@ def main():
         db_node_set_master
     ], namespace='dbs')
 
-    parser.add_commands([
-        status_reporter.show_configuration,
-        status_reporter.start,
-        status_reporter.stop,
-        status_reporter.remove,
-        status_reporter.configure,
-        status_reporter.get_tokens
-    ], namespace='status-reporter')
-
-    parser.add_commands([
-        get_id
-    ], namespace='node',
-        namespace_kwargs={'title': 'Handle node details'})
     parser.dispatch()
 
     os.umask(current_umask)
