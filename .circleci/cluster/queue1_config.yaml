@@ -16,6 +16,10 @@ rabbitmq:
       networks:
         default: QUEUE2_IP
 
+ssl_inputs:
+  internal_cert_path: /etc/cloudify/queue_cert.pem
+  internal_key_path: /etc/cloudify/queue_key.pem
+
 services_to_install:
  - queue_service
  - monitoring_service
