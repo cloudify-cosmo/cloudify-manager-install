@@ -79,7 +79,7 @@ from .utils.certificates import (
 from .utils.common import (
     run, sudo, can_lookup_hostname, is_installed
 )
-from .utils.install import yum_install, yum_remove, is_package_installed
+from .utils.install import yum_install, yum_remove
 from .utils.files import (
     replace_in_file,
     remove as _remove,
