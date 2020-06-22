@@ -574,6 +574,8 @@ prometheus:
     metrics_port: 9187
   rabbitmq_prometheus:
     metrics_port: 15692
+  # ca_cert_path is a path to the CA certificate, which is used currently by the blackbox_exporter
+  # to connect to the HTTPS services that use certificates signed with this CA certificate.
   ca_cert_path: ''
 
 flask_security: {}
