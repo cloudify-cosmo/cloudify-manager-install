@@ -206,11 +206,24 @@ class RestService(BaseComponent):
             constants.MANAGER_RESOURCES_HOME
         )
 
+    def _configure_pid_restservice(self):
+        # Create restservice under /run
+        pid_dir = constants.REST_PID_DIR
+        if not os.path.exists(pid_dir):
+            common.mkdir(pid_dir)
+            common.chown(
+                constants.CLOUDIFY_USER,
+                constants.CLOUDIFY_GROUP,
+                pid_dir
+            )
+            common.chmod('755', pid_dir)
+
     def _configure_restservice(self):
         self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
+        self._configure_pid_restservice()
 
     def _verify_restservice_alive(self):
         logger.info('Verifying Rest service is up...')
