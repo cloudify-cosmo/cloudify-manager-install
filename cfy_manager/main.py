@@ -372,8 +372,7 @@ def db_node_add(**kwargs):
     config.load_config()
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'], kwargs['node_id'],
-                            kwargs.get('hostname'))
+        db.add_cluster_node(kwargs['address'], kwargs.get('hostname'))
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -383,7 +382,6 @@ def db_node_add(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
-@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG)
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
@@ -391,12 +389,7 @@ def db_node_remove(**kwargs):
     config.load_config()
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
-                kwargs.get('node_id') is None):
-            logger.error('Argument -i/--node-id is required when running '
-                         '`dbs remove` on a manager')
-            return
-        db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
+        db.remove_cluster_node(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
 

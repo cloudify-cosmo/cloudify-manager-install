@@ -143,7 +143,7 @@ def _create_rabbitmq_info():
             'password': config[RABBITMQ]['password'],
             'params': None,
             'networks': broker[NETWORKS],
-            'is_external': broker.get('node_id') is None,
+            'is_external': broker.get('address') is None,
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
@@ -172,7 +172,6 @@ def _create_db_nodes_info():
     # External db is used
     return [{
         'name': config[POSTGRESQL_CLIENT]['host'],
-        'node_id': str(uuid.uuid4()),
         'host': config[POSTGRESQL_CLIENT]['host'],
         'is_external': True
     }]

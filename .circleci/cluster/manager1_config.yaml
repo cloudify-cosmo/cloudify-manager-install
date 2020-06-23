@@ -10,11 +10,11 @@ rabbitmq:
   ca_path: /etc/cloudify/ca.pem
   cluster_members:
     rabbit1:
-      node_id: QUEUE1_NODE
+      address: QUEUE1_IP
       networks:
         default: QUEUE1_IP
     rabbit2:
-      node_id: QUEUE2_NODE
+      address: QUEUE2_IP
       networks:
         default: QUEUE2_IP
 
