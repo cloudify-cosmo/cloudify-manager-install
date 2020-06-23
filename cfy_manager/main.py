@@ -586,14 +586,9 @@ def _get_components(include_components=None):
 
     if is_installed(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
-        if (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
-                config[POSTGRESQL_SERVER]['cluster']['nodes']):
-            _components += [components.PostgresqlStatusReporter()]
 
     if is_installed(QUEUE_SERVICE):
         _components += [components.RabbitMQ()]
-        if config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]:
-            _components += [components.RabbitmqStatusReporter()]
 
     if is_installed(MANAGER_SERVICE):
         _components += [

@@ -47,7 +47,5 @@ COMPONENTS_DEPENDENCIES = {
     'Stage': ['systemd-sysv'],
     'UsageCollector': [],
     'Patch': [],
-    'RabbitmqStatusReporter': [],
-    'PostgresqlStatusReporter': [],
     'Prometheus': [],
 }
