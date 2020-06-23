@@ -26,6 +26,7 @@ import requests
 
 from ..components_constants import (
     CONFIG,
+    SCRIPTS,
     SERVICES_TO_INSTALL,
     HOSTNAME
 )
