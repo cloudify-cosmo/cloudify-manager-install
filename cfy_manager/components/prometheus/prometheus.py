@@ -102,7 +102,11 @@ class Prometheus(BaseComponent):
         service.configure(PROMETHEUS, append_prefix=False)
         service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
         for exporter in _prometheus_exporters():
-            service.configure(exporter['name'], append_prefix=False)
+            service.configure(
+                exporter['name'],
+                src_dir='prometheus',
+                append_prefix=False
+            )
             service.reload(
                 exporter['name'],
                 append_prefix=False,
