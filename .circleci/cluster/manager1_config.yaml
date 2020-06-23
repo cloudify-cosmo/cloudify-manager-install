@@ -27,13 +27,10 @@ postgresql_server:
     nodes:
       db_1:
         ip: DB1_IP
-        node_id: DB1_NODE
       db_2:
         ip: DB2_IP
-        node_id: DB2_NODE
       db_3:
         ip: DB3_IP
-        node_id: DB3_NODE
 
 postgresql_client:
   ssl_enabled: true
