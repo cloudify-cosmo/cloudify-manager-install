@@ -28,7 +28,6 @@ import requests
 from retrying import retry
 from ruamel.yaml import YAML
 
-
 from cfy_manager.exceptions import (
     BootstrapError,
     ClusteringError,
@@ -62,7 +61,8 @@ from ...utils import (
     db,
     node as cloudify_node,
     network,
-    service
+    service,
+    certificates
 )
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
@@ -213,7 +213,7 @@ class PostgresqlServer(BaseComponent):
             'lc_time': "en_US.UTF-8",
             'shared_buffers': self._generate_default_shared_buffers(),
             'effective_cache_size':
-            self._generate_default_effective_cache_size(),
+                self._generate_default_effective_cache_size(),
         }
         params.update(overrides)
         return params
@@ -253,7 +253,7 @@ class PostgresqlServer(BaseComponent):
                     line = line.replace('ident', 'md5')
                 f.write(line)
             if not re.search(PG_HBA_LISTEN_ALL_REGEX_PATTERN,
-                             '\n'.join(lines)) and enable_remote_connections\
+                             '\n'.join(lines)) and enable_remote_connections \
                     and not config[POSTGRESQL_SERVER]['ssl_only_connections']:
                 f.write('host all all 0.0.0.0/0 md5\n')
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
@@ -272,14 +272,7 @@ class PostgresqlServer(BaseComponent):
         Cluster certificates are handled in _configure_cluster.
         """
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-            self.use_supplied_certificates(
-                cert_destination=PG_SERVER_CERT_PATH,
-                key_destination=PG_SERVER_KEY_PATH,
-                ca_destination=PG_CA_CERT_PATH,
-                owner=POSTGRES_USER,
-                group=POSTGRES_GROUP,
-                key_perms='400',
-            )
+            self.handle_all_in_one_certificates(installing=True)
 
     def _update_configuration(self, enable_remote_connections):
         logger.info('Updating PostgreSQL Server configuration...')
@@ -471,17 +464,18 @@ class PostgresqlServer(BaseComponent):
                 render=False,
             )
 
-    def handle_certificates(self,
-                            using_config=True,
-                            *args,
-                            **kwargs):
+    def handle_cluster_certificates(self,
+                                    installing,
+                                    cert_src=None,
+                                    key_src=None,
+                                    ca_src=None):
         # We currently use the same certificates for etcd, patroni,
         # and postgres. This should be a reasonable starting approach as
         # these reside on the same machine and all have the same impact if
         # compromised (full access to data directly or via injected
         # configuration changes).
 
-        etcd_certs = {
+        etcd_certs_config = {
             'cert_destination': ETCD_SERVER_CERT_PATH,
             'key_destination': ETCD_SERVER_KEY_PATH,
             'ca_destination': ETCD_CA_PATH,
@@ -490,7 +484,7 @@ class PostgresqlServer(BaseComponent):
             'key_perms': '400'
         }
 
-        patroni_rest_certs = {
+        patroni_rest_certs_config = {
             'cert_destination': PATRONI_REST_CERT_PATH,
             'key_destination': PATRONI_REST_KEY_PATH,
             'owner': POSTGRES_USER,
@@ -498,7 +492,7 @@ class PostgresqlServer(BaseComponent):
             'key_perms': '400',
         }
 
-        patroni_db_certs = {
+        patroni_db_certs_config = {
             'cert_destination': PATRONI_DB_CERT_PATH,
             'key_destination': PATRONI_DB_KEY_PATH,
             'ca_destination': PATRONI_DB_CA_PATH,
@@ -507,25 +501,74 @@ class PostgresqlServer(BaseComponent):
             'key_perms': '400'
         }
 
-        postgresql_certs = [etcd_certs, patroni_rest_certs, patroni_db_certs]
-        for certificate in postgresql_certs:
-            if using_config:
-                self.use_supplied_certificates(**certificate)
-            else:
-                src_certs = {'cert_src': kwargs.get('cert_src'),
-                             'key_src': kwargs.get('key_src'),
-                             'ca_src': kwargs.get('ca_src')}
-                certificate.update(src_certs)
-                self.configure_certs_in_correct_locations(**certificate)
+        postgresql_certs_config = [etcd_certs_config,
+                                   patroni_rest_certs_config,
+                                   patroni_db_certs_config]
+        for cert_config in postgresql_certs_config:
+            self.handle_certificates(installing, cert_config, cert_src,
+                                     key_src, ca_src)
+
+    def handle_all_in_one_certificates(self,
+                                       installing,
+                                       cert_src=None,
+                                       key_src=None,
+                                       ca_src=None):
+        cert_config = {
+            'cert_destination': PG_SERVER_CERT_PATH,
+            'key_destination': PG_SERVER_KEY_PATH,
+            'ca_destination': PG_CA_CERT_PATH,
+            'owner': POSTGRES_USER,
+            'group': POSTGRES_GROUP,
+            'key_perms': '400'
+        }
+
+        self.handle_certificates(installing, cert_config, cert_src,
+                                 key_src, ca_src)
+
+    def handle_certificates(self,
+                            installing,
+                            cert_config,
+                            cert_src=None,
+                            key_src=None,
+                            ca_src=None):
+        if installing:
+            self.use_supplied_certificates(**cert_config)
+        else:
+            cert_config.update({
+                'cert_src': cert_src,
+                'key_src': key_src,
+                'ca_src': ca_src
+            })
+            self.configure_certs_in_their_locations(**cert_config)
 
     def replace_certificates(self):
-        self.replace_instance_certificates(
-            SYSTEMD_SERVICE_NAME,
-            ETCD_SERVER_CERT_PATH,
-            ETCD_SERVER_KEY_PATH,
-            ETCD_CA_PATH
-        )
-        # TODO: In the AIO case we have the function _configure_ssl
+        cert_src, key_src, ca_src = \
+            certificates.get_and_validate_certs_for_replacement(
+                default_cert_location=ETCD_SERVER_CERT_PATH,
+                default_key_location=ETCD_SERVER_KEY_PATH,
+                default_ca_location=ETCD_CA_PATH
+            )
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:  # cluster case
+            self.log_replacing_certificates()
+            self.handle_cluster_certificates(installing=False,
+                                             cert_src=cert_src,
+                                             key_src=key_src,
+                                             ca_src=ca_src)
+
+            service.reload(SYSTEMD_SERVICE_NAME, ignore_failure=True)
+            service.verify_alive(SYSTEMD_SERVICE_NAME)
+
+        else:  # AIO case
+            if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+                self.log_replacing_certificates()
+                self.handle_all_in_one_certificates(installing=False,
+                                                    cert_src=cert_src,
+                                                    key_src=key_src,
+                                                    ca_src=ca_src)
+
+    def log_replacing_certificates(self):
+        self.logger.info(
+            'Replacing certificates on the postgresql_server component')
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
@@ -535,7 +578,8 @@ class PostgresqlServer(BaseComponent):
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
         common.chmod('a+x', '/var/lib/patroni')
-        self.handle_certificates(using_config=True)
+
+        self.handle_cluster_certificates(installing=True)
         common.chmod('a-x', '/var/lib/patroni')
 
         logger.info('Deploying patroni initial startup monitor.')
@@ -623,8 +667,8 @@ class PostgresqlServer(BaseComponent):
                 look_for = ' {address} '.format(
                     address=self._format_pg_hba_address(node_ip))
                 if not any(
-                    look_for in entry
-                    for entry in patroni_conf['postgresql']['pg_hba']
+                        look_for in entry
+                        for entry in patroni_conf['postgresql']['pg_hba']
                 ):
                     self._add_node_to_pg_hba(
                         pg_hba=patroni_conf['postgresql']['pg_hba'],
@@ -961,8 +1005,8 @@ class PostgresqlServer(BaseComponent):
                 ignore_failures=True
             ).aggr_stdout
             if (
-                'cluster is unavailable' in etcd_cluster_health
-                or 'failed to list members' in etcd_cluster_health
+                    'cluster is unavailable' in etcd_cluster_health
+                    or 'failed to list members' in etcd_cluster_health
             ):
                 raise DBNodeListError(
                     'Etcd is not responding on this node. '
@@ -1144,8 +1188,8 @@ class PostgresqlServer(BaseComponent):
         for replica in replicas:
             if replica['state'] == 'sync_replica':
                 if (
-                    master_log_location
-                    and replica.get('log_location') < master_log_location
+                        master_log_location
+                        and replica.get('log_location') < master_log_location
                 ):
                     logger.error(
                         'Synchronous replica not in sync with master. '
@@ -1155,8 +1199,8 @@ class PostgresqlServer(BaseComponent):
                     status = max(status, self.DOWN)
             else:
                 if (
-                    master_timeline
-                    and replica.get('timeline') != master_timeline
+                        master_timeline
+                        and replica.get('timeline') != master_timeline
                 ):
                     logger.warning(
                         'Asynchronous replica not on same timeline as '

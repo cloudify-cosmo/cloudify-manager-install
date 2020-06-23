@@ -35,6 +35,9 @@ from ...utils import (
     service
 )
 from ...utils.network import wait_for_port
+from ...constants import (NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                          NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
+                          NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
 
 logger = get_logger(COMPOSER)
 
@@ -67,6 +70,68 @@ class Composer(BaseComponent):
             ],
         )
 
+    def _handle_ca_certificate(self, installing):
+        base_cert_config = {
+            'logger': self.logger,
+            'ca_destination': DB_CA_PATH,
+            'owner': COMPOSER_USER,
+            'group': COMPOSER_GROUP
+        }
+
+        install_cert_config = {
+                'component_name': POSTGRESQL_CLIENT,
+                'update_config': False
+        }
+
+        replace_cert_config = {'ca_src': NEW_POSTGRESQL_CA_CERT_FILE_PATH}
+
+        certificates.handle_cert_config(installing,
+                                        base_cert_config,
+                                        install_cert_config,
+                                        replace_cert_config)
+
+    def _handle_cert_and_key(self, installing):
+        base_cert_config = {
+            'logger': self.logger,
+            'cert_destination': DB_CLIENT_CERT_PATH,
+            'key_destination': DB_CLIENT_KEY_PATH,
+            'owner': COMPOSER_USER,
+            'group': COMPOSER_GROUP,
+            'key_perms': '400'
+        }
+
+        install_cert_config = {
+                'component_name': SSL_INPUTS,
+                'update_config': False,
+                'prefix': 'postgresql_client_'
+        }
+
+        replace_cert_config = {
+            'cert_src': NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+            'key_src': NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH
+        }
+
+        certificates.handle_cert_config(installing,
+                                        base_cert_config,
+                                        install_cert_config,
+                                        replace_cert_config)
+
+    def replace_certificates(self):
+        # The certificates are validated in the PostgresqlClient component
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            self.log_replacing_certs('CA cert')
+            self._handle_ca_certificate(installing=False)
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                self.log_replacing_certs('cert and key')
+                self._handle_cert_and_key(installing=False)
+
+            service.reload(COMPOSER)
+            self._verify_composer_alive()
+
+    def log_replacing_certs(self, certs_type):
+        self.logger.info(
+            'Replacing {0} on composer component'.format(certs_type))
+
     def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
         # We need to use sudo to read this or we break on configure
@@ -93,14 +158,7 @@ class Composer(BaseComponent):
         params = {}
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            certificates.use_supplied_certificates(
-                component_name=POSTGRESQL_CLIENT,
-                logger=self.logger,
-                ca_destination=DB_CA_PATH,
-                owner=COMPOSER_USER,
-                group=COMPOSER_GROUP,
-                update_config=False,
-            )
+            self._handle_ca_certificate(installing=True)
 
             params.update({
                 'sslmode': 'verify-full',
@@ -113,17 +171,7 @@ class Composer(BaseComponent):
             }
 
             if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                certificates.use_supplied_certificates(
-                    component_name=SSL_INPUTS,
-                    prefix='postgresql_client_',
-                    logger=self.logger,
-                    cert_destination=DB_CLIENT_CERT_PATH,
-                    key_destination=DB_CLIENT_KEY_PATH,
-                    owner=COMPOSER_USER,
-                    group=COMPOSER_GROUP,
-                    key_perms='400',
-                    update_config=False,
-                )
+                self._handle_cert_and_key(installing=True)
 
                 params.update({
                     'sslcert': DB_CLIENT_CERT_PATH,

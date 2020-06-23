@@ -408,7 +408,7 @@ class RestService(BaseComponent):
 
     def _configure_db_proxy(self):
         self._set_haproxy_connect_any(True)
-        self.handle_haproxy_certificate(using_config=True)
+        self.handle_haproxy_certificate(installing=True)
 
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
@@ -428,42 +428,46 @@ class RestService(BaseComponent):
         service.restart('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
 
-    def handle_haproxy_certificate(self, using_config):
-        certificate = {
+    def handle_haproxy_certificate(self, installing):
+        base_cert_config = {
             'logger': self.logger,
             'ca_destination': '/etc/haproxy/ca.crt',
             'owner': 'haproxy',
             'group': 'haproxy'
         }
 
-        if using_config:
-            certificate.update({'component_name': 'postgresql_client'})
-            certificates.use_supplied_certificates(**certificate)
-        else:
-            certificate.update({
-                'ca_src': constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
-            })
-            certificates.configuring_certs_in_correct_locations(**certificate)
+        install_cert_config = {'component_name': 'postgresql_client'}
+
+        replace_cert_config = {
+            'ca_src': constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+        }
+
+        certificates.handle_cert_config(installing,
+                                        base_cert_config,
+                                        install_cert_config,
+                                        replace_cert_config)
 
     @staticmethod
-    def handle_ldap_certificate(using_config):
-        certificate = {
+    def handle_ldap_certificate(installing):
+        base_cert_config = {
             'logger': logger,
             'ca_destination': LDAP_CA_CERT_PATH
         }
 
-        if using_config:
-            certificate.update({
+        install_cert_config = {
                 'component_name': RESTSERVICE,
                 'sub_component': 'ldap',
                 'just_ca_cert': True
-            })
-            certificates.use_supplied_certificates(**certificate)
-        else:
-            certificate.update({
-                'ca_src': constants.NEW_LDAP_CA_CERT_PATH
-            })
-            certificates.configuring_certs_in_correct_locations(**certificate)
+            }
+
+        replace_cert_config = {
+            'ca_src': constants.NEW_LDAP_CA_CERT_PATH
+        }
+
+        certificates.handle_cert_config(installing,
+                                        base_cert_config,
+                                        install_cert_config,
+                                        replace_cert_config)
 
     def replace_certificates(self):
         if common.manager_using_db_cluster():
@@ -473,12 +477,15 @@ class RestService(BaseComponent):
     def _replace_ldap_cert(self):
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
             validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
-            self.handle_ldap_certificate(using_config=False)
+            logger.info('Replacing ldap CA cert on the restservice component')
+            self.handle_ldap_certificate(installing=False)
 
     def _replace_haproxy_cert(self):
         if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
             # The certificate was validated in the PostgresqlClient component
-            self.handle_haproxy_certificate(using_config=False)
+            self.logger.info(
+                'Replacing haproxy cert on the restservice component')
+            self.handle_haproxy_certificate(installing=False)
             service.reload('haproxy', append_prefix=False)
             self._wait_for_haproxy_startup()
 
@@ -540,7 +547,7 @@ class RestService(BaseComponent):
         logger.notice('Configuring Rest Service...')
 
         logger.info('Checking for ldaps CA cert to deploy.')
-        self.handle_ldap_certificate(using_config=True)
+        self.handle_ldap_certificate(installing=True)
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 
