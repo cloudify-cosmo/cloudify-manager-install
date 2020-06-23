@@ -510,7 +510,6 @@ class RestService(BaseComponent):
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
-            self._fetch_manager_reporter_token()
         if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             logger.info('Removing postgres password from config.yaml')
             config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
