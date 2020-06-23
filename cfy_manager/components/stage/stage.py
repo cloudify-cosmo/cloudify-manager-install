@@ -132,17 +132,18 @@ class Stage(BaseComponent):
         replacing_cert_and_key = os.path.exists(
             NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
 
-        if config[POSTGRESQL_CLIENT][SSL_ENABLED] and replacing_ca:
-            self.log_replacing_certs('CA cert')
-            self._handle_ca_certificate(installing=False)
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            if replacing_ca:
+                self.log_replacing_certs('CA cert')
+                self._handle_ca_certificate(installing=False)
 
             if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
                     replacing_cert_and_key):
                 self.log_replacing_certs('cert and key')
                 self._handle_cert_and_key(installing=False)
 
-            service.reload(STAGE, append_prefix=False)
-            service.verify_alive(STAGE, append_prefix=False)
+            service.restart(STAGE)
+            service.verify_alive(STAGE)
 
     def log_replacing_certs(self, certs_type):
         self.logger.info(

@@ -108,12 +108,12 @@ class BaseComponent(object):
         )
 
     def configure_certs_in_their_locations(self,
-                                           cert_src,
-                                           cert_destination,
-                                           key_src,
-                                           key_destination,
-                                           ca_src,
-                                           ca_destination,
+                                           cert_src=None,
+                                           cert_destination=None,
+                                           key_src=None,
+                                           key_destination=None,
+                                           ca_src=None,
+                                           ca_destination=None,
                                            key_pass=None,
                                            owner=CLOUDIFY_USER,
                                            group=CLOUDIFY_GROUP,
