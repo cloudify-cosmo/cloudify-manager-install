@@ -67,7 +67,7 @@ from ...utils import (
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
-SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
+POSTGRES_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 
 # Etcd used only in clusters
@@ -460,7 +460,7 @@ class PostgresqlServer(BaseComponent):
                 src_dir='postgresql_server',
                 append_prefix=False,
                 render=False,
-                config_path='config/supervisord/patroni.conf'
+                config_path='config/supervisord'
             )
         else:
             service.configure(
@@ -472,8 +472,8 @@ class PostgresqlServer(BaseComponent):
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
-        service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        service.disable(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
+        service.disable(POSTGRES_SERVICE_NAME, append_prefix=False)
 
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
@@ -550,7 +550,7 @@ class PostgresqlServer(BaseComponent):
             service.configure(
                 'rsyslog',
                 src_dir='postgresql_server',
-                config_path='config/supervisord/rsyslog.conf',
+                config_path='config/supervisord',
                 append_prefix=False,
             )
         service.restart('rsyslog', append_prefix=False)
@@ -575,7 +575,7 @@ class PostgresqlServer(BaseComponent):
                 user='etcd',
                 group='etcd',
                 src_dir='postgresql_server',
-                config_path='config/supervisord/etcd.conf',
+                config_path='config/supervisord',
                 external_configure_params={
                     'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
                 }
@@ -775,7 +775,7 @@ class PostgresqlServer(BaseComponent):
                 'patroni_startup_check',
                 append_prefix=False,
                 src_dir='postgresql_server',
-                config_path='config/supervisord/patroni_startup_check.conf'
+                config_path='config/supervisord'
             )
             service.start('patroni_startup_check', append_prefix=False)
         else:
@@ -1473,10 +1473,10 @@ class PostgresqlServer(BaseComponent):
         files.copy_notice(POSTGRESQL_SERVER)
         if self.service_type == 'supervisord':
             service.configure(
-                SYSTEMD_SERVICE_NAME,
+                POSTGRES_SERVICE_NAME,
                 append_prefix=False,
                 src_dir='postgresql_server',
-                config_path='config/supervisord/postgresql-9.5.conf'
+                config_path='config/supervisord'
             )
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
@@ -1504,7 +1504,7 @@ class PostgresqlServer(BaseComponent):
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
-        service.remove(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.remove(POSTGRES_SERVICE_NAME, append_prefix=False)
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')
@@ -1513,9 +1513,9 @@ class PostgresqlServer(BaseComponent):
             service.start('patroni', append_prefix=False)
             service.verify_alive('patroni', append_prefix=False)
         else:
-            service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            service.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            service.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.enable(POSTGRES_SERVICE_NAME, append_prefix=False)
+            service.start(POSTGRES_SERVICE_NAME, append_prefix=False)
+            service.verify_alive(POSTGRES_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
@@ -1524,7 +1524,7 @@ class PostgresqlServer(BaseComponent):
             service.stop('etcd', append_prefix=False)
             service.stop('patroni', append_prefix=False)
         else:
-            service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):

@@ -48,6 +48,7 @@ CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
 LOG_DIR = join(constants.BASE_LOG_DIR, PROMETHEUS)
 BIN_DIR = join(sep, 'usr', 'local', 'bin')
 SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
+SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
@@ -90,18 +91,39 @@ def _prometheus_exporters():
 class Prometheus(BaseComponent):
     component_name = 'prometheus'
 
+    def _configure_exporter_services(self):
+        pass
+
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration()
-        service.configure(PROMETHEUS, append_prefix=False)
-        service.reload(PROMETHEUS,
-                       append_prefix=False, ignore_failure=True)
+        config_path = CONFIG_DIR
+        if self.service_type == 'supervisord':
+            config_path = join(CONFIG_DIR, 'supervisord')
+        service.configure(
+            PROMETHEUS,
+            append_prefix=False,
+            config_path=config_path
+        )
+        service.reload(
+            PROMETHEUS,
+            append_prefix=False,
+            ignore_failure=True
+        )
         for exporter in _prometheus_exporters():
-            service.configure(exporter['name'], append_prefix=False)
-            service.reload(exporter['name'], append_prefix=False,
-                           ignore_failure=True)
+            service.configure(
+                exporter['name'],
+                append_prefix=False,
+                config_path=config_path
+            )
+            service.reload(
+                exporter['name'],
+                append_prefix=False,
+                config_path=config_path,
+                ignore_failure=True
+            )
         logger.notice('Prometheus successfully configured')
 
     def remove(self):
@@ -170,7 +192,6 @@ def _deploy_configuration():
         _update_config()
     _deploy_prometheus_configuration()
     _deploy_exporters_configuration()
-    _deploy_services_configuration()
 
 
 def _update_config():
@@ -205,18 +226,6 @@ def _deploy_exporters_configuration():
         for file_name, dest_file_name in exporter['deploy_config'].items():
             files.deploy(join(CONFIG_DIR, file_name), dest_file_name)
             common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
-
-
-def _deploy_services_configuration():
-    logger.notice(
-        'Deploying Prometheus and exporters service configuration...')
-    files.deploy(join(CONFIG_DIR, 'prometheus.service'),
-                 join(SYSTEMD_CONFIG_DIR, 'prometheus.service'))
-    for exporter in _prometheus_exporters():
-        files.deploy(join(CONFIG_DIR,
-                          '{0}.service'.format(exporter['name'])),
-                     join(SYSTEMD_CONFIG_DIR,
-                          '{0}.service'.format(exporter['name'])))
 
 
 def _validate_prometheus_running():

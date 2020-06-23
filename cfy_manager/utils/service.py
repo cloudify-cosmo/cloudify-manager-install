@@ -26,7 +26,7 @@ from ..logger import get_logger
 from ..constants import COMPONENTS_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ..exceptions import ValidationError
 
-logger = get_logger('SystemD')
+logger = get_logger('Service')
 
 
 class SystemD(object):
@@ -245,15 +245,15 @@ class Supervisord(object):
                   user=CLOUDIFY_USER,
                   group=CLOUDIFY_GROUP,
                   external_configure_params=None,
-                  config_path='config/supervisord.conf',
+                  config_path='config/supervisord',
                   src_dir=None,
                   append_prefix=True,
                   render=True):
-        """This configures systemd for a specific service.
+        """This configures supervisord for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
         All env files will be named "cloudify-SERVICENAME".
-        All systemd config files will be named "cloudify-SERVICENAME.service".
+        All supervisord config files will be named "SERVICENAME.cloudify.conf".
         """
         sid = _get_full_service_name(service_name, append_prefix=append_prefix)
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
@@ -262,6 +262,7 @@ class Supervisord(object):
             src_dir = service_name
         src_dir = src_dir.replace('-', '_')
         srv_src = join(COMPONENTS_DIR, src_dir, config_path)
+        srv_src = join(srv_src, '{0}.conf'.format(sid))
         logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
