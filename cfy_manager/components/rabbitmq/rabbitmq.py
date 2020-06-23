@@ -484,21 +484,28 @@ class RabbitMQ(BaseComponent):
             return self.configure_certs_in_their_locations(**cert_config)
 
     def replace_certificates(self):
-        cert_src, key_src, ca_src = \
-            certificates.get_and_validate_certs_for_replacement(
-                default_cert_location=constants.BROKER_CERT_LOCATION,
-                default_key_location=constants.BROKER_KEY_LOCATION,
-                default_ca_location=constants.BROKER_CA_LOCATION
-            )
+        if certificates.needs_to_replace_certificates(
+                constants.NEW_BROKER_CERT_FILE_PATH,
+                constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            cert_src, key_src, ca_src = \
+                certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=constants.BROKER_CERT_LOCATION,
+                    default_key_location=constants.BROKER_KEY_LOCATION,
+                    default_ca_location=constants.BROKER_CA_LOCATION,
+                    new_cert_location=constants.NEW_BROKER_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_BROKER_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH
+                )
 
-        self.logger.info('Replacing certificates on the rabbitmq component')
-        self.handle_certificates(installing=False,
-                                 cert_src=cert_src,
-                                 key_src=key_src,
-                                 ca_src=ca_src)
+            self.logger.info(
+                'Replacing certificates on the rabbitmq component')
+            self.handle_certificates(installing=False,
+                                     cert_src=cert_src,
+                                     key_src=key_src,
+                                     ca_src=ca_src)
 
-        service.reload(RABBITMQ, ignore_failure=True)
-        service.verify_alive(RABBITMQ)
+            service.reload(RABBITMQ, ignore_failure=True)
+            service.verify_alive(RABBITMQ)
 
     # Give rabbit time to finish starting
     @retry(stop_max_attempt_number=20, wait_fixed=3000)

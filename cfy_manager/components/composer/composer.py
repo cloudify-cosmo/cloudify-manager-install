@@ -118,10 +118,15 @@ class Composer(BaseComponent):
 
     def replace_certificates(self):
         # The certificates are validated in the PostgresqlClient component
-        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_cert_and_key = os.path.exists(
+            NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
+
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED] and replacing_ca:
             self.log_replacing_certs('CA cert')
             self._handle_ca_certificate(installing=False)
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
+                    replacing_cert_and_key):
                 self.log_replacing_certs('cert and key')
                 self._handle_cert_and_key(installing=False)
 

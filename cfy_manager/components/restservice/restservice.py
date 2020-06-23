@@ -86,6 +86,7 @@ from ...utils.files import (
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
+
 REST_VENV = join(REST_HOME_DIR, 'env')
 LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
@@ -473,6 +474,33 @@ class RestService(BaseComponent):
         if common.manager_using_db_cluster():
             self._replace_haproxy_cert()
         self._replace_ldap_cert()
+
+    def _replace_ca_certs_on_db(self):
+        if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            self._replace_manager_ca_on_db()
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            self._replace_rabbitmq_ca_on_db()
+
+    def _replace_manager_ca_on_db(self):
+        cert_name = '{0}-ca'.format(config[MANAGER][HOSTNAME])
+        self._log_replacing_certs_on_db(cert_name)
+        script_input = {
+            'cert_path': constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
+            'name': cert_name
+        }
+        db.run_script('replace_certs_on_db', script_input)
+
+    def _replace_rabbitmq_ca_on_db(self):
+        self._log_replacing_certs_on_db('rabbitmq-ca')
+        script_input = {
+            'cert_path': constants.NEW_BROKER_CA_CERT_FILE_PATH,
+            'name': 'rabbitmq-ca'
+        }
+        db.run_script('replace_certs_on_db', script_input)
+
+    def _log_replacing_certs_on_db(self, cert_type):
+        self.logger.info(
+            'Replacing {0} in Certificate table'.format(cert_type))
 
     def _replace_ldap_cert(self):
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):

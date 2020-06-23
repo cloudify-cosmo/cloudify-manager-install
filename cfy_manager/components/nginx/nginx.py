@@ -163,12 +163,12 @@ class Nginx(BaseComponent):
                                                replace_cert_config)
 
     def replace_certificates(self):
-        replacing_internal_certs = (
-                exists(constants.NEW_CERT_FILE_PATH) or
-                exists(constants.NEW_CA_CERT_FILE_PATH))
-        replacing_external_certs = (
-                exists(constants.NEW_EXTERNAL_CERT_FILE_PATH) or
-                exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH))
+        replacing_internal_certs = certificates.needs_to_replace_certificates(
+            constants.NEW_INTERNAL_CERT_FILE_PATH,
+            constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
+        replacing_external_certs = certificates.needs_to_replace_certificates(
+            constants.NEW_EXTERNAL_CERT_FILE_PATH,
+            constants.NEW_EXTERNAL_CA_CERT_FILE_PATH)
 
         if replacing_internal_certs:
             self._replace_internal_certs()
@@ -184,7 +184,10 @@ class Nginx(BaseComponent):
             certificates.get_and_validate_certs_for_replacement(
                 default_cert_location=constants.INTERNAL_CERT_PATH,
                 default_key_location=constants.INTERNAL_KEY_PATH,
-                default_ca_location=constants.CA_CERT_PATH
+                default_ca_location=constants.CA_CERT_PATH,
+                new_cert_location=constants.NEW_INTERNAL_CERT_FILE_PATH,
+                new_key_location=constants.NEW_INTERNAL_KEY_FILE_PATH,
+                new_ca_location=constants.NEW_INTERNAL_CA_CERT_FILE_PATH
             )
 
         self.log_replacing_certificates('internal certificates')

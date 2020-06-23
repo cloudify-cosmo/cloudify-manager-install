@@ -338,10 +338,19 @@ class PostgresqlServer(BaseComponent):
             options = []
 
         service.start('etcd', append_prefix=False, options=options)
+        self._wait_for_etcd()
+        logger.info('etcd has started')
+
+    def _reload_etcd(self):
+        logger.info('Reloading etcd')
+        service.reload('etcd', append_prefix=False)
+        self._wait_for_etcd()
+        logger.info('etcd has reloaded')
+
+    def _wait_for_etcd(self):
         while not self._etcd_is_running():
             logger.info('Waiting for etcd to start...')
             time.sleep(1)
-        logger.info('etcd has started')
 
     def _patronictl_command(self, command):
         """Execute a patronictl command."""
@@ -542,29 +551,38 @@ class PostgresqlServer(BaseComponent):
             self.configure_certs_in_their_locations(**cert_config)
 
     def replace_certificates(self):
-        cert_src, key_src, ca_src = \
-            certificates.get_and_validate_certs_for_replacement(
-                default_cert_location=ETCD_SERVER_CERT_PATH,
-                default_key_location=ETCD_SERVER_KEY_PATH,
-                default_ca_location=ETCD_CA_PATH
-            )
-        if config[POSTGRESQL_SERVER]['cluster']['nodes']:  # cluster case
-            self.log_replacing_certificates()
-            self.handle_cluster_certificates(installing=False,
-                                             cert_src=cert_src,
-                                             key_src=key_src,
-                                             ca_src=ca_src)
-
-            service.reload(SYSTEMD_SERVICE_NAME, ignore_failure=True)
-            service.verify_alive(SYSTEMD_SERVICE_NAME)
-
-        else:  # AIO case
-            if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+        if certificates.needs_to_replace_certificates(
+                constants.NEW_POSTGRESQL_CERT_FILE_PATH,
+                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
+            cert_src, key_src, ca_src = \
+                certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=ETCD_SERVER_CERT_PATH,
+                    default_key_location=ETCD_SERVER_KEY_PATH,
+                    default_ca_location=ETCD_CA_PATH,
+                    new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+                )
+            if config[POSTGRESQL_SERVER]['cluster']['nodes']:  # cluster case
                 self.log_replacing_certificates()
-                self.handle_all_in_one_certificates(installing=False,
-                                                    cert_src=cert_src,
-                                                    key_src=key_src,
-                                                    ca_src=ca_src)
+                self.handle_cluster_certificates(installing=False,
+                                                 cert_src=cert_src,
+                                                 key_src=key_src,
+                                                 ca_src=ca_src)
+                self._reload_etcd()
+                service.reload('patroni', append_prefix=False)
+                service.verify_alive('patroni', append_prefix=False)
+
+            else:  # AIO case
+                if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+                    self.log_replacing_certificates()
+                    self.handle_all_in_one_certificates(installing=False,
+                                                        cert_src=cert_src,
+                                                        key_src=key_src,
+                                                        ca_src=ca_src)
+
+                    service.reload(SYSTEMD_SERVICE_NAME, ignore_failure=True)
+                    service.verify_alive(SYSTEMD_SERVICE_NAME)
 
     def log_replacing_certificates(self):
         self.logger.info(
