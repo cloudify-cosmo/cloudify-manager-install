@@ -1049,15 +1049,11 @@ def run_init():
 @argh.decorators.named('replace-certificates')
 def replace_certificates():
     """ Replacing the certificates on the current instance """
+    config.load_config()
     installed_components = _get_components()
     for component in installed_components:
         if _has_replace_certificates_attr(component):
             component.replace_certificates()
-
-    # TODO: Check if the AIO case is different
-    # TODO: Handle certificates metadata
-    # TODO: Replace certificates in the db table
-    # TODO: Handle LDAP
 
 
 def _has_replace_certificates_attr(component):
