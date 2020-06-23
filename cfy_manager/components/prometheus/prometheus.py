@@ -99,9 +99,8 @@ class Prometheus(BaseComponent):
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration()
-        config_path = CONFIG_DIR
         service.configure(PROMETHEUS, append_prefix=False)
-        service.reload(PROMETHEUS,append_prefix=False, ignore_failure=True)
+        service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
         for exporter in _prometheus_exporters():
             service.configure(exporter['name'], append_prefix=False)
             service.reload(
