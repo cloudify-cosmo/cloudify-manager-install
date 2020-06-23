@@ -370,11 +370,11 @@ class PostgresqlServer(BaseComponent):
         self._wait_for_etcd()
         logger.info('etcd has started')
 
-    def _reload_etcd(self):
-        logger.info('Reloading etcd')
-        service.reload('etcd', append_prefix=False)
+    def _restart_etcd(self):
+        logger.info('Restarting etcd')
+        service.restart('etcd', append_prefix=False, ignore_failure=True)
         self._wait_for_etcd()
-        logger.info('etcd has reloaded')
+        logger.info('etcd has restarted')
 
     def _wait_for_etcd(self):
         while not self._etcd_is_running():
@@ -597,8 +597,8 @@ class PostgresqlServer(BaseComponent):
                                                  cert_src=cert_src,
                                                  key_src=key_src,
                                                  ca_src=ca_src)
-                self._reload_etcd()
-                service.reload('patroni', append_prefix=False)
+                self._restart_etcd()
+                service.restart('patroni', append_prefix=False)
                 service.verify_alive('patroni', append_prefix=False)
 
             else:  # AIO case
@@ -609,7 +609,7 @@ class PostgresqlServer(BaseComponent):
                                                         key_src=key_src,
                                                         ca_src=ca_src)
 
-                    service.reload(POSTGRES_SERVICE_NAME, ignore_failure=True)
+                    service.restart(POSTGRES_SERVICE_NAME, ignore_failure=True)
                     service.verify_alive(POSTGRES_SERVICE_NAME)
 
     def log_replacing_certificates(self):

@@ -18,7 +18,6 @@ import json
 import argparse
 from datetime import datetime
 
-
 from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import models, get_storage_manager  # NOQA
@@ -50,7 +49,7 @@ def init_parser():
 
 
 def init_flask_app():
-    config.instance.load_configuration(from_db=False)
+    config.instance.load_configuration()
     setup_flask_app(
         manager_ip=config.instance.postgresql_host,
         hash_salt=config.instance.security_hash_salt,

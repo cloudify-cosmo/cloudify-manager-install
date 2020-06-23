@@ -163,11 +163,13 @@ class PostgresqlClient(BaseComponent):
             'logger': self.logger,
             'cert_destination': POSTGRESQL_CLIENT_CERT_PATH,
             'key_destination': POSTGRESQL_CLIENT_KEY_PATH,
-            'prefix': 'postgresql_client_',
             'key_perms': '400',
         }
 
-        install_cert_config = {'component_name': SSL_INPUTS}
+        install_cert_config = {
+            'component_name': SSL_INPUTS,
+            'prefix': 'postgresql_client_'
+        }
 
         replace_cert_config = {
             'cert_src': NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
