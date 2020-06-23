@@ -550,9 +550,9 @@ def get_and_validate_certs_for_replacement(
         default_cert_location,
         default_key_location,
         default_ca_location,
-        new_cert_location=const.NEW_CERT_FILE_PATH,
-        new_key_location=const.NEW_KEY_FILE_PATH,
-        new_ca_location=const.NEW_CA_CERT_FILE_PATH):
+        new_cert_location,
+        new_key_location,
+        new_ca_location):
 
     cert_filename, key_filename = get_cert_and_key_filenames(
         new_cert_location, new_key_location,
@@ -577,3 +577,7 @@ def get_cert_and_key_filenames(new_cert_location,
 def get_ca_filename(new_ca_location, default_ca_location):
     return (new_ca_location if os.path.exists(new_ca_location)
             else default_ca_location)
+
+
+def needs_to_replace_certificates(cert_path, ca_cert_path):
+    return os.path.exists(cert_path) or os.path.exists(ca_cert_path)
