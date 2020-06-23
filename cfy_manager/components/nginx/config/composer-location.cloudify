@@ -8,9 +8,9 @@ location /composer {
   proxy_set_header   Host             $http_host;
   proxy_hide_header X-Powered-By;
 
-  location ~* ^/composer/react/compiled/js/(.*)$ {
+  location ~* ^/composer/static/(.*)$ {
     gzip_static on;
-    alias /opt/cloudify-composer/react/compiled/js/$1;
+    alias /opt/cloudify-composer/dist/static/$1;
   }
 
   location ~* \.(?:css|js|map|jpe?g|gif|png)$ {
