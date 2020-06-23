@@ -25,7 +25,7 @@ from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ..exceptions import ProcessExecutionError
 from .files import write_to_file, write_to_tempfile
-from ..components.validations import check_certificates
+from ..components.validations import check_certificates, validate_certificates
 
 from ..logger import get_logger
 from .. import constants as const
@@ -461,13 +461,13 @@ def use_supplied_certificates(component_name,
         logger.debug('No user-supplied certificates were present.')
         return False
 
-    configuring_certs_in_correct_locations(logger,
-                                           cert_src, cert_destination,
-                                           key_src, key_destination,
-                                           ca_src, ca_destination,
-                                           key_pass,
-                                           owner, group,
-                                           key_perms, cert_perms)
+    configuring_certs_in_their_locations(logger,
+                                         cert_src, cert_destination,
+                                         key_src, key_destination,
+                                         ca_src, ca_destination,
+                                         key_pass,
+                                         owner, group,
+                                         key_perms, cert_perms)
 
     if update_config:
         logger.info('Updating configured certification locations.')
@@ -484,18 +484,18 @@ def use_supplied_certificates(component_name,
     return True
 
 
-def configuring_certs_in_correct_locations(logger,
-                                           cert_src=None,
-                                           cert_destination=None,
-                                           key_src=None,
-                                           key_destination=None,
-                                           ca_src=None,
-                                           ca_destination=None,
-                                           key_pass=None,
-                                           owner=CLOUDIFY_USER,
-                                           group=CLOUDIFY_GROUP,
-                                           key_perms='440',
-                                           cert_perms='444'):
+def configuring_certs_in_their_locations(logger,
+                                         cert_src=None,
+                                         cert_destination=None,
+                                         key_src=None,
+                                         key_destination=None,
+                                         ca_src=None,
+                                         ca_destination=None,
+                                         key_pass=None,
+                                         owner=CLOUDIFY_USER,
+                                         group=CLOUDIFY_GROUP,
+                                         key_perms='440',
+                                         cert_perms='444'):
     # Put the files in the correct place
     logger.info('Ensuring files are in correct locations.')
 
@@ -529,11 +529,47 @@ def configuring_certs_in_correct_locations(logger,
             sudo(['chmod', cert_perms, path])
 
 
-def _keep_old_certs(keep_old_file, old_file_path):
-    # TODO: Verify that we want to keep old certs
-    if keep_old_file and os.path.exists(old_file_path):
-        old_files_dir = os.path.dirname(old_file_path)+'/old_certs'
-        if not os.path.exists(old_files_dir):
-            os.mkdir(old_files_dir)
-        basename = os.path.basename(old_file_path)
-        os.rename(old_file_path, old_files_dir+'/{0}'.format(basename))
+def handle_cert_config(installing,
+                       base_cert_config,
+                       install_cert_config,
+                       replace_cert_config):
+    if installing:
+        base_cert_config.update(install_cert_config)
+        return use_supplied_certificates(**base_cert_config)
+
+    else:
+        base_cert_config.update(replace_cert_config)
+        configuring_certs_in_their_locations(**base_cert_config)
+
+
+def get_and_validate_certs_for_replacement(
+        default_cert_location,
+        default_key_location,
+        default_ca_location,
+        new_cert_location=const.NEW_CERT_FILE_PATH,
+        new_key_location=const.NEW_KEY_FILE_PATH,
+        new_ca_location=const.NEW_CA_CERT_FILE_PATH):
+
+    cert_filename, key_filename = get_cert_and_key_filenames(
+        new_cert_location, new_key_location,
+        default_cert_location, default_key_location)
+
+    ca_filename = get_ca_filename(new_ca_location, default_ca_location)
+
+    validate_certificates(cert_filename, key_filename, ca_filename)
+    return cert_filename, key_filename, ca_filename
+
+
+def get_cert_and_key_filenames(new_cert_location,
+                               new_key_location,
+                               default_cert_location,
+                               default_key_location):
+    if os.path.exists(new_cert_location):
+        return new_cert_location, new_key_location
+
+    return default_cert_location, default_key_location
+
+
+def get_ca_filename(new_ca_location, default_ca_location):
+    return (new_ca_location if os.path.exists(new_ca_location)
+            else default_ca_location)

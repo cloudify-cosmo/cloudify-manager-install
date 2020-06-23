@@ -13,20 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
-
-from ..validations import validate_certificates
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
 from ...constants import (CLOUDIFY_USER,
-                          CLOUDIFY_GROUP,
-                          NEW_CERT_FILE_PATH,
-                          NEW_KEY_FILE_PATH,
-                          NEW_CA_CERT_FILE_PATH)
+                          CLOUDIFY_GROUP)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
 from ...utils.certificates import (use_supplied_certificates,
-                                   configuring_certs_in_correct_locations)
+                                   configuring_certs_in_their_locations)
 from ...utils import service
 from ...logger import get_logger
 
@@ -113,19 +107,19 @@ class BaseComponent(object):
             cert_perms=cert_perms,
         )
 
-    def configure_certs_in_correct_locations(self,
-                                             cert_src,
-                                             cert_destination,
-                                             key_src,
-                                             key_destination,
-                                             ca_src,
-                                             ca_destination,
-                                             key_pass=None,
-                                             owner=CLOUDIFY_USER,
-                                             group=CLOUDIFY_GROUP,
-                                             key_perms='440',
-                                             cert_perms='444'):
-        return configuring_certs_in_correct_locations(
+    def configure_certs_in_their_locations(self,
+                                           cert_src,
+                                           cert_destination,
+                                           key_src,
+                                           key_destination,
+                                           ca_src,
+                                           ca_destination,
+                                           key_pass=None,
+                                           owner=CLOUDIFY_USER,
+                                           group=CLOUDIFY_GROUP,
+                                           key_perms='440',
+                                           cert_perms='444'):
+        return configuring_certs_in_their_locations(
             logger=self.logger,
             cert_src=cert_src,
             cert_destination=cert_destination,
@@ -139,57 +133,3 @@ class BaseComponent(object):
             key_perms=key_perms,
             cert_perms=cert_perms
         )
-
-    @staticmethod
-    def get_cert_and_key_filenames(new_cert_location,
-                                   new_key_location,
-                                   default_cert_location,
-                                   default_key_location):
-        if os.path.exists(new_cert_location):
-            return new_cert_location, new_key_location
-
-        return default_cert_location, default_key_location
-
-    @staticmethod
-    def get_ca_filename(new_ca_location, default_ca_location):
-        return (new_ca_location if os.path.exists(new_ca_location)
-                else default_ca_location)
-
-    def handle_certificates(self,
-                            using_config,
-                            *args,
-                            **kwargs):
-        pass
-
-    def replace_instance_certificates(self,
-                                      service_name,
-                                      default_cert_location,
-                                      default_key_location,
-                                      default_ca_location,
-                                      *args,
-                                      **kwargs):
-        new_cert_location = (kwargs.get('new_cert_location') or
-                             NEW_CERT_FILE_PATH)
-        new_key_location = (kwargs.get('new_key_location') or
-                            NEW_KEY_FILE_PATH)
-        new_ca_location = (kwargs.get('new_ca_location') or
-                           NEW_CA_CERT_FILE_PATH)
-
-        cert_filename, key_filename = self.get_cert_and_key_filenames(
-            new_cert_location, new_key_location,
-            default_cert_location, default_key_location)
-
-        ca_filename = self.get_ca_filename(new_ca_location,
-                                           default_ca_location)
-
-        validate_certificates(cert_filename, key_filename, ca_filename)
-
-        self.handle_certificates(using_config=False,
-                                 cert_src=cert_filename,
-                                 key_src=key_filename,
-                                 ca_src=ca_filename,
-                                 *args,
-                                 **kwargs)
-
-        service.reload(service_name, ignore_failure=True)
-        service.verify_alive(service_name)
