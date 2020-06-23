@@ -474,6 +474,7 @@ class RestService(BaseComponent):
         if common.manager_using_db_cluster():
             self._replace_haproxy_cert()
         self._replace_ldap_cert()
+        self._replace_ca_certs_on_db()
 
     def _replace_ca_certs_on_db(self):
         if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
@@ -488,7 +489,7 @@ class RestService(BaseComponent):
             'cert_path': constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
             'name': cert_name
         }
-        db.run_script('replace_certs_on_db', script_input)
+        self._run_replace_certs_on_db_script(script_input)
 
     def _replace_rabbitmq_ca_on_db(self):
         self._log_replacing_certs_on_db('rabbitmq-ca')
@@ -496,7 +497,16 @@ class RestService(BaseComponent):
             'cert_path': constants.NEW_BROKER_CA_CERT_FILE_PATH,
             'name': 'rabbitmq-ca'
         }
-        db.run_script('replace_certs_on_db', script_input)
+        self._run_replace_certs_on_db_script(script_input)
+
+    @staticmethod
+    def _run_replace_certs_on_db_script(script_input):
+        configs = {
+            'rest_config': REST_CONFIG_PATH,
+            'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
+            'security_config': REST_SECURITY_CONFIG_PATH
+        }
+        db.run_script('replace_certs_on_db.py', script_input, configs)
 
     def _log_replacing_certs_on_db(self, cert_type):
         self.logger.info(

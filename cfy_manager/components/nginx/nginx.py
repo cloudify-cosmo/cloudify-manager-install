@@ -126,6 +126,7 @@ class Nginx(BaseComponent):
                 installing=False,
                 cert_destination=cert_destination,
                 key_destination=key_destination,
+                ca_destination=constants.CA_CERT_PATH,
                 cert_src=cert_src,
                 key_src=key_src,
                 ca_src=ca_src
@@ -135,6 +136,7 @@ class Nginx(BaseComponent):
                             installing,
                             cert_destination,
                             key_destination,
+                            ca_destination=None,
                             prefix=None,
                             cert_src=None,
                             key_src=None,
@@ -154,7 +156,7 @@ class Nginx(BaseComponent):
             'cert_src': cert_src,
             'key_src': key_src,
             'ca_src': ca_src,
-            'ca_destination': constants.CA_CERT_PATH
+            'ca_destination': ca_destination
         }
 
         return certificates.handle_cert_config(installing,
@@ -176,7 +178,7 @@ class Nginx(BaseComponent):
             self._replace_external_certs()
 
         if replacing_external_certs or replacing_external_certs:
-            service.reload(NGINX, append_prefix=False)
+            service.restart(NGINX, append_prefix=False)
             service.verify_alive(NGINX, append_prefix=False)
 
     def _replace_internal_certs(self):
@@ -248,6 +250,7 @@ class Nginx(BaseComponent):
                 installing=False,
                 cert_destination=cert_destination,
                 key_destination=key_destination,
+                ca_destination=constants.EXTERNAL_CA_CERT_PATH,
                 cert_src=cert_src,
                 key_src=key_src,
                 ca_src=ca_src
