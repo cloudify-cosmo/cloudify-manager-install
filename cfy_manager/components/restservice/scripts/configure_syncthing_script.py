@@ -24,16 +24,22 @@ from manager_rest.storage import models, get_storage_manager
 from cloudify_premium.ha import controller, syncthing
 
 
-def run_syncthing_configuration(hostname, bootstrap_cluster):
-    syncthing.configure(bootstrap_cluster)
-    syncthing.start(hostname)
+def run_syncthing_configuration(
+        hostname,
+        bootstrap_cluster,
+        service_management):
+    syncthing.configure(
+        bootstrap_cluster,
+        service_management=service_management
+    )
+    syncthing.start(hostname, service_management=service_management)
 
     if not bootstrap_cluster:
         sm = get_storage_manager()
         managers_list = sm.list(models.Manager)
         controller.add_manager(managers_list)
         syncthing.wait_for_replication()
-    syncthing.finish()
+    syncthing.finish(service_management=service_management)
 
 
 def file_path(path):
@@ -63,5 +69,8 @@ if __name__ == '__main__':
     config.instance.load_configuration()
     setup_flask_app(manager_ip=config.instance.postgresql_host)
 
-    run_syncthing_configuration(args_dict['hostname'],
-                                args_dict['bootstrap_cluster'])
+    run_syncthing_configuration(
+        args_dict['hostname'],
+        args_dict['bootstrap_cluster'],
+        args_dict['service_management']
+    )

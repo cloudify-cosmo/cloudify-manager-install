@@ -206,11 +206,24 @@ class RestService(BaseComponent):
             constants.MANAGER_RESOURCES_HOME
         )
 
+    def _configure_pid_restservice(self):
+        # Create restservice under /run
+        pid_dir = constants.REST_PID_DIR
+        if not os.path.exists(pid_dir):
+            common.mkdir(pid_dir)
+            common.chown(
+                constants.CLOUDIFY_USER,
+                constants.CLOUDIFY_GROUP,
+                pid_dir
+            )
+            common.chmod('755', pid_dir)
+
     def _configure_restservice(self):
         self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
+        self._configure_pid_restservice()
 
     def _verify_restservice_alive(self):
         logger.info('Verifying Rest service is up...')
@@ -406,7 +419,18 @@ class RestService(BaseComponent):
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
 
-        service.enable('haproxy', append_prefix=False)
+        # Configure the haproxy service for supervisord
+        if self.service_type == 'supervisord':
+            service.configure(
+                'haproxy',
+                user='haproxy',
+                group='haproxy',
+                src_dir='restservice',
+                append_prefix=False,
+                config_path='config/supervisord/haproxy.conf'
+            )
+        else:
+            service.enable('haproxy', append_prefix=False)
         service.restart('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
 
@@ -456,6 +480,7 @@ class RestService(BaseComponent):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
             'bootstrap_cluster': bootstrap_cluster,
+            'service_management': self.service_type
         }
         script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
         result = run_script_on_manager_venv(script_path,
@@ -480,7 +505,13 @@ class RestService(BaseComponent):
 
         self._make_paths()
         self._configure_restservice()
-        service.configure(RESTSERVICE)
+        if self.service_type == 'supervisord':
+            service.configure(
+                RESTSERVICE,
+                config_path='config/supervisord/restservice.conf'
+            )
+        else:
+            service.configure(RESTSERVICE)
         logger.notice('Rest Service successfully configured')
 
     def _join_cluster_setup(self):
