@@ -52,7 +52,7 @@ from ...utils.files import write_to_file, deploy
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
-SCRIPS_PATH = join(
+SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
     RABBITMQ,
     SCRIPTS,
@@ -496,7 +496,7 @@ class RabbitMQ(BaseComponent):
     def _configure_rabbitmq_wrapper_script(self):
         deploy(
             join(
-                SCRIPS_PATH,
+                SCRIPTS_PATH,
                 'start_rabbitmq_server.sh'
             ),
             '/var/lib/rabbitmq/',

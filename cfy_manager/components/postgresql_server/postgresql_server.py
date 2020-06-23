@@ -547,7 +547,6 @@ class PostgresqlServer(BaseComponent):
                     service_type=self.service_type
                 ))
         common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
-        # Configure the rsyslog for supervisord
         if self.service_type == 'supervisord':
             service.configure(
                 'rsyslog',
