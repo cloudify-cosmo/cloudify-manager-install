@@ -100,28 +100,13 @@ class Prometheus(BaseComponent):
         _chown_resources_dir()
         _deploy_configuration()
         config_path = CONFIG_DIR
-        if self.service_type == 'supervisord':
-            config_path = join(CONFIG_DIR, 'supervisord')
-        service.configure(
-            PROMETHEUS,
-            append_prefix=False,
-            config_path=config_path
-        )
-        service.reload(
-            PROMETHEUS,
-            append_prefix=False,
-            ignore_failure=True
-        )
+        service.configure(PROMETHEUS, append_prefix=False)
+        service.reload(PROMETHEUS,append_prefix=False, ignore_failure=True)
         for exporter in _prometheus_exporters():
-            service.configure(
-                exporter['name'],
-                append_prefix=False,
-                config_path=config_path
-            )
+            service.configure(exporter['name'], append_prefix=False)
             service.reload(
                 exporter['name'],
                 append_prefix=False,
-                config_path=config_path,
                 ignore_failure=True
             )
         logger.notice('Prometheus successfully configured')
