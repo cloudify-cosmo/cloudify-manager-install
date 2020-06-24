@@ -86,9 +86,11 @@ from .utils.files import (
     remove_temp_files,
     touch
 )
+from ._compat import xmlrpclib
 
 logger = get_logger('Main')
 
+STARTER_SERVICE = 'cloudify-starter'
 START_TIME = time.time()
 TEST_CA_ROOT_PATH = os.path.expanduser('~/.cloudify-test-ca')
 TEST_CA_CERT_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.crt')
@@ -917,24 +919,29 @@ def _check_systemd_starter(timeout):
 
 def _check_supervisord_starter(timeout):
     deadline = time.time() + timeout
-    command = [
-        'grep',
-        'exited: starter (exit status 0; expected)',
-        '/var/log/cloudify/supervisord.log'
-    ]
+    server = xmlrpclib.Server(
+        'http://',
+        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
     while time.time() < deadline:
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        process.communicate()
-        if not process.returncode:
-            logger.info('The starter service finished')
-            break
+        try:
+            status_response = server.supervisor.getProcessInfo(
+                STARTER_SERVICE)
+        except xmlrpclib.Fault as e:
+            raise BootstrapError(
+                'Error {0} while trying to lookup {1}'
+                ''.format(e, STARTER_SERVICE)
+            )
+
         else:
-            logger.info('The starter serivce not ready yet')
-            time.sleep(1)
+            service_status = status_response['statename']
+            if service_status == 'EXITED':
+                logger.info('{0} service finished'.format(STARTER_SERVICE))
+                break
+            else:
+                logger.info(
+                    '{0} service not finished yet'.format(STARTER_SERVICE)
+                )
+                time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
 

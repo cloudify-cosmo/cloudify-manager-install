@@ -24,6 +24,8 @@ if PY2:
     except ImportError:
         from StringIO import StringIO
 
+    import httplib
+    import xmlrpclib
     from urllib2 import HTTPError, URLError
     from urllib2 import Request, urlopen
     from urlparse import urlparse
@@ -32,7 +34,8 @@ if PY2:
 
 else:
     from io import StringIO
-
+    import xmlrpc.client as xmlrpclib
+    import http.client as httplib
     from urllib.error import HTTPError, URLError
     from urllib.request import Request, urlopen
     from urllib.parse import urlparse
@@ -48,4 +51,6 @@ __all__ = [
     'urlopen',
     'urlparse',
     'text_type',
+    'httplib',
+    'xmlrpclib'
 ]

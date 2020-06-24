@@ -12,7 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import socket
 from os.path import exists, join
 from functools import partial
 
@@ -22,11 +22,27 @@ from .files import deploy
 from .common import run, sudo, remove as remove_file, chown
 
 from ..config import config
+from .._compat import httplib, xmlrpclib
 from ..logger import get_logger
 from ..constants import COMPONENTS_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ..exceptions import ValidationError
 
 logger = get_logger('Service')
+
+
+class UnixSocketHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.host)
+
+
+class UnixSocketTransport(xmlrpclib.Transport, object):
+    def __init__(self, path):
+        super(UnixSocketTransport, self).__init__()
+        self._path = path
+
+    def make_connection(self, host):
+        return UnixSocketHTTPConnection(self._path)
 
 
 class SystemD(object):
