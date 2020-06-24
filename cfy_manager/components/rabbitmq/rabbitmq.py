@@ -488,7 +488,7 @@ class RabbitMQ(BaseComponent):
             # We must populate the brokers table for an all-in-one manager
             config[RABBITMQ]['cluster_members'] = {
                 config[MANAGER][HOSTNAME]: {
-                    'node_id': 'ALL_IN_ONE',
+                    'address': 'ALL_IN_ONE',  # TODO mateusz make a const
                     'networks': config['networks']
                 }
             }

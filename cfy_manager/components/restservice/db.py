@@ -162,7 +162,6 @@ def _create_db_nodes_info():
         return [
             {
                 'name': name,
-                'node_id': db['node_id'],
                 'host': db['ip'],
                 'is_external': False
             }
