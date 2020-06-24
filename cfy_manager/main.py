@@ -903,7 +903,7 @@ def _is_unit_finished(unit_name):
             return int(value) > 0
 
 
-def _check_systemd_starter(timeout):
+def _wait_systemd_starter(timeout):
     deadline = time.time() + timeout
     journalctl = subprocess.Popen([
         '/bin/journalctl', '-fu', 'cloudify-starter.service'])
@@ -917,28 +917,46 @@ def _check_systemd_starter(timeout):
     journalctl.kill()
 
 
-def _check_supervisord_starter(timeout):
-    deadline = time.time() + timeout
+def _get_starter_service_response():
     server = xmlrpclib.Server(
         'http://',
         transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
-    while time.time() < deadline:
-        try:
-            status_response = server.supervisor.getProcessInfo(
-                STARTER_SERVICE)
-        except xmlrpclib.Fault as e:
-            raise BootstrapError(
-                'Error {0} while trying to lookup {1}'
-                ''.format(e, STARTER_SERVICE)
-            )
+    try:
+        status_response = server.supervisor.getProcessInfo(
+            STARTER_SERVICE)
+    except xmlrpclib.Fault as e:
+        raise BootstrapError(
+            'Error {0} while trying to lookup {1}'
+            ''.format(e, STARTER_SERVICE)
+        )
+    return status_response
 
+
+def _get_starter_serivce_log(offset, length):
+    server = xmlrpclib.Server(
+        'http://',
+        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
+    try:
+        service_log = server.supervisor.readLog(offset, length)
+        logger.info(service_log)
+    except xmlrpclib.Fault as e:
+        raise BootstrapError(
+            'Error {0} while trying to lookup {1}'
+            ''.format(e, STARTER_SERVICE)
+        )
+
+
+def _wait_supervisord_starter(timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        _get_starter_serivce_log(-1024, 0)
+        status_response = _get_starter_service_response()
+        service_status = status_response['statename']
+        if service_status == 'EXITED':
+            logger.info('{0} service finished'.format(STARTER_SERVICE))
+            break
         else:
-            service_status = status_response['statename']
-            if service_status == 'EXITED':
-                logger.info('{0} service finished'.format(STARTER_SERVICE))
-                break
-            else:
-                time.sleep(1)
+            time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
 
@@ -949,9 +967,9 @@ def wait_for_starter(verbose=False, timeout=180):
     config.load_config()
     service_type = service._get_service_type()
     if service_type == 'supervisord':
-        _check_supervisord_starter(timeout)
+        _wait_supervisord_starter(timeout)
     else:
-        _check_systemd_starter(timeout)
+        _wait_systemd_starter(timeout)
 
 
 def _guess_private_ip():
