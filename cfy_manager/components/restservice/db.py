@@ -143,7 +143,7 @@ def _create_rabbitmq_info():
             'password': config[RABBITMQ]['password'],
             'params': None,
             'networks': broker[NETWORKS],
-            'is_external': broker.get('address') is None,
+            'is_external': broker.get('networks', {}).get('default') is None,
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
