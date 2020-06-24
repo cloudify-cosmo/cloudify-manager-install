@@ -69,7 +69,7 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
-from .utils import CFY_UMASK
+from .utils import CFY_UMASK, service
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
@@ -901,9 +901,7 @@ def _is_unit_finished(unit_name):
             return int(value) > 0
 
 
-@argh.decorators.named('wait-for-starter')
-def wait_for_starter(verbose=False, timeout=180):
-    _prepare_execution(verbose, config_write_required=False)
+def _check_systemd_starter(timeout):
     deadline = time.time() + timeout
     journalctl = subprocess.Popen([
         '/bin/journalctl', '-fu', 'cloudify-starter.service'])
@@ -915,6 +913,41 @@ def wait_for_starter(verbose=False, timeout=180):
     else:
         raise BootstrapError('Timed out waiting for the starter service')
     journalctl.kill()
+
+
+def _check_supervisord_starter(timeout):
+    deadline = time.time() + timeout
+    command = [
+        'grep',
+        'exited: starter (exit status 0; expected)',
+        '/var/log/cloudify/supervisord.log'
+    ]
+    while time.time < deadline:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        process.communicate()
+        if not process.returncode:
+            logger.info('The starter service finished')
+            break
+        else:
+            logger.info('The starter serivce not ready yet')
+            time.sleep(1)
+    else:
+        raise BootstrapError('Timed out waiting for the starter service')
+
+
+@argh.decorators.named('wait-for-starter')
+def wait_for_starter(verbose=False, timeout=180):
+    _prepare_execution(verbose, config_write_required=False)
+    config.load_config()
+    service_type = service._get_service_type()
+    if service_type == 'supervisord':
+        _check_supervisord_starter(timeout)
+    else:
+        _check_systemd_starter(timeout)
 
 
 def _guess_private_ip():
