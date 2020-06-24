@@ -56,12 +56,13 @@ class Composer(BaseComponent):
         if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the composer db')
             return
+        backend_dir = join(HOME_DIR, 'backend')
         npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
                 'sudo', '-u', COMPOSER_USER, 'bash', '-c',
                 'cd {path}; {npm} run db-migrate'.format(
-                    path=HOME_DIR,
+                    path=backend_dir,
                     npm=npm_path,
                 ),
             ],
