@@ -91,9 +91,6 @@ def _prometheus_exporters():
 class Prometheus(BaseComponent):
     component_name = 'prometheus'
 
-    def _configure_exporter_services(self):
-        pass
-
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
         _create_prometheus_directories()
