@@ -648,8 +648,8 @@ def _remove_rabbitmq_service_unit():
     services_and_patterns = \
         [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
          ("cloudify-mgmtworker.service", mgmt_patterns)]
-    for service, pattern_list in services_and_patterns:
-        path = os.path.join(prefix, service)
+    for _service, pattern_list in services_and_patterns:
+        path = os.path.join(prefix, _service)
         for pattern in pattern_list:
             replace_in_file(pattern, "", path)
     sudo("systemctl daemon-reload")
@@ -922,7 +922,7 @@ def _check_supervisord_starter(timeout):
         'exited: starter (exit status 0; expected)',
         '/var/log/cloudify/supervisord.log'
     ]
-    while time.time < deadline:
+    while time.time() < deadline:
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
