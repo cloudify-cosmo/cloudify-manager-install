@@ -77,6 +77,7 @@ ETCD_GROUP = 'etcd'
 HOST = 'host'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
+PGSQL_SOCK_DIR = '/var/run/postgresql'
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
 PGSQL_DATA_DIR = '/var/lib/pgsql/9.5/data'
@@ -164,6 +165,9 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(LOG_DIR)
         if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
+
+        common.mkdir(PGSQL_SOCK_DIR)
+        common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
