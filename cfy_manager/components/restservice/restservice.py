@@ -26,12 +26,9 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ...utils.db import run_psql_command
-from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
-    SELECT_USER_TOKENS_QUERY,
     REST_SECURITY_CONFIG_PATH,
     REST_AUTHORIZATION_CONFIG_PATH
 )
@@ -39,7 +36,6 @@ from ..components_constants import (
     VENV,
     CONFIG,
     SCRIPTS,
-    PASSWORD,
     CLEAN_DB,
     SECURITY,
     SSL_INPUTS,
@@ -49,10 +45,7 @@ from ..components_constants import (
     ADMIN_PASSWORD,
     FLASK_SECURITY,
     SERVER_PASSWORD,
-    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
     HOSTNAME
 )
 from ..base_component import BaseComponent
@@ -253,23 +246,6 @@ class RestService(BaseComponent):
                 db.validate_schema_version(configs)
                 self._join_cluster(configs)
 
-    @staticmethod
-    def _fetch_manager_reporter_token():
-        sql_stmnt = "{0} = '{1}'".format(
-            SELECT_USER_TOKENS_QUERY,
-            MANAGER_STATUS_REPORTER
-        )
-        query_result = run_psql_command(
-            command=['-c', sql_stmnt],
-            db_key='cloudify_db_name',
-        )
-        manager_reporter = json.loads(query_result)
-        reporters_tokens = get_encoded_user_ids([manager_reporter])
-        config.setdefault(
-            MANAGER_STATUS_REPORTER,
-            {})[constants.STATUS_REPORTER_TOKEN] = \
-            reporters_tokens[MANAGER_STATUS_REPORTER]
-
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
         self._generate_passwords()
@@ -336,19 +312,7 @@ class RestService(BaseComponent):
                 config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE,
                                                 MONITORING_SERVICE])
 
-    def _generate_status_reporter_passwords(self):
-        if not is_premium_installed():
-            return
-        if self._is_in_cluster_mode():
-            config.setdefault(DB_STATUS_REPORTER, {})[PASSWORD] = \
-                self._generate_password()
-            config.setdefault(BROKER_STATUS_REPORTER, {})[PASSWORD] = \
-                self._generate_password()
-        config.setdefault(MANAGER_STATUS_REPORTER, {})[PASSWORD] = \
-            self._generate_password()
-
     def _generate_passwords(self):
-        self._generate_status_reporter_passwords()
         self._generate_admin_password_if_empty()
 
     def _random_alphanumeric(self, result_len=31):
@@ -546,7 +510,6 @@ class RestService(BaseComponent):
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
-            self._fetch_manager_reporter_token()
         if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             logger.info('Removing postgres password from config.yaml')
             config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'

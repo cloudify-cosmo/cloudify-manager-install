@@ -63,6 +63,8 @@ RABBITMQ_ENV_PATH = '/etc/rabbitmq/rabbitmq-env.conf'
 RABBITMQ_ENABLED_PLUGINS = '/etc/cloudify/rabbitmq/enabled_plugins'
 SECURE_PORT = 5671
 
+ALL_IN_ONE_ADDRESS = 'ALL_IN_ONE'
+
 RABBITMQ_CTL = 'rabbitmqctl'
 logger = get_logger(RABBITMQ)
 
@@ -488,7 +490,7 @@ class RabbitMQ(BaseComponent):
             # We must populate the brokers table for an all-in-one manager
             config[RABBITMQ]['cluster_members'] = {
                 config[MANAGER][HOSTNAME]: {
-                    'node_id': 'ALL_IN_ONE',
+                    'address': ALL_IN_ONE_ADDRESS,
                     'networks': config['networks']
                 }
             }

@@ -80,16 +80,6 @@ CERT_METADATA_FILE_PATH = join(SSL_CERTS_TARGET_DIR, 'certificate_metadata')
 
 CFY_EXEC_TEMPDIR_ENVVAR = 'CFY_EXEC_TEMP'
 
-STATUS_REPORTER = 'status-reporter'
-STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
-STATUS_REPORTER_CONFIGURATION_PATH = join(
-    STATUS_REPORTER_PATH,
-    'status_reporter_configuration.yaml')
-STATUS_REPORTER_OS_USER = 'cfyreporter'
-STATUS_REPORTER_TOKEN = 'token'
-STATUS_REPORTER_MANAGERS_IPS = 'managers_ips'
-STATUS_REPORTER_CONFIG_KEY = 'extra_config'
-
 SCRIPTS = 'scripts'
 
 SELECT_USER_TOKENS_QUERY = """

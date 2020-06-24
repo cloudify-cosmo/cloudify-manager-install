@@ -44,7 +44,6 @@ MANAGER_INFO = {
         '/cloudify-rabbitmq',
         '/cloudify-management-worker',
         '/cloudify-manager-ip-setter',
-        '/cloudify-status-reporter'
     ]
 }
 

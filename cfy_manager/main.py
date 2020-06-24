@@ -19,7 +19,6 @@ from __future__ import print_function
 import os
 import re
 import sys
-import json
 import time
 import logging
 import subprocess
@@ -41,11 +40,8 @@ from .components.components_constants import (
     PUBLIC_IP,
     PRIVATE_IP,
     ADMIN_PASSWORD,
-    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
     UNCONFIGURED_INSTALL,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
     PREMIUM_EDITION
 )
 from .components.globals import set_globals
@@ -61,7 +57,6 @@ from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
-    STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
@@ -74,7 +69,6 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
-from .status_reporter import status_reporter
 from .utils import CFY_UMASK
 from .utils.certificates import (
     create_internal_certs,
@@ -83,16 +77,15 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, sudo, can_lookup_hostname, allows_json_format, is_installed
+    run, sudo, can_lookup_hostname, is_installed
 )
-from .utils.install import yum_install, yum_remove, is_package_installed
+from .utils.install import yum_install, yum_remove
 from .utils.files import (
     replace_in_file,
     remove as _remove,
     remove_temp_files,
     touch
 )
-from .utils.node import get_node_id
 
 logger = get_logger('Main')
 
@@ -379,8 +372,7 @@ def db_node_add(**kwargs):
     config.load_config()
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'], kwargs['node_id'],
-                            kwargs.get('hostname'))
+        db.add_cluster_node(kwargs['address'], kwargs.get('hostname'))
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -390,7 +382,6 @@ def db_node_add(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
-@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG)
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
@@ -398,12 +389,7 @@ def db_node_remove(**kwargs):
     config.load_config()
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
-                kwargs.get('node_id') is None):
-            logger.error('Argument -i/--node-id is required when running '
-                         '`dbs remove` on a manager')
-            return
-        db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
+        db.remove_cluster_node(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -440,16 +426,6 @@ def db_node_set_master(**kwargs):
         db.set_master(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
-
-
-@allows_json_format()
-def get_id(json_format=None):
-    """Get Cloudify's auto-generated id for this node"""
-    node_id = get_node_id()
-    if json_format:
-        print(json.dumps({'node_id': node_id}))
-    else:
-        print('The node id is: {0}'.format(node_id))
 
 
 def _print_time():
@@ -531,24 +507,10 @@ def _print_finish_message():
 
 def print_credentials_to_screen():
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-    db_status_reporter_token = config.get(
-        DB_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
-    broker_status_reporter_token = config.get(
-        BROKER_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
 
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
     logger.notice('Admin password: %s', password)
-    if db_status_reporter_token:
-        logger.notice('Database Status Reported token: %s',
-                      db_status_reporter_token)
-    if broker_status_reporter_token:
-        logger.notice('Queue Service Status Reported token: %s',
-                      broker_status_reporter_token)
-    for reporter in (MANAGER_STATUS_REPORTER,
-                     DB_STATUS_REPORTER,
-                     BROKER_STATUS_REPORTER):
-        config.pop(reporter, None)
     set_file_handlers_level(current_level)
 
 
@@ -624,14 +586,9 @@ def _get_components(include_components=None):
 
     if is_installed(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
-        if (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
-                config[POSTGRESQL_SERVER]['cluster']['nodes']):
-            _components += [components.PostgresqlStatusReporter()]
 
     if is_installed(QUEUE_SERVICE):
         _components += [components.RabbitMQ()]
-        if config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]:
-            _components += [components.RabbitmqStatusReporter()]
 
     if is_installed(MANAGER_SERVICE):
         _components += [
@@ -649,8 +606,6 @@ def _get_components(include_components=None):
             _components += [
                 components.Composer(),
             ]
-        if is_package_installed('cloudify-status-reporter'):
-            _components += [components.ManagerStatusReporter()]
         _components += [
             components.UsageCollector(),
         ]
@@ -1035,19 +990,6 @@ def main():
         db_node_set_master
     ], namespace='dbs')
 
-    parser.add_commands([
-        status_reporter.show_configuration,
-        status_reporter.start,
-        status_reporter.stop,
-        status_reporter.remove,
-        status_reporter.configure,
-        status_reporter.get_tokens
-    ], namespace='status-reporter')
-
-    parser.add_commands([
-        get_id
-    ], namespace='node',
-        namespace_kwargs={'title': 'Handle node details'})
     parser.dispatch()
 
     os.umask(current_umask)

@@ -60,7 +60,6 @@ from ...utils import (
     common,
     files,
     db,
-    node as cloudify_node,
     network,
     service
 )
@@ -1193,43 +1192,43 @@ class PostgresqlServer(BaseComponent):
         service.restart('amqp-postgres')
         service.restart('restservice')
 
-    def _node_is_in_db(self, node_id):
+    def _node_is_in_db(self, host):
         result = db.run_psql_command(
             command=[
                 '-c',
-                "SELECT COUNT(*) FROM db_nodes where node_id='{0}';".format(
-                    node_id,
+                "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
+                    host,
                 ),
             ],
             db_key='cloudify_db_name',
         )
 
-        # As the node_id is unique, there can only ever be at most 1 entry with
-        # the expected node_id
+        # As the name is a primary key, there can only ever be at most 1 entry
+        # with the expected name
         return int(result) == 1
 
-    def _add_node_to_db(self, name, node_id, host):
+    def _add_node_to_db(self, name, host):
         db.run_psql_command(
             command=[
                 '-c',
-                "INSERT INTO db_nodes (name, node_id, host)"
-                "VALUES ('{0}', '{1}', '{2}');".format(
-                    name, node_id, host
+                "INSERT INTO db_nodes (name, host)"
+                "VALUES ('{0}', '{1}');".format(
+                    name, host
                 ),
             ],
             db_key='cloudify_db_name',
         )
 
-    def _remove_node_from_db(self, node_id):
+    def _remove_node_from_db(self, host):
         db.run_psql_command(
             command=[
                 '-c',
-                "DELETE FROM db_nodes WHERE node_id = '{0}';".format(node_id),
+                "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
             ],
             db_key='cloudify_db_name',
         )
 
-    def add_cluster_node(self, address, node_id, hostname=None):
+    def add_cluster_node(self, address, hostname=None):
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             raise DBManagementError(
                 'Database cluster nodes should be added to the cluster '
@@ -1262,12 +1261,12 @@ class PostgresqlServer(BaseComponent):
         )
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
-        if not self._node_is_in_db(node_id):
-            self._add_node_to_db((hostname or address), node_id, address)
+        if not self._node_is_in_db(address):
+            self._add_node_to_db((hostname or address), address)
 
         self._restart_manager_db_dependent_services()
 
-    def remove_cluster_node(self, address, node_id=None):
+    def remove_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
 
         if len(replicas) < 2:
@@ -1326,10 +1325,9 @@ class PostgresqlServer(BaseComponent):
                 ]
             )
 
-            if self._node_is_in_db(node_id):
-                self._remove_node_from_db(node_id)
+            if self._node_is_in_db(address):
+                self._remove_node_from_db(address)
 
-            cloudify_node.archive_status_report('db', node_id)
             self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):
