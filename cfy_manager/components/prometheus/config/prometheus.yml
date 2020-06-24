@@ -11,10 +11,12 @@ global:
 # Here it's Prometheus itself.
 scrape_configs:
   - job_name: 'prometheus'
-    scheme: {{ manager.external_rest_protocol }}
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_cert_path }}
     metrics_path: /monitoring/metrics
     static_configs:
-      - targets: ['{{ manager.public_ip }}:{{ manager.external_rest_port }}']
+      - targets: ['{{ manager.private_ip }}:53333']
 
   - job_name: 'node'
     static_configs:
