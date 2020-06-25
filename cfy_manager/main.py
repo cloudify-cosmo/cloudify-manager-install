@@ -941,7 +941,7 @@ def _get_starter_serivce_log(offset, length):
         logger.info(service_log)
     except xmlrpclib.Fault as e:
         raise BootstrapError(
-            'Error {0} while trying to lookup {1}'
+            'Error {0} while trying to get log for {1}'
             ''.format(e, STARTER_SERVICE)
         )
 
