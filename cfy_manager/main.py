@@ -953,7 +953,7 @@ def _wait_supervisord_starter(timeout):
     deadline = time.time() + timeout
     offset = 0
     while time.time() < deadline:
-        _get_starter_service_log(offset, 0)
+        _get_starter_service_log(offset, offset + 100)
         status_response = _get_starter_service_response()
         service_status = status_response['statename']
         if service_status == 'EXITED':
