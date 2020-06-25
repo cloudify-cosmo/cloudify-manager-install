@@ -22,6 +22,7 @@ import sys
 import time
 import logging
 import subprocess
+from xml.parsers import expat
 from traceback import format_exception
 
 import argh
@@ -944,18 +945,22 @@ def _get_starter_serivce_log(offset, length):
             'Error {0} while trying to get log for {1}'
             ''.format(e, STARTER_SERVICE)
         )
+    except expat.ExpatError:
+        logger.debug('No more logs to show for {0}'.format(STARTER_SERVICE))
 
 
 def _wait_supervisord_starter(timeout):
     deadline = time.time() + timeout
+    offset = 0
     while time.time() < deadline:
-        _get_starter_serivce_log(-1024, 0)
+        _get_starter_serivce_log(offset, 0)
         status_response = _get_starter_service_response()
         service_status = status_response['statename']
         if service_status == 'EXITED':
             logger.info('{0} service finished'.format(STARTER_SERVICE))
             break
         else:
+            offset += 100
             time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
