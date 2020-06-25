@@ -390,8 +390,7 @@ class RestService(BaseComponent):
                 user='haproxy',
                 group='haproxy',
                 src_dir='restservice',
-                append_prefix=False,
-                config_path='config/supervisord/haproxy.conf'
+                append_prefix=False
             )
         else:
             service.enable('haproxy', append_prefix=False)
@@ -469,13 +468,7 @@ class RestService(BaseComponent):
 
         self._make_paths()
         self._configure_restservice()
-        if self.service_type == 'supervisord':
-            service.configure(
-                RESTSERVICE,
-                config_path='config/supervisord/restservice.conf'
-            )
-        else:
-            service.configure(RESTSERVICE)
+        service.configure(RESTSERVICE)
         logger.notice('Rest Service successfully configured')
 
     def _join_cluster_setup(self):

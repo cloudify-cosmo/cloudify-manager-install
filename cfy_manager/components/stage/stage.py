@@ -183,7 +183,7 @@ class Stage(BaseComponent):
         self._set_internal_manager_ip()
         self._set_community_mode()
         external_configure_params = {}
-        if service._get_service_type() == 'supervisord':
+        if self.service_type == 'supervisord':
             external_configure_params['service_user'] = STAGE_USER
             external_configure_params['service_group'] = STAGE_GROUP
         service.configure(

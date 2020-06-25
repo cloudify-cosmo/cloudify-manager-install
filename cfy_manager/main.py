@@ -22,6 +22,7 @@ import sys
 import time
 import logging
 import subprocess
+from xml.parsers import expat
 from traceback import format_exception
 
 import argh
@@ -69,7 +70,7 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
-from .utils import CFY_UMASK
+from .utils import CFY_UMASK, service
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
@@ -86,9 +87,11 @@ from .utils.files import (
     remove_temp_files,
     touch
 )
+from ._compat import xmlrpclib
 
 logger = get_logger('Main')
 
+STARTER_SERVICE = 'cloudify-starter'
 START_TIME = time.time()
 TEST_CA_ROOT_PATH = os.path.expanduser('~/.cloudify-test-ca')
 TEST_CA_CERT_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.crt')
@@ -648,8 +651,8 @@ def _remove_rabbitmq_service_unit():
     services_and_patterns = \
         [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
          ("cloudify-mgmtworker.service", mgmt_patterns)]
-    for service, pattern_list in services_and_patterns:
-        path = os.path.join(prefix, service)
+    for _service, pattern_list in services_and_patterns:
+        path = os.path.join(prefix, _service)
         for pattern in pattern_list:
             replace_in_file(pattern, "", path)
     sudo("systemctl daemon-reload")
@@ -901,9 +904,7 @@ def _is_unit_finished(unit_name):
             return int(value) > 0
 
 
-@argh.decorators.named('wait-for-starter')
-def wait_for_starter(verbose=False, timeout=180):
-    _prepare_execution(verbose, config_write_required=False)
+def _wait_systemd_starter(timeout):
     deadline = time.time() + timeout
     journalctl = subprocess.Popen([
         '/bin/journalctl', '-fu', 'cloudify-starter.service'])
@@ -915,6 +916,65 @@ def wait_for_starter(verbose=False, timeout=180):
     else:
         raise BootstrapError('Timed out waiting for the starter service')
     journalctl.kill()
+
+
+def _get_starter_service_response():
+    server = xmlrpclib.Server(
+        'http://',
+        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
+    try:
+        status_response = server.supervisor.getProcessInfo(
+            STARTER_SERVICE)
+    except xmlrpclib.Fault as e:
+        raise BootstrapError(
+            'Error {0} while trying to lookup {1}'
+            ''.format(e, STARTER_SERVICE)
+        )
+    return status_response
+
+
+def _get_starter_service_log(offset, length):
+    server = xmlrpclib.Server(
+        'http://',
+        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
+    try:
+        service_log = server.supervisor.readLog(offset, length)
+        logger.info(service_log)
+    except xmlrpclib.Fault as e:
+        raise BootstrapError(
+            'Error {0} while trying to get log for {1}'
+            ''.format(e, STARTER_SERVICE)
+        )
+    except expat.ExpatError:
+        logger.debug('No more logs to show for {0}'.format(STARTER_SERVICE))
+
+
+def _wait_supervisord_starter(timeout):
+    deadline = time.time() + timeout
+    offset = 0
+    while time.time() < deadline:
+        _get_starter_service_log(offset, 0)
+        status_response = _get_starter_service_response()
+        service_status = status_response['statename']
+        if service_status == 'EXITED':
+            logger.info('{0} service finished'.format(STARTER_SERVICE))
+            break
+        else:
+            offset += 100
+            time.sleep(1)
+    else:
+        raise BootstrapError('Timed out waiting for the starter service')
+
+
+@argh.decorators.named('wait-for-starter')
+def wait_for_starter(verbose=False, timeout=180):
+    _prepare_execution(verbose, config_write_required=False)
+    config.load_config()
+    service_type = service._get_service_type()
+    if service_type == 'supervisord':
+        _wait_supervisord_starter(timeout)
+    else:
+        _wait_systemd_starter(timeout)
 
 
 def _guess_private_ip():

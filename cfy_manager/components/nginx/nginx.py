@@ -246,7 +246,7 @@ class Nginx(BaseComponent):
     def configure(self):
         logger.notice('Configuring NGINX...')
         self._configure()
-        if service._get_service_type() != 'supervisord':
+        if self.service_type != 'supervisord':
             service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 
@@ -262,7 +262,7 @@ class Nginx(BaseComponent):
     def start(self):
         logger.notice('Starting NGINX...')
         self._handle_certs()
-        if service._get_service_type() == 'supervisord':
+        if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
         service.start(NGINX, append_prefix=False)
         service.verify_alive(NGINX, append_prefix=False)
