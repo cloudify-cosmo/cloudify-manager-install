@@ -29,6 +29,7 @@ from ..service_names import (
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
     POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
 
     DATABASE_SERVICE,
     MANAGER_SERVICE,
@@ -180,15 +181,27 @@ def _deploy_configuration():
 
 
 def _update_config():
+
+    def postgresql_username():
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            return config[POSTGRESQL_CLIENT]['server_username']
+        return 'postgres'
+
+    def postgresql_password():
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            return config[POSTGRESQL_CLIENT]['server_password']
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            return config[POSTGRESQL_SERVER]['postgres_password']
+
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'username': config[POSTGRESQL_CLIENT]['server_username']})
+                {'username': postgresql_username()})
         if ('password' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'password': config[POSTGRESQL_CLIENT]['server_password']})
+                {'password': postgresql_password()})
     if ('ca_cert_path' not in config[PROMETHEUS] or
             not config[PROMETHEUS]['ca_cert_path']):
         config[PROMETHEUS].update(
