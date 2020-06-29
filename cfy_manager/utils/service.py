@@ -20,6 +20,7 @@ from retrying import retry
 
 from .files import deploy
 from .common import (
+    run,
     sudo,
     remove as remove_file,
     chown
@@ -204,7 +205,7 @@ class Supervisord(object):
             cmd += [service]
         if options:
             cmd.extend(options)
-        return sudo(cmd, ignore_failures=ignore_failure)
+        return run(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
         self.supervisorctl(
