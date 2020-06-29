@@ -28,8 +28,5 @@ RUN chmod a+wx /var/run
 RUN chmod 755 /etc/cloudify
 RUN mkdir /etc/supervisord.d
 
-RUN groupadd supervisor
-RUN usermod -a -G supervisor cfyuser
-
 COPY supervisord.conf /etc/supervisord.conf
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]

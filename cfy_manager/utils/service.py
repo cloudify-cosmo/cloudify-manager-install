@@ -19,12 +19,20 @@ from functools import partial
 from retrying import retry
 
 from .files import deploy
-from .common import run, sudo, remove as remove_file, chown
+from .common import (
+    sudo,
+    remove as remove_file,
+    chown
+)
 
 from ..config import config
 from .._compat import httplib, xmlrpclib
 from ..logger import get_logger
-from ..constants import COMPONENTS_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
+from ..constants import (
+    COMPONENTS_DIR,
+    CLOUDIFY_USER,
+    CLOUDIFY_GROUP
+)
 from ..exceptions import ValidationError
 
 logger = get_logger('Service')
@@ -196,7 +204,7 @@ class Supervisord(object):
             cmd += [service]
         if options:
             cmd.extend(options)
-        return run(cmd, ignore_failures=ignore_failure)
+        return sudo(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
         self.supervisorctl(
