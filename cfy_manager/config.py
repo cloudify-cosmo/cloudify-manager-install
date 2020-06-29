@@ -17,6 +17,8 @@ import collections
 from contextlib import contextmanager
 from getpass import getuser
 from os.path import isfile
+import os
+import grp
 import pwd
 import subprocess
 
@@ -61,20 +63,27 @@ class Config(CommentedMap):
             user_config = self._load_yaml(USER_CONFIG_PATH)
             dict_merge(self, user_config)
 
+    def _chown_config(self, name):
+        """Make sure the config is owned by the user and group `name`.
+
+        This will do nothing if the config file is already owned by them.
+        """
+        current = os.stat(USER_CONFIG_PATH)
+        if current.st_uid != pwd.getpwnam(name).pw_uid:
+            # Not using common module because of circular import issues
+            subprocess.check_call(['sudo', 'chown', name, USER_CONFIG_PATH])
+        if current.st_gid != grp.getgrnam(name).gr_gid:
+            subprocess.check_call(['sudo', 'chgrp', name, USER_CONFIG_PATH])
+
     @contextmanager
     def _own_config_file(self):
         try:
-            # Not using common module because of circular import issues
-            subprocess.check_call([
-                'sudo', 'chown', getuser() + '.', USER_CONFIG_PATH
-            ])
+            self._chown_config(getuser())
             yield
         finally:
             try:
                 pwd.getpwnam('cfyuser')
-                subprocess.check_call([
-                    'sudo', 'chown', CLOUDIFY_USER + '.', USER_CONFIG_PATH
-                ])
+                self._chown_config(CLOUDIFY_USER)
             except KeyError:
                 # No cfyuser, don't pass ownnership back (this is probably a
                 # DB or rabbit node)
