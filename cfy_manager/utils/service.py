@@ -19,12 +19,20 @@ from functools import partial
 from retrying import retry
 
 from .files import deploy
-from .common import run, sudo, remove as remove_file, chown
+from .common import (
+    sudo,
+    remove as remove_file,
+    chown
+)
 
 from ..config import config
 from .._compat import httplib, xmlrpclib
 from ..logger import get_logger
-from ..constants import COMPONENTS_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
+from ..constants import (
+    COMPONENTS_DIR,
+    CLOUDIFY_USER,
+    CLOUDIFY_GROUP
+)
 from ..exceptions import ValidationError
 
 logger = get_logger('Service')
