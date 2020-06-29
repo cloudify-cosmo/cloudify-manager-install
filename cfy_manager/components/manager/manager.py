@@ -30,7 +30,7 @@ from ...utils.files import (replace_in_file,
                             remove_files,
                             touch)
 from ...utils.logrotate import setup_logrotate
-from ...utils.sudoers import add_entry_to_sudoers
+from ...utils.sudoers import add_entry_to_sudoers, allow_user_to_sudo_command
 from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
@@ -42,9 +42,18 @@ class Manager(BaseComponent):
     def _install(self):
         self._create_cloudify_user()
         self._create_sudoers_file_and_disable_sudo_requiretty()
+        if self.service_type == 'supervisord':
+            self._allow_run_supervisorctl_command()
         self._set_selinux_permissive()
         setup_logrotate()
         self._create_manager_resources_dirs()
+
+    def _allow_run_supervisorctl_command(self):
+        command = '/usr/bin/supervisorctl'
+        description = 'Allow running {0} for {1}'.format(
+            command, constants.CLOUDIFY_USER
+        )
+        allow_user_to_sudo_command(command, description)
 
     def _get_exec_tempdir(self):
         return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \

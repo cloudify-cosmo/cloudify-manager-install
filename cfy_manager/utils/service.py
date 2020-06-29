@@ -196,7 +196,7 @@ class Supervisord(object):
             cmd += [service]
         if options:
             cmd.extend(options)
-        return run(cmd, ignore_failures=ignore_failure)
+        return sudo(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
         self.supervisorctl(
