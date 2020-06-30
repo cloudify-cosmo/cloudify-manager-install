@@ -48,14 +48,6 @@ logger = get_logger(MGMTWORKER)
 
 class MgmtWorker(BaseComponent):
     def _add_snapshot_restore_sudo_commands(self):
-        sudoers.allow_user_to_sudo_command(
-            '/usr/bin/cfy_manager status-reporter configure '
-            '--token [a-zA-Z0-9]*',
-            description='Allows status reporter configuration during '
-                        'snapshot restore.',
-            allow_as='root',
-        )
-
         scripts = [
             (
                 'allow-snapshot-ssl-client-cert-access',

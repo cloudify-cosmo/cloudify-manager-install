@@ -24,6 +24,7 @@ REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
+REST_PID_DIR = '/run/cloudify-restservice'
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
@@ -78,16 +79,6 @@ POSTGRESQL_CA_CERT_PATH = \
 CERT_METADATA_FILE_PATH = join(SSL_CERTS_TARGET_DIR, 'certificate_metadata')
 
 CFY_EXEC_TEMPDIR_ENVVAR = 'CFY_EXEC_TEMP'
-
-STATUS_REPORTER = 'status-reporter'
-STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
-STATUS_REPORTER_CONFIGURATION_PATH = join(
-    STATUS_REPORTER_PATH,
-    'status_reporter_configuration.yaml')
-STATUS_REPORTER_OS_USER = 'cfyreporter'
-STATUS_REPORTER_TOKEN = 'token'
-STATUS_REPORTER_MANAGERS_IPS = 'managers_ips'
-STATUS_REPORTER_CONFIG_KEY = 'extra_config'
 
 SCRIPTS = 'scripts'
 

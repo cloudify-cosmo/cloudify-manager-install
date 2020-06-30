@@ -11,10 +11,12 @@ global:
 # Here it's Prometheus itself.
 scrape_configs:
   - job_name: 'prometheus'
-    scheme: {{ manager.external_rest_protocol }}
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_cert_path }}
     metrics_path: /monitoring/metrics
     static_configs:
-      - targets: ['{{ manager.public_ip }}:{{ manager.external_rest_port }}']
+      - targets: ['{{ manager.private_ip }}:53333']
 
   - job_name: 'node'
     static_configs:
@@ -54,6 +56,42 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+{% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}
+  - job_name: 'federate_rabbitmq'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ rabbitmq.ca_path }}
+    metrics_path: /metrics/rabbitmq
+    params:
+      'match[]':
+        - '{job="rabbitmq"}'
+        # - '{__name__=~"job:.*"}'
+    static_configs:
+      - targets:
+{% for host, rabbitmq in rabbitmq.cluster_members.items() %}
+        - {{ rabbitmq.networks.default }}:53333
+{% endfor %}
+{% endif %}
+{% if postgresql_server.cluster.nodes|length > 0 %}
+  - job_name: 'federate_postgres'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ postgresql_server.ca_path }}
+    metrics_path: /metrics/postgres
+    params:
+      'match[]':
+        - '{job="postgresql"}'
+        # - '{__name__=~"job:.*"}'
+    static_configs:
+      - targets:
+{% for host, postgres in postgresql_server.cluster.nodes.items() %}
+        - {{ postgres.ip }}:53333
+{% endfor %}
+{% endif %}
 {% endif %}{% if 'database_service' in services_to_install %}
   - job_name: 'postgresql'
     static_configs:

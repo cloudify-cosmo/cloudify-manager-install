@@ -5,9 +5,9 @@ manager:
 rabbitmq:
   cert_path: /etc/cloudify/queue_cert.pem
   key_path: /etc/cloudify/queue_key.pem
+  ca_path: /etc/cloudify/ca.pem
   erlang_cookie: cookievalue123
   nodename: rabbit2
-  ca_path: /etc/cloudify/ca.pem
   cluster_members:
     rabbit1:
       networks:
@@ -17,5 +17,11 @@ rabbitmq:
         default: CONTAINER_IP
   join_cluster: rabbit1
 
+ssl_inputs:
+  internal_cert_path: /etc/cloudify/queue_cert.pem
+  internal_key_path: /etc/cloudify/queue_key.pem
+  ca_cert_path: /etc/cloudify/ca.pem
+
 services_to_install:
  - queue_service
+ - monitoring_service

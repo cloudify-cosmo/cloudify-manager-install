@@ -103,13 +103,19 @@ class Nginx(BaseComponent):
         So it is an error to provide only the CA cert, and then not provide
         the internal cert+key.
         """
+        cert_destinations = {
+            'cert_destination': constants.INTERNAL_CERT_PATH,
+            'key_destination': constants.INTERNAL_KEY_PATH,
+        }
+        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL) and \
+                MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL):
+            cert_destinations['ca_destination'] = constants.CA_CERT_PATH
         logger.info('Handling internal certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
             self.logger,
-            cert_destination=constants.INTERNAL_CERT_PATH,
-            key_destination=constants.INTERNAL_KEY_PATH,
             prefix='internal_',
+            **cert_destinations
         )
 
         if deployed:
@@ -246,7 +252,7 @@ class Nginx(BaseComponent):
     def configure(self):
         logger.notice('Configuring NGINX...')
         self._configure()
-        if service._get_service_type() != 'supervisord':
+        if self.service_type != 'supervisord':
             service.enable(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
 
@@ -262,7 +268,7 @@ class Nginx(BaseComponent):
     def start(self):
         logger.notice('Starting NGINX...')
         self._handle_certs()
-        if service._get_service_type() == 'supervisord':
+        if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
         service.start(NGINX, append_prefix=False)
         service.verify_alive(NGINX, append_prefix=False)

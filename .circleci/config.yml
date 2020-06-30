@@ -320,20 +320,6 @@ jobs:
       - wait_for_container:
           container_name: DB3_NAME
       - run:
-          name: Prepare node_id envvars for the status reporter
-          command: |
-            QUEUE1_NODE=$(docker exec ${QUEUE1_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
-            QUEUE2_NODE=$(docker exec ${QUEUE2_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
-            DB1_NODE=$(docker exec ${DB1_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
-            DB2_NODE=$(docker exec ${DB2_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
-            DB3_NODE=$(docker exec ${DB3_NAME} cfy_manager node get-id | grep -oE '[^ ]+$')
-
-            echo "export QUEUE1_NODE=${QUEUE1_NODE}" >> $BASH_ENV
-            echo "export QUEUE2_NODE=${QUEUE2_NODE}" >> $BASH_ENV
-            echo "export DB1_NODE=${DB1_NODE}" >> $BASH_ENV
-            echo "export DB2_NODE=${DB2_NODE}" >> $BASH_ENV
-            echo "export DB3_NODE=${DB3_NODE}" >> $BASH_ENV
-      - run:
           name: Install manager1
           command: |
             sed -e "s/CONTAINER_IP/${MANAGER1_IP}/g" \
@@ -342,11 +328,6 @@ jobs:
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
               -e "s/DB3_IP/${DB3_IP}/g" \
-              -e "s/QUEUE1_NODE/${QUEUE1_NODE}/g" \
-              -e "s/QUEUE2_NODE/${QUEUE2_NODE}/g" \
-              -e "s/DB1_NODE/${DB1_NODE}/g" \
-              -e "s/DB2_NODE/${DB2_NODE}/g" \
-              -e "s/DB3_NODE/${DB3_NODE}/g" \
               .circleci/cluster/manager1_config.yaml > manager1_config.yaml
 
             docker run \
@@ -371,9 +352,6 @@ jobs:
               -e "s/DB1_IP/${DB1_IP}/g" \
               -e "s/DB2_IP/${DB2_IP}/g" \
               -e "s/DB3_IP/${DB3_IP}/g" \
-              -e "s/DB1_NODE/${DB1_NODE}/g" \
-              -e "s/DB2_NODE/${DB2_NODE}/g" \
-              -e "s/DB3_NODE/${DB3_NODE}/g" \
               .circleci/cluster/manager2_config.yaml > manager2_config.yaml
 
             openssl rsa -aes256 -passout pass:secret_ca_password -in ca.key -out ca.encrypted.key
@@ -392,21 +370,6 @@ jobs:
               ${CLUSTER_IMAGE}
       - wait_for_container:
           container_name: MANAGER2_NAME
-      - run:
-          name: Configuring status reporters of brokers
-          command: |
-            set -eux
-            TOKEN=$(docker exec ${MANAGER1_NAME} cfy_manager status-reporter get-tokens --json |  python -c 'import json,sys;obj=json.load(sys.stdin);print obj["broker_status_reporter"]')
-            .circleci/cluster/configure_status_reporter.sh "${QUEUE1_NAME} ${QUEUE2_NAME}" "${MANAGER1_IP} ${MANAGER2_IP}" ${TOKEN}
-      - run:
-          name: Configuring status reporters of db nodes
-          command: |
-            set -eux
-            TOKEN=$(docker exec ${MANAGER1_NAME} cfy_manager status-reporter get-tokens --json |  python -c 'import json,sys;obj=json.load(sys.stdin);print obj["db_status_reporter"]')
-            .circleci/cluster/configure_status_reporter.sh "${DB1_NAME} ${DB2_NAME} ${DB3_NAME}" "${MANAGER1_IP} ${MANAGER2_IP}" ${TOKEN}
-      - run:
-          name: Waiting a little for the status reporters to check in
-          command: sleep 6
       - run:
           name: Check Cluster Status
           command: |

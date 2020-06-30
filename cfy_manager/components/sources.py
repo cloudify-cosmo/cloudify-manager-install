@@ -22,17 +22,18 @@ manager = [
     'patch', 'nodejs', 'cloudify-stage'
 ]
 manager_premium = [
-    'cloudify-premium', 'cloudify-status-reporter', 'cloudify-composer'
+    'cloudify-premium', 'cloudify-composer'
 ]
 manager_cluster = ['haproxy']
 db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
 db_cluster = [
-    'libestr', 'libfastjson', 'rsyslog', 'etcd',
-    'cloudify-status-reporter', 'patroni'
+    'libestr', 'libfastjson', 'rsyslog', 'etcd', 'patroni'
 ]
 queue = ['rabbitmq-server-3.8.4', 'cloudify-rabbitmq']
-queue_cluster = ['cloudify-status-reporter']
+queue_cluster = []
 prometheus = [
     'prometheus', 'node_exporter', 'blackbox_exporter', 'postgres_exporter',
 ]
-prometheus_cluster = []
+prometheus_cluster = [
+    'nginx',
+]

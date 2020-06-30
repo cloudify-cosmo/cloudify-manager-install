@@ -26,12 +26,9 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ...utils.db import run_psql_command
-from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
-    SELECT_USER_TOKENS_QUERY,
     REST_SECURITY_CONFIG_PATH,
     REST_AUTHORIZATION_CONFIG_PATH
 )
@@ -39,7 +36,6 @@ from ..components_constants import (
     VENV,
     CONFIG,
     SCRIPTS,
-    PASSWORD,
     CLEAN_DB,
     SECURITY,
     SSL_INPUTS,
@@ -49,10 +45,7 @@ from ..components_constants import (
     ADMIN_PASSWORD,
     FLASK_SECURITY,
     SERVER_PASSWORD,
-    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
     HOSTNAME
 )
 from ..base_component import BaseComponent
@@ -206,11 +199,24 @@ class RestService(BaseComponent):
             constants.MANAGER_RESOURCES_HOME
         )
 
+    def _configure_pid_restservice(self):
+        # Create restservice under /run
+        pid_dir = constants.REST_PID_DIR
+        if not os.path.exists(pid_dir):
+            common.mkdir(pid_dir)
+            common.chown(
+                constants.CLOUDIFY_USER,
+                constants.CLOUDIFY_GROUP,
+                pid_dir
+            )
+            common.chmod('755', pid_dir)
+
     def _configure_restservice(self):
         self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
+        self._configure_pid_restservice()
 
     def _verify_restservice_alive(self):
         logger.info('Verifying Rest service is up...')
@@ -239,23 +245,6 @@ class RestService(BaseComponent):
             else:
                 db.validate_schema_version(configs)
                 self._join_cluster(configs)
-
-    @staticmethod
-    def _fetch_manager_reporter_token():
-        sql_stmnt = "{0} = '{1}'".format(
-            SELECT_USER_TOKENS_QUERY,
-            MANAGER_STATUS_REPORTER
-        )
-        query_result = run_psql_command(
-            command=['-c', sql_stmnt],
-            db_key='cloudify_db_name',
-        )
-        manager_reporter = json.loads(query_result)
-        reporters_tokens = get_encoded_user_ids([manager_reporter])
-        config.setdefault(
-            MANAGER_STATUS_REPORTER,
-            {})[constants.STATUS_REPORTER_TOKEN] = \
-            reporters_tokens[MANAGER_STATUS_REPORTER]
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
@@ -323,19 +312,7 @@ class RestService(BaseComponent):
                 config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE,
                                                 MONITORING_SERVICE])
 
-    def _generate_status_reporter_passwords(self):
-        if not is_premium_installed():
-            return
-        if self._is_in_cluster_mode():
-            config.setdefault(DB_STATUS_REPORTER, {})[PASSWORD] = \
-                self._generate_password()
-            config.setdefault(BROKER_STATUS_REPORTER, {})[PASSWORD] = \
-                self._generate_password()
-        config.setdefault(MANAGER_STATUS_REPORTER, {})[PASSWORD] = \
-            self._generate_password()
-
     def _generate_passwords(self):
-        self._generate_status_reporter_passwords()
         self._generate_admin_password_if_empty()
 
     def _random_alphanumeric(self, result_len=31):
@@ -406,7 +383,17 @@ class RestService(BaseComponent):
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
 
-        service.enable('haproxy', append_prefix=False)
+        # Configure the haproxy service for supervisord
+        if self.service_type == 'supervisord':
+            service.configure(
+                'haproxy',
+                user='haproxy',
+                group='haproxy',
+                src_dir='restservice',
+                append_prefix=False
+            )
+        else:
+            service.enable('haproxy', append_prefix=False)
         service.restart('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
 
@@ -456,6 +443,7 @@ class RestService(BaseComponent):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
             'bootstrap_cluster': bootstrap_cluster,
+            'service_management': self.service_type
         }
         script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
         result = run_script_on_manager_venv(script_path,
@@ -515,7 +503,6 @@ class RestService(BaseComponent):
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
-            self._fetch_manager_reporter_token()
         if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             logger.info('Removing postgres password from config.yaml')
             config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'

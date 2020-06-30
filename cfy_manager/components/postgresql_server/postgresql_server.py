@@ -60,7 +60,6 @@ from ...utils import (
     common,
     files,
     db,
-    node as cloudify_node,
     network,
     service
 )
@@ -68,7 +67,7 @@ from ...utils import (
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
-SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
+POSTGRES_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 
 # Etcd used only in clusters
@@ -78,6 +77,7 @@ ETCD_GROUP = 'etcd'
 HOST = 'host'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
+PGSQL_SOCK_DIR = '/var/run/postgresql'
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
 PGSQL_DATA_DIR = '/var/lib/pgsql/9.5/data'
@@ -165,6 +165,9 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(LOG_DIR)
         if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
+
+        common.mkdir(PGSQL_SOCK_DIR)
+        common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
@@ -461,7 +464,7 @@ class PostgresqlServer(BaseComponent):
                 src_dir='postgresql_server',
                 append_prefix=False,
                 render=False,
-                config_path='config/supervisord/patroni.conf'
+                config_path='config/supervisord'
             )
         else:
             service.configure(
@@ -473,8 +476,8 @@ class PostgresqlServer(BaseComponent):
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
-        service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
-        service.disable(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
+        service.disable(POSTGRES_SERVICE_NAME, append_prefix=False)
 
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
@@ -547,7 +550,13 @@ class PostgresqlServer(BaseComponent):
                     service_type=self.service_type
                 ))
         common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
-        # Restart the rsyslog
+        if self.service_type == 'supervisord':
+            service.configure(
+                'rsyslog',
+                src_dir='postgresql_server',
+                config_path='config/supervisord',
+                append_prefix=False,
+            )
         service.restart('rsyslog', append_prefix=False)
 
         # create custom postgresql conf file with log settings
@@ -570,7 +579,7 @@ class PostgresqlServer(BaseComponent):
                 user='etcd',
                 group='etcd',
                 src_dir='postgresql_server',
-                config_path='config/supervisord/etcd.conf',
+                config_path='config/supervisord',
                 external_configure_params={
                     'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
                 }
@@ -770,7 +779,7 @@ class PostgresqlServer(BaseComponent):
                 'patroni_startup_check',
                 append_prefix=False,
                 src_dir='postgresql_server',
-                config_path='config/supervisord/patroni_startup_check.conf'
+                config_path='config/supervisord'
             )
             service.start('patroni_startup_check', append_prefix=False)
         else:
@@ -1187,43 +1196,43 @@ class PostgresqlServer(BaseComponent):
         service.restart('amqp-postgres')
         service.restart('restservice')
 
-    def _node_is_in_db(self, node_id):
+    def _node_is_in_db(self, host):
         result = db.run_psql_command(
             command=[
                 '-c',
-                "SELECT COUNT(*) FROM db_nodes where node_id='{0}';".format(
-                    node_id,
+                "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
+                    host,
                 ),
             ],
             db_key='cloudify_db_name',
         )
 
-        # As the node_id is unique, there can only ever be at most 1 entry with
-        # the expected node_id
+        # As the name is a primary key, there can only ever be at most 1 entry
+        # with the expected name
         return int(result) == 1
 
-    def _add_node_to_db(self, name, node_id, host):
+    def _add_node_to_db(self, name, host):
         db.run_psql_command(
             command=[
                 '-c',
-                "INSERT INTO db_nodes (name, node_id, host)"
-                "VALUES ('{0}', '{1}', '{2}');".format(
-                    name, node_id, host
+                "INSERT INTO db_nodes (name, host)"
+                "VALUES ('{0}', '{1}');".format(
+                    name, host
                 ),
             ],
             db_key='cloudify_db_name',
         )
 
-    def _remove_node_from_db(self, node_id):
+    def _remove_node_from_db(self, host):
         db.run_psql_command(
             command=[
                 '-c',
-                "DELETE FROM db_nodes WHERE node_id = '{0}';".format(node_id),
+                "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
             ],
             db_key='cloudify_db_name',
         )
 
-    def add_cluster_node(self, address, node_id, hostname=None):
+    def add_cluster_node(self, address, hostname=None):
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             raise DBManagementError(
                 'Database cluster nodes should be added to the cluster '
@@ -1254,15 +1263,14 @@ class PostgresqlServer(BaseComponent):
             ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
             stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
         )
-
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
-        if not self._node_is_in_db(node_id):
-            self._add_node_to_db((hostname or address), node_id, address)
+        if not self._node_is_in_db(address):
+            self._add_node_to_db((hostname or address), address)
 
         self._restart_manager_db_dependent_services()
 
-    def remove_cluster_node(self, address, node_id=None):
+    def remove_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
 
         if len(replicas) < 2:
@@ -1321,10 +1329,9 @@ class PostgresqlServer(BaseComponent):
                 ]
             )
 
-            if self._node_is_in_db(node_id):
-                self._remove_node_from_db(node_id)
+            if self._node_is_in_db(address):
+                self._remove_node_from_db(address)
 
-            cloudify_node.archive_status_report('db', node_id)
             self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):
@@ -1470,10 +1477,10 @@ class PostgresqlServer(BaseComponent):
         files.copy_notice(POSTGRESQL_SERVER)
         if self.service_type == 'supervisord':
             service.configure(
-                SYSTEMD_SERVICE_NAME,
+                POSTGRES_SERVICE_NAME,
                 append_prefix=False,
                 src_dir='postgresql_server',
-                config_path='config/supervisord/postgresql-9.5.conf'
+                config_path='config/supervisord'
             )
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
@@ -1501,7 +1508,7 @@ class PostgresqlServer(BaseComponent):
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
-        service.remove(SYSTEMD_SERVICE_NAME, append_prefix=False)
+        service.remove(POSTGRES_SERVICE_NAME, append_prefix=False)
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')
@@ -1510,9 +1517,9 @@ class PostgresqlServer(BaseComponent):
             service.start('patroni', append_prefix=False)
             service.verify_alive('patroni', append_prefix=False)
         else:
-            service.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            service.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
-            service.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.enable(POSTGRES_SERVICE_NAME, append_prefix=False)
+            service.start(POSTGRES_SERVICE_NAME, append_prefix=False)
+            service.verify_alive(POSTGRES_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
@@ -1521,7 +1528,7 @@ class PostgresqlServer(BaseComponent):
             service.stop('etcd', append_prefix=False)
             service.stop('patroni', append_prefix=False)
         else:
-            service.stop(SYSTEMD_SERVICE_NAME, append_prefix=False)
+            service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):

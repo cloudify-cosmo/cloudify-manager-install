@@ -19,10 +19,10 @@ from __future__ import print_function
 import os
 import re
 import sys
-import json
 import time
 import logging
 import subprocess
+from xml.parsers import expat
 from traceback import format_exception
 
 import argh
@@ -41,11 +41,8 @@ from .components.components_constants import (
     PUBLIC_IP,
     PRIVATE_IP,
     ADMIN_PASSWORD,
-    DB_STATUS_REPORTER,
     SERVICES_TO_INSTALL,
     UNCONFIGURED_INSTALL,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
     PREMIUM_EDITION
 )
 from .components.globals import set_globals
@@ -61,7 +58,6 @@ from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
-    STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
 )
 from .encryption.encryption import update_encryption_key
@@ -74,8 +70,7 @@ from .logger import (
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
-from .status_reporter import status_reporter
-from .utils import CFY_UMASK
+from .utils import CFY_UMASK, service
 from .utils.certificates import (
     create_internal_certs,
     create_external_certs,
@@ -83,19 +78,19 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, sudo, can_lookup_hostname, allows_json_format, is_installed
+    run, can_lookup_hostname, is_installed
 )
-from .utils.install import yum_install, yum_remove, is_package_installed
+from .utils.install import yum_install, yum_remove
 from .utils.files import (
-    replace_in_file,
     remove as _remove,
     remove_temp_files,
     touch
 )
-from .utils.node import get_node_id
+from ._compat import xmlrpclib
 
 logger = get_logger('Main')
 
+STARTER_SERVICE = 'cloudify-starter'
 START_TIME = time.time()
 TEST_CA_ROOT_PATH = os.path.expanduser('~/.cloudify-test-ca')
 TEST_CA_CERT_PATH = os.path.join(TEST_CA_ROOT_PATH, 'ca.crt')
@@ -379,8 +374,7 @@ def db_node_add(**kwargs):
     config.load_config()
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'], kwargs['node_id'],
-                            kwargs.get('hostname'))
+        db.add_cluster_node(kwargs['address'], kwargs.get('hostname'))
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -390,7 +384,6 @@ def db_node_add(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
-@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG)
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
@@ -398,12 +391,7 @@ def db_node_remove(**kwargs):
     config.load_config()
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
-                kwargs.get('node_id') is None):
-            logger.error('Argument -i/--node-id is required when running '
-                         '`dbs remove` on a manager')
-            return
-        db.remove_cluster_node(kwargs['address'], kwargs.get('node_id'))
+        db.remove_cluster_node(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -440,16 +428,6 @@ def db_node_set_master(**kwargs):
         db.set_master(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
-
-
-@allows_json_format()
-def get_id(json_format=None):
-    """Get Cloudify's auto-generated id for this node"""
-    node_id = get_node_id()
-    if json_format:
-        print(json.dumps({'node_id': node_id}))
-    else:
-        print('The node id is: {0}'.format(node_id))
 
 
 def _print_time():
@@ -531,24 +509,10 @@ def _print_finish_message():
 
 def print_credentials_to_screen():
     password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-    db_status_reporter_token = config.get(
-        DB_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
-    broker_status_reporter_token = config.get(
-        BROKER_STATUS_REPORTER, {}).get(STATUS_REPORTER_TOKEN)
 
     current_level = get_file_handlers_level()
     set_file_handlers_level(logging.ERROR)
     logger.notice('Admin password: %s', password)
-    if db_status_reporter_token:
-        logger.notice('Database Status Reported token: %s',
-                      db_status_reporter_token)
-    if broker_status_reporter_token:
-        logger.notice('Queue Service Status Reported token: %s',
-                      broker_status_reporter_token)
-    for reporter in (MANAGER_STATUS_REPORTER,
-                     DB_STATUS_REPORTER,
-                     BROKER_STATUS_REPORTER):
-        config.pop(reporter, None)
     set_file_handlers_level(current_level)
 
 
@@ -624,14 +588,9 @@ def _get_components(include_components=None):
 
     if is_installed(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
-        if (config[SERVICES_TO_INSTALL] == [DATABASE_SERVICE] and
-                config[POSTGRESQL_SERVER]['cluster']['nodes']):
-            _components += [components.PostgresqlStatusReporter()]
 
     if is_installed(QUEUE_SERVICE):
         _components += [components.RabbitMQ()]
-        if config[SERVICES_TO_INSTALL] == [QUEUE_SERVICE]:
-            _components += [components.RabbitmqStatusReporter()]
 
     if is_installed(MANAGER_SERVICE):
         _components += [
@@ -649,8 +608,6 @@ def _get_components(include_components=None):
             _components += [
                 components.Composer(),
             ]
-        if is_package_installed('cloudify-status-reporter'):
-            _components += [components.ManagerStatusReporter()]
         _components += [
             components.UsageCollector(),
         ]
@@ -683,21 +640,6 @@ def _filter_components(components, include_components):
         component for component in components
         if component.__class__.__name__.lower() in include_components
     ]
-
-
-def _remove_rabbitmq_service_unit():
-    prefix = "/lib/systemd/system"
-    rabbitmq_pattern = "cloudify-rabbitmq.service"
-    mgmt_patterns = ["Wants={0}".format(rabbitmq_pattern),
-                     "After={0}".format(rabbitmq_pattern)]
-    services_and_patterns = \
-        [("cloudify-amqp-postgres.service", [rabbitmq_pattern]),
-         ("cloudify-mgmtworker.service", mgmt_patterns)]
-    for service, pattern_list in services_and_patterns:
-        path = os.path.join(prefix, service)
-        for pattern in pattern_list:
-            replace_in_file(pattern, "", path)
-    sudo("systemctl daemon-reload")
 
 
 def install_args(f):
@@ -803,10 +745,6 @@ def install(verbose=False,
             component.configure()
         for component in components:
             component.start()
-
-    if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
-            QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]):
-        _remove_rabbitmq_service_unit()
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
@@ -946,9 +884,7 @@ def _is_unit_finished(unit_name):
             return int(value) > 0
 
 
-@argh.decorators.named('wait-for-starter')
-def wait_for_starter(verbose=False, timeout=180):
-    _prepare_execution(verbose, config_write_required=False)
+def _wait_systemd_starter(timeout):
     deadline = time.time() + timeout
     journalctl = subprocess.Popen([
         '/bin/journalctl', '-fu', 'cloudify-starter.service'])
@@ -960,6 +896,65 @@ def wait_for_starter(verbose=False, timeout=180):
     else:
         raise BootstrapError('Timed out waiting for the starter service')
     journalctl.kill()
+
+
+def _get_starter_service_response():
+    server = xmlrpclib.Server(
+        'http://',
+        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
+    try:
+        status_response = server.supervisor.getProcessInfo(
+            STARTER_SERVICE)
+    except xmlrpclib.Fault as e:
+        raise BootstrapError(
+            'Error {0} while trying to lookup {1}'
+            ''.format(e, STARTER_SERVICE)
+        )
+    return status_response
+
+
+def _get_starter_service_log(offset, length):
+    server = xmlrpclib.Server(
+        'http://',
+        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
+    try:
+        service_log = server.supervisor.readLog(offset, length)
+        logger.info(service_log)
+    except xmlrpclib.Fault as e:
+        raise BootstrapError(
+            'Error {0} while trying to get log for {1}'
+            ''.format(e, STARTER_SERVICE)
+        )
+    except expat.ExpatError:
+        logger.debug('No more logs to show for {0}'.format(STARTER_SERVICE))
+
+
+def _wait_supervisord_starter(timeout):
+    deadline = time.time() + timeout
+    offset = 0
+    while time.time() < deadline:
+        _get_starter_service_log(offset, offset + 100)
+        status_response = _get_starter_service_response()
+        service_status = status_response['statename']
+        if service_status == 'EXITED':
+            logger.info('{0} service finished'.format(STARTER_SERVICE))
+            break
+        else:
+            offset += 100
+            time.sleep(1)
+    else:
+        raise BootstrapError('Timed out waiting for the starter service')
+
+
+@argh.decorators.named('wait-for-starter')
+def wait_for_starter(verbose=False, timeout=180):
+    _prepare_execution(verbose, config_write_required=False)
+    config.load_config()
+    service_type = service._get_service_type()
+    if service_type == 'supervisord':
+        _wait_supervisord_starter(timeout)
+    else:
+        _wait_systemd_starter(timeout)
 
 
 def _guess_private_ip():
@@ -1035,19 +1030,6 @@ def main():
         db_node_set_master
     ], namespace='dbs')
 
-    parser.add_commands([
-        status_reporter.show_configuration,
-        status_reporter.start,
-        status_reporter.stop,
-        status_reporter.remove,
-        status_reporter.configure,
-        status_reporter.get_tokens
-    ], namespace='status-reporter')
-
-    parser.add_commands([
-        get_id
-    ], namespace='node',
-        namespace_kwargs={'title': 'Handle node details'})
     parser.dispatch()
 
     os.umask(current_umask)

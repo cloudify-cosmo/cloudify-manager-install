@@ -24,11 +24,13 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
 )
 from ..service_names import (
+    MANAGER,
     PROMETHEUS,
     NODE_EXPORTER,
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
     POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
 
     DATABASE_SERVICE,
     MANAGER_SERVICE,
@@ -48,6 +50,7 @@ CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
 LOG_DIR = join(constants.BASE_LOG_DIR, PROMETHEUS)
 BIN_DIR = join(sep, 'usr', 'local', 'bin')
 SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
+SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
@@ -96,12 +99,18 @@ class Prometheus(BaseComponent):
         _chown_resources_dir()
         _deploy_configuration()
         service.configure(PROMETHEUS, append_prefix=False)
-        service.reload(PROMETHEUS,
-                       append_prefix=False, ignore_failure=True)
+        service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
         for exporter in _prometheus_exporters():
-            service.configure(exporter['name'], append_prefix=False)
-            service.reload(exporter['name'], append_prefix=False,
-                           ignore_failure=True)
+            service.configure(
+                exporter['name'],
+                src_dir='prometheus',
+                append_prefix=False
+            )
+            service.reload(
+                exporter['name'],
+                append_prefix=False,
+                ignore_failure=True
+            )
         logger.notice('Prometheus successfully configured')
 
     def remove(self):
@@ -166,27 +175,45 @@ def _chown_resources_dir():
 
 
 def _deploy_configuration():
-    if PROMETHEUS in config:
-        _update_config()
+    _update_config()
     _deploy_prometheus_configuration()
     _deploy_exporters_configuration()
-    _deploy_services_configuration()
 
 
 def _update_config():
+    def postgresql_username():
+        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(POSTGRESQL_CLIENT, {}).get('server_username')
+        return 'postgres'
+
+    def postgresql_password():
+        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(POSTGRESQL_CLIENT, {}).get('server_password')
+        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(POSTGRESQL_SERVER, {}).get('postgres_password')
+
+    def postgresql_ip_address():
+        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(MANAGER, {}).get('private_ip')
+        return 'localhost'
+
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'username': config[POSTGRESQL_CLIENT]['server_username']})
+                {'username': postgresql_username()})
         if ('password' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'password': config[POSTGRESQL_CLIENT]['server_password']})
-    if ('ca_cert_path' not in config[PROMETHEUS] or
-            not config[PROMETHEUS]['ca_cert_path']):
+                {'password': postgresql_password()})
+        if ('ip_address' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
+                not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'ip_address': postgresql_ip_address()})
+    if ('ca_cert_path' not in config.get(PROMETHEUS, {}) or
+            not config.get(PROMETHEUS, {}).get('ca_cert_path')):
         config[PROMETHEUS].update(
-            {'ca_cert_path': config[CONSTANTS]['ca_cert_path']})
+            {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
 
 def _deploy_prometheus_configuration():
@@ -205,18 +232,6 @@ def _deploy_exporters_configuration():
         for file_name, dest_file_name in exporter['deploy_config'].items():
             files.deploy(join(CONFIG_DIR, file_name), dest_file_name)
             common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
-
-
-def _deploy_services_configuration():
-    logger.notice(
-        'Deploying Prometheus and exporters service configuration...')
-    files.deploy(join(CONFIG_DIR, 'prometheus.service'),
-                 join(SYSTEMD_CONFIG_DIR, 'prometheus.service'))
-    for exporter in _prometheus_exporters():
-        files.deploy(join(CONFIG_DIR,
-                          '{0}.service'.format(exporter['name'])),
-                     join(SYSTEMD_CONFIG_DIR,
-                          '{0}.service'.format(exporter['name'])))
 
 
 def _validate_prometheus_running():

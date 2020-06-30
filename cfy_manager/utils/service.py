@@ -12,21 +12,45 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import socket
 from os.path import exists, join
 from functools import partial
 
 from retrying import retry
 
 from .files import deploy
-from .common import run, sudo, remove as remove_file, chown
+from .common import (
+    sudo,
+    remove as remove_file,
+    chown
+)
 
 from ..config import config
+from .._compat import httplib, xmlrpclib
 from ..logger import get_logger
-from ..constants import COMPONENTS_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
+from ..constants import (
+    COMPONENTS_DIR,
+    CLOUDIFY_USER,
+    CLOUDIFY_GROUP
+)
 from ..exceptions import ValidationError
 
-logger = get_logger('SystemD')
+logger = get_logger('Service')
+
+
+class UnixSocketHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.host)
+
+
+class UnixSocketTransport(xmlrpclib.Transport, object):
+    def __init__(self, path):
+        super(UnixSocketTransport, self).__init__()
+        self._path = path
+
+    def make_connection(self, host):
+        return UnixSocketHTTPConnection(self._path)
 
 
 class SystemD(object):
@@ -180,7 +204,7 @@ class Supervisord(object):
             cmd += [service]
         if options:
             cmd.extend(options)
-        return run(cmd, ignore_failures=ignore_failure)
+        return sudo(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
         self.supervisorctl(
@@ -245,15 +269,15 @@ class Supervisord(object):
                   user=CLOUDIFY_USER,
                   group=CLOUDIFY_GROUP,
                   external_configure_params=None,
-                  config_path='config/supervisord.conf',
+                  config_path='config/supervisord',
                   src_dir=None,
                   append_prefix=True,
                   render=True):
-        """This configures systemd for a specific service.
+        """This configures supervisord for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
         All env files will be named "cloudify-SERVICENAME".
-        All systemd config files will be named "cloudify-SERVICENAME.service".
+        All supervisord config files will be named "SERVICENAME.cloudify.conf".
         """
         sid = _get_full_service_name(service_name, append_prefix=append_prefix)
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
@@ -262,6 +286,7 @@ class Supervisord(object):
             src_dir = service_name
         src_dir = src_dir.replace('-', '_')
         srv_src = join(COMPONENTS_DIR, src_dir, config_path)
+        srv_src = join(srv_src, '{0}.conf'.format(sid))
         logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
