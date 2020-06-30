@@ -56,13 +56,13 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
-{% if rabbitmq.cluster_members|length > 0 and ('localhost' not in rabbitmq.cluster_members or rabbitmq.cluster_members.localhost.address != 'ALL_IN_ONE') %}
+{% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}
   - job_name: 'federate_rabbitmq'
     scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
-      ca_file: {{ prometheus.ca_cert_path }}  # FIXME
+      ca_file: {{ rabbitmq.ca_path }}
     metrics_path: /metrics/rabbitmq
     params:
       'match[]':
@@ -80,7 +80,7 @@ scrape_configs:
     honor_labels: true
     scheme: 'https'
     tls_config:
-      ca_file: {{ prometheus.ca_cert_path }}  # FIXME
+      ca_file: {{ postgresql_server.ca_path }}
     metrics_path: /metrics/postgres
     params:
       'match[]':
