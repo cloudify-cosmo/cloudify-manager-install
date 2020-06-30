@@ -1,0 +1,12 @@
+groups:
+  - name: postgresql
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up{instance="localhost:{{ prometheus.postgres_exporter.metrics_port }}", job="postgresql"} == 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL database is down
+
+# TODO add federated instances

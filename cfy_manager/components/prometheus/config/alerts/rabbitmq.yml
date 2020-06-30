@@ -1,0 +1,12 @@
+groups:
+  - name: rabbitmq
+    rules:
+      - alert: RabbitMQDown
+        expr: rabbitmq_identity_info{instance="localhost:{{ prometheus.rabbitmq_prometheus.metrics_port }}", job="rabbitmq"} == 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: RabbitMQ message broker is down
+
+# TODO add federated instances

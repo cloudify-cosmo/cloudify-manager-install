@@ -6,7 +6,14 @@ global:
 
   external_labels:
     monitor: cloudify
-
+{% if 'manager_service' in services_to_install %}
+# Rule files specifies a list of globs. Rules and alerts are read from
+# all matching files.
+rule_files:
+  - alerts/postgresql.yml
+  - alerts/rabbitmq.yml
+  - alerts/manager.yml
+{% endif %}
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
@@ -32,8 +39,8 @@ scrape_configs:
           - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
           - http://localhost:8088/  # Cloudify stage
           - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
-          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify rest and ui internal
-          - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
+          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify external
+          - https://{{ manager.private_ip }}:53333/ # Cloudify internal
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -47,8 +54,8 @@ scrape_configs:
       module: [http_400]  # Look for a HTTP 400 respose
     static_configs:
       - targets:
-          - http://127.0.0.1:8100/  # Cloudify rest
-          - http://127.0.0.1:53229/  # Cloudify resources
+          - http://localhost:8100/  # Cloudify rest service
+          - http://localhost:53229/  # Cloudify resources service
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

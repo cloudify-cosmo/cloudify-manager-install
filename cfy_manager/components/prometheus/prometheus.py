@@ -223,6 +223,14 @@ def _deploy_prometheus_configuration():
     files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
                  PROMETHEUS_CONFIG_PATH)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_PATH)
+    if MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL, []):
+        return
+    # deploy alerts configuration files
+    for file_name in ['postgresql.yml', 'rabbitmq.yml', 'manager.yml', ]:
+        dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'alerts', file_name)
+        files.deploy(join(CONFIG_DIR, 'alerts', file_name),
+                     dest_file_name)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
 
 
 def _deploy_exporters_configuration():
