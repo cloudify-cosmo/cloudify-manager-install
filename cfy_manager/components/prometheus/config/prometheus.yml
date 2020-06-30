@@ -22,7 +22,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
 {% if 'manager_service' in services_to_install %}
-  - job_name: 'blackbox_http_200'
+  - job_name: 'http_200'
     metrics_path: /probe
     params:
       module: [http_200]  # Look for a HTTP 200 respose
