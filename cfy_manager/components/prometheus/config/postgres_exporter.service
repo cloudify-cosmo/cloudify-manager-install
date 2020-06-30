@@ -6,7 +6,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-Environment="DATA_SOURCE_NAME=postgresql://{% if prometheus.postgres_exporter.username %}{{ prometheus.postgres_exporter.username }}{% if prometheus.postgres_exporter.password %}:{{ prometheus.postgres_exporter.password }}{% endif %}@{% endif %}localhost:5432/?sslmode={{ prometheus.postgres_exporter.sslmode }}"
+Environment="DATA_SOURCE_NAME=postgresql://{% if prometheus.postgres_exporter.username %}{{ prometheus.postgres_exporter.username }}{% if prometheus.postgres_exporter.password %}:{{ prometheus.postgres_exporter.password }}{% endif %}@{% endif %}{{ prometheus.postgres_exporter.ip_address }}:5432/?sslmode={{ prometheus.postgres_exporter.sslmode }}"
 User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID

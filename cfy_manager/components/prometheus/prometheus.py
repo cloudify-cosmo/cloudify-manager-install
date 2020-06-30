@@ -24,11 +24,13 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
 )
 from ..service_names import (
+    MANAGER,
     PROMETHEUS,
     NODE_EXPORTER,
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
     POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
 
     DATABASE_SERVICE,
     MANAGER_SERVICE,
@@ -173,26 +175,45 @@ def _chown_resources_dir():
 
 
 def _deploy_configuration():
-    if PROMETHEUS in config:
-        _update_config()
+    _update_config()
     _deploy_prometheus_configuration()
     _deploy_exporters_configuration()
 
 
 def _update_config():
+    def postgresql_username():
+        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(POSTGRESQL_CLIENT, {}).get('server_username')
+        return 'postgres'
+
+    def postgresql_password():
+        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(POSTGRESQL_CLIENT, {}).get('server_password')
+        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(POSTGRESQL_SERVER, {}).get('postgres_password')
+
+    def postgresql_ip_address():
+        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
+            return config.get(MANAGER, {}).get('private_ip')
+        return 'localhost'
+
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'username': config[POSTGRESQL_CLIENT]['server_username']})
+                {'username': postgresql_username()})
         if ('password' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'password': config[POSTGRESQL_CLIENT]['server_password']})
-    if ('ca_cert_path' not in config[PROMETHEUS] or
-            not config[PROMETHEUS]['ca_cert_path']):
+                {'password': postgresql_password()})
+        if ('ip_address' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
+                not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'ip_address': postgresql_ip_address()})
+    if ('ca_cert_path' not in config.get(PROMETHEUS, {}) or
+            not config.get(PROMETHEUS, {}).get('ca_cert_path')):
         config[PROMETHEUS].update(
-            {'ca_cert_path': config[CONSTANTS]['ca_cert_path']})
+            {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
 
 def _deploy_prometheus_configuration():

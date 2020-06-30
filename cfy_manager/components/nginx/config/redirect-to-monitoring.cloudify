@@ -13,3 +13,39 @@ location ~ ^/monitoring {
     gzip_min_length 1000;
     gzip_proxied any;
 }
+location /metrics/node {
+    rewrite            /metrics/node(.*)  /metrics$1  break;
+
+    proxy_pass         http://cloudify-monitoring-node;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+}{% if 'database_service' in services_to_install %}
+location /metrics/postgres {
+    rewrite            /metrics/postgres(.*)  /metrics$1  break;
+
+    proxy_pass         http://cloudify-monitoring-postgres;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+}{% endif %}{% if 'queue_service' in services_to_install %}
+location /metrics/rabbitmq {
+    rewrite            /metrics/rabbitmq(.*)  /metrics$1  break;
+
+    proxy_pass         http://cloudify-monitoring-rabbitmq;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+}{% endif %}

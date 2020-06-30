@@ -34,4 +34,6 @@ queue_cluster = []
 prometheus = [
     'prometheus', 'node_exporter', 'blackbox_exporter', 'postgres_exporter',
 ]
-prometheus_cluster = []
+prometheus_cluster = [
+    'nginx',
+]
