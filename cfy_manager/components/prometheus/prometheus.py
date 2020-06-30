@@ -22,6 +22,8 @@ from ..components_constants import (
     CONFIG,
     CONSTANTS,
     SERVICES_TO_INSTALL,
+    ENABLE_REMOTE_CONNECTIONS,
+    PRIVATE_IP,
 )
 from ..service_names import (
     MANAGER,
@@ -193,8 +195,8 @@ def _update_config():
             return config.get(POSTGRESQL_SERVER, {}).get('postgres_password')
 
     def postgresql_ip_address():
-        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(MANAGER, {}).get('private_ip')
+        if config.get(POSTGRESQL_SERVER, {}).get(ENABLE_REMOTE_CONNECTIONS):
+            return config.get(MANAGER, {}).get(PRIVATE_IP)
         return 'localhost'
 
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
