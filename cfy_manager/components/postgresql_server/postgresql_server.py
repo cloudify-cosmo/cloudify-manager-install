@@ -464,7 +464,6 @@ class PostgresqlServer(BaseComponent):
                 src_dir='postgresql_server',
                 append_prefix=False,
                 render=False,
-                config_path='config/supervisord'
             )
         else:
             service.configure(
