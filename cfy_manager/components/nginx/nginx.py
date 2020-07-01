@@ -34,7 +34,11 @@ from ...logger import get_logger
 from ...utils import (
     common,
     certificates,
-    service
+    service,
+)
+from ..components_constants import (
+    CONFIG,
+    SCRIPTS,
 )
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
@@ -248,7 +252,7 @@ class Nginx(BaseComponent):
 
     def _configure_wait_on_restart_wrapper_service(self):
         # Deploy the executable script to /opt/cloudify
-        files.deploy(
+        deploy(
             join(
                 SCRIPTS_PATH,
                 'wait_on_restart.sh'
