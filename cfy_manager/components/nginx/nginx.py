@@ -19,6 +19,7 @@ from os.path import join, exists
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
+    SCRIPTS,
     PRIVATE_IP,
     PUBLIC_IP,
     SSL_INPUTS,
@@ -35,10 +36,6 @@ from ...utils import (
     common,
     certificates,
     service,
-)
-from ..components_constants import (
-    CONFIG,
-    SCRIPTS,
 )
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
