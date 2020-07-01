@@ -35,9 +35,9 @@ scrape_configs:
       module: [http_200]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
-          - http://localhost:3000/  # Cloudify composer
+          - http://127.0.0.1:3000/  # Cloudify composer
           - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
-          - http://localhost:8088/  # Cloudify stage
+          - http://127.0.0.1:8088/  # Cloudify stage
           - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
           - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify external
           - https://{{ manager.private_ip }}:53333/ # Cloudify internal
@@ -47,15 +47,15 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+        replacement: 127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
   - job_name: 'http_400'
     metrics_path: /probe
     params:
       module: [http_400]  # Look for a HTTP 400 respose
     static_configs:
       - targets:
-          - http://localhost:8100/  # Cloudify rest service
-          - http://localhost:53229/  # Cloudify resources service
+          - http://127.0.0.1:8100/  # Cloudify rest service
+          - http://127.0.0.1:53229/  # Cloudify resources service
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -74,7 +74,6 @@ scrape_configs:
     params:
       'match[]':
         - '{job="rabbitmq"}'
-        # - '{__name__=~"job:.*"}'
     static_configs:
       - targets:
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}
@@ -92,7 +91,6 @@ scrape_configs:
     params:
       'match[]':
         - '{job="postgresql"}'
-        # - '{__name__=~"job:.*"}'
     static_configs:
       - targets:
 {% for host, postgres in postgresql_server.cluster.nodes.items() %}
