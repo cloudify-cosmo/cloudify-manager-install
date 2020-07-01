@@ -81,7 +81,7 @@ scrape_configs:
 {% endfor %}
 {% endif %}
 {% if postgresql_server.cluster.nodes|length > 0 %}
-  - job_name: 'federate_postgres'
+  - job_name: 'federate_postgresql'
     scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
