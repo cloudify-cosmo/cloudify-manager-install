@@ -25,7 +25,6 @@ from ..components_constants import (
     SECURITY,
     ADMIN_USERNAME,
     ADMIN_PASSWORD,
-    PREMIUM_EDITION,
     PROVIDER_CONTEXT,
     SERVICES_TO_INSTALL,
 )

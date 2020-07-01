@@ -23,10 +23,6 @@ manager:
   #
   ######################################################################################
 
-  # if "community", premium components won't be installed; if "premium",
-  # they will be (or throw an error if missing)
-  premium_edition: set_by_installer_builder
-
   # Sets whether the first time the manager's VM is booted from a Cloudify manager image
   # its private IP will be propagated to all relevant configuration files.
   set_manager_ip_on_boot: false
