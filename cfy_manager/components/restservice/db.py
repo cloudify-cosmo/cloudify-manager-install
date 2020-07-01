@@ -44,8 +44,9 @@ from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError
 
-from ...utils.files import temp_copy
 from ...utils import common, db as utils_db
+from ...utils.install import is_premium_installed
+from ...utils.files import temp_copy
 from ...utils.scripts import run_script_on_manager_venv
 
 logger = get_logger('DB')
@@ -118,7 +119,7 @@ def _create_populate_db_args_dict():
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
-        'premium': config[MANAGER][PREMIUM_EDITION],
+        'premium': 'premium' if is_premium_installed() else 'community',
         'rabbitmq_brokers': _create_rabbitmq_info(),
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info()
