@@ -48,13 +48,13 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: 127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
-  - job_name: 'http_400'
+  - job_name: 'http_40x'
     metrics_path: /probe
     params:
-      module: [http_400]  # Look for a HTTP 400 respose
+      module: [http_40x]  # Look for a HTTP 400 respose
     static_configs:
       - targets:
-          - http://127.0.0.1:8100/  # Cloudify rest service
+          - http://127.0.0.1:8100/api/v3.1/status  # Cloudify rest service
           - http://127.0.0.1:53229/  # Cloudify resources service
     relabel_configs:
       - source_labels: [__address__]
