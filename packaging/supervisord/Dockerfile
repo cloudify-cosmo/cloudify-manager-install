@@ -22,6 +22,9 @@ EXPOSE 80 443 5671 53333
 COPY $rpm_file /tmp/cloudify-manager-install.rpm
 COPY $config /etc/cloudify/config.yaml
 
+COPY starter.sh /opt/cloudify/
+RUN chmod +x /opt/cloudify/starter.sh
+
 RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager-install.rpm
 RUN cfy_manager install --only-install --verbose
 RUN chmod a+wx /var/run
@@ -29,4 +32,4 @@ RUN chmod 755 /etc/cloudify
 RUN mkdir /etc/supervisord.d
 
 COPY supervisord.conf /etc/supervisord.conf
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+CMD ["/opt/cloudify/starter.sh"]
