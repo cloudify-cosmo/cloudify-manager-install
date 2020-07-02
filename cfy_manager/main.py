@@ -970,28 +970,13 @@ def _guess_private_ip():
     return inets[0]
 
 
-def _handle_ip_manager_setter_for_supervisord(timeout=180):
+def _handle_ip_manager_setter_for_supervisord():
     if is_installed(MANAGER_SERVICE) and \
             config[MANAGER]['set_manager_ip_on_boot']:
-        command = [
-            'grep',
-            'Cloudify Manager services successfully started!',
-            '/var/log/cloudify/manager/cfy_manager.log'
-        ]
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            process.communicate()
-            if not process.returncode:
-                break
-
-        subprocess.check_call([
-            '/opt/cloudify/manager-ip-setter/start_manager_ip_setter.sh'
-        ])
+        service.start('manager-ip-starter')
+        is_active = service.is_active('manager-ip-starter')
+        while is_active != 'exited':
+            is_active = service.is_active('manager-ip-starter')
 
 
 @argh.decorators.named('image-starter')

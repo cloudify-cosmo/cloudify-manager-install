@@ -28,14 +28,14 @@ from ... import constants
 from ..components_constants import SCRIPTS
 
 MANAGER_IP_SETTER_DIR = join('/opt/cloudify', MANAGER_IP_SETTER)
-MANAGER_IP_SETTER_SCRIPT = join(
+MANAGER_IP_STARTER_SCRIPT = join(
     MANAGER_IP_SETTER_DIR,
-    'start_manager_ip_setter.sh'
+    'manager_ip_starter.sh'
 )
-SRC_MANAGER_IP_SETTER = 'manager_ip_setter'
+MANAGER_IP_STARTER = 'manager_ip_starter'
 SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
-    SRC_MANAGER_IP_SETTER,
+    MANAGER_IP_STARTER,
     SCRIPTS,
 )
 
@@ -43,22 +43,23 @@ logger = get_logger(MANAGER_IP_SETTER)
 
 
 class ManagerIpSetter(BaseComponent):
-    def _configure_manager_ip_setter_wrapper_script(self):
+    def _configure_manager_ip_starter_wrapper_script(self):
         files.deploy(
             join(
                 SCRIPTS_PATH,
-                'start_manager_ip_setter.sh'
+                'manager_ip_starter.sh'
             ),
             MANAGER_IP_SETTER_DIR,
             render=False
         )
-        common.chmod('755', MANAGER_IP_SETTER_SCRIPT)
+        common.chmod('755', MANAGER_IP_STARTER_SCRIPT)
 
     def configure(self):
         logger.notice('Configuring Manager IP Setter...')
         if config[MANAGER]['set_manager_ip_on_boot']:
             if self.service_type == 'supervisord':
-                self._configure_manager_ip_setter_wrapper_script()
+                self._configure_manager_ip_starter_wrapper_script()
+                service.configure(MANAGER_IP_STARTER)
             service.configure(MANAGER_IP_SETTER)
         else:
             logger.info('Set manager ip on boot is disabled.')
