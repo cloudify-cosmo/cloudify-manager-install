@@ -930,7 +930,7 @@ def _get_starter_service_log(offset, length):
         logger.debug('No more logs to show for {0}'.format(STARTER_SERVICE))
 
 
-def _wait_supervisord_starter(timeout):
+def _wait_supervisord_starter(timeout=180):
     deadline = time.time() + timeout
     offset = 0
     while time.time() < deadline:
@@ -970,6 +970,15 @@ def _guess_private_ip():
     return inets[0]
 
 
+def _handle_ip_manager_setter_for_supervisord():
+    if is_installed(MANAGER_SERVICE) and \
+            config[MANAGER]['set_manager_ip_on_boot']:
+        _wait_supervisord_starter()
+        subprocess.check_call([
+            '/opt/cloudify/manager-ip-setter/start_manager_ip_setter.sh'
+        ])
+
+
 @argh.decorators.named('image-starter')
 def image_starter(verbose=False):
     """Guess the IPs if needed and run cfy_manager configure + start
@@ -991,6 +1000,13 @@ def image_starter(verbose=False):
         args += ['--public-ip', private_ip]
     subprocess.check_call(command + ['configure'] + args)
     subprocess.check_call(command + ['start'] + args)
+    service_type = service._get_service_type()
+    # In case for supervisord handle ip manager setter in case on the
+    # following conditions:
+    # 1. "manager_service" is existed
+    # 2. "set_manager_ip_on_boot" is enabled on the manager side
+    if service_type == 'supervisord':
+        _handle_ip_manager_setter_for_supervisord()
 
 
 def main():
