@@ -25,20 +25,17 @@ from ...utils import (
     files
 )
 from ... import constants
-from ..components_constants import (
-    CONFIG,
-    SCRIPTS
-)
+from ..components_constants import SCRIPTS
 
 MANAGER_IP_SETTER_DIR = join('/opt/cloudify', MANAGER_IP_SETTER)
 MANAGER_IP_SETTER_SCRIPT = join(
     MANAGER_IP_SETTER_DIR,
     'start_manager_ip_setter.sh'
 )
-CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER_IP_SETTER, CONFIG)
+SRC_MANAGER_IP_SETTER = 'manager_ip_setter'
 SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
-    MANAGER_IP_SETTER,
+    SRC_MANAGER_IP_SETTER,
     SCRIPTS,
 )
 
