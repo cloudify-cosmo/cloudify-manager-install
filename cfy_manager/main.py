@@ -43,7 +43,6 @@ from .components.components_constants import (
     ADMIN_PASSWORD,
     SERVICES_TO_INSTALL,
     UNCONFIGURED_INSTALL,
-    PREMIUM_EDITION
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
@@ -685,27 +684,29 @@ def sanity_check(verbose=False, private_ip=None):
 
 def _get_packages():
     """Yum packages to install/uninstall, based on the current config"""
-    premium = config[MANAGER][PREMIUM_EDITION] == 'premium'
     packages = []
+    # Adding premium components on all, even if we're on community, because
+    # yum will return 0 (success) if any packages install successfully even if
+    # some of the specified packages don't exist.
     if is_installed(MANAGER_SERVICE):
         packages += sources.manager
-        if premium:
-            packages += sources.manager_cluster + sources.manager_premium
+        # Premium components
+        packages += sources.manager_cluster + sources.manager_premium
 
     if is_installed(DATABASE_SERVICE):
         packages += sources.db
-        if premium:
-            packages += sources.db_cluster
+        # Premium components
+        packages += sources.db_cluster
 
     if is_installed(QUEUE_SERVICE):
         packages += sources.queue
-        if premium:
-            packages += sources.queue_cluster
+        # Premium components
+        packages += sources.queue_cluster
 
     if is_installed(MONITORING_SERVICE):
         packages += sources.prometheus
-        if premium:
-            packages += sources.prometheus_cluster
+        # Premium components
+        packages += sources.prometheus_cluster
 
     return packages
 
