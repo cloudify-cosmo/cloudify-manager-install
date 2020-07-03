@@ -1,8 +1,7 @@
 # Prometheus self-check
 global:
   scrape_interval:     15s
-  evaluation_interval: 30s
-  # scrape_timeout is set to the global default (10s).
+  evaluation_interval: 15s
 
   external_labels:
     monitor: cloudify
@@ -10,6 +9,7 @@ global:
 # Rule files specifies a list of globs. Rules and alerts are read from
 # all matching files.
 rule_files:
+  - rules/postgresql.yml
   - alerts/postgresql.yml
   - alerts/rabbitmq.yml
   - alerts/manager.yml

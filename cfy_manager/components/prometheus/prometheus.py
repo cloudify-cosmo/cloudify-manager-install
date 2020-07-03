@@ -226,6 +226,12 @@ def _deploy_prometheus_configuration():
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_PATH)
     if MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL, []):
         return
+    # deploy rules configuration files
+    for file_name in ['postgresql.yml', ]:
+        dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'rules', file_name)
+        files.deploy(join(CONFIG_DIR, 'rules', file_name),
+                     dest_file_name)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
     # deploy alerts configuration files
     for file_name in ['postgresql.yml', 'rabbitmq.yml', 'manager.yml', ]:
         dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'alerts', file_name)
