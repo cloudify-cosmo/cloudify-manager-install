@@ -227,7 +227,7 @@ def _deploy_prometheus_configuration():
     if MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL, []):
         return
     # deploy rules configuration files
-    for file_name in ['postgresql.yml', ]:
+    for file_name in ['postgresql.yml', 'rabbitmq.yml', ]:
         dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'rules', file_name)
         files.deploy(join(CONFIG_DIR, 'rules', file_name),
                      dest_file_name)

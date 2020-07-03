@@ -19,26 +19,33 @@ groups:
 {% endif %}
 {% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}
-      - alert: RabbitMQInClusterDown
+      - alert: RabbitMQDown
         expr: rabbitmq_identity_info{instance="{{ rabbitmq.networks.default }}:53333", job="federate_rabbitmq"} != 1
         for: 5s
         labels:
-          severity: critical
+          severity: warning
         annotations:
-          summary: One of clustered RabbitMQ message brokers is down
+          summary: RabbitMQ message broker is down
       - alert: RabbitMQPluginDown
         expr: up{instance="{{ rabbitmq.networks.default }}:53333", job="federate_rabbitmq"} != 1
         for: 5s
         labels:
-          severity: critical
+          severity: warning
         annotations:
           summary: RabbitMQ Prometheus plugin is down
 {% endfor %}
       - alert: RabbitMQClusterDegraded
-        expr: {% for host, rabbitmq in rabbitmq.cluster_members.items() %}up{instance="{{ rabbitmq.networks.default }}:53333", job="federate_rabbitmq"} != 1 or rabbitmq_identity_info{instance="{{ rabbitmq.networks.default }}:53333", job="federate_rabbitmq"} != 1{% if not loop.last %} or {% endif %}{% endfor %}
+        expr: job:postgresql_in_cluster:sum < {{ rabbitmq.cluster_members|length }}
         for: 5s
         labels:
           severity: critical
         annotations:
-          summary: PostgreSQL database cluster is degraded
+          summary: RabbitMQ cluster is degraded
+      - alert: RabbitMQClusterDown
+        expr: job:postgresql_in_cluster:sum < {{ (rabbitmq.cluster_members|length / 2)|round(0, 'ceil') }}
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: RabbitMQ cluster is down
 {% endif %}
