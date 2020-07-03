@@ -48,4 +48,16 @@ location /metrics/rabbitmq {
     proxy_set_header   X-Server-Port     $server_port;
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
+}{% endif %}{% if 'manager_service' in services_to_install %}
+location /metrics/blackbox {
+    rewrite            /metrics/blackbox(.*)  /metrics$1  break;
+
+    proxy_pass         http://cloudify-monitoring-blackbox;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
 }{% endif %}
