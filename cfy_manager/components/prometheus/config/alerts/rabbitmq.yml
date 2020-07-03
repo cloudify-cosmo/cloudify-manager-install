@@ -35,14 +35,14 @@ groups:
           summary: RabbitMQ Prometheus plugin is down
 {% endfor %}
       - alert: RabbitMQClusterDegraded
-        expr: job:postgresql_in_cluster:sum < {{ rabbitmq.cluster_members|length }}
+        expr: job:rabbitmq_in_cluster:sum < {{ rabbitmq.cluster_members|length }}
         for: 5s
         labels:
           severity: critical
         annotations:
           summary: RabbitMQ cluster is degraded
       - alert: RabbitMQClusterDown
-        expr: job:postgresql_in_cluster:sum < {{ (rabbitmq.cluster_members|length / 2)|round(0, 'ceil') }}
+        expr: job:rabbitmq_in_cluster:sum < {{ (rabbitmq.cluster_members|length / 2)|round(0, 'ceil') }}
         for: 5s
         labels:
           severity: critical

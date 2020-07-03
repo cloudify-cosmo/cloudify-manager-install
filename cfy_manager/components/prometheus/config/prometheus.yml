@@ -10,6 +10,7 @@ global:
 # all matching files.
 rule_files:
   - rules/postgresql.yml
+  - rules/rabbitmq.yml
   - alerts/postgresql.yml
   - alerts/rabbitmq.yml
   - alerts/manager.yml
