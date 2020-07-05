@@ -59,7 +59,10 @@ class ManagerIpSetter(BaseComponent):
         if config[MANAGER]['set_manager_ip_on_boot']:
             if self.service_type == 'supervisord':
                 self._configure_manager_ip_starter_wrapper_script()
-                service.configure(MANAGER_IP_STARTER)
+                service.configure(
+                    MANAGER_IP_STARTER,
+                    src_dir='manager_ip_setter'
+                )
             service.configure(MANAGER_IP_SETTER)
         else:
             logger.info('Set manager ip on boot is disabled.')
