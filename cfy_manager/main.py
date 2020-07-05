@@ -77,7 +77,10 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, can_lookup_hostname, is_installed
+    run,
+    sudo,
+    can_lookup_hostname,
+    is_installed
 )
 from .utils.install import yum_install, yum_remove
 from .utils.files import (
@@ -732,6 +735,10 @@ def install(verbose=False,
     )
     logger.notice('Installing desired components...')
     set_globals(only_install=only_install)
+    service_type = service._get_service_type()
+    # This only relevant for restarting services on VM that use supervisord 
+    if service_type == 'supervisord':
+        sudo('systemctl enable cloudify-starter.service', ignore_failures=True)
     yum_install(_get_packages())
 
     components = _get_components()

@@ -42,6 +42,7 @@ ln -s %_venv/bin/cfy_manager %{buildroot}/usr/bin/cfy_manager
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
+cp ${RPM_SOURCE_DIR}/packaging/cloudify-starter.service %{buildroot}/usr/lib/systemd/system/
 
 %pre
 ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
