@@ -736,7 +736,6 @@ def install(verbose=False,
     logger.notice('Installing desired components...')
     set_globals(only_install=only_install)
     yum_install(_get_packages())
-
     components = _get_components()
     validate(components=components, only_install=only_install)
     validate_dependencies(components=components)
@@ -777,7 +776,6 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
-
     service_type = service._get_service_type()
     # This only relevant for restarting services on VM that use supervisord
     if service_type == 'supervisord':
