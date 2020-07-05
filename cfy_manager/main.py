@@ -975,8 +975,11 @@ def _handle_ip_manager_setter_for_supervisord():
             config[MANAGER]['set_manager_ip_on_boot']:
         service.start('manager-ip-starter')
         is_active = service.is_active('manager-ip-starter')
-        while is_active != 'exited':
+        while is_active == 'running':
             is_active = service.is_active('manager-ip-starter')
+
+        if is_active != 'exited':
+            raise BootstrapError('Unable to start manager-ip-starter on boot')
 
 
 @argh.decorators.named('image-starter')

@@ -21,6 +21,10 @@ while [ -z "$exited"]; do
         sleep 1
 done
 # Start services again
+
+echo "Starting All services"
+/usr/bin/supervisorctl -c /etc/supervisord.conf reread
+
 echo "Starting All services"
 /usr/bin/supervisorctl -c /etc/supervisord.conf start \
                         cloudify-mgmtworker \
