@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
-
 from ..base_component import BaseComponent
 from ..service_names import MANAGER, MANAGER_IP_SETTER
 from ...config import config
@@ -23,8 +21,6 @@ from ...utils import (
     common,
     service,
 )
-from ... import constants
-from ..components_constants import SCRIPTS
 
 logger = get_logger(MANAGER_IP_SETTER)
 
