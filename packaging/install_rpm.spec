@@ -39,6 +39,8 @@ cp -R ${RPM_SOURCE_DIR}/packaging/files/* %{buildroot}
 
 mv %_venv %{buildroot}%_venv
 ln -s %_venv/bin/cfy_manager %{buildroot}/usr/bin/cfy_manager
+ln -s %_venv/bin/supervisorctl %{buildroot}/usr/bin/supervisorctl
+ln -s %_venv/bin/supervisord %{buildroot}/usr/bin/supervisord
 
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
@@ -67,9 +69,14 @@ cfy_manager install
 ###########################################################################
 "
 
+
 %files
 /usr/bin/cfy_manager
 /opt/cloudify
 %attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
 /etc/yum.repos.d/Cloudify-Local.repo
 /usr/lib/systemd/system/cloudify-starter.service
+/usr/lib/systemd/system/supervisord.service
+/etc/supervisord.conf
+/usr/bin/supervisorctl
+/usr/bin/supervisord

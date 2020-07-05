@@ -79,6 +79,7 @@ from .utils.certificates import (
 from .utils.common import (
     run,
     sudo,
+    mkdir,
     can_lookup_hostname,
     is_installed
 )
@@ -714,6 +715,15 @@ def _get_packages():
     return packages
 
 
+def _configure_supervisord():
+    mkdir('/etc/supervisord.d')
+    # These services will be relevant for using supervisord on VM not on
+    # containers
+    sudo('systemctl enable cloudify-starter.service', ignore_failures=True)
+    sudo('systemctl enable supervisord.service', ignore_failures=True)
+    sudo('systemctl restart supervisord', ignore_failures=True)
+
+
 @argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
 @install_args
 def install(verbose=False,
@@ -779,7 +789,7 @@ def configure(verbose=False,
     service_type = service._get_service_type()
     # This only relevant for restarting services on VM that use supervisord
     if service_type == 'supervisord':
-        sudo('systemctl enable cloudify-starter.service', ignore_failures=True)
+        _configure_supervisord()
 
     if clean_db:
         for component in components:
@@ -979,6 +989,7 @@ def _guess_private_ip():
 def _handle_ip_manager_setter_for_supervisord():
     if is_installed(MANAGER_SERVICE) and \
             config[MANAGER]['set_manager_ip_on_boot']:
+        logger.notice('Starting manager-ip-setter...')
         service.start('manager-ip-setter')
         is_active = service.is_active('manager-ip-setter')
         while is_active == 'running':
@@ -986,6 +997,8 @@ def _handle_ip_manager_setter_for_supervisord():
 
         if is_active != 'exited':
             raise BootstrapError('Unable to start manager-ip-setter on boot')
+
+        logger.notice('manager-ip-setter successfully started')
 
 
 @argh.decorators.named('image-starter')
