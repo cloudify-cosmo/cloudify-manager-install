@@ -973,13 +973,13 @@ def _guess_private_ip():
 def _handle_ip_manager_setter_for_supervisord():
     if is_installed(MANAGER_SERVICE) and \
             config[MANAGER]['set_manager_ip_on_boot']:
-        service.start('manager-ip-starter')
-        is_active = service.is_active('manager-ip-starter')
+        service.start('manager-ip-setter')
+        is_active = service.is_active('manager-ip-setter')
         while is_active == 'running':
-            is_active = service.is_active('manager-ip-starter')
+            is_active = service.is_active('manager-ip-setter')
 
         if is_active != 'exited':
-            raise BootstrapError('Unable to start manager-ip-starter on boot')
+            raise BootstrapError('Unable to start manager-ip-setter on boot')
 
 
 @argh.decorators.named('image-starter')
