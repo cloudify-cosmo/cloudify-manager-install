@@ -35,7 +35,7 @@ MANAGER_IP_STARTER_SCRIPT = join(
 MANAGER_IP_STARTER = 'manager_ip_starter'
 SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
-    MANAGER_IP_STARTER,
+    MANAGER_IP_SETTER,
     SCRIPTS,
 )
 
