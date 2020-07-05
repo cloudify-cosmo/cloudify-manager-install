@@ -32,7 +32,7 @@ MANAGER_IP_STARTER_SCRIPT = join(
     MANAGER_IP_SETTER_DIR,
     'manager_ip_starter.sh'
 )
-MANAGER_IP_STARTER = 'manager_ip_starter'
+MANAGER_IP_STARTER = 'manager-ip-starter'
 SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
     'manager_ip_setter',
