@@ -735,10 +735,6 @@ def install(verbose=False,
     )
     logger.notice('Installing desired components...')
     set_globals(only_install=only_install)
-    service_type = service._get_service_type()
-    # This only relevant for restarting services on VM that use supervisord 
-    if service_type == 'supervisord':
-        sudo('systemctl enable cloudify-starter.service', ignore_failures=True)
     yum_install(_get_packages())
 
     components = _get_components()
@@ -781,6 +777,11 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
+
+    service_type = service._get_service_type()
+    # This only relevant for restarting services on VM that use supervisord
+    if service_type == 'supervisord':
+        sudo('systemctl enable cloudify-starter.service', ignore_failures=True)
 
     if clean_db:
         for component in components:

@@ -42,7 +42,7 @@ ln -s %_venv/bin/cfy_manager %{buildroot}/usr/bin/cfy_manager
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
-cp ${RPM_SOURCE_DIR}/packaging/cloudify-starter.service %{buildroot}/usr/lib/systemd/system/
+cp -R ${RPM_SOURCE_DIR}/packaging/files/* %{buildroot}
 
 %pre
 ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
@@ -71,3 +71,4 @@ cfy_manager install
 /opt/cloudify
 %attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
 /etc/yum.repos.d/Cloudify-Local.repo
+/usr/lib/systemd/system/cloudify-starter.service
