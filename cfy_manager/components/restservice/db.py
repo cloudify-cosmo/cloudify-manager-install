@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import time
 import uuid
 from os.path import join
@@ -243,7 +244,12 @@ def insert_manager(configs):
             args['manager']['ca_cert'] = f.read()
     except IOError:
         args['manager']['ca_cert'] = None
-    _run_script('create_tables_and_add_defaults.py', args, configs)
+    out = _run_script('create_tables_and_add_defaults.py', args, configs)
+    if out:
+        out_dict = json.loads(out)
+        if 'cluster_nodes_config' in out_dict:
+            return (out_dict.get('cluster_nodes_config'),
+                    out_dict.get('rabbitmq_ca_cert_path'),)
 
 
 def create_amqp_resources(configs=None):

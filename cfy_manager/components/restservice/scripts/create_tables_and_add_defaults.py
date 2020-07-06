@@ -17,6 +17,7 @@
 from __future__ import print_function
 
 import os
+from os.path import isfile
 import sys
 import json
 import atexit
@@ -146,6 +147,35 @@ def _insert_manager(config):
     sm.put(inst)
 
 
+def _prepare_config_for_monitoring():
+    sm = get_storage_manager()
+    cfg = {}
+    rabbitmq_nodes = sm.list(models.RabbitMQBroker)
+    if len(rabbitmq_nodes) > 0:
+        tmp_ca_cert_path = rabbitmq_nodes[0].write_ca_cert()
+        if isfile(tmp_ca_cert_path):
+            RETURN_DICT['rabbitmq_ca_cert_path'] = tmp_ca_cert_path
+        cfg['rabbitmq'] = {
+            'cluster_members': {}
+        }
+        for node in rabbitmq_nodes:
+            cfg['rabbitmq']['cluster_members'][node.name] = {
+                'networks': {'default': node.private_ip}
+            }
+    postgresql_server_nodes = sm.list(models.DBNodes)
+    if len(postgresql_server_nodes) > 0:
+        cfg['postgresql_server'] = {'cluster': {'nodes': {}}}
+        for node in postgresql_server_nodes:
+            cfg['postgresql_server']['cluster']['nodes'][node.name] = {
+                'ip': node.private_ip
+            }
+    if not cfg:
+        return
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as fp:
+        json.dump(cfg, fp)
+        RETURN_DICT['cluster_nodes_config'] = fp.name
+
+
 def _insert_cert(cert, name):
     sm = get_storage_manager()
     inst = models.Certificate(
@@ -257,6 +287,7 @@ if __name__ == '__main__':
             script_config['rabbitmq_brokers'], rabbitmq_ca_id)
     if script_config.get('manager'):
         _insert_manager(script_config['manager'])
+        _prepare_config_for_monitoring()
     if script_config.get('provider_context'):
         _add_provider_context(script_config['provider_context'])
     if script_config.get('db_nodes'):

@@ -15,7 +15,9 @@
 
 
 from os import sep
-from os.path import join
+from os.path import isfile, join
+
+import json
 
 from ..base_component import BaseComponent
 from ..components_constants import (
@@ -56,6 +58,7 @@ SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
+CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
 
 AVAILABLE_EXPORTERS = [
     {
@@ -130,6 +133,11 @@ class Prometheus(BaseComponent):
         logger.notice('Successfully removed Prometheus and exporters files')
 
     def start(self):
+        if isfile(CLUSTER_DETAILS_PATH):
+            logger.notice(
+                'File {0} exists will update Prometheus config...'.format(
+                    CLUSTER_DETAILS_PATH))
+            _deploy_configuration()
         logger.notice('Starting Prometheus and exporters...')
         service.restart(PROMETHEUS, append_prefix=False,
                         ignore_failure=True)
@@ -200,6 +208,11 @@ def _update_config():
             return config.get(MANAGER, {}).get(PRIVATE_IP)
         return 'localhost'
 
+    def read_from_json_file(fn):
+        with open(fn, 'r') as fp:
+            cfg = json.load(fp)
+        return cfg
+
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
@@ -217,6 +230,10 @@ def _update_config():
             not config.get(PROMETHEUS, {}).get('ca_cert_path')):
         config[PROMETHEUS].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
+
+    if isfile(CLUSTER_DETAILS_PATH):
+        config.update(read_from_json_file(CLUSTER_DETAILS_PATH))
+        files.remove(CLUSTER_DETAILS_PATH, ignore_failure=True)
 
 
 def _deploy_prometheus_configuration():
