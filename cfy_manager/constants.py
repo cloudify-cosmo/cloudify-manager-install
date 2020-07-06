@@ -24,7 +24,6 @@ REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
-REST_PID_DIR = '/run/cloudify-restservice'
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'

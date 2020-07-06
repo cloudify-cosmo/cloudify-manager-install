@@ -221,6 +221,7 @@ class Supervisord(object):
         )
 
     def start(self, service_name, ignore_failure=False, options=None):
+        self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'start',
             service_name,
@@ -236,6 +237,7 @@ class Supervisord(object):
         )
 
     def restart(self, service_name, ignore_failure=False):
+        self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'restart',
             service_name,
@@ -293,8 +295,6 @@ class Supervisord(object):
             deploy(srv_src, dst, render=render,
                    additional_render_context=external_configure_params)
             chown(user, group, dst)
-
-        self.enable(sid)
 
 
 def _get_service_type():
