@@ -85,7 +85,7 @@ scrape_configs:
     honor_labels: true
     scheme: 'https'
     tls_config:
-      ca_file: {{ postgresql_server.ca_path }}
+      ca_file: {{ postgresql_client.ca_path }}
     metrics_path: /metrics/postgres
     params:
       'match[]':
