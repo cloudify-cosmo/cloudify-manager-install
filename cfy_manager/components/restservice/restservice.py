@@ -201,15 +201,25 @@ class RestService(BaseComponent):
 
     def _configure_pid_restservice(self):
         # Create restservice under /run
-        pid_dir = constants.REST_PID_DIR
-        if not os.path.exists(pid_dir):
-            common.mkdir(pid_dir)
+        if self.service_type == 'supervisord':
+            deploy(
+                os.path.join(
+                    SCRIPTS_PATH,
+                    'configure-rest-runtime-dir.sh'
+                ),
+                '/opt/cloudify/configure-rest-runtime-dir.sh'
+            )
             common.chown(
                 constants.CLOUDIFY_USER,
                 constants.CLOUDIFY_GROUP,
-                pid_dir
+                '/opt/cloudify/configure-rest-runtime-dir.sh'
             )
-            common.chmod('755', pid_dir)
+            common.chmod('755', '/opt/cloudify/configure-rest-runtime-dir.sh')
+            service.configure(
+                'configure-rest-runtime-dir',
+                src_dir='restservice',
+                append_prefix=False
+            )
 
     def _configure_restservice(self):
         self._generate_flask_security_config()

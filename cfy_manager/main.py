@@ -719,7 +719,6 @@ def _configure_supervisord():
     mkdir('/etc/supervisord.d')
     # These services will be relevant for using supervisord on VM not on
     # containers
-    sudo('systemctl enable cloudify-starter.service', ignore_failures=True)
     sudo('systemctl enable supervisord.service', ignore_failures=True)
     sudo('systemctl restart supervisord', ignore_failures=True)
 
@@ -986,21 +985,6 @@ def _guess_private_ip():
     return inets[0]
 
 
-def _handle_ip_manager_setter_for_supervisord():
-    if is_installed(MANAGER_SERVICE) and \
-            config[MANAGER]['set_manager_ip_on_boot']:
-        logger.notice('Starting manager-ip-setter...')
-        service.start('manager-ip-setter')
-        is_active = service.is_active('manager-ip-setter')
-        while is_active == 'running':
-            is_active = service.is_active('manager-ip-setter')
-
-        if is_active != 'exited':
-            raise BootstrapError('Unable to start manager-ip-setter on boot')
-
-        logger.notice('manager-ip-setter successfully started')
-
-
 @argh.decorators.named('image-starter')
 def image_starter(verbose=False):
     """Guess the IPs if needed and run cfy_manager configure + start
@@ -1022,13 +1006,6 @@ def image_starter(verbose=False):
         args += ['--public-ip', private_ip]
     subprocess.check_call(command + ['configure'] + args)
     subprocess.check_call(command + ['start'] + args)
-    service_type = service._get_service_type()
-    # In case for supervisord handle ip manager setter in case on the
-    # following conditions:
-    # 1. "manager_service" is existed
-    # 2. "set_manager_ip_on_boot" is enabled on the manager side
-    if service_type == 'supervisord':
-        _handle_ip_manager_setter_for_supervisord()
 
 
 def main():
