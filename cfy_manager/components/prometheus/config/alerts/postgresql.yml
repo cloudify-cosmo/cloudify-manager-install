@@ -1,3 +1,5 @@
+# Those alerts are automatically generated during configuration phase of Cloudify installation.
+# Keep that in mind when attempting to alter them.
 groups:
   - name: postgresql
     rules:
@@ -34,6 +36,7 @@ groups:
         annotations:
           summary: Postgres Exporter is down
 {% endfor %}
+      # Below threshold values were automatically calculated during Cloudify configuration.
       - alert: PostgreSQLClusterDegraded
         expr: job:postgresql_in_cluster:sum < {{ postgresql_server.cluster.nodes|length }}
         for: 5s
