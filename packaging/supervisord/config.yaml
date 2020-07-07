@@ -17,6 +17,7 @@ services_to_install:
 - database_service
 - queue_service
 - manager_service
+- monitoring_service
 
 save_config: false
 service_management: supervisord
