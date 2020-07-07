@@ -19,6 +19,7 @@ from os.path import join, exists
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
+    SCRIPTS,
     PRIVATE_IP,
     PUBLIC_IP,
     SSL_INPUTS,
@@ -43,7 +44,8 @@ LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
 SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
-    NGINX
+    NGINX,
+    SCRIPTS
 )
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 
