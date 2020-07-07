@@ -199,7 +199,7 @@ class RestService(BaseComponent):
             constants.MANAGER_RESOURCES_HOME
         )
 
-    def _configure_pid_restservice(self):
+    def _configure_pid_dir_restservice(self):
         # Create restservice under /run
         if self.service_type == 'supervisord':
             deploy(
@@ -226,7 +226,7 @@ class RestService(BaseComponent):
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
-        self._configure_pid_restservice()
+        self._configure_pid_dir_restservice()
 
     def _verify_restservice_alive(self):
         logger.info('Verifying Rest service is up...')
