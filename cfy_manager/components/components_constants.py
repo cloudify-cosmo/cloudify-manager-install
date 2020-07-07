@@ -35,8 +35,6 @@ SECURITY = 'security'
 ADMIN_PASSWORD = 'admin_password'
 ADMIN_USERNAME = 'admin_username'
 
-PREMIUM_EDITION = 'premium_edition'
-
 ENABLE_REMOTE_CONNECTIONS = 'enable_remote_connections'
 POSTGRES_PASSWORD = 'postgres_password'
 SERVER_PASSWORD = 'server_password'
