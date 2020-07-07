@@ -3,7 +3,6 @@ manager:
   public_ip: '127.0.0.1'
   hostname: 'localhost'
   cli_local_profile_host_name: 'localhost'
-  premium_edition: premium
   set_manager_ip_on_boot: false
   security:
     admin_password: 'admin'
@@ -18,6 +17,7 @@ services_to_install:
 - database_service
 - queue_service
 - manager_service
+- monitoring_service
 
 save_config: false
 service_management: supervisord

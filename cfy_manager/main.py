@@ -77,7 +77,11 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, can_lookup_hostname, is_installed
+    run,
+    sudo,
+    mkdir,
+    can_lookup_hostname,
+    is_installed
 )
 from .utils.install import yum_install, yum_remove
 from .utils.files import (
@@ -711,6 +715,14 @@ def _get_packages():
     return packages
 
 
+def _configure_supervisord():
+    mkdir('/etc/supervisord.d')
+    # These services will be relevant for using supervisord on VM not on
+    # containers
+    sudo('systemctl enable supervisord.service', ignore_failures=True)
+    sudo('systemctl restart supervisord', ignore_failures=True)
+
+
 @argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
 @install_args
 def install(verbose=False,
@@ -774,7 +786,10 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
-
+    service_type = service._get_service_type()
+    # This only relevant for restarting services on VM that use supervisord
+    if service_type == 'supervisord':
+        _configure_supervisord()
     if clean_db:
         for component in components:
             component.stop()
