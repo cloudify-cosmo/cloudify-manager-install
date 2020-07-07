@@ -519,7 +519,7 @@ class RestService(BaseComponent):
 
         # Make sure to call "configure-rest-runtime-dir" service
         if self.service_type == 'supervisord':
-            service.restart('configure-rest-runtime-dir')
+            service.restart('configure-rest-runtime-dir', append_prefix=False)
         service.restart(RESTSERVICE)
         if config[CLUSTER_JOIN]:
             logger.info('Extra node in cluster, will verify rest-service '
