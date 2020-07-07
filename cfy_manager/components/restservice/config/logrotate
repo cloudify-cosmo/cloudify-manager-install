@@ -9,6 +9,6 @@
         notifempty
         sharedscripts
         postrotate
-                [ -f /run/cloudify-restservice/pid ] && kill -USR1 $(cat /run/cloudify-restservice/pid)
+                [ -f /run/restservice.pid ] && kill -USR1 $(cat /run/restservice.pid)
         endscript
 }
