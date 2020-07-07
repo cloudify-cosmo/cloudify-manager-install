@@ -80,7 +80,8 @@ class SystemD(object):
                   config_path='config',
                   src_dir=None,
                   append_prefix=True,
-                  render=True):
+                  render=True,
+                  ignore_failure=False):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
@@ -113,7 +114,7 @@ class SystemD(object):
                    additional_render_context=external_configure_params)
 
         logger.debug('Enabling systemd .service...')
-        self.enable('{0}.service'.format(sid))
+        self.enable('{0}.service'.format(sid), ignore_failure=ignore_failure)
 
     def remove(self, service_name, service_file=True):
         """Stop and disable the service, and then delete its data

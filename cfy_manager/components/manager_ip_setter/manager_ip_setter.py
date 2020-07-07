@@ -30,7 +30,16 @@ class ManagerIpSetter(BaseComponent):
     def configure(self):
         logger.notice('Configuring Manager IP Setter...')
         if config[MANAGER]['set_manager_ip_on_boot']:
-            service.configure(MANAGER_IP_SETTER)
+            # Always use systemd as manager-ip-setter.sh invoked on booting
+            # image
+            # Only relevant for VMs
+            service.SystemD().configure(
+                MANAGER_IP_SETTER,
+                ignore_failure=True,
+                external_configure_params={
+                    'service_type': self.service_type
+                }
+            )
         else:
             logger.info('Set manager ip on boot is disabled.')
         logger.notice('Manager IP Setter successfully configured')
