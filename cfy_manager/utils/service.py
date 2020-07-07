@@ -230,6 +230,7 @@ class Supervisord(object):
         )
 
     def stop(self, service_name, ignore_failure=False):
+        self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'stop',
             service_name,
