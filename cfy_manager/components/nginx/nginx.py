@@ -43,8 +43,7 @@ LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
 SCRIPTS_PATH = join(
     constants.COMPONENTS_DIR,
-    NGINX,
-    SCRIPTS,
+    NGINX
 )
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 
