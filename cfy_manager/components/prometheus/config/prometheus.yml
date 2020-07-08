@@ -1,54 +1,60 @@
 # Prometheus self-check
 global:
   scrape_interval:     15s
-  evaluation_interval: 30s
-  # scrape_timeout is set to the global default (10s).
+  evaluation_interval: 15s
 
   external_labels:
     monitor: cloudify
-
+{% if 'manager_service' in services_to_install %}
+# Rule files specifies a list of globs. Rules and alerts are read from
+# all matching files.
+rule_files:
+  - rules/postgresql.yml
+  - rules/rabbitmq.yml
+  - alerts/postgresql.yml
+  - alerts/rabbitmq.yml
+  - alerts/manager.yml
+{% endif %}
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
   - job_name: 'prometheus'
     scheme: 'https'
-    tls_config:
-      ca_file: {{ prometheus.ca_cert_path }}
     metrics_path: /monitoring/metrics
     static_configs:
-      - targets: ['{{ manager.private_ip }}:53333']
+      - targets: ['127.0.0.1:{{ prometheus.port }}']
 
   - job_name: 'node'
     static_configs:
       - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
 {% if 'manager_service' in services_to_install %}
-  - job_name: 'blackbox_http_200'
+  - job_name: 'http_200'
     metrics_path: /probe
     params:
       module: [http_200]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
-          - http://localhost:3000/  # Cloudify composer
+          - http://127.0.0.1:3000/  # Cloudify composer
           - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
-          - http://localhost:8088/  # Cloudify stage
+          - http://127.0.0.1:8088/  # Cloudify stage
           - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
-          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify rest and ui internal
-          - https://{{ manager.public_ip }}:53333 # Cloudify rest and ui internal
+          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify external
+          - https://{{ manager.private_ip }}:53333/ # Cloudify internal
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
-  - job_name: 'http_400'
+        replacement: 127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+  - job_name: 'http_40x'
     metrics_path: /probe
     params:
-      module: [http_400]  # Look for a HTTP 400 respose
+      module: [http_40x]  # Look for a HTTP 400 respose
     static_configs:
       - targets:
-          - http://127.0.0.1:8100/  # Cloudify rest
-          - http://127.0.0.1:53229/  # Cloudify resources
+          - http://127.0.0.1:8100/api/v3.1/status  # Cloudify rest service
+          - http://127.0.0.1:53229/  # Cloudify resources service
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -67,7 +73,6 @@ scrape_configs:
     params:
       'match[]':
         - '{job="rabbitmq"}'
-        # - '{__name__=~"job:.*"}'
     static_configs:
       - targets:
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}
@@ -75,17 +80,16 @@ scrape_configs:
 {% endfor %}
 {% endif %}
 {% if postgresql_server.cluster.nodes|length > 0 %}
-  - job_name: 'federate_postgres'
+  - job_name: 'federate_postgresql'
     scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
-      ca_file: {{ postgresql_server.ca_path }}
+      ca_file: {{ postgresql_client.ca_path }}
     metrics_path: /metrics/postgres
     params:
       'match[]':
         - '{job="postgresql"}'
-        # - '{__name__=~"job:.*"}'
     static_configs:
       - targets:
 {% for host, postgres in postgresql_server.cluster.nodes.items() %}

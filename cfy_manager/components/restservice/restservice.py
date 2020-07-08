@@ -63,6 +63,7 @@ from ...logger import get_logger
 from ...utils import (
     certificates,
     common,
+    files,
     service
 )
 from ...exceptions import BootstrapError
@@ -87,6 +88,8 @@ logger = get_logger(RESTSERVICE)
 CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(REST_HOME_DIR, 'license_key.pem.pub')
 REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
 LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
+CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
+RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 
 class RestService(BaseComponent):
@@ -231,7 +234,9 @@ class RestService(BaseComponent):
                 db.create_amqp_resources(configs)
             else:
                 db.validate_schema_version(configs)
-                self._join_cluster(configs)
+                cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
+                self._prepare_cluster_config_update(cluster_cfg_fn,
+                                                    rabbitmq_ca_fn)
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
@@ -281,7 +286,7 @@ class RestService(BaseComponent):
         self._validate_cluster_join()
         config[CLUSTER_JOIN] = True
         certificates.handle_ca_cert(self.logger, generate_if_missing=False)
-        db.insert_manager(configs)
+        return db.insert_manager(configs)
 
     def _generate_password(self, length=12):
         chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
@@ -437,6 +442,22 @@ class RestService(BaseComponent):
                                             args_dict,
                                             envvars=self._create_process_env())
         log_script_run_results(result)
+
+    def _prepare_cluster_config_update(self, cluster_cfg_filename,
+                                       rabbitmq_ca_cert_filename):
+        with open(cluster_cfg_filename, 'r') as fp:
+            cfg = json.load(fp)
+        if (rabbitmq_ca_cert_filename and
+                not os.path.isfile(RABBITMQ_CA_CERT_PATH)):
+            files.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
+            files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                        RABBITMQ_CA_CERT_PATH)
+            cfg['rabbitmq']['ca_path'] = RABBITMQ_CA_CERT_PATH
+        with open(CLUSTER_DETAILS_PATH, 'w') as fp:
+            json.dump(cfg, fp)
+        files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                    CLUSTER_DETAILS_PATH)
+        files.remove(cluster_cfg_filename, ignore_failure=True)
 
     def configure(self):
         logger.notice('Configuring Rest Service...')

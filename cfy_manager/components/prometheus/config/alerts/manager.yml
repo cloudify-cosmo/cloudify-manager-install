@@ -1,0 +1,42 @@
+groups:
+  - name: manager
+    rules:
+      - alert: ComposerDown
+        expr: probe_http_status_code{instance="http://127.0.0.1:3000/", job="http_200"} != 200 or probe_http_status_code{instance="http://{{ manager.private_ip }}/composer", job="http_200"} != 200
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Cloudify Composer is down
+
+      - alert: ConsoleDown
+        expr: probe_http_status_code{instance="http://127.0.0.1:8088/", job="http_200"} != 200 or probe_http_status_code{instance="http://{{ manager.private_ip }}/", job="http_200"} != 200
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Cloudify Console is down
+
+      - alert: RestServiceDown
+        expr: probe_http_status_code{instance="http://127.0.0.1:8100/api/v3.1/status", job="http_40x"} != 401
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Cloudify REST Service is down
+
+      - alert: ResourcesServiceDown
+        expr: probe_http_status_code{instance="http://127.0.0.1:53229/", job="http_40x"} != 400
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Cloudify Resources Service is down
+
+      - alert: WebserverDown
+        expr: probe_http_status_code{instance="{{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/", job="http_200"} != 200
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Cloudify Webserver is down

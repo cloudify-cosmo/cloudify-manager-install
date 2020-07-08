@@ -15,13 +15,17 @@
 
 
 from os import sep
-from os.path import join
+from os.path import isfile, join
+
+import json
 
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
     CONSTANTS,
     SERVICES_TO_INSTALL,
+    ENABLE_REMOTE_CONNECTIONS,
+    PRIVATE_IP,
 )
 from ..service_names import (
     MANAGER,
@@ -54,6 +58,7 @@ SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
+CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
 
 AVAILABLE_EXPORTERS = [
     {
@@ -116,7 +121,8 @@ class Prometheus(BaseComponent):
     def remove(self):
         logger.notice('Removing Prometheus and exporters...')
         remove_files_list = [PROMETHEUS_DATA_DIR, ]
-        for dir_name in ('rules', 'rules.d', 'files_sd', 'exporters',):
+        for dir_name in (
+                'rules', 'rules.d', 'files_sd', 'exporters', 'alerts',):
             remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, dir_name))
         for file_name in ('prometheus.yml',):
             remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, file_name))
@@ -127,6 +133,11 @@ class Prometheus(BaseComponent):
         logger.notice('Successfully removed Prometheus and exporters files')
 
     def start(self):
+        if isfile(CLUSTER_DETAILS_PATH):
+            logger.notice(
+                'File {0} exists will update Prometheus config...'.format(
+                    CLUSTER_DETAILS_PATH))
+            _deploy_configuration()
         logger.notice('Starting Prometheus and exporters...')
         service.restart(PROMETHEUS, append_prefix=False,
                         ignore_failure=True)
@@ -193,9 +204,14 @@ def _update_config():
             return config.get(POSTGRESQL_SERVER, {}).get('postgres_password')
 
     def postgresql_ip_address():
-        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(MANAGER, {}).get('private_ip')
+        if config.get(POSTGRESQL_SERVER, {}).get(ENABLE_REMOTE_CONNECTIONS):
+            return config.get(MANAGER, {}).get(PRIVATE_IP)
         return 'localhost'
+
+    def read_from_json_file(fn):
+        with open(fn, 'r') as fp:
+            cfg = json.load(fp)
+        return cfg
 
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
@@ -215,12 +231,30 @@ def _update_config():
         config[PROMETHEUS].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
+    if isfile(CLUSTER_DETAILS_PATH):
+        config.update(read_from_json_file(CLUSTER_DETAILS_PATH))
+        files.remove(CLUSTER_DETAILS_PATH, ignore_failure=True)
+
 
 def _deploy_prometheus_configuration():
     logger.notice('Deploying Prometheus configuration...')
     files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
                  PROMETHEUS_CONFIG_PATH)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_PATH)
+    if MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL, []):
+        return
+    # deploy rules configuration files
+    for file_name in ['postgresql.yml', 'rabbitmq.yml', ]:
+        dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'rules', file_name)
+        files.deploy(join(CONFIG_DIR, 'rules', file_name),
+                     dest_file_name)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
+    # deploy alerts configuration files
+    for file_name in ['postgresql.yml', 'rabbitmq.yml', 'manager.yml', ]:
+        dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'alerts', file_name)
+        files.deploy(join(CONFIG_DIR, 'alerts', file_name),
+                     dest_file_name)
+        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
 
 
 def _deploy_exporters_configuration():

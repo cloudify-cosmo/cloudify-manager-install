@@ -5,10 +5,10 @@ modules:
       tls_config:
         insecure_skip_verify: false
         ca_file: {{ prometheus.ca_cert_path }}
-  http_400:
+  http_40x:
     prober: http
     http:
-      valid_status_codes: [400,]
+      valid_status_codes: [400,401,]
       tls_config:
         insecure_skip_verify: false
         ca_file: {{ prometheus.ca_cert_path }}
