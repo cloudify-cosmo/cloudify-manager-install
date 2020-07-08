@@ -45,5 +45,5 @@ class ManagerIpSetter(BaseComponent):
         logger.notice('Manager IP Setter successfully configured')
 
     def remove(self):
-        service.remove(MANAGER_IP_SETTER, service_file=False)
+        service.SystemD().remove(MANAGER_IP_SETTER, service_file=False)
         common.remove('/opt/cloudify/manager-ip-setter')

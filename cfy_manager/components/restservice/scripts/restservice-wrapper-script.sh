@@ -11,7 +11,7 @@ if [ ! -d "/run/cloudify-restservice" ]; then
     chmod 755 /run/cloudify-restservice
 fi
 
-gunicorn='/opt/manager/env/bin/gunicorn \
+/bin/sh -c '/opt/manager/env/bin/gunicorn \
     -u cfyuser \
     -g cfyuser \
     --pid /run/cloudify-restservice/pid \
@@ -22,5 +22,3 @@ gunicorn='/opt/manager/env/bin/gunicorn \
     --timeout 300 manager_rest.wsgi:app \
     --log-file /var/log/cloudify/rest/gunicorn.log \
     --access-logfile /var/log/cloudify/rest/gunicorn-access.log'
-
-/bin/sh -c "$gunicorn"
