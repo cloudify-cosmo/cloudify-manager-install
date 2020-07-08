@@ -15,7 +15,6 @@ RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
     systemd-sysv initscripts tcp_wrappers-libs sudo openssh-server
-RUN easy_install supervisor
 
 EXPOSE 80 443 5671 53333
 
@@ -26,7 +25,6 @@ RUN yum install -y /tmp/cloudify-manager-install.rpm && rm /tmp/cloudify-manager
 RUN cfy_manager install --only-install --verbose
 RUN chmod a+wx /var/run
 RUN chmod 755 /etc/cloudify
-RUN mkdir /etc/supervisord.d
 
 COPY supervisord.conf /etc/supervisord.conf
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]

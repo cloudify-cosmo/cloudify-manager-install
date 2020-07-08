@@ -19,6 +19,7 @@ from os.path import join, exists
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
+    SCRIPTS,
     PRIVATE_IP,
     PUBLIC_IP,
     SSL_INPUTS,
@@ -41,6 +42,11 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
+SCRIPTS_PATH = join(
+    constants.COMPONENTS_DIR,
+    NGINX,
+    SCRIPTS
+)
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 
 logger = get_logger(NGINX)
@@ -241,7 +247,27 @@ class Nginx(BaseComponent):
         if output.aggr_stdout.strip() not in {'200', '401'}:
             raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
+    def _configure_wait_on_restart_wrapper_service(self):
+        deploy(
+            join(
+                SCRIPTS_PATH,
+                'wait_on_restart.sh'
+            ),
+            '/etc/cloudify',
+            render=False
+        )
+        common.chmod('755', '/etc/cloudify/wait_on_restart.sh')
+        # Configure service wait_on_restart
+        service.configure(
+            'wait_on_restart',
+            src_dir='nginx',
+            append_prefix=False,
+            render=False,
+        )
+
     def _configure(self):
+        if self.service_type == 'supervisord':
+            self._configure_wait_on_restart_wrapper_service()
         self._deploy_nginx_config_files()
 
     def install(self):

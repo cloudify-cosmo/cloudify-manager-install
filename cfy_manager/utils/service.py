@@ -80,7 +80,8 @@ class SystemD(object):
                   config_path='config',
                   src_dir=None,
                   append_prefix=True,
-                  render=True):
+                  render=True,
+                  ignore_failure=False):
         """This configures systemd for a specific service.
         It requires that two files are present for each service one containing
         the environment variables and one containing the systemd config.
@@ -113,7 +114,7 @@ class SystemD(object):
                    additional_render_context=external_configure_params)
 
         logger.debug('Enabling systemd .service...')
-        self.enable('{0}.service'.format(sid))
+        self.enable('{0}.service'.format(sid), ignore_failure=ignore_failure)
 
     def remove(self, service_name, service_file=True):
         """Stop and disable the service, and then delete its data
@@ -267,6 +268,16 @@ class Supervisord(object):
             ignore_failure=True
         ).aggr_stdout.strip().split()[1].lower()
 
+    @staticmethod
+    def get_service_config_file_path(service_name):
+        """Returns the path to a supervisord service config file
+        for a given service_name.
+        (e.g./etc/supervisord.d/rabbitmq.cloudify.conf)
+        """
+        if service_name.startswith('cloudify-'):
+            service_name = service_name.split('-')[1]
+        return "/etc/supervisord.d/{0}.cloudify.conf".format(service_name)
+
     def configure(self,
                   service_name,
                   user=CLOUDIFY_USER,
@@ -296,6 +307,17 @@ class Supervisord(object):
             deploy(srv_src, dst, render=render,
                    additional_render_context=external_configure_params)
             chown(user, group, dst)
+
+    def remove(self, service_name, service_file=True):
+        """Stop and disable the service, and then delete its data
+        """
+        self.stop(service_name, ignore_failure=True)
+        self.disable(service_name, ignore_failure=True)
+
+        # components that have had their unit file moved to the RPM, will
+        # also remove it during RPM uninstall
+        if service_file:
+            remove_file(self.get_service_config_file_path(service_name))
 
 
 def _get_service_type():

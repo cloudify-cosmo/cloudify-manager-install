@@ -463,8 +463,7 @@ class PostgresqlServer(BaseComponent):
                 'patroni',
                 src_dir='postgresql_server',
                 append_prefix=False,
-                render=False,
-                config_path='config/supervisord'
+                render=False
             )
         else:
             service.configure(
