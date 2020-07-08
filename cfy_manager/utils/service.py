@@ -272,8 +272,10 @@ class Supervisord(object):
     def get_service_config_file_path(service_name):
         """Returns the path to a supervisord service config file
         for a given service_name.
-        (e.g./etc/supervisord.d/cloudify-rabbitmq.cloudify.conf)
+        (e.g./etc/supervisord.d/rabbitmq.cloudify.conf)
         """
+        if service_name.startswith('cloudify-'):
+            service_name = service_name.split('-')[1]
         return "/etc/supervisord.d/{0}.cloudify.conf".format(service_name)
 
     def configure(self,

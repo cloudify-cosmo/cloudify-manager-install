@@ -58,6 +58,7 @@ from .constants import (
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
+    SUPERVISORD_CONFIG_DIR,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -527,6 +528,14 @@ def _are_components_configured():
     return os.path.isfile(INITIAL_CONFIGURE_FILE)
 
 
+def is_supervisord_service():
+    service_type = service._get_service_type()
+    # This only relevant for restarting services on VM that use supervisord
+    if service_type == 'supervisord':
+        return True
+    return False
+
+
 def _create_initial_install_file():
     """
     Create /etc/cloudify/.installed if install finished successfully
@@ -716,7 +725,7 @@ def _get_packages():
 
 
 def _configure_supervisord():
-    mkdir('/etc/supervisord.d')
+    mkdir(SUPERVISORD_CONFIG_DIR)
     # These services will be relevant for using supervisord on VM not on
     # containers
     sudo('systemctl enable supervisord.service', ignore_failures=True)
@@ -786,9 +795,8 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
-    service_type = service._get_service_type()
     # This only relevant for restarting services on VM that use supervisord
-    if service_type == 'supervisord':
+    if is_supervisord_service():
         _configure_supervisord()
     if clean_db:
         for component in components:
@@ -826,6 +834,9 @@ def remove(verbose=False, force=False):
 
     if _are_components_configured():
         _remove(INITIAL_CONFIGURE_FILE)
+
+    if is_supervisord_service():
+        _remove(SUPERVISORD_CONFIG_DIR)
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
@@ -966,8 +977,7 @@ def _wait_supervisord_starter(timeout):
 def wait_for_starter(verbose=False, timeout=180):
     _prepare_execution(verbose, config_write_required=False)
     config.load_config()
-    service_type = service._get_service_type()
-    if service_type == 'supervisord':
+    if is_supervisord_service():
         _wait_supervisord_starter(timeout)
     else:
         _wait_systemd_starter(timeout)
