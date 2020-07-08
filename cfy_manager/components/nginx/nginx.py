@@ -254,10 +254,10 @@ class Nginx(BaseComponent):
                 SCRIPTS_PATH,
                 'wait_on_restart.sh'
             ),
-            '/opt/cloudify',
+            '/etc/cloudify',
             render=False
         )
-        common.chmod('755', '/opt/cloudify/wait_on_restart.sh')
+        common.chmod('755', '/etc/cloudify/wait_on_restart.sh')
         # Configure service wait_on_restart
         service.configure(
             'wait_on_restart',
