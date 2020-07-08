@@ -529,11 +529,7 @@ def _are_components_configured():
 
 
 def is_supervisord_service():
-    service_type = service._get_service_type()
-    # This only relevant for restarting services on VM that use supervisord
-    if service_type == 'supervisord':
-        return True
-    return False
+    return service._get_service_type() == 'supervisord'
 
 
 def _create_initial_install_file():

@@ -9,7 +9,7 @@ ExecStop=/usr/bin/supervisorctl -c /etc/supervisord.conf shutdown
 ExecReload=/usr/bin/supervisorctl -c /etc/supervisord.conf reload
 KillMode=process
 Restart=on-failure
-RestartSec=42s
+RestartSec=10s
 
 [Install]
 WantedBy=multi-user.target
