@@ -5,11 +5,12 @@ worker_count=$1
 max_requests=$2
 port=$3
 
-if [ ! -d "/run/cloudify-restservice" ]; then
-    mkdir -p /run/cloudify-restservice
-    chown cfyuser. /run/cloudify-restservice
-    chmod 755 /run/cloudify-restservice
-fi
+trap "{ echo Stopping restservice; sudo kill -9 `cat /run/cloudify-restservice/pid` exit 0; }" EXIT
+
+rm -rf /run/cloudify-restservice/
+mkdir -p /run/cloudify-restservice
+chown cfyuser. /run/cloudify-restservice
+chmod 755 /run/cloudify-restservice
 
 /bin/sh -c '/opt/manager/env/bin/gunicorn \
     -u cfyuser \
