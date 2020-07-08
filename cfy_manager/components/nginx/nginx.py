@@ -248,7 +248,6 @@ class Nginx(BaseComponent):
             raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
     def _configure_wait_on_restart_wrapper_service(self):
-        # Deploy the executable script to /opt/cloudify
         deploy(
             join(
                 SCRIPTS_PATH,
