@@ -859,6 +859,13 @@ def start(include_components,
     _validate_components_prepared('start')
     set_globals()
     logger.notice('Starting Cloudify Manager services...')
+    if is_supervisord_service():
+        # This is will be only relevant for running sshd service on container
+        sudo(
+            'supervisorctl -c /etc/supervisord.conf restart sshd',
+            ignore_failures=True
+        )
+
     for component in _get_components(include_components):
         component.start()
     logger.notice('Cloudify Manager services successfully started!')
