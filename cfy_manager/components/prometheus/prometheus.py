@@ -14,10 +14,9 @@
 #  * limitations under the License.
 
 
+import json
 from os import sep
 from os.path import isfile, join
-
-import json
 
 from ..base_component import BaseComponent
 from ..components_constants import (
@@ -209,10 +208,22 @@ def _update_config():
             return config.get(MANAGER, {}).get(PRIVATE_IP)
         return 'localhost'
 
-    def read_from_json_file(fn):
-        with open(fn, 'r') as fp:
-            cfg = json.load(fp)
-        return cfg
+    def update_cluster_details(file_name):
+        with open(file_name, 'r') as fp:
+            cluster_cfg = json.load(fp)
+        if (cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes'] and
+                not config[POSTGRESQL_SERVER]['cluster']['nodes']):
+            config[POSTGRESQL_SERVER]['cluster'].update({
+                'nodes': cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
+            })
+        if (cluster_cfg[RABBITMQ]['ca_path'] and
+                not config[RABBITMQ]['ca_path']):
+            config[RABBITMQ]['ca_path'] = cluster_cfg[RABBITMQ]['ca_path']
+        if (cluster_cfg[RABBITMQ]['cluster_members'] and
+                not config[RABBITMQ]['cluster_members']):
+            config[RABBITMQ].update({
+                'cluster_members': cluster_cfg[RABBITMQ]['cluster_members']
+            })
 
     def update_monitoring_credentials():
         # Update configuration of credentials for federated Prometheus
@@ -260,7 +271,7 @@ def _update_config():
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
     if isfile(CLUSTER_DETAILS_PATH):
-        config.update(read_from_json_file(CLUSTER_DETAILS_PATH))
+        update_cluster_details(CLUSTER_DETAILS_PATH)
         files.remove(CLUSTER_DETAILS_PATH, ignore_failure=True)
 
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:

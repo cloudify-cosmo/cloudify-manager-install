@@ -263,8 +263,6 @@ class Nginx(BaseComponent):
     def _create_htpasswd_files(self):
         username = config.get(PROMETHEUS).get('credentials').get('username')
         password = config.get(PROMETHEUS).get('credentials').get('password')
-        logger.warning("MATEUSZ creating htpasswd with {0}:{1}".format(
-            username, password))
         htpassword_file_name = '/etc/nginx/conf.d/monitoring-htpasswd.cloudify'
         with NamedTemporaryFile(delete=False, mode='w') as f:
             f.write('{0}:{1}'.format(username, common.run(
