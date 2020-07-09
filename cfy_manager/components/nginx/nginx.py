@@ -270,6 +270,7 @@ class Nginx(BaseComponent):
             f.write('{0}:{1}'.format(username, common.run(
                 ['openssl', 'passwd', '-apr1', password]).aggr_stdout))
         common.move(f.name, htpassword_file_name)
+        common.chown('nginx', 'nginx', htpassword_file_name)
         common.chmod('600', htpassword_file_name)
 
     def _verify_nginx(self):
