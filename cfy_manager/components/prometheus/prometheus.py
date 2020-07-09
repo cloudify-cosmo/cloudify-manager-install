@@ -35,6 +35,7 @@ from ..service_names import (
     POSTGRES_EXPORTER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
+    RABBITMQ,
 
     DATABASE_SERVICE,
     MANAGER_SERVICE,
@@ -213,6 +214,33 @@ def _update_config():
             cfg = json.load(fp)
         return cfg
 
+    def update_monitoring_credentials():
+        # Update configuration of credentials for federated Prometheus
+        # instances working on database_service and queue_service nodes
+        # of a cluster
+        if len(config[POSTGRESQL_SERVER]['cluster']['nodes']) > 0:
+            postgresql_monitoring_cfg = config.get(
+                POSTGRESQL_CLIENT).get('monitoring', {})
+            if (not postgresql_monitoring_cfg.get('username') or
+                    not postgresql_monitoring_cfg.get('password')):
+                if not postgresql_monitoring_cfg:
+                    config[POSTGRESQL_CLIENT]['monitoring'] = {}
+                config[POSTGRESQL_CLIENT]['monitoring']['username'] = \
+                    config[POSTGRESQL_CLIENT]['server_username']
+                config[POSTGRESQL_CLIENT]['monitoring']['password'] = \
+                    config[POSTGRESQL_CLIENT]['server_password']
+        if len(config[RABBITMQ]['cluster_members']) > 0:
+            rabbitmq_monitoring_cfg = config.get(
+                RABBITMQ).get('monitoring', {})
+            if (not rabbitmq_monitoring_cfg.get('username') or
+                    not rabbitmq_monitoring_cfg.get('password')):
+                if not rabbitmq_monitoring_cfg:
+                    config[RABBITMQ]['monitoring'] = {}
+                config[RABBITMQ]['monitoring']['username'] = \
+                    config[RABBITMQ]['username']
+                config[RABBITMQ]['monitoring']['password'] = \
+                    config[RABBITMQ]['password']
+
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
@@ -234,6 +262,9 @@ def _update_config():
     if isfile(CLUSTER_DETAILS_PATH):
         config.update(read_from_json_file(CLUSTER_DETAILS_PATH))
         files.remove(CLUSTER_DETAILS_PATH, ignore_failure=True)
+
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        update_monitoring_credentials()
 
 
 def _deploy_prometheus_configuration():
