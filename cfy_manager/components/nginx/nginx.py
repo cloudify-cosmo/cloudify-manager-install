@@ -220,6 +220,7 @@ class Nginx(BaseComponent):
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')
+        # TODO mateusz create .htpasswd files for monitoring_service
         for resource in self._config_files():
             deploy(resource.src, resource.dst)
 
