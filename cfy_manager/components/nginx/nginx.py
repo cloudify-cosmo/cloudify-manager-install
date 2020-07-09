@@ -15,6 +15,7 @@
 
 from collections import namedtuple
 from os.path import join, exists
+from tempfile import NamedTemporaryFile
 
 from ..base_component import BaseComponent
 from ..components_constants import (
@@ -223,7 +224,6 @@ class Nginx(BaseComponent):
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')
-        # TODO mateusz create .htpasswd files for monitoring_service
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._update_credentials_config()
             self._create_htpasswd_files()
@@ -265,6 +265,15 @@ class Nginx(BaseComponent):
         password = config.get(PROMETHEUS).get('credentials').get('password')
         logger.warning("MATEUSZ creating htpasswd with {0}:{1}".format(
             username, password))
+        with NamedTemporaryFile(mode='w') as f:
+            f.write('{0}:{1}'.format(
+                username,
+                common.run(['openssl', 'passwd', '-apr1'],
+                           stdin=password).aggr_stdout
+            ))
+            tmp_file_name = f.name
+        common.move(tmp_file_name,
+                    '/etc/nginx/conf.d/monitoring-htpasswd.cloudify')
 
     def _verify_nginx(self):
         # TODO: This code requires the restservice to be installed, but
