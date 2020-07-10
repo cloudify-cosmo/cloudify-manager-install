@@ -272,6 +272,7 @@ def insert_manager(configs):
             'monitoring_password': monitoring_password,
         }
     }
+
     try:
         with open(constants.CA_CERT_PATH) as f:
             args['manager']['ca_cert'] = f.read()
