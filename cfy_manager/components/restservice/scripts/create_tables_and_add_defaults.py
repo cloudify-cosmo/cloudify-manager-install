@@ -142,7 +142,9 @@ def _insert_manager(config):
         distribution=version_data['distribution'],
         distro_release=version_data['distro_release'],
         _ca_cert_id=ca,
-        last_seen=config['last_seen']
+        last_seen=config['last_seen'],
+        monitoring_username=config['monitoring_username'],
+        monitoring_password=config['monitoring_password'],
     )
     sm.put(inst)
 

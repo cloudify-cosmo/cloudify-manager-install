@@ -132,6 +132,14 @@ def _create_populate_db_args_dict():
 
 
 def _create_rabbitmq_info():
+    monitoring_username = config[RABBITMQ].get(
+        'monitoring', {}).get('username')
+    monitoring_password = config[RABBITMQ].get(
+        'monitoring', {}).get('password')
+    if not monitoring_username or not monitoring_password:
+        monitoring_username = config[RABBITMQ].get('username')
+        monitoring_password = config[RABBITMQ].get('password')
+
     return [
         {
             'name': name,
@@ -145,17 +153,29 @@ def _create_rabbitmq_info():
             'params': None,
             'networks': broker[NETWORKS],
             'is_external': broker.get('networks', {}).get('default') is None,
+            'monitoring_username': monitoring_username,
+            'monitoring_password': monitoring_password,
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
 
 
 def _create_db_nodes_info():
+    monitoring_username = config[POSTGRESQL_CLIENT].get(
+        'monitoring', {}).get('username')
+    monitoring_password = config[POSTGRESQL_CLIENT].get(
+        'monitoring', {}).get('password')
+    if not monitoring_username or not monitoring_password:
+        monitoring_username = config[POSTGRESQL_CLIENT].get('server_username')
+        monitoring_password = config[POSTGRESQL_CLIENT].get('server_password')
+
     if common.is_all_in_one_manager():
         return [{
             'name': config[MANAGER][HOSTNAME],
             'host': config[NETWORKS]['default'],
-            'is_external': False
+            'is_external': False,
+            'monitoring_username': monitoring_username,
+            'monitoring_password': monitoring_password,
         }]
 
     if common.manager_using_db_cluster():
@@ -164,7 +184,9 @@ def _create_db_nodes_info():
             {
                 'name': name,
                 'host': db['ip'],
-                'is_external': False
+                'is_external': False,
+                'monitoring_username': monitoring_username,
+                'monitoring_password': monitoring_password,
             }
             for name, db in db_nodes.items()
         ]
@@ -173,7 +195,9 @@ def _create_db_nodes_info():
     return [{
         'name': config[POSTGRESQL_CLIENT]['host'],
         'host': config[POSTGRESQL_CLIENT]['host'],
-        'is_external': True
+        'is_external': True,
+        'monitoring_username': monitoring_username,
+        'monitoring_password': monitoring_password,
     }]
 
 
@@ -230,13 +254,22 @@ def populate_db(configs):
 
 def insert_manager(configs):
     logger.notice('Registering manager in the DB...')
+    monitoring_username = config['manager'].get(
+        'monitoring', {}).get('username')
+    monitoring_password = config['manager'].get(
+        'monitoring', {}).get('password')
+    if not monitoring_username or not monitoring_password:
+        monitoring_username = config['manager']['security']['admin_username']
+        monitoring_password = config['manager']['security']['admin_password']
     args = {
         'manager': {
             'public_ip': config['manager']['public_ip'],
             'hostname': config[MANAGER][HOSTNAME],
             'private_ip': config['manager']['private_ip'],
             'networks': config[NETWORKS],
-            'last_seen': common.get_formatted_timestamp()
+            'last_seen': common.get_formatted_timestamp(),
+            'monitoring_username': monitoring_username,
+            'monitoring_password': monitoring_password,
         }
     }
     try:
