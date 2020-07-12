@@ -169,6 +169,32 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(PGSQL_SOCK_DIR)
         common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
+    def _configure_postgresql_server_service(self):
+        if self.service_type == 'supervisord':
+            service.configure(
+                POSTGRES_SERVICE_NAME,
+                append_prefix=False,
+                src_dir='postgresql_server',
+                config_path='config/supervisord'
+            )
+            files.deploy(
+                join(
+                    SCRIPTS_PATH,
+                    'postgresql_server_wrapper_script.sh'
+                ),
+                '/var/lib/pgsql/',
+                render=False
+            )
+            common.chown(
+                'postgres',
+                'postgres',
+                '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
+            )
+            common.chmod(
+                '755',
+                '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
+            )
+
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
         common.copy(file_path, temp_file_path)
@@ -1474,13 +1500,7 @@ class PostgresqlServer(BaseComponent):
     def configure(self):
         logger.notice('Configuring PostgreSQL Server...')
         files.copy_notice(POSTGRESQL_SERVER)
-        if self.service_type == 'supervisord':
-            service.configure(
-                POSTGRES_SERVICE_NAME,
-                append_prefix=False,
-                src_dir='postgresql_server',
-                config_path='config/supervisord'
-            )
+        self._configure_postgresql_server_service()
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
         else:
