@@ -979,7 +979,6 @@ def _wait_supervisord_starter(timeout):
             break
         else:
             offset += len(service_log)
-            time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
 
