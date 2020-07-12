@@ -965,9 +965,16 @@ def _wait_supervisord_starter(timeout):
     while time.time() < deadline:
         service_log = _get_starter_service_log(offset, 0)
         status_response = _get_starter_service_response()
-        logger.info(service_log)
+        if service_log:
+            logger.info(service_log)
         service_status = status_response['statename']
+        exit_status = status_response['exitstatus']
         if service_status == 'EXITED':
+            if exit_status != 0:
+                raise BootstrapError(
+                    '{0} service exit with error status '
+                    'code {1}', STARTER_SERVICE, exit_status
+                )
             logger.info('{0} service finished'.format(STARTER_SERVICE))
             break
         else:
