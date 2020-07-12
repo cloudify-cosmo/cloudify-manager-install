@@ -973,12 +973,12 @@ def _wait_supervisord_starter(timeout):
             if exit_status != 0:
                 raise BootstrapError(
                     '{0} service exit with error status '
-                    'code {1}', STARTER_SERVICE, exit_status
+                    'code {1}'.format(STARTER_SERVICE, exit_status)
                 )
             logger.info('{0} service finished'.format(STARTER_SERVICE))
             break
         else:
-            offset += sys.getsizeof(service_log)
+            offset += len(service_log)
             time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
