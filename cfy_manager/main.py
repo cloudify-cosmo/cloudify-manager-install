@@ -949,7 +949,7 @@ def _get_starter_service_log(offset, length):
         transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
     try:
         service_log = server.supervisor.readLog(offset, length)
-        logger.info(service_log)
+        return service_log
     except xmlrpclib.Fault as e:
         raise BootstrapError(
             'Error {0} while trying to get log for {1}'
@@ -963,14 +963,15 @@ def _wait_supervisord_starter(timeout):
     deadline = time.time() + timeout
     offset = 0
     while time.time() < deadline:
-        _get_starter_service_log(offset, offset + 100)
+        service_log = _get_starter_service_log(offset, 0)
         status_response = _get_starter_service_response()
+        logger.info(service_log)
         service_status = status_response['statename']
         if service_status == 'EXITED':
             logger.info('{0} service finished'.format(STARTER_SERVICE))
             break
         else:
-            offset += 100
+            offset += sys.getsizeof(service_log)
             time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
