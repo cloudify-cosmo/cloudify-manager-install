@@ -489,16 +489,7 @@ class RabbitMQ(BaseComponent):
         if certificates.needs_to_replace_certificates(
                 constants.NEW_BROKER_CERT_FILE_PATH,
                 constants.NEW_BROKER_CA_CERT_FILE_PATH):
-            cert_src, key_src, ca_src = \
-                certificates.get_and_validate_certs_for_replacement(
-                    default_cert_location=constants.BROKER_CERT_LOCATION,
-                    default_key_location=constants.BROKER_KEY_LOCATION,
-                    default_ca_location=constants.BROKER_CA_LOCATION,
-                    new_cert_location=constants.NEW_BROKER_CERT_FILE_PATH,
-                    new_key_location=constants.NEW_BROKER_KEY_FILE_PATH,
-                    new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH
-                )
-
+            cert_src, key_src, ca_src = self.validate_new_certs()
             self.logger.info(
                 'Replacing certificates on the rabbitmq component')
             self.handle_certificates(installing=False,
@@ -508,6 +499,17 @@ class RabbitMQ(BaseComponent):
 
             service.reload(RABBITMQ, ignore_failure=True)
             service.verify_alive(RABBITMQ)
+
+    @staticmethod
+    def validate_new_certs():
+        return certificates.get_and_validate_certs_for_replacement(
+            default_cert_location=constants.BROKER_CERT_LOCATION,
+            default_key_location=constants.BROKER_KEY_LOCATION,
+            default_ca_location=constants.BROKER_CA_LOCATION,
+            new_cert_location=constants.NEW_BROKER_CERT_FILE_PATH,
+            new_key_location=constants.NEW_BROKER_KEY_FILE_PATH,
+            new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH
+        )
 
     # Give rabbit time to finish starting
     @retry(stop_max_attempt_number=20, wait_fixed=3000)

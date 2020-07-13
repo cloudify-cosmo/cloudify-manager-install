@@ -140,6 +140,13 @@ class Manager(BaseComponent):
             logger.info('Replacing rabbitmq CA cert on the manager component')
             self.handle_certificates(installing=False)
 
+    @staticmethod
+    def validate_new_certs():
+        if (QUEUE_SERVICE not in config[SERVICES_TO_INSTALL] and
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            validate_certificates(
+                ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
+
     def _configure(self):
         self._prepare_certificates()
 
