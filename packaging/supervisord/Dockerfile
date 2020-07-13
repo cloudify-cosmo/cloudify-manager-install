@@ -30,4 +30,4 @@ RUN mkdir -p /etc/supervisord.d
 
 COPY sshd.conf /etc/supervisord.d/
 COPY supervisord.conf /etc/supervisord.conf
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+CMD ["/usr/bin/cfy_manager", "run-init"]

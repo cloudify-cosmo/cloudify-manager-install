@@ -44,4 +44,4 @@ RUN chmod g+rx /etc/cloudify
 
 STOPSIGNAL SIGRTMIN+3
 VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"]
+CMD ["/usr/bin/cfy_manager", "run-init"]
