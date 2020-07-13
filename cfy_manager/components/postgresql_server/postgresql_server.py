@@ -582,15 +582,7 @@ class PostgresqlServer(BaseComponent):
         if certificates.needs_to_replace_certificates(
                 constants.NEW_POSTGRESQL_CERT_FILE_PATH,
                 constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
-            cert_src, key_src, ca_src = \
-                certificates.get_and_validate_certs_for_replacement(
-                    default_cert_location=ETCD_SERVER_CERT_PATH,
-                    default_key_location=ETCD_SERVER_KEY_PATH,
-                    default_ca_location=ETCD_CA_PATH,
-                    new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
-                    new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
-                    new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
-                )
+            cert_src, key_src, ca_src = self.validate_new_certs()
             if config[POSTGRESQL_SERVER]['cluster']['nodes']:  # cluster case
                 self.log_replacing_certificates()
                 self.handle_cluster_certificates(installing=False,
@@ -611,6 +603,17 @@ class PostgresqlServer(BaseComponent):
 
                     service.restart(POSTGRES_SERVICE_NAME, ignore_failure=True)
                     service.verify_alive(POSTGRES_SERVICE_NAME)
+
+    @staticmethod
+    def validate_new_certs():
+        return certificates.get_and_validate_certs_for_replacement(
+            default_cert_location=ETCD_SERVER_CERT_PATH,
+            default_key_location=ETCD_SERVER_KEY_PATH,
+            default_ca_location=ETCD_CA_PATH,
+            new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
+            new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
+            new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+        )
 
     def log_replacing_certificates(self):
         self.logger.info(

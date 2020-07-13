@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import time
+import yaml
 import logging
 import subprocess
 from xml.parsers import expat
@@ -55,13 +56,15 @@ from .components.service_names import (
 from .components.validations import validate, validate_dependencies
 from .config import config
 from .constants import (
+    CERTS_MAPPING,
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
-    SUPERVISORD_CONFIG_DIR
+    SUPERVISORD_CONFIG_DIR,
+    NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import BootstrapError, ValidationError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -81,6 +84,7 @@ from .utils.common import (
     run,
     sudo,
     mkdir,
+    copy,
     can_lookup_hostname,
     is_installed
 )
@@ -156,6 +160,13 @@ DB_NODE_ID_HELP_MSG = (
 )
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
+)
+VALIDATE_HELP_MSG = (
+    "Validate the provided certificates. If this flag is on, then the "
+    "certificates will only be validated and not replaced."
+)
+INPUT_PATH_MSG = (
+    "The replace-certificates yaml configuration file path."
 )
 
 
@@ -1040,18 +1051,52 @@ def run_init():
 
 
 @argh.decorators.named('replace-certificates')
-def replace_certificates():
+@argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
+@argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
+def replace_certificates(input_path=NEW_CERTS_TMP_DIR_PATH,
+                         only_validate=False):
     """ Replacing the certificates on the current instance """
     config.load_config()
-    installed_components = _get_components()
-    for component in installed_components:
-        if _has_replace_certificates_attr(component):
-            component.replace_certificates()
+    _handle_replace_certs_config_path(input_path)
+    if only_validate:
+        _only_validate()
+    else:
+        for component in _get_components():
+            if _has_replace_certificates_attr(component):
+                component.replace_certificates()
+
+
+def _handle_replace_certs_config_path(replace_certs_config_path):
+    with open(replace_certs_config_path) as certs_config_file:
+        replace_certs_config = yaml.load(certs_config_file, yaml.Loader)
+
+    for cert_name, cert_path in replace_certs_config.items():
+        copy(cert_path, CERTS_MAPPING[cert_name])
 
 
 def _has_replace_certificates_attr(component):
     return (hasattr(component, 'replace_certificates') and
             callable(getattr(component, 'replace_certificates')))
+
+
+def _has_validate_new_certs_attr(component):
+    return (hasattr(component, 'validate_new_certs') and
+            callable(getattr(component, 'validate_new_certs')))
+
+
+def _only_validate():
+    config.load_config()
+    certs_valid = True
+    for component in _get_components():
+        if _has_validate_new_certs_attr(component):
+            try:
+                component.validate_new_certs()
+            except (ValueError, ValidationError) as err:
+                logger.error(err)
+                certs_valid = False
+
+    if not certs_valid:
+        raise
 
 
 def main():

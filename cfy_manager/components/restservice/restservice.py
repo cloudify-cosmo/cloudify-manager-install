@@ -27,8 +27,6 @@ import requests
 
 from . import db
 from ..validations import validate_certificates
-from ...utils.db import run_psql_command
-from ...utils.scripts import get_encoded_user_ids
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
@@ -446,6 +444,12 @@ class RestService(BaseComponent):
             self._replace_haproxy_cert()
         self._replace_ldap_cert()
         self._replace_ca_certs_on_db()
+
+    @staticmethod
+    def validate_new_certs():
+        # All other certs are validated in other components
+        if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
+            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
 
     def _replace_ca_certs_on_db(self):
         if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
