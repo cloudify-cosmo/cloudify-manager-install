@@ -1027,6 +1027,25 @@ def image_starter(verbose=False):
     subprocess.check_call(command + ['start'] + args)
 
 
+@argh.decorators.named('run-init')
+def run_init():
+    """Run the configured init system/service management system.
+
+    Based on the configuration, run either systemd or supervisord.
+    This is to be used for the docker image. Full OS images should run
+    systemd on their own.
+    """
+    config.load_config()
+    if is_supervisord_service():
+        os.execv(
+            "/usr/bin/supervisord",
+            ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
+    else:
+        os.execv(
+            "/bin/bash",
+            ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
+
+
 def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
@@ -1048,7 +1067,8 @@ def main():
         generate_test_cert,
         reset_admin_password,
         image_starter,
-        wait_for_starter
+        wait_for_starter,
+        run_init
     ])
 
     parser.add_commands([
