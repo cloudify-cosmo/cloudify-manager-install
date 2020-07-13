@@ -1,5 +1,4 @@
 version: 2.1
-
 commands:
   wait_for_container:
     parameters:
@@ -10,139 +9,25 @@ commands:
       - run:
           name: Waiting for << parameters.container_name >> to start
           command: |
-            docker exec ${<< parameters.container_name >>} cfy_manager wait-for-starter
-
-jobs:
-  fetch_rpms:
-    docker:
-      - image: python:2
-    working_directory: ~/cloudify-manager-install
+            docker exec -e LC_ALL=en_US.utf8 ${<< parameters.container_name >>} cfy_manager wait-for-starter
+  build_manager_image:
+    parameters:
+      image_name:
+        type: string
+        description: envvar containing the cloudify image name
+      docker_file_path:
+        type: string
+        description: path to where docker file located inside the project
     steps:
-      - checkout
-      - run: pip install requests
       - run:
-          name: Fetch RPMs built on CircleCI
+          name: Build manager container << parameters.image_name >>
           command: |
-            mkdir rpms
-            cd rpms
-            ../.circleci/fetch_rpms
-      - persist_to_workspace:
-          root: ~/cloudify-manager-install
-          paths:
-            - rpms
-
-  py3_compat:
-    docker:
-      - image: circleci/python:2.7
-    steps:
-      - checkout
-      - run:
-          name: install futurize
-          command: pip install future --user
-      - run:
-          name: find python3-incompatible code
-          command: |
-            FUTURIZE="futurize ."
-            while read line; do
-              [[ "$line" =~ ^#.* ]] && continue
-              FUTURIZE="${FUTURIZE} -f ${line}"
-            done<.circleci/py3fixers
-            echo "Running: $FUTURIZE"
-            $FUTURIZE>futurize_diffs
-      - run:
-          name: check that there is no python3-incompatible code
-          command: |
-            if [[ -s futurize_diffs ]]; then
-              echo "Python-3-incompatible code found"
-              cat futurize_diffs
-              exit 1
-            fi
-
-  build_rpm:
-    working_directory: /tmp/cloudify-manager-install
-    docker:
-      - image: rpmbuild/centos7
-    steps:
-      - checkout
-      - run:
-          name: Set version environment variables
-          command: cat packaging/version_info >> $BASH_ENV
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Link items from workspace under rpm sources dir
-          command: |
-            rm ~/rpm -fr
-            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install/rpms
-            cp -a /tmp/workspace/x86_64/prometheus-*.rpm /tmp/cloudify-manager-install/rpms/
-            cp -a /tmp/workspace/x86_64/*_exporter-*.rpm /tmp/cloudify-manager-install/rpms/
-            ln -s /tmp/cloudify-manager-install ~/rpm
-      - run:
-          name: set up cloudify-premium deploy key
-          command: |
-            mkdir -p ~/.ssh
-            echo "${CLOUDIFY_PREMIUM_DEPLOY_KEY}" > ~/.ssh/id_rsa
-      - run:
-          command: |
-            pushd /tmp/cloudify-manager-install/rpms
-              /tmp/cloudify-manager-install/packaging/fetch_requirements --edition premium -b ${CIRCLE_BRANCH} >~/fetch_requirements.log
-              cat ~/fetch_requirements.log
+            set -eux
+            ls -la /tmp/workspace
+            pushd << parameters.docker_file_path >>
+              docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${<< parameters.image_name >>} .
             popd
-      - run: sudo yum install rpmdevtools -y
-      - run: sudo chmod a+wx /opt
-      - run:
-          name: Installing build dependencies
-          command: sudo yum-builddep -y packaging/install_rpm.spec
-      - run:
-          name: set premium_edition in the packaged config.yaml
-          command: sed -i "s/set_by_installer_builder/premium/" config.yaml
-      - run: rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
-      - persist_to_workspace:
-          root: ~/rpm
-          paths:
-            - x86_64
-      - store_artifacts:
-          path: ~/rpm/x86_64
-          destination: /
-
-  build_prometheus_rpms:
-    working_directory: /tmp/cloudify-manager-install-prometheus
-    docker:
-      - image: rpmbuild/centos7
-    steps:
-      - checkout
-      - run:
-          name: Set version environment variables
-          command: cat packaging/version_info >> $BASH_ENV
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Link items from workspace under rpm sources dir
-          command: |
-            rm ~/rpm -fr
-            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install-prometheus/rpms
-            ln -s /tmp/cloudify-manager-install-prometheus ~/rpm
-      - run: sudo yum install rpmdevtools -y
-      - run:
-          name: Installing build dependencies
-          command: sudo yum-builddep -y packaging/install_rpm.spec
-      - run: rpmbuild -bb packaging/prometheus.spec
-      - run: rpmbuild -bb packaging/prometheus_node_exporter.spec
-      - run: rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
-      - run: rpmbuild -bb packaging/prometheus_postgres_exporter.spec
-      - persist_to_workspace:
-          root: ~/rpm
-          paths:
-            - x86_64
-      - store_artifacts:
-          path: ~/rpm/x86_64
-          destination: /
-
-  install_manager:
-    machine: true
-    environment:
-      CONTAINER_NAME: cfy_manager
-      IMAGE_NAME: cfy_manager_image
+  prepare_cloudify_manager:
     steps:
       - checkout
       - attach_workspace:
@@ -152,14 +37,8 @@ jobs:
           command: |
             cp /tmp/workspace/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
             docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
-      - run:
-          name: Build manager container
-          command: |
-            set -eux
-            ls -la /tmp/workspace
-            pushd packaging/docker
-              docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${IMAGE_NAME} .
-            popd
+  run_cloudify_manager:
+    steps:
       - run:
           name: Run manager container
           command: |
@@ -176,30 +55,8 @@ jobs:
           command: |
             docker exec -e LC_ALL=en_US.utf8 ${CONTAINER_NAME} touch /opt/manager/sanity_mode
             docker exec -e LC_ALL=en_US.utf8 ${CONTAINER_NAME} cfy_manager sanity-check
-
-  install_cluster:
-    machine: true
-    environment:
-      CONTAINER_NAME: cfy_manager
-      IMAGE_NAME: cfy_manager_image
-      CLUSTER_IMAGE: cfy_manager_image_preinstalled
+  run_cloudify_cluster:
     steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Serve the manager-install rpm on http
-          command: |
-            cp /tmp/workspace/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
-            docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
-      - run:
-          name: Build manager container
-          command: |
-            set -eux
-            ls -la /tmp/workspace
-            pushd packaging/docker
-              docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${CLUSTER_IMAGE} .
-            popd
       - run:
           name: Prepare name envvars
           command: |
@@ -374,7 +231,18 @@ jobs:
           name: Check Cluster Status
           command: |
             .circleci/cluster/validate_status.sh ${MANAGER1_NAME} ${MANAGER2_NAME}
+  configure_cluster_for_supervisord:
+    steps:
+      - run:
+          name: Configure service management to use supervisord
+          command: |
+            echo "service_management: supervisord" >> .circleci/cluster/queue1_config.yaml
+            echo "service_management: supervisord" >> .circleci/cluster/queue2_config.yaml
+            echo "service_management: supervisord" >> .circleci/cluster/db_config.yaml
+            echo "service_management: supervisord" >> .circleci/cluster/manager1_config.yaml
+            echo "service_management: supervisord" >> .circleci/cluster/manager2_config.yaml
 
+jobs:
   flake8:
     docker:
       - image: circleci/python:3.6
@@ -382,6 +250,152 @@ jobs:
       - checkout
       - run: pip install --user flake8
       - run: python -m flake8
+  py3_compat:
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - checkout
+      - run:
+          name: install futurize
+          command: pip install future --user
+      - run:
+          name: find python3-incompatible code
+          command: |
+            FUTURIZE="futurize ."
+            while read line; do
+              [[ "$line" =~ ^#.* ]] && continue
+              FUTURIZE="${FUTURIZE} -f ${line}"
+            done<.circleci/py3fixers
+            echo "Running: $FUTURIZE"
+            $FUTURIZE>futurize_diffs
+      - run:
+          name: check that there is no python3-incompatible code
+          command: |
+            if [[ -s futurize_diffs ]]; then
+              echo "Python-3-incompatible code found"
+              cat futurize_diffs
+              exit 1
+            fi
+  fetch_rpms:
+    docker:
+      - image: python:2
+    working_directory: ~/cloudify-manager-install
+    steps:
+      - checkout
+      - run: pip install requests
+      - run:
+          name: Fetch RPMs built on CircleCI
+          command: |
+            mkdir rpms
+            cd rpms
+            ../.circleci/fetch_rpms
+      - persist_to_workspace:
+          root: ~/cloudify-manager-install
+          paths:
+            - rpms
+  build_rpm:
+    working_directory: /tmp/cloudify-manager-install
+    docker:
+      - image: rpmbuild/centos7
+    steps:
+      - checkout
+      - run:
+          name: Set version environment variables
+          command: cat packaging/version_info >> $BASH_ENV
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Link items from workspace under rpm sources dir
+          command: |
+            rm ~/rpm -fr
+            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install/rpms
+            cp -a /tmp/workspace/x86_64/prometheus-*.rpm /tmp/cloudify-manager-install/rpms/
+            cp -a /tmp/workspace/x86_64/*_exporter-*.rpm /tmp/cloudify-manager-install/rpms/
+            ln -s /tmp/cloudify-manager-install ~/rpm
+      - run:
+          name: set up cloudify-premium deploy key
+          command: |
+            mkdir -p ~/.ssh
+            echo "${CLOUDIFY_PREMIUM_DEPLOY_KEY}" > ~/.ssh/id_rsa
+      - run:
+          command: |
+            pushd /tmp/cloudify-manager-install/rpms
+              /tmp/cloudify-manager-install/packaging/fetch_requirements --edition premium -b ${CIRCLE_BRANCH} >~/fetch_requirements.log
+              cat ~/fetch_requirements.log
+            popd
+      - run: sudo yum install rpmdevtools -y
+      - run: sudo chmod a+wx /opt
+      - run:
+          name: Installing build dependencies
+          command: sudo yum-builddep -y packaging/install_rpm.spec
+      - run:
+          name: set premium_edition in the packaged config.yaml
+          command: sed -i "s/set_by_installer_builder/premium/" config.yaml
+      - run: >-
+          rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" -bb packaging/install_rpm.spec
+      - persist_to_workspace:
+          root: ~/rpm
+          paths:
+            - x86_64
+      - store_artifacts:
+          path: ~/rpm/x86_64
+          destination: /
+  build_prometheus_rpms:
+    working_directory: /tmp/cloudify-manager-install-prometheus
+    docker:
+      - image: rpmbuild/centos7
+    steps:
+      - checkout
+      - run:
+          name: Set version environment variables
+          command: cat packaging/version_info >> $BASH_ENV
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Link items from workspace under rpm sources dir
+          command: |
+            rm ~/rpm -fr
+            ln -s /tmp/workspace/rpms /tmp/cloudify-manager-install-prometheus/rpms
+            ln -s /tmp/cloudify-manager-install-prometheus ~/rpm
+      - run: sudo yum install rpmdevtools -y
+      - run:
+          name: Installing build dependencies
+          command: sudo yum-builddep -y packaging/install_rpm.spec
+      - run: rpmbuild -bb packaging/prometheus.spec
+      - run: rpmbuild -bb packaging/prometheus_node_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
+      - run: rpmbuild -bb packaging/prometheus_postgres_exporter.spec
+      - persist_to_workspace:
+          root: ~/rpm
+          paths:
+            - x86_64
+      - store_artifacts:
+          path: ~/rpm/x86_64
+          destination: /
+  install_manager:
+    machine: true
+    environment:
+      CONTAINER_NAME: cfy_manager
+      IMAGE_NAME: cfy_manager_image
+    steps:
+      - prepare_cloudify_manager
+      - build_manager_image:
+          image_name: IMAGE_NAME
+          docker_file_path: packaging/docker
+      - run_cloudify_manager
+  install_cluster:
+    machine: true
+    environment:
+      CONTAINER_NAME: cfy_manager
+      IMAGE_NAME: cfy_manager_image
+      CLUSTER_IMAGE: cfy_manager_image_preinstalled
+    steps:
+      - prepare_cloudify_manager
+      - build_manager_image:
+          image_name: CLUSTER_IMAGE
+          docker_file_path: packaging/supervisord
+      - configure_cluster_for_supervisord
+      - run_cloudify_cluster
 
 workflows:
   version: 2
@@ -401,11 +415,10 @@ workflows:
       - install_cluster:
           requires:
             - build_rpm
-
   nightly:
     triggers:
       - schedule:
-          cron: "0 0 * * *"
+          cron: 0 0 * * *
           filters:
             branches:
               only:
