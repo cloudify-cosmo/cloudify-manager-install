@@ -987,7 +987,7 @@ def wait_for_starter(verbose=False, timeout=180):
     _prepare_execution(verbose, config_write_required=False)
     config.load_config()
     if is_supervisord_service():
-        _wait_supervisord_starter(timeout)
+        _wait_supervisord_starter(timeout=300)
     else:
         _wait_systemd_starter(timeout)
 
