@@ -142,7 +142,9 @@ def _insert_manager(config):
         distribution=version_data['distribution'],
         distro_release=version_data['distro_release'],
         _ca_cert_id=ca,
-        last_seen=config['last_seen']
+        last_seen=config['last_seen'],
+        monitoring_username=config['monitoring_username'],
+        monitoring_password=config['monitoring_password'],
     )
     sm.put(inst)
 
@@ -287,12 +289,13 @@ if __name__ == '__main__':
             script_config['rabbitmq_brokers'], rabbitmq_ca_id)
     if script_config.get('manager'):
         _insert_manager(script_config['manager'])
-        _prepare_config_for_monitoring()
     if script_config.get('provider_context'):
         _add_provider_context(script_config['provider_context'])
     if script_config.get('db_nodes'):
         _insert_db_nodes(script_config['db_nodes'])
     if script_config.get('usage_collector'):
         _insert_usage_collector(script_config['usage_collector'])
+    if script_config.get('manager'):
+        _prepare_config_for_monitoring()
 
     print(json.dumps(RETURN_DICT))

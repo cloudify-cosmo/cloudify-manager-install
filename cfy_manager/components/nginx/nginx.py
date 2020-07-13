@@ -15,6 +15,7 @@
 
 from collections import namedtuple
 from os.path import join, exists
+from tempfile import NamedTemporaryFile
 
 from ..base_component import BaseComponent
 from ..components_constants import (
@@ -27,7 +28,10 @@ from ..components_constants import (
     HOSTNAME,
     SERVICES_TO_INSTALL
 )
-from ..service_names import NGINX, MANAGER, MANAGER_SERVICE, MONITORING_SERVICE
+from ..service_names import (NGINX, MANAGER, MANAGER_SERVICE,
+                             MONITORING_SERVICE, PROMETHEUS,
+                             DATABASE_SERVICE, POSTGRESQL_SERVER,
+                             QUEUE_SERVICE, RABBITMQ, )
 from ... import constants
 from ...config import config
 from ...exceptions import ValidationError
@@ -220,12 +224,52 @@ class Nginx(BaseComponent):
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')
+        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
+            self._update_credentials_config()
+            self._create_htpasswd_files()
         for resource in self._config_files():
             deploy(resource.src, resource.dst)
 
         # remove the default configuration which reserves localhost:80 for a
         # nginx default landing page
         common.remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
+
+    def _update_credentials_config(self):
+        prometheus_credentials_cfg = config.get(PROMETHEUS).get('credentials',
+                                                                {})
+        if (prometheus_credentials_cfg.get('username') and
+                prometheus_credentials_cfg.get('password')):
+            return
+        if 'credentials' not in config.get(PROMETHEUS):
+            config[PROMETHEUS]['credentials'] = {}
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            manager_security_cfg = config.get(MANAGER).get('security', {})
+            config[PROMETHEUS]['credentials']['username'] = \
+                manager_security_cfg.get('admin_username')
+            config[PROMETHEUS]['credentials']['password'] = \
+                manager_security_cfg.get('admin_password')
+        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            postgres_password = \
+                config.get(POSTGRESQL_SERVER).get('postgres_password')
+            config[PROMETHEUS]['credentials']['username'] = 'postgres'
+            config[PROMETHEUS]['credentials']['password'] = postgres_password
+        if QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+            rabbitmq_cfg = config.get(RABBITMQ)
+            config[PROMETHEUS]['credentials']['username'] = \
+                rabbitmq_cfg.get('username')
+            config[PROMETHEUS]['credentials']['password'] = \
+                rabbitmq_cfg.get('password')
+
+    def _create_htpasswd_files(self):
+        username = config.get(PROMETHEUS).get('credentials').get('username')
+        password = config.get(PROMETHEUS).get('credentials').get('password')
+        htpassword_file_name = '/etc/nginx/conf.d/monitoring-htpasswd.cloudify'
+        with NamedTemporaryFile(delete=False, mode='w') as f:
+            f.write('{0}:{1}'.format(username, common.run(
+                ['openssl', 'passwd', '-apr1', password]).aggr_stdout))
+        common.move(f.name, htpassword_file_name)
+        common.chown('nginx', 'nginx', htpassword_file_name)
+        common.chmod('600', htpassword_file_name)
 
     def _verify_nginx(self):
         # TODO: This code requires the restservice to be installed, but

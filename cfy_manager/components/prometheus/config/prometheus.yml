@@ -40,6 +40,8 @@ scrape_configs:
           - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
           - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify external
           - https://{{ manager.private_ip }}:53333/ # Cloudify internal
+        labels:
+          host: {{ manager.private_ip }}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -55,6 +57,8 @@ scrape_configs:
       - targets:
           - http://127.0.0.1:8100/api/v3.1/status  # Cloudify rest service
           - http://127.0.0.1:53229/  # Cloudify resources service
+        labels:
+          host: {{ manager.private_ip }}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -69,6 +73,9 @@ scrape_configs:
     scheme: 'https'
     tls_config:
       ca_file: {{ rabbitmq.ca_path }}
+    basic_auth:
+      username: {{ rabbitmq.monitoring.username }}
+      password: {{ rabbitmq.monitoring.password }}
     metrics_path: /metrics/rabbitmq
     params:
       'match[]':
@@ -86,6 +93,9 @@ scrape_configs:
     scheme: 'https'
     tls_config:
       ca_file: {{ postgresql_client.ca_path }}
+    basic_auth:
+      username: {{ postgresql_client.monitoring.username }}
+      password: {{ postgresql_client.monitoring.password }}
     metrics_path: /metrics/postgres
     params:
       'match[]':
