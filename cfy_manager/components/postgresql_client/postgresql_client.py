@@ -186,7 +186,7 @@ class PostgresqlClient(BaseComponent):
         replacing_cert_and_key = os.path.exists(
             NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            self._validate_new_certs()
+            self.validate_new_certs()
             if replacing_ca:
                 self.logger.info(
                     'Replacing CA cert on postgresql_client component')
@@ -198,21 +198,22 @@ class PostgresqlClient(BaseComponent):
                 self._handle_cert_and_key(installing=False)
 
     @staticmethod
-    def _validate_new_certs():
-        cert_filename, key_filename = None, None
-        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-            cert_filename, key_filename = \
-                certificates.get_cert_and_key_filenames(
-                    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
-                    NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
-                    POSTGRESQL_CLIENT_CERT_PATH,
-                    POSTGRESQL_CLIENT_KEY_PATH)
+    def validate_new_certs():
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            cert_filename, key_filename = None, None
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                cert_filename, key_filename = \
+                    certificates.get_cert_and_key_filenames(
+                        NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+                        NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
+                        POSTGRESQL_CLIENT_CERT_PATH,
+                        POSTGRESQL_CLIENT_KEY_PATH)
 
-        ca_filename = certificates.get_ca_filename(
-            NEW_POSTGRESQL_CA_CERT_FILE_PATH,
-            POSTGRESQL_CA_CERT_PATH)
+            ca_filename = certificates.get_ca_filename(
+                NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                POSTGRESQL_CA_CERT_PATH)
 
-        validate_certificates(cert_filename, key_filename, ca_filename)
+            validate_certificates(cert_filename, key_filename, ca_filename)
 
     def _configure(self):
         self._create_postgres_pgpass_files()

@@ -175,42 +175,46 @@ class Nginx(BaseComponent):
                                                replace_cert_config)
 
     def replace_certificates(self):
-        replacing_internal_certs = certificates.needs_to_replace_certificates(
-            constants.NEW_INTERNAL_CERT_FILE_PATH,
-            constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
-        replacing_external_certs = certificates.needs_to_replace_certificates(
-            constants.NEW_EXTERNAL_CERT_FILE_PATH,
-            constants.NEW_EXTERNAL_CA_CERT_FILE_PATH)
-
-        if replacing_internal_certs:
+        if self._needs_to_replace_internal_certs():
             self._replace_internal_certs()
-        if replacing_external_certs:
+        if self._needs_to_replace_external_certs():
             self._replace_external_certs()
 
-        if replacing_external_certs or replacing_external_certs:
+        if (self._needs_to_replace_internal_certs() or
+                self._needs_to_replace_external_certs()):
             service.restart(NGINX, append_prefix=False)
             service.verify_alive(NGINX, append_prefix=False)
 
-    def _replace_internal_certs(self):
-        cert_src, key_src, ca_src = \
-            certificates.get_and_validate_certs_for_replacement(
-                default_cert_location=constants.INTERNAL_CERT_PATH,
-                default_key_location=constants.INTERNAL_KEY_PATH,
-                default_ca_location=constants.CA_CERT_PATH,
-                new_cert_location=constants.NEW_INTERNAL_CERT_FILE_PATH,
-                new_key_location=constants.NEW_INTERNAL_KEY_FILE_PATH,
-                new_ca_location=constants.NEW_INTERNAL_CA_CERT_FILE_PATH
-            )
+    @staticmethod
+    def _needs_to_replace_internal_certs():
+        return certificates.needs_to_replace_certificates(
+            constants.NEW_INTERNAL_CERT_FILE_PATH,
+            constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
 
-        self.log_replacing_certificates('internal certificates')
-        self._handle_internal_cert(installing=False,
-                                   cert_src=cert_src,
-                                   key_src=key_src,
-                                   ca_src=ca_src)
+    @staticmethod
+    def _needs_to_replace_external_certs():
+        return certificates.needs_to_replace_certificates(
+            constants.NEW_EXTERNAL_CERT_FILE_PATH,
+            constants.NEW_EXTERNAL_CA_CERT_FILE_PATH)
 
-    def _replace_external_certs(self):
-        cert_src, key_src, ca_src = \
-            certificates.get_and_validate_certs_for_replacement(
+    def validate_new_certs(self):
+        self._validate_internal_certs()
+        self._validate_external_certs()
+
+    def _validate_internal_certs(self):
+        if self._needs_to_replace_internal_certs():
+            return certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=constants.INTERNAL_CERT_PATH,
+                    default_key_location=constants.INTERNAL_KEY_PATH,
+                    default_ca_location=constants.CA_CERT_PATH,
+                    new_cert_location=constants.NEW_INTERNAL_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_INTERNAL_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+                )
+
+    def _validate_external_certs(self):
+        if self._needs_to_replace_external_certs():
+            return certificates.get_and_validate_certs_for_replacement(
                 default_cert_location=constants.EXTERNAL_CERT_PATH,
                 default_key_location=constants.EXTERNAL_KEY_PATH,
                 default_ca_location=constants.CA_CERT_PATH,
@@ -219,6 +223,16 @@ class Nginx(BaseComponent):
                 new_ca_location=constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
             )
 
+    def _replace_internal_certs(self):
+        cert_src, key_src, ca_src = self._validate_internal_certs()
+        self.log_replacing_certificates('internal certificates')
+        self._handle_internal_cert(installing=False,
+                                   cert_src=cert_src,
+                                   key_src=key_src,
+                                   ca_src=ca_src)
+
+    def _replace_external_certs(self):
+        cert_src, key_src, ca_src = self._validate_external_certs()
         self.log_replacing_certificates('external certificates')
         self._handle_external_cert(installing=False,
                                    cert_src=cert_src,
