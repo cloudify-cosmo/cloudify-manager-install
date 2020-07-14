@@ -27,13 +27,11 @@ import argparse
 import subprocess
 from datetime import datetime
 
-from flask_migrate import upgrade
-
 from manager_rest import config, version
 from manager_rest.storage import storage_utils
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import db, models, get_storage_manager  # NOQA
+from manager_rest.storage import models, get_storage_manager  # NOQA
 
 logging.basicConfig(
     stream=sys.stderr, level=logging.INFO, format='%(message)s')
@@ -42,16 +40,6 @@ logger = \
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 RETURN_DICT = {}
-
-
-def _init_db_tables(db_migrate_dir):
-    logger.info('Setting up a Flask app')
-    # Clean up the DB, in case it's not a clean install
-    db.drop_all()
-    db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
-
-    logger.info('Creating tables in the DB')
-    upgrade(directory=db_migrate_dir)
 
 
 def _add_default_user_and_tenant(amqp_manager, script_config):
@@ -265,8 +253,6 @@ if __name__ == '__main__':
     with open(args.input, 'r') as f:
         script_config = json.load(f)
 
-    if script_config.get('db_migrate_dir'):
-        _init_db_tables(script_config['db_migrate_dir'])
     if (script_config.get('admin_username')
             and script_config.get('admin_password')):
         amqp_manager = _get_amqp_manager(script_config)

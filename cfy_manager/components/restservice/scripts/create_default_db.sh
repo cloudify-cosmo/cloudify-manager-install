@@ -70,3 +70,6 @@ create_admin_user ${db_name} ${user} ${password}
 create_stage_database ${stage_db_name} ${user}
 create_composer_database ${composer_db_name} ${user}
 possibly_revoke_role_from_user ${user}
+
+psql "$db_name" -c 'DROP TABLE IF EXISTS alembic_version;'
+PGPASSWORD="$password" psql --user "${user}" "$db_name" -f "/opt/manager/resources/cloudify/migrations/schema.sql"

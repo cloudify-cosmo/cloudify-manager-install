@@ -116,8 +116,6 @@ def _create_populate_db_args_dict():
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
         'provider_context': _get_provider_context(),
         'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
-        'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
-                               'migrations'),
         'config': make_manager_config(),
         'premium': 'premium' if is_premium_installed() else 'community',
         'rabbitmq_brokers': _create_rabbitmq_info(),
