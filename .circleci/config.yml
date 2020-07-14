@@ -399,29 +399,6 @@ jobs:
       - prepare_cloudify_manager
       - build_manager_image:
           image_name: CLUSTER_IMAGE
-          docker_file_path: packaging/docker
-      - run_cloudify_cluster
-  install_manager_with_supervisord:
-    machine: true
-    environment:
-      CONTAINER_NAME: cfy_manager
-      IMAGE_NAME: cfy_manager_image
-    steps:
-      - prepare_cloudify_manager
-      - build_manager_image:
-          image_name: IMAGE_NAME
-          docker_file_path: packaging/supervisord
-      - run_cloudify_manager
-  install_cluster_with_supervisord:
-    machine: true
-    environment:
-      CONTAINER_NAME: cfy_manager
-      IMAGE_NAME: cfy_manager_image
-      CLUSTER_IMAGE: cfy_manager_image_preinstalled
-    steps:
-      - prepare_cloudify_manager
-      - build_manager_image:
-          image_name: CLUSTER_IMAGE
           docker_file_path: packaging/supervisord
       - configure_cluster_for_supervisord
       - run_cloudify_cluster
@@ -444,12 +421,6 @@ workflows:
       - install_cluster:
           requires:
             - build_rpm
-      - install_manager_with_supervisord:
-          requires:
-            - install_manager
-      - install_cluster_with_supervisord:
-          requires:
-            - install_cluster
   nightly:
     triggers:
       - schedule:
