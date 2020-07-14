@@ -42,10 +42,9 @@ manager:
 
   # Parameters for accessing the manager's monitoring service remotely
   monitoring:
-    # TODO mateusz implement nginx credentials
-    # Those are copied from manager.security.admin_username
-    # and manager.security.admin_password by default.
+    # This is copied from manager.security.admin_username by default.
     username: ''
+    # This is copied from manager.security.admin_password by default.
     password: ''
 
 provider_context:
@@ -222,9 +221,9 @@ rabbitmq:
 
   # Parameters for accessing the rabbitmq's monitoring service remotely
   monitoring:
-    # TODO mateusz implement nginx credentials
-    # Those are copied from rabbitmq.username and rabbitmq.password by default.
+    # Username is copied from rabbitmq.username by default.
     username: ''
+    # Password is copied rabbitmq.password by default.
     password: ''
 
 # IMPORTANT: some of the configuration keys in the "postgresql_server" and
@@ -364,10 +363,9 @@ postgresql_client:
 
   # Parameters for accessing the postgresql_server's monitoring service remotely
   monitoring:
-    # TODO mateusz implement nginx credentials
-    # This one is copied from postgresql_client.server_username by default
+    # This one is copied from postgresql_client.server_username by default.
     username: ''
-    # This one is copied from postgresql_client.server_password by default
+    # This one is copied from postgresql_client.server_password by default.
     password: ''
 
 stage:
@@ -598,11 +596,12 @@ prometheus:
   ca_cert_path: ''
   # Parameters that will be used to access the monitoring service remotely
   credentials:
-    # TODO mateusz implement nginx credentials
     # If those values are left empty, credentials will be copied from manager's credentials or
     # rabbitmq's, or postgresql_server's (in this order)
     username: ''
     password: ''
+  # How long should status reporter wait for Prometheus response (in seconds).
+  request_timeout: 4
 
 
 flask_security: {}
