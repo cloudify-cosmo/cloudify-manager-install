@@ -20,7 +20,6 @@ import os
 import re
 import sys
 import time
-import yaml
 import logging
 import subprocess
 from xml.parsers import expat
@@ -92,7 +91,8 @@ from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
     remove as _remove,
     remove_temp_files,
-    touch
+    touch,
+    read_yaml_file
 )
 from ._compat import xmlrpclib
 
@@ -1078,9 +1078,7 @@ def replace_certificates(input_path=NEW_CERTS_TMP_DIR_PATH,
 
 
 def _handle_replace_certs_config_path(replace_certs_config_path):
-    with open(replace_certs_config_path) as certs_config_file:
-        replace_certs_config = yaml.load(certs_config_file, yaml.Loader)
-
+    replace_certs_config = read_yaml_file(replace_certs_config_path)
     for cert_name, cert_path in replace_certs_config.items():
         copy(cert_path, CERTS_MAPPING[cert_name])
 
