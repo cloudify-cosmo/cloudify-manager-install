@@ -49,6 +49,8 @@ from ...constants import (
 )
 from ...logger import get_logger
 from ...utils import common, files, service
+from ...utils.users import create_service_user
+
 
 CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
 LOG_DIR = join(constants.BASE_LOG_DIR, PROMETHEUS)
@@ -100,6 +102,7 @@ class Prometheus(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
+        _create_cloudify_user()
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration()
@@ -160,6 +163,20 @@ class Prometheus(BaseComponent):
                 target_node=join_node,
             )
         )
+
+
+def _create_cloudify_user():
+    create_service_user(
+        user=constants.CLOUDIFY_USER,
+        group=constants.CLOUDIFY_GROUP,
+        home=constants.CLOUDIFY_HOME_DIR
+    )
+    common.mkdir(constants.CLOUDIFY_HOME_DIR)
+    common.chown(
+        constants.CLOUDIFY_USER,
+        constants.CLOUDIFY_GROUP,
+        constants.CLOUDIFY_HOME_DIR,
+    )
 
 
 def _create_prometheus_directories():
