@@ -14,23 +14,21 @@
 #  * limitations under the License.
 
 import sys
-import getpass
 import time
 import uuid
+import pkg_resources
 from contextlib import contextmanager
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
-from cfy_manager.components import sources
-from ..components_constants import PRIVATE_IP, CLUSTER_JOIN
+from ..components_constants import CLUSTER_JOIN
 from ..base_component import BaseComponent
-from ..service_names import SANITY, MANAGER
+from ..service_names import SANITY
 from ...config import config
 from ...logger import get_logger
 from ...constants import CLOUDIFY_HOME_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common
-from ...utils.network import wait_for_port
-from ...utils.files import get_local_source_path, write_to_file, remove_files
+from ...utils.files import write_to_file, remove_files
 
 
 logger = get_logger(SANITY)
@@ -86,22 +84,19 @@ class Sanity(BaseComponent):
 
     def _upload_blueprint(self):
         logger.info('Uploading sanity blueprint...')
-        sanity_blueprint = get_local_source_path(sources.sanity)
-        common.run(['cfy', 'blueprints', 'upload', sanity_blueprint, '-n',
-                    'no-monitoring-singlehost-blueprint.yaml', '-b',
-                    self.blueprint_name],
+        blueprint_path = pkg_resources.resource_filename(
+            'cfy_manager',
+            'components/sanity/blueprint/bp.yaml'
+        )
+        common.run(['cfy', 'blueprints', 'upload', blueprint_path,
+                    '-b', self.blueprint_name],
                    stdout=sys.stdout)
 
-    def _deploy_app(self, ssh_key_path):
+    def _deploy_app(self):
         logger.info('Deploying sanity app...')
-        manager_ip = config[MANAGER][PRIVATE_IP]
-        ssh_user = getpass.getuser()
         common.run(['cfy', 'deployments', 'create', '-b', self.blueprint_name,
                     self.deployment_name,
-                    '-i', 'server_ip={0}'.format(manager_ip),
-                    '-i', 'agent_user={0}'.format(ssh_user),
-                    '-i', 'agent_private_key_path={0}'.format(ssh_key_path),
-                    '-i', 'webserver_port={0}'.format(SANITY_WEB_SERVER_PORT)],
+                    '--skip-plugins-validation'],
                    stdout=sys.stdout)
 
     def _install_sanity(self):
@@ -111,19 +106,15 @@ class Sanity(BaseComponent):
                    stdout=sys.stdout)
 
     @staticmethod
-    def _verify_sanity():
-        wait_for_port(SANITY_WEB_SERVER_PORT)
-
-    @staticmethod
     def _clean_old_sanity():
         logger.debug('Removing remnants of old sanity '
                      'installation if exists...')
         common.remove('/opt/mgmtworker/work/deployments/default_tenant/sanity')
 
-    def _run_sanity(self, ssh_key_path):
+    def _run_sanity(self):
         self._clean_old_sanity()
         self._upload_blueprint()
-        self._deploy_app(ssh_key_path)
+        self._deploy_app()
         self._install_sanity()
 
     def _clean_sanity(self):
@@ -139,11 +130,8 @@ class Sanity(BaseComponent):
 
     def run_sanity_check(self):
         logger.notice('Running Sanity...')
-        ssh_key_path = self._create_ssh_key()
-        self._run_sanity(ssh_key_path)
-        self._verify_sanity()
+        self._run_sanity()
         self._clean_sanity()
-        self._remove_sanity_ssh(ssh_key_path)
         logger.notice('Sanity completed successfully')
 
     def start(self):

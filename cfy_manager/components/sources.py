@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-sanity = 'cloudify-hello-world-example-*.tar.gz'
-
 manager = [
     'cloudify-management-worker', 'cloudify-rest-service',
     'cloudify-cli', 'cloudify-manager-ip-setter', 'nginx',
