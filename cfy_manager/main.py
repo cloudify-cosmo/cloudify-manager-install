@@ -60,7 +60,7 @@ from .constants import (
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
     SUPERVISORD_CONFIG_DIR,
-    NEW_CERTS_TMP_DIR_PATH
+    CONFIG_FILE_PATH
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError, ValidationError
@@ -1060,7 +1060,7 @@ def run_init():
 @argh.decorators.named('replace-certificates')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
-def replace_certificates(input_path=NEW_CERTS_TMP_DIR_PATH,
+def replace_certificates(input_path=CONFIG_FILE_PATH,
                          only_validate=False):
     """ Replacing the certificates on the current instance """
     config.load_config()
@@ -1076,7 +1076,8 @@ def replace_certificates(input_path=NEW_CERTS_TMP_DIR_PATH,
 def _handle_replace_certs_config_path(replace_certs_config_path):
     replace_certs_config = read_yaml_file(replace_certs_config_path)
     for cert_name, cert_path in replace_certs_config.items():
-        copy(cert_path, CERTS_MAPPING[cert_name])
+        if cert_path != CERTS_MAPPING[cert_name]:
+            copy(cert_path, CERTS_MAPPING[cert_name])
 
 
 def _has_replace_certificates_attr(component):
