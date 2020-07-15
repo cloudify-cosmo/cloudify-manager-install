@@ -9,7 +9,7 @@ commands:
       - run:
           name: Waiting for << parameters.container_name >> to start
           command: |
-            docker exec ${<< parameters.container_name >>} cfy_manager wait-for-starter
+            docker exec -e LC_ALL=en_US.utf8 ${<< parameters.container_name >>} cfy_manager wait-for-starter
   build_manager_image:
     parameters:
       image_name:
