@@ -248,8 +248,9 @@ class RestService(BaseComponent):
             else:
                 db.validate_schema_version(configs)
                 cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
-                self._prepare_cluster_config_update(cluster_cfg_fn,
-                                                    rabbitmq_ca_fn)
+                if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
+                    self._prepare_cluster_config_update(cluster_cfg_fn,
+                                                        rabbitmq_ca_fn)
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
