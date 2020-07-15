@@ -90,20 +90,23 @@ class Sanity(BaseComponent):
         )
         common.run(['cfy', 'blueprints', 'upload', blueprint_path,
                     '-b', self.blueprint_name],
-                   stdout=sys.stdout)
+                   stdout=sys.stdout,
+                   env={'LC_ALL': 'en_US.UTF-8'})
 
     def _deploy_app(self):
         logger.info('Deploying sanity app...')
         common.run(['cfy', 'deployments', 'create', '-b', self.blueprint_name,
                     self.deployment_name,
                     '--skip-plugins-validation'],
-                   stdout=sys.stdout)
+                   stdout=sys.stdout,
+                   env={'LC_ALL': 'en_US.UTF-8'})
 
     def _install_sanity(self):
         logger.info('Installing sanity app...')
         common.run(['cfy', 'executions', 'start', 'install', '-d',
                     self.deployment_name],
-                   stdout=sys.stdout)
+                   stdout=sys.stdout,
+                   env={'LC_ALL': 'en_US.UTF-8'})
 
     @staticmethod
     def _clean_old_sanity():
@@ -121,12 +124,15 @@ class Sanity(BaseComponent):
         logger.info('Removing sanity...')
         common.run(['cfy', 'executions', 'start', 'uninstall', '-d',
                     self.deployment_name],
-                   stdout=sys.stdout)
+                   stdout=sys.stdout,
+                   env={'LC_ALL': 'en_US.UTF-8'})
         common.run(['cfy', 'deployments', 'delete', self.deployment_name],
-                   stdout=sys.stdout)
+                   stdout=sys.stdout,
+                   env={'LC_ALL': 'en_US.UTF-8'})
         time.sleep(3)
         common.run(['cfy', 'blueprints', 'delete', self.blueprint_name],
-                   stdout=sys.stdout)
+                   stdout=sys.stdout,
+                   env={'LC_ALL': 'en_US.UTF-8'})
 
     def run_sanity_check(self):
         logger.notice('Running Sanity...')
