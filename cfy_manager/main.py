@@ -976,7 +976,7 @@ def _wait_supervisord_starter(timeout):
 
 
 @argh.decorators.named('wait-for-starter')
-def wait_for_starter(verbose=False, timeout=180):
+def wait_for_starter(verbose=False, timeout=300):
     _prepare_execution(verbose, config_write_required=False)
     config.load_config()
     if is_supervisord_service():
