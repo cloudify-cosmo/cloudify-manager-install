@@ -171,12 +171,6 @@ def _create_cloudify_user():
         group=constants.CLOUDIFY_GROUP,
         home=constants.CLOUDIFY_HOME_DIR
     )
-    common.mkdir(constants.CLOUDIFY_HOME_DIR)
-    common.chown(
-        constants.CLOUDIFY_USER,
-        constants.CLOUDIFY_GROUP,
-        constants.CLOUDIFY_HOME_DIR,
-    )
 
 
 def _create_prometheus_directories():
