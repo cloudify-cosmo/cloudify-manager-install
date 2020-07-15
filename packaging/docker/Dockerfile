@@ -16,8 +16,7 @@ RUN groupadd -g $reporter_gid cfyreporter
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs sudo \
-    openssh-server
+    systemd-sysv initscripts tcp_wrappers-libs sudo
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
