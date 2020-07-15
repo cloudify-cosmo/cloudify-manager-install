@@ -3,8 +3,8 @@ set -eux
 
 validate_status() {
   echo "Testing cluster status in $1"
-  manager_status="$(docker exec $1 cfy cluster status)"
-  docker exec $1 cfy cluster status --json
+  manager_status="$(docker exec -e LC_ALL=en_US.utf8 $1 cfy cluster status)"
+  docker exec -e LC_ALL=en_US.utf8 $1 cfy cluster status --json
   set +e
   # those `exit 1` calls should be `exit 1`, but currently `cfy cluster status`
   # has a false positive issue where it's reporting the managers as failing.
