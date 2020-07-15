@@ -110,6 +110,7 @@ VERBOSE_HELP_MSG = (
 # These constants are the same as on the cloudify-cli #
 
 NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
+CONFIG_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'replace_certificates_config.yaml'
 
 NEW_BROKER_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_cert.pem'
 NEW_BROKER_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_key.pem'
