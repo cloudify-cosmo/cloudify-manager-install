@@ -170,6 +170,7 @@ jobs:
       - run:
           name: Check Manager Status
           command: |
+            sleep 10
             .circleci/cluster/validate_status.sh ${CONTAINER_NAME}
       - run:
           name: Run the sanity check
