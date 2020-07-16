@@ -31,7 +31,6 @@ from ...utils.files import (replace_in_file,
                             touch)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers, allow_user_to_sudo_command
-from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
 
@@ -40,7 +39,6 @@ logger = get_logger(MANAGER)
 
 class Manager(BaseComponent):
     def _install(self):
-        self._create_cloudify_user()
         self._create_sudoers_file_and_disable_sudo_requiretty()
         if self.service_type == 'supervisord':
             self._allow_run_supervisorctl_command()
@@ -58,19 +56,6 @@ class Manager(BaseComponent):
     def _get_exec_tempdir(self):
         return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \
                gettempdir()
-
-    def _create_cloudify_user(self):
-        create_service_user(
-            user=constants.CLOUDIFY_USER,
-            group=constants.CLOUDIFY_GROUP,
-            home=constants.CLOUDIFY_HOME_DIR
-        )
-        common.mkdir(constants.CLOUDIFY_HOME_DIR)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            constants.CLOUDIFY_HOME_DIR,
-        )
 
     def _create_sudoers_file_and_disable_sudo_requiretty(self):
         common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
