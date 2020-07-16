@@ -288,6 +288,7 @@ jobs:
                   -e "s/DB3_IP/${DB3_IP}/g" \
                   .circleci/cluster/db_config.yaml > db2_config.yaml
 
+            echo "service_management: supervisord" >> db2_config.yaml
             docker run \
               -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
               --name ${DB2_NAME} \
