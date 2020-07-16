@@ -97,6 +97,14 @@ def sudo(command, *args, **kwargs):
     return run(command=command, *args, **kwargs)
 
 
+def cfy(*command, **kwargs):
+    # all `cfy` run calls have LC_ALL explicitly provided because
+    # click on py3.6 absolutely requires some locale to be set
+    env = {'LC_ALL': 'en_US.UTF-8'}
+    base = ['sudo', 'cfy'] if kwargs.pop('sudo', False) else ['cfy']
+    return run(base + list(command), env=env, **kwargs)
+
+
 def mkdir(folder, use_sudo=True):
     if os.path.isdir(folder):
         return

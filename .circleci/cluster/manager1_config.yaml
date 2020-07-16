@@ -48,3 +48,5 @@ ssl_inputs:
 services_to_install:
 - manager_service
 - monitoring_service
+
+service_management: supervisord

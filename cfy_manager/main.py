@@ -859,13 +859,6 @@ def start(include_components,
     _validate_components_prepared('start')
     set_globals()
     logger.notice('Starting Cloudify Manager services...')
-    if is_supervisord_service():
-        # This is will be only relevant for running sshd service on container
-        sudo(
-            'supervisorctl -c /etc/supervisord.conf restart sshd',
-            ignore_failures=True
-        )
-
     for component in _get_components(include_components):
         component.start()
     logger.notice('Cloudify Manager services successfully started!')
@@ -983,7 +976,7 @@ def _wait_supervisord_starter(timeout):
 
 
 @argh.decorators.named('wait-for-starter')
-def wait_for_starter(verbose=False, timeout=180):
+def wait_for_starter(verbose=False, timeout=300):
     _prepare_execution(verbose, config_write_required=False)
     config.load_config()
     if is_supervisord_service():
@@ -1027,6 +1020,25 @@ def image_starter(verbose=False):
     subprocess.check_call(command + ['start'] + args)
 
 
+@argh.decorators.named('run-init')
+def run_init():
+    """Run the configured init system/service management system.
+
+    Based on the configuration, run either systemd or supervisord.
+    This is to be used for the docker image. Full OS images should run
+    systemd on their own.
+    """
+    config.load_config()
+    if is_supervisord_service():
+        os.execv(
+            "/usr/bin/supervisord",
+            ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
+    else:
+        os.execv(
+            "/bin/bash",
+            ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
+
+
 def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
@@ -1048,7 +1060,8 @@ def main():
         generate_test_cert,
         reset_admin_password,
         image_starter,
-        wait_for_starter
+        wait_for_starter,
+        run_init
     ])
 
     parser.add_commands([

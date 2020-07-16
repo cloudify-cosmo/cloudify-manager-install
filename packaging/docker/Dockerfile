@@ -16,8 +16,7 @@ RUN groupadd -g $reporter_gid cfyreporter
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs sudo \
-    openssh-server
+    systemd-sysv initscripts tcp_wrappers-libs sudo
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
@@ -41,7 +40,10 @@ RUN systemctl enable cloudify-starter.service
 
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
+RUN mkdir -p /etc/supervisord.d
+RUN chmod a+wx /var/run
+COPY supervisord.conf /etc/supervisord.conf
 
 STOPSIGNAL SIGRTMIN+3
 VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"]
+CMD ["/usr/bin/cfy_manager", "run-init"]
