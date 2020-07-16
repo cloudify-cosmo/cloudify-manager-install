@@ -19,6 +19,7 @@ Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python3 >= 3.6, python3-devel >= 3.6, createrepo, gcc
 Requires:       python3 >= 3.6
+Requires(pre):  shadow-utils
 
 %description
 Cloudify Manager installer.
@@ -45,6 +46,7 @@ ln -s %_venv/bin/supervisord %{buildroot}/usr/bin/supervisord
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
+mkdir -p %{buildroot}/var/log/cloudify
 
 %pre
 ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
@@ -53,6 +55,9 @@ if (( $(awk 'BEGIN {print ("'$ver'"<"'$min_ver'")}') )); then
     >&2 echo "[ERROR] OS version earlier than $min_ver, exiting."
     exit 1;
 fi
+
+groupadd -fr cfyuser
+getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
 %post
 echo "
@@ -77,3 +82,4 @@ cfy_manager install
 /etc/supervisord.conf
 /usr/bin/supervisorctl
 /usr/bin/supervisord
+%attr(755,cfyuser,cfyuser) /var/log/cloudify
