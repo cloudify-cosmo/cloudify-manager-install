@@ -46,6 +46,11 @@ ln -s %_venv/bin/supervisord %{buildroot}/usr/bin/supervisord
 mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
 
+groupadd --force cfyuser
+useradd --shell /sbin/nologin --home-dir /etc/cloudify --no-create-home --system --no-user-group --gid cfyuser cfyuser
+mkdir /var/log/cloudify
+chown cfyuser:cfyuser /var/log/cloudify
+
 %pre
 ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
 min_ver=7.6
