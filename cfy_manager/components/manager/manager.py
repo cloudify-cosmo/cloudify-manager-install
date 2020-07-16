@@ -47,6 +47,7 @@ class Manager(BaseComponent):
         self._set_selinux_permissive()
         setup_logrotate()
         self._create_manager_resources_dirs()
+        self._create_logs_dir()
 
     def _allow_run_supervisorctl_command(self):
         command = '/usr/bin/supervisorctl'
@@ -113,6 +114,15 @@ class Manager(BaseComponent):
         common.mkdir(join(resources_root, 'cloudify_agent'))
         common.mkdir(join(resources_root, 'packages', 'scripts'))
         common.mkdir(join(resources_root, 'packages', 'templates'))
+
+    def _create_logs_dir(self):
+        logs_dir = join(os.sep, 'var', 'log', 'cloudify')
+        common.mkdir(logs_dir)
+        common.chown(
+            constants.CLOUDIFY_USER,
+            constants.CLOUDIFY_GROUP,
+            logs_dir
+        )
 
     def _prepare_certificates(self):
         if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):
