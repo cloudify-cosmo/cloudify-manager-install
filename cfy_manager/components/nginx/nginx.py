@@ -248,12 +248,12 @@ class Nginx(BaseComponent):
                 manager_security_cfg.get('admin_username')
             config[PROMETHEUS]['credentials']['password'] = \
                 manager_security_cfg.get('admin_password')
-        if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        elif DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             postgres_password = \
                 config.get(POSTGRESQL_SERVER).get('postgres_password')
             config[PROMETHEUS]['credentials']['username'] = 'postgres'
             config[PROMETHEUS]['credentials']['password'] = postgres_password
-        if QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+        elif QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
             rabbitmq_cfg = config.get(RABBITMQ)
             config[PROMETHEUS]['credentials']['username'] = \
                 rabbitmq_cfg.get('username')
