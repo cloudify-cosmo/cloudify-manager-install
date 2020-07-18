@@ -15,9 +15,10 @@
 
 from __future__ import print_function
 
+import os
 import csv
 import glob
-import os
+import time
 import shlex
 import socket
 import logging
@@ -165,6 +166,15 @@ def ensure_destination_dir_exists(destination):
 def copy(source, destination):
     ensure_destination_dir_exists(destination)
     sudo(['cp', '-rp', source, destination])
+
+
+def not_overriding_copy(source, destination):
+    if os.path.exists(destination):
+        modified_name = time.strftime('%Y%m%d-%H%M%S_') + \
+                        os.path.basename(destination)
+        new_dest = os.path.dirname(destination) + modified_name
+        move(destination, new_dest)
+    copy(source, destination)
 
 
 def move(source, destination, rename_only=False):
