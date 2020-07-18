@@ -97,10 +97,7 @@ VERBOSE_HELP_MSG = (
     "Used to give more verbose output."
 )
 
-# These constants are the same as on the cloudify-cli #
-
 NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
-CONFIG_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'replace_certificates_config.yaml'
 
 NEW_BROKER_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_cert.pem'
 NEW_BROKER_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_key.pem'
@@ -108,20 +105,19 @@ NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                 'new_rabbitmq_ca_cert.pem')
 
 NEW_POSTGRESQL_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                 'new_postgresql_cert.pem')
+                                 'new_postgresql_server_cert.pem')
 NEW_POSTGRESQL_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                'new_postgresql_key.pem')
+                                'new_postgresql_server_key.pem')
 NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                         'new_postgresql_client_cert.pem')
 NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                        'new_postgresql_client_key.pem')
 NEW_POSTGRESQL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                    'new_postgresql_ca_cert.pem')
+                                    'new_postgresql_server_ca_cert.pem')
 
 NEW_INTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_cert.pem'
 NEW_INTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_key.pem'
-NEW_INTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                  'new_internal_ca_cert.pem')
+NEW_INTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ca_cert.pem')
 
 NEW_EXTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_cert.pem'
 NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
@@ -129,24 +125,3 @@ NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                   'new_external_ca_cert.pem')
 
 NEW_LDAP_CA_CERT_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ldap_ca_cert.pem')
-
-CERTS_MAPPING = {
-    'new_postgresql_cert_path': NEW_POSTGRESQL_CERT_FILE_PATH,
-    'new_postgresql_key_path': NEW_POSTGRESQL_KEY_FILE_PATH,
-    'new_postgresql_ca_cert_path': NEW_POSTGRESQL_CA_CERT_FILE_PATH,
-    'new_rabbitmq_cert_path': NEW_BROKER_CERT_FILE_PATH,
-    'new_rabbitmq_key_path': NEW_BROKER_KEY_FILE_PATH,
-    'new_rabbitmq_ca_cert_path': NEW_BROKER_CA_CERT_FILE_PATH,
-    'new_internal_cert_path': NEW_INTERNAL_CERT_FILE_PATH,
-    'new_internal_key_path': NEW_INTERNAL_KEY_FILE_PATH,
-    'new_ca_cert_path': NEW_INTERNAL_CA_CERT_FILE_PATH,
-    'new_external_cert_path': NEW_EXTERNAL_CERT_FILE_PATH,
-    'new_external_key_path': NEW_EXTERNAL_KEY_FILE_PATH,
-    'new_external_ca_cert_path': NEW_EXTERNAL_CA_CERT_FILE_PATH,
-    'new_postgresql_client_cert_path':
-        NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
-    'new_postgresql_client_key_path': NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
-    'new_ldap_ca_cert_path': NEW_LDAP_CA_CERT_PATH
-}
-
-##################################################################
