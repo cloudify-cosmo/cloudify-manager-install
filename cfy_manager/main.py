@@ -55,15 +55,14 @@ from .components.service_names import (
 from .components.validations import validate, validate_dependencies
 from .config import config
 from .constants import (
-    CERTS_MAPPING,
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
     SUPERVISORD_CONFIG_DIR,
-    CONFIG_FILE_PATH
+    NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError, ValidationError
+from .exceptions import BootstrapError, ValidationError, ProcessExecutionError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -1053,7 +1052,7 @@ def run_init():
 @argh.decorators.named('replace-certificates')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
-def replace_certificates(input_path=CONFIG_FILE_PATH,
+def replace_certificates(input_path=None,
                          only_validate=False):
     """ Replacing the certificates on the current instance """
     config.load_config()
@@ -1067,10 +1066,13 @@ def replace_certificates(input_path=CONFIG_FILE_PATH,
 
 
 def _handle_replace_certs_config_path(replace_certs_config_path):
+    if not replace_certs_config_path:
+        return
     replace_certs_config = read_yaml_file(replace_certs_config_path)
     for cert_name, cert_path in replace_certs_config.items():
-        if cert_path != CERTS_MAPPING[cert_name]:
-            copy(cert_path, CERTS_MAPPING[cert_name])
+        new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
+        if cert_path != new_cert_local_path:
+            copy(cert_path, new_cert_local_path)
 
 
 def _has_replace_certificates_attr(component):
@@ -1090,11 +1092,11 @@ def _only_validate():
         if _has_validate_new_certs_attr(component):
             try:
                 component.validate_new_certs()
-            except (ValueError, ValidationError) as err:
-                logger.error(err)
+            except (ValueError, ValidationError, ProcessExecutionError) as err:
+                print(err, file=sys.stderr)  # For fabric
                 certs_valid = False
 
-    if not certs_valid:
+    if not certs_valid:  # This way we can finish validating all components
         raise
 
 
