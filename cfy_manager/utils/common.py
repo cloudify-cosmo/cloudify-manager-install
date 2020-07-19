@@ -172,8 +172,8 @@ def not_overriding_copy(source, destination):
     if os.path.exists(destination):
         modified_name = time.strftime('%Y%m%d-%H%M%S_') + \
                         os.path.basename(destination)
-        new_dest = os.path.dirname(destination) + modified_name
-        move(destination, new_dest)
+        new_dest = os.path.join(os.path.dirname(destination), modified_name)
+        copy(destination, new_dest)
     copy(source, destination)
 
 

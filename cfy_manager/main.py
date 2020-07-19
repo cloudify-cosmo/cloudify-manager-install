@@ -1071,9 +1071,22 @@ def replace_certificates(input_path=None,
     if only_validate:
         _only_validate()
     else:
-        for component in _get_components():
-            if _has_replace_certificates_attr(component):
+        _replace_certificates()
+
+
+def _replace_certificates():
+    replace_successful = True
+    logger.info('Replacing certificates')
+    for component in _get_components():
+        if _has_replace_certificates_attr(component):
+            try:
                 component.replace_certificates()
+            except Exception as err:  # There isn't a specific exception
+                print(err, file=sys.stderr)  # For fabric
+                replace_successful = True
+
+    if not replace_successful:
+        raise
 
 
 def _handle_replace_certs_config_path(replace_certs_config_path):
@@ -1097,7 +1110,7 @@ def _has_validate_new_certs_attr(component):
 
 
 def _only_validate():
-    config.load_config()
+    logger.info('Validating new certificates')
     certs_valid = True
     for component in _get_components():
         if _has_validate_new_certs_attr(component):
