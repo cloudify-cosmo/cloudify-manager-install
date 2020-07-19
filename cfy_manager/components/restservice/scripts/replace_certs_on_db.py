@@ -14,6 +14,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from __future__ import print_function
+
 import json
 import argparse
 from datetime import datetime
@@ -29,10 +31,16 @@ def update_cert(cert_path, name):
     sm = get_storage_manager()
     instances = sm.list(models.Certificate,
                         filters={'name': name})
-    instance = instances[0]
-    instance.value = cert
-    instance.updated_at = datetime.now()
-    sm.update(instance)
+    if instances:
+        instance = instances[0]
+        if instance.value != cert:
+            instance.value = cert
+            instance.updated_at = datetime.now()
+            sm.update(instance)
+            print('Replaced cert {0} on DB'.format(name))
+            return
+
+    print('CA cert {0} was already replaced'.format(name))
 
 
 def init_parser():

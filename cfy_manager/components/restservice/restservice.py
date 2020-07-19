@@ -481,7 +481,8 @@ class RestService(BaseComponent):
             'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
             'security_config': REST_SECURITY_CONFIG_PATH
         }
-        db.run_script('replace_certs_on_db.py', script_input, configs)
+        output = db.run_script('replace_certs_on_db.py', script_input, configs)
+        logger.info(output)
 
     def _log_replacing_certs_on_db(self, cert_type):
         self.logger.info(

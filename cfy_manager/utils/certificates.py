@@ -19,7 +19,7 @@ import json
 from contextlib import contextmanager
 
 from . import network
-from .common import sudo, remove, chown, copy
+from .common import sudo, remove, chown, not_overriding_copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
@@ -500,14 +500,14 @@ def configuring_certs_in_their_locations(logger,
     logger.info('Ensuring files are in correct locations.')
 
     if cert_destination and cert_src != cert_destination:
-        copy(cert_src, cert_destination)
+        not_overriding_copy(cert_src, cert_destination)
     if key_destination and key_src != key_destination:
-        copy(key_src, key_destination)
+        not_overriding_copy(key_src, key_destination)
     if ca_destination and ca_src != ca_destination:
         if ca_src:
-            copy(ca_src, ca_destination)
+            not_overriding_copy(ca_src, ca_destination)
         else:
-            copy(cert_destination, ca_destination)
+            not_overriding_copy(cert_destination, ca_destination)
 
     if key_pass:
         remove_key_encryption(
