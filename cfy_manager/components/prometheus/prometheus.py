@@ -48,7 +48,7 @@ from ...constants import (
     CLOUDIFY_GROUP
 )
 from ...logger import get_logger
-from ...utils import common, files, service
+from ...utils import common, files, service, certificates
 
 
 CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
@@ -101,6 +101,7 @@ class Prometheus(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
+        _deploy_certs()
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration()
@@ -161,6 +162,16 @@ class Prometheus(BaseComponent):
                 target_node=join_node,
             )
         )
+
+
+def _deploy_certs():
+    logger.info('Setting up TLS certificates.')
+    certificates.use_supplied_certificates(
+        PROMETHEUS,
+        logger,
+        cert_destination=constants.MONITORING_CERT_PATH,
+        key_destination=constants.MONITORING_KEY_PATH,
+        ca_destination=constants.MONITORING_CA_CERT_PATH)
 
 
 def _create_prometheus_directories():
