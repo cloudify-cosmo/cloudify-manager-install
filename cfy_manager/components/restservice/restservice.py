@@ -460,6 +460,7 @@ class RestService(BaseComponent):
     def _prepare_cluster_config_update(self, cluster_cfg_filename,
                                        rabbitmq_ca_cert_filename):
         logger.notice('Updating cluster configuration for monitoring service')
+        files.chmod('644', cluster_cfg_filename)
         with open(cluster_cfg_filename, 'r') as fp:
             cfg = json.load(fp)
         if (rabbitmq_ca_cert_filename and
