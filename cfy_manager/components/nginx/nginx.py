@@ -41,7 +41,13 @@ from ...utils import (
     certificates,
     service
 )
-from ...utils.files import remove_files, deploy, copy_notice, remove_notice
+from ...utils.files import (
+    remove_files,
+    deploy,
+    copy_notice,
+    remove_notice,
+    chown,
+)
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
@@ -59,6 +65,7 @@ logger = get_logger(NGINX)
 class Nginx(BaseComponent):
     def _install(self):
         common.mkdir(LOG_DIR)
+        chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, LOG_DIR)
         copy_notice(NGINX)
         if config.get('service_management') != 'supervisord':
             self._deploy_unit_override()
