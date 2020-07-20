@@ -65,7 +65,7 @@ logger = get_logger(NGINX)
 class Nginx(BaseComponent):
     def _install(self):
         common.mkdir(LOG_DIR)
-        chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, LOG_DIR)
+        chown('nginx', 'nginx', LOG_DIR)
         copy_notice(NGINX)
         if config.get('service_management') != 'supervisord':
             self._deploy_unit_override()
