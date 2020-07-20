@@ -175,8 +175,8 @@ jobs:
       - run:
           name: Run the sanity check
           command: |
-            docker exec -e LC_ALL=en_US.utf8 ${CONTAINER_NAME} touch /opt/manager/sanity_mode
-            docker exec -e LC_ALL=en_US.utf8 ${CONTAINER_NAME} cfy_manager sanity-check
+            docker exec ${CONTAINER_NAME} touch /opt/manager/sanity_mode
+            docker exec ${CONTAINER_NAME} cfy_manager sanity-check
 
   install_cluster:
     machine: true
