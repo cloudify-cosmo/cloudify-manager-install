@@ -244,8 +244,8 @@ class Nginx(BaseComponent):
 
     def _internal_certs_exist(self):
         return (
-                exists(constants.INTERNAL_CERT_PATH)
-                and exists(constants.INTERNAL_KEY_PATH)
+            exists(constants.INTERNAL_CERT_PATH)
+            and exists(constants.INTERNAL_KEY_PATH)
         )
 
     def _handle_external_cert(self,
@@ -282,8 +282,8 @@ class Nginx(BaseComponent):
 
     def _external_certs_exist(self):
         return (
-                exists(constants.EXTERNAL_CERT_PATH)
-                and exists(constants.EXTERNAL_KEY_PATH)
+            exists(constants.EXTERNAL_CERT_PATH)
+            and exists(constants.EXTERNAL_KEY_PATH)
         )
 
     def _handle_certs(self):
@@ -459,10 +459,10 @@ class Nginx(BaseComponent):
         remove_notice(NGINX)
         remove_logrotate(NGINX)
         remove_files([
-                         join('/var/cache', NGINX),
-                         LOG_DIR,
-                         UNIT_OVERRIDE_PATH
-                     ] + [resource.dst for resource in self._config_files()])
+            join('/var/cache', NGINX),
+            LOG_DIR,
+            UNIT_OVERRIDE_PATH
+        ] + [resource.dst for resource in self._config_files()])
 
     def start(self):
         logger.notice('Starting NGINX...')

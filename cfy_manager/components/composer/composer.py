@@ -80,8 +80,8 @@ class Composer(BaseComponent):
         }
 
         install_cert_config = {
-                'component_name': POSTGRESQL_CLIENT,
-                'update_config': False
+            'component_name': POSTGRESQL_CLIENT,
+            'update_config': False
         }
 
         replace_cert_config = {'ca_src': NEW_POSTGRESQL_CA_CERT_FILE_PATH}
@@ -102,9 +102,9 @@ class Composer(BaseComponent):
         }
 
         install_cert_config = {
-                'component_name': SSL_INPUTS,
-                'update_config': False,
-                'prefix': 'postgresql_client_'
+            'component_name': SSL_INPUTS,
+            'update_config': False,
+            'prefix': 'postgresql_client_'
         }
 
         replace_cert_config = {

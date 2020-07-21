@@ -43,19 +43,6 @@ def update_cert(cert_path, name):
     print('CA cert {0} was already replaced'.format(name))
 
 
-def init_parser():
-    parser = argparse.ArgumentParser(
-        description='Replace the CA certificates in the Certificate table'
-    )
-    parser.add_argument(
-        '--input',
-        help='Path to a config file containing info needed by this script',
-        required=True,
-    )
-
-    return parser
-
-
 def init_flask_app():
     config.instance.load_configuration()
     setup_flask_app(
@@ -66,9 +53,17 @@ def init_flask_app():
 
 
 def main():
-    parser = init_parser()
-    init_flask_app()
+    parser = argparse.ArgumentParser(
+        description='Replace the CA certificates in the Certificate table'
+    )
+    parser.add_argument(
+        '--input',
+        help='Path to a config file containing info needed by this script',
+        required=True,
+    )
+
     args = parser.parse_args()
+    init_flask_app()
 
     with open(args.input, 'r') as f:
         script_input = json.load(f)
