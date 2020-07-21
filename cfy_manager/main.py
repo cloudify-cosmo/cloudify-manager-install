@@ -61,7 +61,7 @@ from .constants import (
     SUPERVISORD_CONFIG_DIR,
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import BootstrapError, FileError
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -86,6 +86,7 @@ from .utils.common import (
 )
 from .utils.install import yum_install, yum_remove
 from .utils.files import (
+    get_local_source_path,
     remove as _remove,
     remove_temp_files,
     touch
@@ -612,10 +613,13 @@ def _get_components(include_components=None):
             components.MgmtWorker(),
             components.Stage(),
         ]
-        if not config[COMPOSER]['skip_installation']:
-            _components += [
-                components.Composer(),
-            ]
+        try:
+            get_local_source_path(sources.composer)
+        except FileError:
+            logger.notice('Composer will not be installed: package not found')
+        else:
+            if not config[COMPOSER]['skip_installation']:
+                _components += [components.Composer()]
         _components += [
             components.UsageCollector(),
         ]
