@@ -580,6 +580,12 @@ usage_collector:
     interval_in_days: 1
 
 prometheus:
+  # A public certificate, a private key, and a CA certificate file paths for the Nginx
+  # HTTPS proxy for the Prometheus.  All will be copied to the appropriate location and
+  # have permissions and ownership set appropriately.
+  cert_path: ''
+  key_path: ''
+  ca_path: ''
   port: 9090
   node_exporter:
     metrics_port: 9100

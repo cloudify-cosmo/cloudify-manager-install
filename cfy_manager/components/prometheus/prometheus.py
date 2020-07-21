@@ -22,9 +22,10 @@ from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
     CONSTANTS,
-    SERVICES_TO_INSTALL,
     ENABLE_REMOTE_CONNECTIONS,
+    HOSTNAME,
     PRIVATE_IP,
+    SERVICES_TO_INSTALL,
 )
 from ..service_names import (
     MANAGER,
@@ -48,6 +49,7 @@ from ...constants import (
     CLOUDIFY_GROUP
 )
 from ...logger import get_logger
+from ...exceptions import ValidationError
 from ...utils import common, files, service, certificates
 
 
@@ -101,7 +103,7 @@ class Prometheus(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
-        _deploy_certs()
+        _handle_certs()
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration()
@@ -164,14 +166,67 @@ class Prometheus(BaseComponent):
         )
 
 
-def _deploy_certs():
+def _handle_certs():
     logger.info('Setting up TLS certificates.')
-    certificates.use_supplied_certificates(
+    supplied = certificates.use_supplied_certificates(
         PROMETHEUS,
         logger,
         cert_destination=constants.MONITORING_CERT_PATH,
         key_destination=constants.MONITORING_KEY_PATH,
         ca_destination=constants.MONITORING_CA_CERT_PATH)
+    if supplied:
+        logger.info('Deployed user provided external cert and key')
+    else:
+        config[PROMETHEUS]['ca_path'] = constants.MONITORING_CA_CERT_PATH
+        config[PROMETHEUS]['cert_path'] = constants.MONITORING_CERT_PATH
+        config[PROMETHEUS]['key_path'] = constants.MONITORING_KEY_PATH
+        _generate_certs()
+
+
+def _generate_certs():
+    logger.info('Generating certificate...')
+    if _installing_manager():
+        has_ca_key = certificates.handle_ca_cert(logger)
+    else:
+        has_ca_key = False
+        # If we're not installing the manager and user certs were not
+        # supplied then we're about to generate self-signed certs.
+        # As we're going to do this, we'll set the ca_path such that
+        # anything consuming this value will get the path to the cert
+        # that will allow them to trust the broker.
+        config[PROMETHEUS]['ca_path'] = config[PROMETHEUS]['cert_path']
+    if not common.is_all_in_one_manager():
+        raise ValidationError(
+            'Cannot generate self-signed certificates for Prometheus in a '
+            'cluster - externally generated certificates must be provided '
+            'as well as the appropriate CA certificate.'
+        )
+    # As we only support generating certificates on single-node setups,
+    # we will take only the manager's details (having failed before now
+    # if there is a different environment than all in one)
+    hostname = config[MANAGER][HOSTNAME]
+    private_ip = config[MANAGER][PRIVATE_IP]
+
+    certificates.store_cert_metadata(
+        hostname,
+        new_networks=[private_ip],
+    )
+
+    sign_cert = constants.CA_CERT_PATH if has_ca_key else None
+    sign_key = constants.CA_KEY_PATH if has_ca_key else None
+
+    certificates._generate_ssl_certificate(
+        ips=[private_ip],
+        cn=hostname,
+        cert_path=config[PROMETHEUS]['cert_path'],
+        key_path=config[PROMETHEUS]['key_path'],
+        sign_cert=sign_cert,
+        sign_key=sign_key,
+    )
+
+
+def _installing_manager():
+    return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
 
 def _create_prometheus_directories():
