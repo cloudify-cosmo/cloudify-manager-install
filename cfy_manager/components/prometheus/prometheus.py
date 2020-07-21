@@ -212,16 +212,18 @@ def _update_config():
     def update_cluster_details(file_name):
         with open(file_name, 'r') as fp:
             cluster_cfg = json.load(fp)
-        if (cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes'] and
-                not config[POSTGRESQL_SERVER]['cluster']['nodes']):
+        if (cluster_cfg.get(POSTGRESQL_SERVER, {}).get('cluster',
+                                                       {}).get('nodes') and
+                not config.get(POSTGRESQL_SERVER, {}).get('cluster',
+                                                          {}).get('nodes')):
             config[POSTGRESQL_SERVER]['cluster'].update({
                 'nodes': cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
             })
-        if (cluster_cfg[RABBITMQ]['ca_path'] and
-                not config[RABBITMQ]['ca_path']):
+        if (cluster_cfg.get(RABBITMQ, {}).get('ca_path') and
+                not config.get(RABBITMQ, {}).get('ca_path')):
             config[RABBITMQ]['ca_path'] = cluster_cfg[RABBITMQ]['ca_path']
-        if (cluster_cfg[RABBITMQ]['cluster_members'] and
-                not config[RABBITMQ]['cluster_members']):
+        if (cluster_cfg.get(RABBITMQ, {}).get('cluster_members') and
+                not config.get(RABBITMQ, {}).get('cluster_members')):
             config[RABBITMQ].update({
                 'cluster_members': cluster_cfg[RABBITMQ]['cluster_members']
             })
