@@ -591,15 +591,15 @@ prometheus:
     metrics_port: 9100
   blackbox_exporter:
     metrics_port: 9115
+    # ca_cert_path is a path to the CA certificate, which is used currently by the blackbox_exporter
+    # to connect to the HTTPS services that use certificates signed with this CA certificate.
+    ca_cert_path: ''
   postgres_exporter:
     username: ''
     sslmode: disable
     metrics_port: 9187
   rabbitmq_prometheus:
     metrics_port: 15692
-  # ca_cert_path is a path to the CA certificate, which is used currently by the blackbox_exporter
-  # to connect to the HTTPS services that use certificates signed with this CA certificate.
-  ca_cert_path: ''
   # Parameters that will be used to access the monitoring service remotely
   credentials:
     # If those values are left empty, credentials will be copied from manager's credentials or

@@ -321,6 +321,7 @@ def _update_config():
                 config[RABBITMQ]['monitoring']['password'] = \
                     config[RABBITMQ]['password']
 
+    logger.notice('Updating Prometheus configuration...')
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
@@ -334,9 +335,14 @@ def _update_config():
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'ip_address': postgresql_ip_address()})
-    if ('ca_cert_path' not in config.get(PROMETHEUS, {}) or
-            not config.get(PROMETHEUS, {}).get('ca_cert_path')):
-        config[PROMETHEUS].update(
+    if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
+        ('ca_cert_path' not in config.get(PROMETHEUS,
+                                          {}).get(BLACKBOX_EXPORTER, {}) or
+         not config.get(PROMETHEUS,
+                        {}).get(BLACKBOX_EXPORTER, {}).get('ca_cert_path'))):
+        if not config[PROMETHEUS].get(BLACKBOX_EXPORTER):
+            config[PROMETHEUS][BLACKBOX_EXPORTER] = {}
+        config[PROMETHEUS][BLACKBOX_EXPORTER].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
     if isfile(CLUSTER_DETAILS_PATH):
