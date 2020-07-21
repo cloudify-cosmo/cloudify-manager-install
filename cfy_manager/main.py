@@ -974,6 +974,7 @@ def _wait_supervisord_starter(timeout):
                     )
                 logger.info('{0} service finished'.format(STARTER_SERVICE))
                 break
+        time.sleep(0.5)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
 
