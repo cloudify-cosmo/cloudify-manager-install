@@ -956,21 +956,24 @@ def _wait_supervisord_starter(timeout):
     deadline = time.time() + timeout
     offset = 0
     while time.time() < deadline:
-        service_log = _get_starter_service_log(offset, 0)
-        status_response = _get_starter_service_response()
-        service_status = status_response['statename']
-        exit_status = status_response['exitstatus']
-        if service_log:
-            logger.info(service_log)
-            offset += len(service_log)
-        if service_status == 'EXITED':
-            if exit_status != 0:
-                raise BootstrapError(
-                    '{0} service exit with error status '
-                    'code {1}'.format(STARTER_SERVICE, exit_status)
-                )
-            logger.info('{0} service finished'.format(STARTER_SERVICE))
-            break
+        # Avoid FileNotFoundError by checking first if the supervisord get
+        # created or not
+        if os.path.exists('/var/log/cloudify/supervisord.log'):
+            service_log = _get_starter_service_log(offset, 0)
+            status_response = _get_starter_service_response()
+            service_status = status_response['statename']
+            exit_status = status_response['exitstatus']
+            if service_log:
+                logger.info(service_log)
+                offset += len(service_log)
+            if service_status == 'EXITED':
+                if exit_status != 0:
+                    raise BootstrapError(
+                        '{0} service exit with error status '
+                        'code {1}'.format(STARTER_SERVICE, exit_status)
+                    )
+                logger.info('{0} service finished'.format(STARTER_SERVICE))
+                break
     else:
         raise BootstrapError('Timed out waiting for the starter service')
 
