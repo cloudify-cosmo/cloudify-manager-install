@@ -16,6 +16,11 @@ rabbitmq:
       networks:
         default: QUEUE2_IP
 
+prometheus:
+  cert_path: /etc/cloudify/queue_cert.pem
+  key_path: /etc/cloudify/queue_key.pem
+  ca_path: /etc/cloudify/ca.pem
+
 ssl_inputs:
   internal_cert_path: /etc/cloudify/queue_cert.pem
   internal_key_path: /etc/cloudify/queue_key.pem
