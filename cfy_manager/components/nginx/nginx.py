@@ -189,7 +189,7 @@ class Nginx(BaseComponent):
                 src=join(CONFIG_PATH, file_name),
                 dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
             file_name in [
-                'https-internal-rest-server.cloudify',
+                'https-monitoring-server.cloudify',
                 'cloudify.conf',
                 'logs-conf.cloudify',
             ]

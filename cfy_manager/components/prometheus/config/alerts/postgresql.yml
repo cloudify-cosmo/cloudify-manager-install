@@ -22,14 +22,14 @@ groups:
 {% if postgresql_server.cluster.nodes|length > 0 %}
 {% for host, postgres in postgresql_server.cluster.nodes.items() %}
       - alert: PostgreSQLDown
-        expr: pg_up{instance="{{ postgres.ip }}:53333", job="federate_postgresql"} != 1
+        expr: pg_up{instance="{{ postgres.ip }}:9443", job="federate_postgresql"} != 1
         for: 5s
         labels:
           severity: warning
         annotations:
           summary: PostgreSQL database server is down
       - alert: PostgresExporterDown
-        expr: up{instance="{{ postgres.ip }}:53333", job="federate_postgresql"} != 1
+        expr: up{instance="{{ postgres.ip }}:9443", job="federate_postgresql"} != 1
         for: 5s
         labels:
           severity: warning

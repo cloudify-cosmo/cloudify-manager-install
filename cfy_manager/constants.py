@@ -46,6 +46,7 @@ DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'config.yaml')
 BASE_LOG_DIR = '/var/log/cloudify'
 
 INTERNAL_REST_PORT = 53333
+MONITORING_PORT = 9443
 
 SSL_CERTS_TARGET_DIR = join(CLOUDIFY_HOME_DIR, 'ssl')
 

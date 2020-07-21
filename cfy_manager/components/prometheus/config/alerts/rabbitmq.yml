@@ -22,14 +22,14 @@ groups:
 {% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}
       - alert: RabbitMQDown
-        expr: rabbitmq_identity_info{instance="{{ rabbitmq.networks.default }}:53333", job="federate_rabbitmq"} != 1
+        expr: rabbitmq_identity_info{instance="{{ rabbitmq.networks.default }}:9443", job="federate_rabbitmq"} != 1
         for: 5s
         labels:
           severity: warning
         annotations:
           summary: RabbitMQ message broker is down
       - alert: RabbitMQPluginDown
-        expr: up{instance="{{ rabbitmq.networks.default }}:53333", job="federate_rabbitmq"} != 1
+        expr: up{instance="{{ rabbitmq.networks.default }}:9443", job="federate_rabbitmq"} != 1
         for: 5s
         labels:
           severity: warning
