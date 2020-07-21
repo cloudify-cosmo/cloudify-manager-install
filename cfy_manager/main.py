@@ -956,9 +956,9 @@ def _wait_supervisord_starter(timeout):
     deadline = time.time() + timeout
     offset = 0
     while time.time() < deadline:
-        # Avoid FileNotFoundError by checking first if the supervisord get
-        # created or not
-        if os.path.exists('/var/log/cloudify/supervisord.log'):
+        # Avoid FileNotFoundError by checking first if the supervisord
+        # socket file is ready to start connection to the supervisord server
+        if os.path.exists('/tmp/supervisor.sock'):
             service_log = _get_starter_service_log(offset, 0)
             status_response = _get_starter_service_response()
             service_status = status_response['statename']
