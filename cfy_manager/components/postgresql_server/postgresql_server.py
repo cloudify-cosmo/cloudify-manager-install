@@ -289,9 +289,9 @@ class PostgresqlServer(BaseComponent):
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
-                    f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1')
+                    f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
                 else:
-                    f.write('hostssl all all 0.0.0.0/0 md5')
+                    f.write('hostssl all all 0.0.0.0/0 md5\n')
         return temp_hba_path
 
     def _configure_ssl(self):
