@@ -337,7 +337,8 @@ class Nginx(BaseComponent):
 
     def start(self):
         logger.notice('Starting NGINX...')
-        self._handle_certs()
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._handle_certs()
         if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
         service.start(NGINX, append_prefix=False)

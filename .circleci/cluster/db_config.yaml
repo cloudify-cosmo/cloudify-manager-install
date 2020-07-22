@@ -38,10 +38,6 @@ prometheus:
     password: ''
     sslmode: require
 
-ssl_inputs:
-  internal_cert_path: /etc/cloudify/cert.pem
-  internal_key_path: /etc/cloudify/key.pem
-
 services_to_install:
 - database_service
 - monitoring_service
