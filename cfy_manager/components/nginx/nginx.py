@@ -341,7 +341,7 @@ class Nginx(BaseComponent):
             self._handle_certs()
         if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
-        service.start(NGINX, append_prefix=False)
+        service.restart(NGINX, append_prefix=False)
         service.verify_alive(NGINX, append_prefix=False)
         logger.notice('NGINX successfully started')
 
