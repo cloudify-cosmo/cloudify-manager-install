@@ -19,8 +19,7 @@ from ...constants import (CLOUDIFY_USER,
                           CLOUDIFY_GROUP)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
-from ...utils.certificates import (use_supplied_certificates,
-                                   configuring_certs_in_their_locations)
+from ...utils.certificates import use_supplied_certificates
 from ...utils import service
 from ...logger import get_logger
 
@@ -107,29 +106,5 @@ class BaseComponent(object):
             cert_perms=cert_perms,
         )
 
-    def configure_certs_in_their_locations(self,
-                                           cert_src=None,
-                                           cert_destination=None,
-                                           key_src=None,
-                                           key_destination=None,
-                                           ca_src=None,
-                                           ca_destination=None,
-                                           key_pass=None,
-                                           owner=CLOUDIFY_USER,
-                                           group=CLOUDIFY_GROUP,
-                                           key_perms='440',
-                                           cert_perms='444'):
-        return configuring_certs_in_their_locations(
-            logger=self.logger,
-            cert_src=cert_src,
-            cert_destination=cert_destination,
-            key_src=key_src,
-            key_destination=key_destination,
-            ca_src=ca_src,
-            ca_destination=ca_destination,
-            key_pass=key_pass,
-            owner=owner,
-            group=group,
-            key_perms=key_perms,
-            cert_perms=cert_perms
-        )
+    def replace_certificates(self):
+        pass

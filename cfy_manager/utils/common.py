@@ -163,18 +163,14 @@ def ensure_destination_dir_exists(destination):
         sudo(['mkdir', '-p', destination_dir])
 
 
-def copy(source, destination):
-    ensure_destination_dir_exists(destination)
-    sudo(['cp', '-rp', source, destination])
-
-
-def not_overriding_copy(source, destination):
-    if os.path.exists(destination):
+def copy(source, destination, backup=False):
+    if os.path.exists(destination) and backup:
         modified_name = time.strftime('%Y%m%d-%H%M%S_') + \
                         os.path.basename(destination)
         new_dest = os.path.join(os.path.dirname(destination), modified_name)
         copy(destination, new_dest)
-    copy(source, destination)
+    ensure_destination_dir_exists(destination)
+    sudo(['cp', '-rp', source, destination])
 
 
 def move(source, destination, rename_only=False):

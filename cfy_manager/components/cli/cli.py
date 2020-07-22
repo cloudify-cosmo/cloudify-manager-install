@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 import errno
 import logging
 from os.path import join, exists, expanduser
@@ -28,9 +27,7 @@ from ...logger import (get_logger,
                        get_file_handlers_level)
 from ...utils import common, certificates
 from ...constants import (EXTERNAL_CERT_PATH,
-                          EXTERNAL_CA_CERT_PATH,
-                          NEW_EXTERNAL_CERT_FILE_PATH,
-                          NEW_EXTERNAL_CA_CERT_FILE_PATH)
+                          EXTERNAL_CA_CERT_PATH)
 
 logger = get_logger(CLI)
 
@@ -50,10 +47,7 @@ class Cli(BaseComponent):
         cmd = "sudo {0}".format(cmd) if is_root else cmd
         common.run([cmd], shell=True)
 
-    def start(self):
-        self._start(installing=True)
-
-    def _start(self, installing):
+    def start(self, installing=True):
         logger.notice('Configuring Cloudify CLI...')
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']
@@ -67,7 +61,7 @@ class Cli(BaseComponent):
         ssl_enabled = \
             'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
 
-        cert_path = self._deploy_external_cert(installing)
+        cert_path = self._deploy_external_cert()
         current_user = getuser()
         set_cmd = [
             'profiles', 'set', '-u', username,
@@ -125,36 +119,24 @@ class Cli(BaseComponent):
             else:
                 raise
 
-    def _deploy_external_cert(self, installing):
+    def _deploy_external_cert(self):
         """Return the path of the external cert to use with the CLI.
 
         If provided, copy the external CA cert and return that.
         Otherwise, just return the external cert path.
         """
         if exists(config[SSL_INPUTS]['external_ca_cert_path']):
-            if installing:
-                self.handle_certificates(installing=True)
+            certificates.use_supplied_certificates(
+                SSL_INPUTS,
+                self.logger,
+                ca_destination=EXTERNAL_CA_CERT_PATH,
+                prefix='external_ca_',
+                just_ca_cert=True,
+            )
             return EXTERNAL_CA_CERT_PATH
         else:
             return EXTERNAL_CERT_PATH
 
-    def handle_certificates(self, installing):
-        cert_config = {
-            'logger': self.logger,
-            'ca_destination': EXTERNAL_CA_CERT_PATH
-        }
-
-        if installing:
-            cert_config.update({
-                'component_name': SSL_INPUTS,
-                'prefix': 'external_ca_',
-                'just_ca_cert': True
-            })
-            certificates.use_supplied_certificates(**cert_config)
-
     def replace_certificates(self):
-        if (os.path.exists(NEW_EXTERNAL_CERT_FILE_PATH)
-                or os.path.exists(NEW_EXTERNAL_CA_CERT_FILE_PATH)):
-            # The external_certs were taken care of in the Nginx component
-            self.logger.info('Replacing certificates on cli component')
-            self._start(installing=False)
+        # The external_certs were taken care of in the Nginx component
+        self.start()

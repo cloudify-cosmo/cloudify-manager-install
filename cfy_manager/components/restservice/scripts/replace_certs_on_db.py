@@ -29,10 +29,11 @@ def update_cert(cert_path, name):
     with open(cert_path) as cert_file:
         cert = cert_file.read()
     sm = get_storage_manager()
-    instances = sm.list(models.Certificate,
-                        filters={'name': name})
-    if instances:
-        instance = instances[0]
+    instance = sm.get(models.Certificate,
+                      None,
+                      filters={'name': name},
+                      fail_silently=True)
+    if instance:
         if instance.value != cert:
             instance.value = cert
             instance.updated_at = datetime.now()

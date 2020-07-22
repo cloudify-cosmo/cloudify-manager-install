@@ -62,7 +62,8 @@ from .constants import (
     NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError, ValidationError, ProcessExecutionError
+from .exceptions import (BootstrapError, ValidationError,
+                         ProcessExecutionError, ReplaceCertificatesError)
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -1074,15 +1075,14 @@ def _replace_certificates():
     replace_successful = True
     logger.info('Replacing certificates')
     for component in _get_components():
-        if _has_replace_certificates_attr(component):
-            try:
-                component.replace_certificates()
-            except Exception as err:  # There isn't a specific exception
-                print(err, file=sys.stderr)  # For fabric
-                replace_successful = True
+        try:
+            component.replace_certificates()
+        except Exception as err:  # There isn't a specific exception
+            print(err, file=sys.stderr)  # For fabric
+            replace_successful = True
 
     if not replace_successful:
-        raise
+        raise ReplaceCertificatesError
 
 
 def _handle_replace_certs_config_path(replace_certs_config_path):
@@ -1093,11 +1093,6 @@ def _handle_replace_certs_config_path(replace_certs_config_path):
         new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
         if cert_path != new_cert_local_path:
             copy(cert_path, new_cert_local_path)
-
-
-def _has_replace_certificates_attr(component):
-    return (hasattr(component, 'replace_certificates') and
-            callable(getattr(component, 'replace_certificates')))
 
 
 def _has_validate_new_certs_attr(component):
@@ -1117,7 +1112,7 @@ def _only_validate():
                 certs_valid = False
 
     if not certs_valid:  # This way we can finish validating all components
-        raise
+        raise ReplaceCertificatesError
 
 
 def main():

@@ -26,7 +26,7 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, service
-from ...utils.certificates import handle_cert_config
+from ...utils.certificates import use_supplied_certificates
 from ...utils.files import (replace_in_file,
                             remove_files,
                             touch)
@@ -100,22 +100,11 @@ class Manager(BaseComponent):
         common.mkdir(join(resources_root, 'packages', 'scripts'))
         common.mkdir(join(resources_root, 'packages', 'templates'))
 
-    def handle_certificates(self, installing):
-        base_cert_config = {
-            'logger': logger,
-            'ca_destination': constants.BROKER_CA_LOCATION
-        }
-
-        install_cert_config = {'component_name': RABBITMQ}
-
-        replace_cert_config = {
-            'ca_src': constants.NEW_BROKER_CA_CERT_FILE_PATH
-        }
-
-        handle_cert_config(installing,
-                           base_cert_config,
-                           install_cert_config,
-                           replace_cert_config)
+    @staticmethod
+    def handle_certificates():
+        use_supplied_certificates(component_name=RABBITMQ,
+                                  logger=logger,
+                                  ca_destination=constants.BROKER_CA_LOCATION)
 
     def _prepare_certificates(self):
         if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):
@@ -129,16 +118,15 @@ class Manager(BaseComponent):
         if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
             # ...but only if one was provided.
             if config[RABBITMQ]['ca_path']:
-                self.handle_certificates(installing=True)
+                self.handle_certificates()
 
     def replace_certificates(self):
         if (QUEUE_SERVICE not in config[SERVICES_TO_INSTALL] and
                 os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
-            validate_certificates(
-                ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
-
             logger.info('Replacing rabbitmq CA cert on the manager component')
-            self.handle_certificates(installing=False)
+            config[RABBITMQ]['ca_path'] = \
+                constants.NEW_BROKER_CA_CERT_FILE_PATH
+            self.handle_certificates()
 
     @staticmethod
     def validate_new_certs():
