@@ -353,7 +353,7 @@ def check_certificates(config_section, section_path,
                        ca_path='ca_path', key_password='key_password',
                        require_non_ca_certs=True,
                        ):
-    """Check that the provided cert, key, and CA actally match"""
+    """Check that the provided cert, key, and CA actually match"""
     cert_filename = config_section.get(cert_path)
     key_filename = config_section.get(key_path)
 

@@ -80,7 +80,6 @@ from ...utils.files import (
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
-
 REST_VENV = join(REST_HOME_DIR, 'env')
 LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
@@ -379,7 +378,7 @@ class RestService(BaseComponent):
 
     def _configure_db_proxy(self):
         self._set_haproxy_connect_any(True)
-        self.handle_haproxy_certificate(installing=True)
+        self.handle_haproxy_certificate()
 
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
@@ -398,55 +397,34 @@ class RestService(BaseComponent):
         service.restart('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
 
-    def handle_haproxy_certificate(self, installing):
-        base_cert_config = {
-            'logger': self.logger,
-            'ca_destination': '/etc/haproxy/ca.crt',
-            'owner': 'haproxy',
-            'group': 'haproxy'
-        }
-
-        install_cert_config = {'component_name': 'postgresql_client'}
-
-        replace_cert_config = {
-            'ca_src': constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
-        }
-
-        certificates.handle_cert_config(installing,
-                                        base_cert_config,
-                                        install_cert_config,
-                                        replace_cert_config)
+    def handle_haproxy_certificate(self):
+        certificates.use_supplied_certificates(
+            logger=self.logger,
+            ca_destination='/etc/haproxy/ca.crt',
+            owner='haproxy',
+            group='haproxy',
+            component_name='postgresql_client'
+        )
 
     @staticmethod
-    def handle_ldap_certificate(installing):
-        base_cert_config = {
-            'logger': logger,
-            'ca_destination': LDAP_CA_CERT_PATH
-        }
-
-        install_cert_config = {
-                'component_name': RESTSERVICE,
-                'sub_component': 'ldap',
-                'just_ca_cert': True
-            }
-
-        replace_cert_config = {
-            'ca_src': constants.NEW_LDAP_CA_CERT_PATH
-        }
-
-        certificates.handle_cert_config(installing,
-                                        base_cert_config,
-                                        install_cert_config,
-                                        replace_cert_config)
+    def handle_ldap_certificate():
+        certificates.use_supplied_certificates(
+            logger=logger,
+            ca_destination=LDAP_CA_CERT_PATH,
+            component_name=RESTSERVICE,
+            sub_component='ldap',
+            just_ca_cert=True
+        )
 
     def replace_certificates(self):
         if common.manager_using_db_cluster():
             self._replace_haproxy_cert()
         self._replace_ldap_cert()
         self._replace_ca_certs_on_db()
+        service.restart(RESTSERVICE)
+        self._verify_restservice_alive()
 
-    @staticmethod
-    def validate_new_certs():
+    def validate_new_certs(self):
         # All other certs are validated in other components
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
             validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
@@ -485,21 +463,23 @@ class RestService(BaseComponent):
         logger.info(output)
 
     def _log_replacing_certs_on_db(self, cert_type):
-        self.logger.info(
-            'Replacing {0} in Certificate table'.format(cert_type))
+        self.logger.info('Replacing %s in Certificate table', cert_type)
 
     def _replace_ldap_cert(self):
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
             validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
             logger.info('Replacing ldap CA cert on the restservice component')
-            self.handle_ldap_certificate(installing=False)
+            config['ldap']['ca_cert'] = constants.NEW_LDAP_CA_CERT_PATH
+            self.handle_ldap_certificate()
 
     def _replace_haproxy_cert(self):
         if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
             # The certificate was validated in the PostgresqlClient component
             self.logger.info(
                 'Replacing haproxy cert on the restservice component')
-            self.handle_haproxy_certificate(installing=False)
+            config[POSTGRESQL_CLIENT]['ca_path'] = \
+                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+            self.handle_haproxy_certificate()
             service.reload('haproxy', append_prefix=False)
             self._wait_for_haproxy_startup()
 
@@ -579,7 +559,7 @@ class RestService(BaseComponent):
         logger.notice('Configuring Rest Service...')
 
         logger.info('Checking for ldaps CA cert to deploy.')
-        self.handle_ldap_certificate(installing=True)
+        self.handle_ldap_certificate()
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 

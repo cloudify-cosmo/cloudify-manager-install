@@ -19,7 +19,7 @@ import json
 from contextlib import contextmanager
 
 from . import network
-from .common import sudo, remove, chown, not_overriding_copy
+from .common import sudo, remove, chown, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
@@ -426,18 +426,30 @@ def use_supplied_certificates(component_name,
                               prefix='',
                               just_ca_cert=False,
                               update_config=True,
-                              sub_component=None):
+                              sub_component=None,
+                              validate_certs_src_exist=False):
     """Use user-supplied certificates, checking they're not broken.
+
     Any private key password will be removed, and the config will be
     updated after the certificates are moved to the intended destination.
+
     At least one of the cert_, key_, or ca_ destination entries must be
     provided.
+
     Returns True if supplied certificates were used.
     """
     key_path = prefix + 'key_path'
     cert_path = prefix + 'cert_path'
     ca_path = prefix + 'ca_path'
     key_password = prefix + 'key_password'
+
+    # The ssl_inputs has different names for some of the certificates
+    if component_name == SSL_INPUTS:
+        if prefix == 'internal_':
+            ca_path = 'ca_cert_path'
+            key_password = 'ca_key_password'
+        elif prefix == 'external_':
+            ca_path = prefix + 'ca_cert_path'
 
     if just_ca_cert:
         ca_path = cert_path
@@ -465,53 +477,22 @@ def use_supplied_certificates(component_name,
         logger.debug('No user-supplied certificates were present.')
         return False
 
-    configuring_certs_in_their_locations(logger,
-                                         cert_src, cert_destination,
-                                         key_src, key_destination,
-                                         ca_src, ca_destination,
-                                         key_pass,
-                                         owner, group,
-                                         key_perms, cert_perms)
+    if validate_certs_src_exist and not (cert_src and key_src):
+        logger.debug('The certificate and key were not provided.')
+        return False
 
-    if update_config:
-        logger.info('Updating configured certification locations.')
-        if cert_destination:
-            config_section[cert_path] = cert_destination
-        if key_destination:
-            config_section[key_path] = key_destination
-        if ca_destination:
-            config_section[ca_path] = ca_destination
-            # If there was a password, we've now removed it
-            config_section[key_password] = ''
-
-    # Supplied certificates were used
-    return True
-
-
-def configuring_certs_in_their_locations(logger,
-                                         cert_src=None,
-                                         cert_destination=None,
-                                         key_src=None,
-                                         key_destination=None,
-                                         ca_src=None,
-                                         ca_destination=None,
-                                         key_pass=None,
-                                         owner=CLOUDIFY_USER,
-                                         group=CLOUDIFY_GROUP,
-                                         key_perms='440',
-                                         cert_perms='444'):
     # Put the files in the correct place
     logger.info('Ensuring files are in correct locations.')
 
     if cert_destination and cert_src != cert_destination:
-        not_overriding_copy(cert_src, cert_destination)
+        copy(cert_src, cert_destination, True)
     if key_destination and key_src != key_destination:
-        not_overriding_copy(key_src, key_destination)
+        copy(key_src, key_destination, True)
     if ca_destination and ca_src != ca_destination:
         if ca_src:
-            not_overriding_copy(ca_src, ca_destination)
+            copy(ca_src, ca_destination, True)
         else:
-            not_overriding_copy(cert_destination, ca_destination)
+            copy(cert_destination, ca_destination, True)
 
     if key_pass:
         remove_key_encryption(
@@ -532,18 +513,19 @@ def configuring_certs_in_their_locations(logger,
         if path:
             sudo(['chmod', cert_perms, path])
 
+    if update_config:
+        logger.info('Updating configured certification locations.')
+        if cert_destination:
+            config_section[cert_path] = cert_destination
+        if key_destination:
+            config_section[key_path] = key_destination
+        if ca_destination:
+            config_section[ca_path] = ca_destination
+            # If there was a password, we've now removed it
+            config_section[key_password] = ''
 
-def handle_cert_config(installing,
-                       base_cert_config,
-                       install_cert_config,
-                       replace_cert_config):
-    if installing:
-        base_cert_config.update(install_cert_config)
-        return use_supplied_certificates(**base_cert_config)
-
-    else:
-        base_cert_config.update(replace_cert_config)
-        configuring_certs_in_their_locations(**base_cert_config)
+    # Supplied certificates were used
+    return True
 
 
 def get_and_validate_certs_for_replacement(
@@ -553,6 +535,13 @@ def get_and_validate_certs_for_replacement(
         new_cert_location,
         new_key_location,
         new_ca_location):
+    """Validates the new certificates for replacement.
+
+    This function validates the new specified certificates for replacement,
+    based on the new certificates specified and the current ones. E.g. if
+    onlt a new certificate and key were specified, then it will validate them
+    with the current CA.
+    """
 
     cert_filename, key_filename = get_cert_and_key_filenames(
         new_cert_location, new_key_location,
@@ -577,7 +566,3 @@ def get_cert_and_key_filenames(new_cert_location,
 def get_ca_filename(new_ca_location, default_ca_location):
     return (new_ca_location if os.path.exists(new_ca_location)
             else default_ca_location)
-
-
-def needs_to_replace_certificates(cert_path, ca_cert_path):
-    return os.path.exists(cert_path) or os.path.exists(ca_cert_path)

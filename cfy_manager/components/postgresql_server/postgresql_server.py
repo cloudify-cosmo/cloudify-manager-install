@@ -301,7 +301,7 @@ class PostgresqlServer(BaseComponent):
         Cluster certificates are handled in _configure_cluster.
         """
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-            self.handle_all_in_one_certificates(installing=True)
+            self.handle_all_in_one_certificates()
 
     def _update_configuration(self, enable_remote_connections):
         logger.info('Updating PostgreSQL Server configuration...')
@@ -501,11 +501,7 @@ class PostgresqlServer(BaseComponent):
                 render=False,
             )
 
-    def handle_cluster_certificates(self,
-                                    installing,
-                                    cert_src=None,
-                                    key_src=None,
-                                    ca_src=None):
+    def handle_cluster_certificates(self):
         # We currently use the same certificates for etcd, patroni,
         # and postgres. This should be a reasonable starting approach as
         # these reside on the same machine and all have the same impact if
@@ -538,18 +534,12 @@ class PostgresqlServer(BaseComponent):
             'key_perms': '400'
         }
 
-        postgresql_certs_config = [etcd_certs_config,
-                                   patroni_rest_certs_config,
-                                   patroni_db_certs_config]
-        for cert_config in postgresql_certs_config:
-            self.handle_certificates(installing, cert_config, cert_src,
-                                     key_src, ca_src)
+        for cert_config in [etcd_certs_config,
+                            patroni_rest_certs_config,
+                            patroni_db_certs_config]:
+            self.use_supplied_certificates(**cert_config)
 
-    def handle_all_in_one_certificates(self,
-                                       installing,
-                                       cert_src=None,
-                                       key_src=None,
-                                       ca_src=None):
+    def handle_all_in_one_certificates(self):
         cert_config = {
             'cert_destination': PG_SERVER_CERT_PATH,
             'key_destination': PG_SERVER_KEY_PATH,
@@ -559,54 +549,38 @@ class PostgresqlServer(BaseComponent):
             'key_perms': '400'
         }
 
-        self.handle_certificates(installing, cert_config, cert_src,
-                                 key_src, ca_src)
-
-    def handle_certificates(self,
-                            installing,
-                            cert_config,
-                            cert_src=None,
-                            key_src=None,
-                            ca_src=None):
-        if installing:
-            self.use_supplied_certificates(**cert_config)
-        else:
-            cert_config.update({
-                'cert_src': cert_src,
-                'key_src': key_src,
-                'ca_src': ca_src
-            })
-            self.configure_certs_in_their_locations(**cert_config)
+        self.use_supplied_certificates(**cert_config)
 
     def replace_certificates(self):
-        if certificates.needs_to_replace_certificates(
-                constants.NEW_POSTGRESQL_CERT_FILE_PATH,
-                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
-            cert_src, key_src, ca_src = self.validate_new_certs()
+        if (os.path.exists(constants.NEW_POSTGRESQL_CERT_FILE_PATH) or
+                os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH)):
+            self.log_replacing_certificates()
+            self._write_certs_to_config()
             if config[POSTGRESQL_SERVER]['cluster']['nodes']:  # cluster case
-                self.log_replacing_certificates()
-                self.handle_cluster_certificates(installing=False,
-                                                 cert_src=cert_src,
-                                                 key_src=key_src,
-                                                 ca_src=ca_src)
+                self.handle_cluster_certificates()
                 self._restart_etcd()
                 service.restart('patroni', append_prefix=False)
                 service.verify_alive('patroni', append_prefix=False)
 
             else:  # AIO case
                 if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-                    self.log_replacing_certificates()
-                    self.handle_all_in_one_certificates(installing=False,
-                                                        cert_src=cert_src,
-                                                        key_src=key_src,
-                                                        ca_src=ca_src)
-
+                    self.handle_all_in_one_certificates()
                     service.restart(POSTGRES_SERVICE_NAME, ignore_failure=True)
                     service.verify_alive(POSTGRES_SERVICE_NAME)
 
     @staticmethod
-    def validate_new_certs():
-        return certificates.get_and_validate_certs_for_replacement(
+    def _write_certs_to_config():
+        if os.path.exists(constants.NEW_POSTGRESQL_CERT_FILE_PATH):
+            config[POSTGRESQL_SERVER]['cert_path'] = \
+                constants.NEW_POSTGRESQL_CERT_FILE_PATH
+            config[POSTGRESQL_SERVER]['key_path'] = \
+                constants.NEW_POSTGRESQL_KEY_FILE_PATH
+        if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
+            config[POSTGRESQL_SERVER]['ca_path'] = \
+                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+
+    def validate_new_certs(self):
+        certificates.get_and_validate_certs_for_replacement(
             default_cert_location=ETCD_SERVER_CERT_PATH,
             default_key_location=ETCD_SERVER_KEY_PATH,
             default_ca_location=ETCD_CA_PATH,
@@ -628,7 +602,7 @@ class PostgresqlServer(BaseComponent):
         # We need access to the certs, which by default we don't have
         common.chmod('a+x', '/var/lib/patroni')
 
-        self.handle_cluster_certificates(installing=True)
+        self.handle_cluster_certificates()
         common.chmod('a-x', '/var/lib/patroni')
 
         logger.info('Deploying patroni initial startup monitor.')

@@ -404,7 +404,7 @@ class RabbitMQ(BaseComponent):
             logger.info('Updated /etc/hosts')
 
     def _generate_rabbitmq_certs(self):
-        supplied = self.handle_certificates(installing=True)
+        supplied = self.handle_certificates()
 
         if supplied:
             logger.info('Using supplied certificates.')
@@ -462,12 +462,7 @@ class RabbitMQ(BaseComponent):
             sign_key=sign_key,
         )
 
-    def handle_certificates(self,
-                            installing,
-                            cert_src=None,
-                            key_src=None,
-                            ca_src=None):
-
+    def handle_certificates(self):
         cert_config = {
             'cert_destination': constants.BROKER_CERT_LOCATION,
             'key_destination': constants.BROKER_KEY_LOCATION,
@@ -476,33 +471,31 @@ class RabbitMQ(BaseComponent):
             'group': 'rabbitmq',
         }
 
-        if installing:
-            return self.use_supplied_certificates(**cert_config)
-        else:
-            src_certs = {'cert_src': cert_src,
-                         'key_src': key_src,
-                         'ca_src': ca_src}
-            cert_config.update(src_certs)
-            return self.configure_certs_in_their_locations(**cert_config)
+        return self.use_supplied_certificates(**cert_config)
 
     def replace_certificates(self):
-        if certificates.needs_to_replace_certificates(
-                constants.NEW_BROKER_CERT_FILE_PATH,
-                constants.NEW_BROKER_CA_CERT_FILE_PATH):
-            cert_src, key_src, ca_src = self.validate_new_certs()
+        if (os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH) or
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
             self.logger.info(
                 'Replacing certificates on the rabbitmq component')
-            self.handle_certificates(installing=False,
-                                     cert_src=cert_src,
-                                     key_src=key_src,
-                                     ca_src=ca_src)
-
-            service.reload(RABBITMQ, ignore_failure=True)
+            self._write_certs_to_config()
+            self.handle_certificates()
+            service.restart(RABBITMQ, ignore_failure=True)
             service.verify_alive(RABBITMQ)
 
     @staticmethod
-    def validate_new_certs():
-        return certificates.get_and_validate_certs_for_replacement(
+    def _write_certs_to_config():
+        if os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH):
+            config[RABBITMQ]['cert_path'] = \
+                constants.NEW_BROKER_CERT_FILE_PATH
+            config[RABBITMQ]['key_path'] = \
+                constants.NEW_BROKER_KEY_FILE_PATH
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            config[RABBITMQ]['ca_path'] = \
+                constants.NEW_BROKER_CA_CERT_FILE_PATH
+
+    def validate_new_certs(self):
+        certificates.get_and_validate_certs_for_replacement(
             default_cert_location=constants.BROKER_CERT_LOCATION,
             default_key_location=constants.BROKER_KEY_LOCATION,
             default_ca_location=constants.BROKER_CA_LOCATION,
@@ -549,6 +542,11 @@ class RabbitMQ(BaseComponent):
         )
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_SERVER_SCRIPT)
         common.chmod('755', RABBITMQ_SERVER_SCRIPT)
+
+    def _restart_rabbitmq(self):
+        service.restart(RABBITMQ, ignore_failure=True)
+        wait_for_port(SECURE_PORT)
+        self._validate_rabbitmq_running()
 
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
@@ -618,10 +616,7 @@ class RabbitMQ(BaseComponent):
             self._write_definitions_file()
         # rabbitmq start exits with 143 status code that is valid
         # in this case.
-        service.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
-
-        self._validate_rabbitmq_running()
+        self._restart_rabbitmq()
         self._possibly_join_cluster()
         logger.notice('RabbitMQ successfully started')
 

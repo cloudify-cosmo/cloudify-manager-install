@@ -50,7 +50,9 @@ from .components.service_names import (
     COMPOSER,
     MANAGER,
     POSTGRESQL_SERVER,
-    SANITY
+    SANITY,
+    AMQP_POSTGRES,
+    MGMTWORKER
 )
 from .components.validations import validate, validate_dependencies
 from .config import config
@@ -62,7 +64,8 @@ from .constants import (
     NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError, ValidationError, ProcessExecutionError
+from .exceptions import (BootstrapError, ValidationError,
+                         ProcessExecutionError, ReplaceCertificatesError)
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -1075,18 +1078,18 @@ def replace_certificates(input_path=None,
 
 
 def _replace_certificates():
-    replace_successful = True
     logger.info('Replacing certificates')
     for component in _get_components():
-        if _has_replace_certificates_attr(component):
-            try:
-                component.replace_certificates()
-            except Exception as err:  # There isn't a specific exception
-                print(err, file=sys.stderr)  # For fabric
-                replace_successful = True
+        try:
+            component.replace_certificates()
+        except Exception as err:  # There isn't a specific exception
+            raise ReplaceCertificatesError(
+                'An error occurred while replacing certificates: '
+                '{0}'.format(err))
 
-    if not replace_successful:
-        raise
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        service.restart(MGMTWORKER)
+        service.restart(AMQP_POSTGRES)
 
 
 def _handle_replace_certs_config_path(replace_certs_config_path):
@@ -1099,29 +1102,19 @@ def _handle_replace_certs_config_path(replace_certs_config_path):
             copy(cert_path, new_cert_local_path)
 
 
-def _has_replace_certificates_attr(component):
-    return (hasattr(component, 'replace_certificates') and
-            callable(getattr(component, 'replace_certificates')))
-
-
-def _has_validate_new_certs_attr(component):
-    return (hasattr(component, 'validate_new_certs') and
-            callable(getattr(component, 'validate_new_certs')))
-
-
 def _only_validate():
     logger.info('Validating new certificates')
     certs_valid = True
     for component in _get_components():
-        if _has_validate_new_certs_attr(component):
-            try:
-                component.validate_new_certs()
-            except (ValueError, ValidationError, ProcessExecutionError) as err:
-                print(err, file=sys.stderr)  # For fabric
-                certs_valid = False
+        try:
+            component.validate_new_certs()
+        except (ValueError, ValidationError, ProcessExecutionError) as err:
+            print(err, file=sys.stderr)  # For fabric
+            certs_valid = False
 
     if not certs_valid:  # This way we can finish validating all components
-        raise
+        raise ReplaceCertificatesError('An error happened while validating '
+                                       'new certificates')
 
 
 def main():
