@@ -84,13 +84,14 @@ from .utils.common import (
     can_lookup_hostname,
     is_installed
 )
-from .utils.install import yum_install, yum_remove
+from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
     remove as _remove,
     remove_temp_files,
     touch
 )
 from ._compat import xmlrpclib
+
 
 logger = get_logger('Main')
 
@@ -612,7 +613,10 @@ def _get_components(include_components=None):
             components.MgmtWorker(),
             components.Stage(),
         ]
-        if not config[COMPOSER]['skip_installation']:
+        if (
+            is_premium_installed()
+            and not config[COMPOSER]['skip_installation']
+        ):
             _components += [
                 components.Composer(),
             ]
