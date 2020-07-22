@@ -84,7 +84,7 @@ scrape_configs:
     static_configs:
       - targets:
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}
-        - {{ rabbitmq.networks.default }}:9443
+        - {{ rabbitmq.networks.default }}:{{ constants.monitoring_port }}
 {% endfor %}
 {% endif %}
 {% if postgresql_server.cluster.nodes|length > 0 %}
@@ -104,7 +104,7 @@ scrape_configs:
     static_configs:
       - targets:
 {% for host, postgres in postgresql_server.cluster.nodes.items() %}
-        - {{ postgres.ip }}:9443
+        - {{ postgres.ip }}:{{ constants.monitoring_port }}
 {% endfor %}
 {% endif %}
 {% endif %}{% if 'database_service' in services_to_install %}
