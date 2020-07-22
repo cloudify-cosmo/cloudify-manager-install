@@ -308,6 +308,9 @@ class Nginx(BaseComponent):
             append_prefix=False,
             render=False,
         )
+        # Enable wait_on_restart service so that it can be called when
+        # updating the ssl state as it required to restart nginx
+        service.enable('wait_on_restart', append_prefix=False)
 
     def _configure(self):
         if self.service_type == 'supervisord':
