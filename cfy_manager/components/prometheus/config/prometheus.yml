@@ -28,8 +28,6 @@ scrape_configs:
   - job_name: 'node'
     static_configs:
       - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
-{% set add_rabbitmq = false %}
-{% set add_postgresql = false %}
 {% if 'manager_service' in services_to_install %}
   - job_name: 'http_200'
     metrics_path: /probe
@@ -87,7 +85,7 @@ scrape_configs:
       - targets:
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default != manager.private_ip %}
         - {{ rabbitmq.networks.default }}:{{ constants.monitoring_port }}
-{% else %}{% set add_rabbitmq = true %}{% endif %}{% endfor %}
+{% endif %}{% endfor %}
 {% endif %}{% if postgresql_server.cluster.nodes|length > 0 %}
   - job_name: 'federate_postgresql'
     scrape_interval: 15s
@@ -106,17 +104,29 @@ scrape_configs:
       - targets:
 {% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip != manager.private_ip %}
         - {{ postgres.ip }}:{{ constants.monitoring_port }}
-{% else %}{% set add_postgresql = true %}{% endif %}{% endfor %}
+{% endif %}{% endfor %}
 {% endif %}{% endif %}{% if 'queue_service' in services_to_install or add_rabbitmq %}
   - job_name: 'rabbitmq'
     static_configs:
       - targets: ['localhost:{{ prometheus.rabbitmq_prometheus.metrics_port }}']
         labels:
           host: {{ manager.private_ip }}
-  {% endif %}{% if 'database_service' in services_to_install or add_postgresql %}
+{% elif 'manager_service' in services_to_install %}{% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}{% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default == manager.private_ip %}
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['localhost:{{ prometheus.rabbitmq_prometheus.metrics_port }}']
+        labels:
+          host: {{ manager.private_ip }}
+{% endif %}{% endfor %}{% endif %}{% endif %}{% if 'database_service' in services_to_install or add_postgresql %}
   - job_name: 'postgresql'
     static_configs:
       - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']
         labels:
           host: {{ manager.private_ip }}
-{% endif %}
+{% elif 'manager_service' in services_to_install %}{% if postgresql_server.cluster.nodes|length > 0 %}{% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip == manager.private_ip %}
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']
+        labels:
+          host: {{ manager.private_ip }}
+{% endif %}{% endfor %}{% endif %}{% endif %}
