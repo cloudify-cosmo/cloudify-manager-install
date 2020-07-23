@@ -189,7 +189,7 @@ class Nginx(BaseComponent):
                 src=join(CONFIG_PATH, file_name),
                 dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
             file_name in [
-                'https-internal-rest-server.cloudify',
+                'https-monitoring-server.cloudify',
                 'cloudify.conf',
                 'logs-conf.cloudify',
             ]
@@ -337,10 +337,11 @@ class Nginx(BaseComponent):
 
     def start(self):
         logger.notice('Starting NGINX...')
-        self._handle_certs()
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._handle_certs()
         if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
-        service.start(NGINX, append_prefix=False)
+        service.restart(NGINX, append_prefix=False)
         service.verify_alive(NGINX, append_prefix=False)
         logger.notice('NGINX successfully started')
 

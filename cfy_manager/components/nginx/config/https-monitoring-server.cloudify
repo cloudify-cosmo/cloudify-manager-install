@@ -1,0 +1,15 @@
+# Monitoring internal server - always SSL enabled
+server {
+  # server listening for monitoring requests
+  listen              {{ constants.monitoring_port }} ssl default_server;
+  listen              [::]:{{ constants.monitoring_port }} ssl default_server;
+  server_name         _;
+
+  ssl_certificate     {{ constants.monitoring_cert_path }};
+  ssl_certificate_key {{ constants.monitoring_key_path }};
+
+  access_log          /var/log/cloudify/nginx/monitoring.access.log main;
+  error_log           /var/log/cloudify/nginx/monitoring.error.log;
+
+  include "/etc/nginx/conf.d/redirect-to-monitoring.cloudify";
+}

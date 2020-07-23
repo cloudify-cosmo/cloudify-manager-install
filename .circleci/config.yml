@@ -369,6 +369,8 @@ jobs:
               -v $(pwd)/external_key_2.pem:/etc/cloudify/external_key.pem \
               -v $(pwd)/db_client_2_key.pem:/etc/cloudify/postgres_client_key.pem \
               -v $(pwd)/db_client_2_cert.pem:/etc/cloudify/postgres_client_cert.pem \
+              -v $(pwd)/prometheus_cert_2.pem:/etc/cloudify/prometheus_cert.pem \
+              -v $(pwd)/prometheus_key_2.pem:/etc/cloudify/prometheus_key.pem \
               ${CLUSTER_IMAGE}
       - wait_for_container:
           container_name: MANAGER2_NAME

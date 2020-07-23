@@ -30,14 +30,13 @@ postgresql_server:
       replicator_password: 'somesecretvalue123!'
 
 prometheus:
+  cert_path: /etc/cloudify/cert.pem
+  key_path: /etc/cloudify/key.pem
+  ca_path: /etc/cloudify/ca.pem
   postgres_exporter:
     # `password` is a placeholder and will be updated during config file rendering, based on postgresql_server.postgres_password
     password: ''
     sslmode: require
-
-ssl_inputs:
-  internal_cert_path: /etc/cloudify/cert.pem
-  internal_key_path: /etc/cloudify/key.pem
 
 services_to_install:
 - database_service
