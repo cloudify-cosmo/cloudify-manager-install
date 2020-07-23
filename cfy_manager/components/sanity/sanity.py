@@ -64,12 +64,6 @@ class Sanity(BaseComponent):
                    self.deployment_name,
                    stdout=sys.stdout)
 
-    @staticmethod
-    def _clean_old_sanity():
-        logger.debug('Removing remnants of old sanity '
-                     'installation if exists...')
-        common.remove('/opt/mgmtworker/work/deployments/default_tenant/sanity')
-
     def _clean_sanity(self):
         logger.info('Removing sanity...')
         common.cfy('executions', 'start', 'uninstall', '-d',
@@ -83,7 +77,6 @@ class Sanity(BaseComponent):
 
     def run_sanity_check(self):
         logger.notice('Running Sanity...')
-        self._clean_old_sanity()
         self._upload_blueprint()
         self._deploy_app()
         self._install_sanity()
@@ -94,11 +87,11 @@ class Sanity(BaseComponent):
         if config.get(CLUSTER_JOIN):
             logger.notice('Not running the sanity check: joined a cluster')
             return
-        with self._sanity_check_mode():
+        with self.sanity_check_mode():
             self.run_sanity_check()
 
     @contextmanager
-    def _sanity_check_mode(self):
+    def sanity_check_mode(self):
         marker_file = '/opt/manager/sanity_mode'
         try:
             write_to_file('sanity: True', marker_file)
