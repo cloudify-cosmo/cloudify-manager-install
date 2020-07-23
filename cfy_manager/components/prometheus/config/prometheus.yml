@@ -8,12 +8,12 @@ global:
 {% if 'manager_service' in services_to_install %}
 # Rule files specifies a list of globs. Rules and alerts are read from
 # all matching files.
-rule_files:
-  - rules/postgresql.yml
-  - rules/rabbitmq.yml
-  - alerts/postgresql.yml
-  - alerts/rabbitmq.yml
-  - alerts/manager.yml
+#rule_files:
+#  - rules/postgresql.yml
+#  - rules/rabbitmq.yml
+#  - alerts/postgresql.yml
+#  - alerts/rabbitmq.yml
+#  - alerts/manager.yml
 {% endif %}
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
