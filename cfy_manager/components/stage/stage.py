@@ -63,7 +63,7 @@ class Stage(BaseComponent):
         config[STAGE]['community_mode'] = community_mode
 
     def _run_db_migrate(self):
-        if config[CLUSTER_JOIN]:
+        if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the stage db')
             return
         backend_dir = join(HOME_DIR, 'backend')

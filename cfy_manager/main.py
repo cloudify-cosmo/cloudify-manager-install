@@ -1015,6 +1015,9 @@ def image_starter(verbose=False):
     a configured manager.
     """
     _prepare_execution(verbose, config_write_required=False)
+    if _are_components_configured():
+        logger.info('Components already configured - nothing to do')
+        return
     config.load_config()
     command = [sys.executable, '-m', 'cfy_manager.main']
     args = []
