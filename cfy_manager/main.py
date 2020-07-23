@@ -692,7 +692,8 @@ def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _prepare_execution(verbose=verbose, private_ip=private_ip)
     sanity = components.Sanity()
-    sanity.run_sanity_check()
+    with sanity.sanity_check_mode():
+        sanity.run_sanity_check()
 
 
 def _get_packages():

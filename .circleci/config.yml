@@ -175,7 +175,6 @@ jobs:
       - run:
           name: Run the sanity check
           command: |
-            docker exec ${CONTAINER_NAME} touch /opt/manager/sanity_mode
             docker exec ${CONTAINER_NAME} cfy_manager sanity-check
 
   install_cluster:
