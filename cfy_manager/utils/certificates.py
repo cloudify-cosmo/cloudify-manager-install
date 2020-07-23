@@ -27,7 +27,7 @@ from ..exceptions import ProcessExecutionError
 from .files import write_to_file, write_to_tempfile
 from ..components.validations import check_certificates
 
-from ..logger import get_logger
+from ..logger import get_logger, setup_console_logger
 from .. import constants as const
 
 logger = get_logger('Certificates')
@@ -340,11 +340,13 @@ def remove_key_encryption(src_key_path,
           '"hostname" and "networks" fields.')
 @argh.arg('--manager-hostname', help='The manager hostname to be stored')
 def create_internal_certs(manager_hostname=None,
-                          metadata=const.CERT_METADATA_FILE_PATH):
+                          metadata=const.CERT_METADATA_FILE_PATH,
+                          verbose=False):
     """
     Recreate Cloudify Manager's internal certificates, based on the manager IP
     and a metadata file input
     """
+    setup_console_logger(verbose)
     if not os.path.exists(const.CA_CERT_PATH) or \
             not os.path.exists(const.CA_KEY_PATH):
         raise RuntimeError('Internal CA key and cert mus be available to '
@@ -391,11 +393,13 @@ def create_external_certs(private_ip=None,
                           public_ip=None,
                           sign_cert=None,
                           sign_key=None,
-                          sign_key_password=None):
+                          sign_key_password=None,
+                          verbose=False):
     """
     Recreate Cloudify Manager's external certificates, based on the public
     and private IPs
     """
+    setup_console_logger(verbose)
     # Note: the function has default values for the IP arguments, but they
     # are actually required by argh, so it won't be possible to call this
     # function without them from the CLI
