@@ -104,3 +104,9 @@ class BaseComponent(object):
             key_perms=key_perms,
             cert_perms=cert_perms,
         )
+
+    def replace_certificates(self):
+        pass
+
+    def validate_new_certs(self):
+        pass

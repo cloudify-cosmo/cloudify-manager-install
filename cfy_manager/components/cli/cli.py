@@ -27,8 +27,11 @@ from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
 from ...utils import common, certificates
-from ...constants import EXTERNAL_CERT_PATH, EXTERNAL_CA_CERT_PATH
 from ...utils.install import yum_install, yum_remove
+from ...constants import (EXTERNAL_CERT_PATH,
+                          EXTERNAL_CA_CERT_PATH,
+                          NEW_EXTERNAL_CERT_FILE_PATH,
+                          NEW_EXTERNAL_CA_CERT_FILE_PATH)
 
 logger = get_logger(CLI)
 
@@ -157,3 +160,9 @@ class Cli(BaseComponent):
             return EXTERNAL_CA_CERT_PATH
         else:
             return EXTERNAL_CERT_PATH
+
+    def replace_certificates(self):
+        # The external_certs were taken care of in the Nginx component
+        if (exists(NEW_EXTERNAL_CERT_FILE_PATH) or
+                exists(NEW_EXTERNAL_CA_CERT_FILE_PATH)):
+            self._configure()

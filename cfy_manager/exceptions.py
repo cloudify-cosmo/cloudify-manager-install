@@ -60,3 +60,7 @@ class DBManagementError(Exception):
 
 class InitializationError(Exception):
     pass
+
+
+class ReplaceCertificatesError(Exception):
+    pass

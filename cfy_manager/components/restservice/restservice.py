@@ -27,6 +27,7 @@ from collections import namedtuple
 import requests
 
 from . import db
+from ..validations import validate_certificates
 from ...components import sources
 from ...utils.db import run_psql_command
 from ...status_reporter import status_reporter
@@ -428,14 +429,7 @@ class RestService(BaseComponent):
 
     def _configure_db_proxy(self):
         self._set_haproxy_connect_any(True)
-
-        certificates.use_supplied_certificates(
-            component_name='postgresql_client',
-            logger=self.logger,
-            ca_destination='/etc/haproxy/ca.crt',
-            owner='haproxy',
-            group='haproxy',
-        )
+        self.handle_haproxy_certificate()
 
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
@@ -443,6 +437,92 @@ class RestService(BaseComponent):
         systemd.enable('haproxy', append_prefix=False)
         systemd.restart('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
+
+    def handle_haproxy_certificate(self):
+        certificates.use_supplied_certificates(
+            logger=self.logger,
+            ca_destination='/etc/haproxy/ca.crt',
+            owner='haproxy',
+            group='haproxy',
+            component_name='postgresql_client'
+        )
+
+    @staticmethod
+    def handle_ldap_certificate():
+        certificates.use_supplied_certificates(
+            logger=logger,
+            ca_destination=LDAP_CA_CERT_PATH,
+            component_name=RESTSERVICE,
+            sub_component='ldap',
+            just_ca_cert=True
+        )
+
+    def replace_certificates(self):
+        if common.manager_using_db_cluster():
+            self._replace_haproxy_cert()
+        self._replace_ldap_cert()
+        self._replace_ca_certs_on_db()
+        systemd.restart(RESTSERVICE)
+        self._verify_restservice_alive()
+
+    def validate_new_certs(self):
+        # All other certs are validated in other components
+        if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
+            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
+
+    def _replace_ca_certs_on_db(self):
+        if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            self._replace_manager_ca_on_db()
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            self._replace_rabbitmq_ca_on_db()
+
+    def _replace_manager_ca_on_db(self):
+        cert_name = '{0}-ca'.format(config[MANAGER][HOSTNAME])
+        self._log_replacing_certs_on_db(cert_name)
+        script_input = {
+            'cert_path': constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
+            'name': cert_name
+        }
+        self._run_replace_certs_on_db_script(script_input)
+
+    def _replace_rabbitmq_ca_on_db(self):
+        self._log_replacing_certs_on_db('rabbitmq-ca')
+        script_input = {
+            'cert_path': constants.NEW_BROKER_CA_CERT_FILE_PATH,
+            'name': 'rabbitmq-ca'
+        }
+        self._run_replace_certs_on_db_script(script_input)
+
+    @staticmethod
+    def _run_replace_certs_on_db_script(script_input):
+        configs = {
+            'rest_config': REST_CONFIG_PATH,
+            'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
+            'security_config': REST_SECURITY_CONFIG_PATH
+        }
+        output = db.run_script('replace_certs_on_db.py', script_input, configs)
+        logger.info(output)
+
+    def _log_replacing_certs_on_db(self, cert_type):
+        self.logger.info('Replacing %s in Certificate table', cert_type)
+
+    def _replace_ldap_cert(self):
+        if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
+            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
+            logger.info('Replacing ldap CA cert on the restservice component')
+            config['ldap']['ca_cert'] = constants.NEW_LDAP_CA_CERT_PATH
+            self.handle_ldap_certificate()
+
+    def _replace_haproxy_cert(self):
+        if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
+            # The certificate was validated in the PostgresqlClient component
+            self.logger.info(
+                'Replacing haproxy cert on the restservice component')
+            config[POSTGRESQL_CLIENT]['ca_path'] = \
+                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+            self.handle_haproxy_certificate()
+            systemd.reload('haproxy', append_prefix=False)
+            self._wait_for_haproxy_startup()
 
     @staticmethod
     def _upload_cloudify_license():
@@ -515,14 +595,7 @@ class RestService(BaseComponent):
         logger.notice('Configuring Rest Service...')
 
         logger.info('Checking for ldaps CA cert to deploy.')
-        certificates.use_supplied_certificates(
-            RESTSERVICE,
-            logger,
-            sub_component='ldap',
-            just_ca_cert=True,
-            ca_destination=LDAP_CA_CERT_PATH,
-        )
-
+        self.handle_ldap_certificate()
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 

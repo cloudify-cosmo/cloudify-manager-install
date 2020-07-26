@@ -105,3 +105,32 @@ WHERE username
 VERBOSE_HELP_MSG = (
     "Used to give more verbose output."
 )
+
+NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
+
+NEW_BROKER_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_cert.pem'
+NEW_BROKER_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_key.pem'
+NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                'new_rabbitmq_ca_cert.pem')
+
+NEW_POSTGRESQL_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                 'new_postgresql_server_cert.pem')
+NEW_POSTGRESQL_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                'new_postgresql_server_key.pem')
+NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                        'new_postgresql_client_cert.pem')
+NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                       'new_postgresql_client_key.pem')
+NEW_POSTGRESQL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                    'new_postgresql_server_ca_cert.pem')
+
+NEW_INTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_cert.pem'
+NEW_INTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_key.pem'
+NEW_INTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ca_cert.pem')
+
+NEW_EXTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_cert.pem'
+NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
+NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                  'new_external_ca_cert.pem')
+
+NEW_LDAP_CA_CERT_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ldap_ca_cert.pem')

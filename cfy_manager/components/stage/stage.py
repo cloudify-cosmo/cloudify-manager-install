@@ -53,7 +53,8 @@ from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.users import create_service_user
 from ...utils.logrotate import set_logrotate, remove_logrotate
-
+from ...constants import (NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                          NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
 
 logger = get_logger(STAGE)
 
@@ -170,6 +171,52 @@ class Stage(BaseComponent):
             ],
         )
 
+    def _handle_ca_certificate(self):
+        certificates.use_supplied_certificates(
+            component_name=POSTGRESQL_CLIENT,
+            logger=self.logger,
+            ca_destination=DB_CA_PATH,
+            owner=STAGE_USER,
+            group=STAGE_GROUP,
+            update_config=False,
+        )
+
+    def _handle_cert_and_key(self):
+        certificates.use_supplied_certificates(
+            component_name=SSL_INPUTS,
+            prefix='postgresql_client_',
+            logger=self.logger,
+            cert_destination=DB_CLIENT_CERT_PATH,
+            key_destination=DB_CLIENT_KEY_PATH,
+            owner=STAGE_USER,
+            group=STAGE_GROUP,
+            key_perms='400',
+            update_config=False,
+        )
+
+    def replace_certificates(self):
+        # The certificates are validated in the PostgresqlClient component
+        replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_cert_and_key = os.path.exists(
+            NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
+
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            if replacing_ca:
+                self.log_replacing_certs('CA cert')
+                self._handle_ca_certificate()
+
+            if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
+                    replacing_cert_and_key):
+                self.log_replacing_certs('cert and key')
+                self._handle_cert_and_key()
+
+            systemd.restart(STAGE)
+            self._verify_stage_alive()
+
+    def log_replacing_certs(self, certs_type):
+        self.logger.info(
+            'Replacing {0} on stage component'.format(certs_type))
+
     def _set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
         # We need to use sudo to read this or we break on configure
@@ -192,14 +239,7 @@ class Stage(BaseComponent):
         params = {}
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            certificates.use_supplied_certificates(
-                component_name=POSTGRESQL_CLIENT,
-                logger=self.logger,
-                ca_destination=DB_CA_PATH,
-                owner=STAGE_USER,
-                group=STAGE_GROUP,
-                update_config=False,
-            )
+            self._handle_ca_certificate()
 
             params.update({
                 'sslmode': 'verify-full',
@@ -212,17 +252,7 @@ class Stage(BaseComponent):
             }
 
             if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                certificates.use_supplied_certificates(
-                    component_name=SSL_INPUTS,
-                    prefix='postgresql_client_',
-                    logger=self.logger,
-                    cert_destination=DB_CLIENT_CERT_PATH,
-                    key_destination=DB_CLIENT_KEY_PATH,
-                    owner=STAGE_USER,
-                    group=STAGE_GROUP,
-                    key_perms='400',
-                    update_config=False,
-                )
+                self._handle_cert_and_key()
 
                 params.update({
                     'sslcert': DB_CLIENT_CERT_PATH,

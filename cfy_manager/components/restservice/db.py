@@ -229,7 +229,7 @@ def _create_process_env(rest_config=None, authorization_config=None,
     return env
 
 
-def _run_script(script_name, script_input=None, configs=None):
+def run_script(script_name, script_input=None, configs=None):
     """Runs a script in a separate process.
 
     :param script_name: script name inside the SCRIPTS_PATH dir.
@@ -256,7 +256,7 @@ def populate_db(configs):
 
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_populate_db_args_dict()
-    script_output = _run_script(
+    script_output = run_script(
         'create_tables_and_add_defaults.py', args_dict, configs)
     tokens = json.loads(script_output)
 
@@ -283,12 +283,12 @@ def insert_manager(configs):
             args['manager']['ca_cert'] = f.read()
     except IOError:
         args['manager']['ca_cert'] = None
-    _run_script('create_tables_and_add_defaults.py', args, configs)
+    run_script('create_tables_and_add_defaults.py', args, configs)
 
 
 def create_amqp_resources(configs=None):
     logger.notice('Creating AMQP resources...')
-    _run_script('create_amqp_resources.py', configs=configs)
+    run_script('create_amqp_resources.py', configs=configs)
     logger.notice('AMQP resources successfully created')
 
 
@@ -339,7 +339,7 @@ def validate_schema_version(configs):
     """Check that the database schema version is the same as the current
     manager's migrations version.
     """
-    migrations_version = _run_script('get_db_version.py', configs=configs)
+    migrations_version = run_script('get_db_version.py', configs=configs)
     db_version = utils_db.run_psql_command(
         command=['-c', 'SELECT version_num FROM alembic_version'],
         db_key='cloudify_db_name'

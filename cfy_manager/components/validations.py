@@ -351,7 +351,7 @@ def check_certificates(config_section, section_path,
                        ca_path='ca_path', key_password='key_password',
                        require_non_ca_certs=True,
                        ):
-    """Check that the provided cert, key, and CA actally match"""
+    """Check that the provided cert, key, and CA actually match"""
     cert_filename = config_section.get(cert_path)
     key_filename = config_section.get(key_path)
 
@@ -373,16 +373,23 @@ def check_certificates(config_section, section_path,
                     component=section_path,
                 )
             )
-    elif cert_filename and key_filename:
+
+    validate_certificates(cert_filename, key_filename, ca_filename, password)
+    return cert_filename, key_filename, ca_filename, password
+
+
+def validate_certificates(cert_filename=None, key_filename=None,
+                          ca_filename=None, password=None):
+    if cert_filename and key_filename:
         _check_cert_key_match(cert_filename, key_filename, password)
     elif cert_filename or key_filename:
         raise ValidationError('Either both cert_path and key_path must be '
                               'provided, or neither.')
+
     if ca_filename:
         _check_ssl_file(ca_filename, kind='Cert')
         if cert_filename:
             _check_signed_by(ca_filename, cert_filename)
-    return cert_filename, key_filename, ca_filename, password
 
 
 def _check_internal_ca_cert():

@@ -17,7 +17,7 @@ import os
 
 from ...exceptions import ProcessExecutionError
 
-
+from ..validations import validate_certificates
 from cfy_manager.components import sources
 from ..components_constants import (
     SSL_ENABLED,
@@ -32,7 +32,10 @@ from ...constants import (
     POSTGRESQL_CA_CERT_PATH,
     CLOUDIFY_HOME_DIR,
     CLOUDIFY_USER,
-    CLOUDIFY_GROUP
+    CLOUDIFY_GROUP,
+    NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH
 )
 from ...config import config
 from ...logger import get_logger
@@ -156,20 +159,66 @@ class PostgresqlClient(BaseComponent):
         Copy the relevant SSL certificates to the cloudify SSL directory
         """
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-            certificates.use_supplied_certificates(
-                POSTGRESQL_CLIENT,
-                self.logger,
-                ca_destination=POSTGRESQL_CA_CERT_PATH,
-            )
+            self._handle_ca_certificate()
+
             if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                certificates.use_supplied_certificates(
-                    SSL_INPUTS,
-                    self.logger,
-                    cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
-                    key_destination=POSTGRESQL_CLIENT_KEY_PATH,
-                    prefix='postgresql_client_',
-                    key_perms='400',
-                )
+                self._handle_cert_and_key()
+
+    def _handle_ca_certificate(self):
+        certificates.use_supplied_certificates(
+            logger=self.logger,
+            ca_destination=POSTGRESQL_CA_CERT_PATH,
+            component_name=POSTGRESQL_CLIENT
+        )
+
+    def _handle_cert_and_key(self):
+        certificates.use_supplied_certificates(
+            logger=self.logger,
+            cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
+            key_destination=POSTGRESQL_CLIENT_KEY_PATH,
+            key_perms='400',
+            component_name=SSL_INPUTS,
+            prefix='postgresql_client_'
+        )
+
+    def replace_certificates(self):
+        replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_cert_and_key = os.path.exists(
+            NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            self.validate_new_certs()
+            if replacing_ca:
+                self.logger.info(
+                    'Replacing CA cert on postgresql_client component')
+                config[POSTGRESQL_CLIENT]['ca_path'] = \
+                    NEW_POSTGRESQL_CA_CERT_FILE_PATH
+                self._handle_ca_certificate()
+            if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
+                    replacing_cert_and_key):
+                self.logger.info(
+                    'Replacing cert and key on postgresql_client component')
+                config[SSL_INPUTS]['postgresql_client_cert_path'] = \
+                    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH
+                config[SSL_INPUTS]['postgresql_client_key_path'] = \
+                    NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH
+                self._handle_cert_and_key()
+
+    def validate_new_certs(self):
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            cert_filename, key_filename = None, None
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                cert_filename, key_filename = \
+                    certificates.get_cert_and_key_filenames(
+                        NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+                        NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
+                        POSTGRESQL_CLIENT_CERT_PATH,
+                        POSTGRESQL_CLIENT_KEY_PATH)
+
+            ca_filename = certificates.get_ca_filename(
+                NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                POSTGRESQL_CA_CERT_PATH)
+
+            validate_certificates(cert_filename, key_filename, ca_filename)
 
     def _configure(self):
         self._create_postgres_pgpass_files()

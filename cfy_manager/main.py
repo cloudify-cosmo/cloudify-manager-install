@@ -44,7 +44,10 @@ from .components.components_constants import (
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
-from .components.service_names import MANAGER, POSTGRESQL_SERVER
+from .components.service_names import (MANAGER,
+                                       MGMTWORKER,
+                                       AMQP_POSTGRES,
+                                       POSTGRESQL_SERVER)
 from .components.validations import validate
 from .config import config
 from .constants import (
@@ -52,9 +55,12 @@ from .constants import (
     INITIAL_INSTALL_FILE,
     STATUS_REPORTER_TOKEN,
     INITIAL_CONFIGURE_FILE,
+    STATUS_REPORTER,
+    NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import (BootstrapError, ValidationError,
+                         ProcessExecutionError, ReplaceCertificatesError)
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -70,14 +76,20 @@ from .utils.certificates import (
     generate_ca_cert,
     _generate_ssl_certificate,
 )
-from .utils.common import run, sudo, can_lookup_hostname, allows_json_format
+from .utils.common import (run,
+                           sudo,
+                           copy,
+                           allows_json_format,
+                           can_lookup_hostname)
 from .utils.files import (
     replace_in_file,
     remove as _remove,
     remove_temp_files,
-    touch
+    touch,
+    read_yaml_file
 )
 from .utils.node import get_node_id
+from utils.systemd import systemd
 
 logger = get_logger('Main')
 
@@ -142,6 +154,13 @@ DB_NODE_ID_HELP_MSG = (
 )
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
+)
+VALIDATE_HELP_MSG = (
+    "Validate the provided certificates. If this flag is on, then the "
+    "certificates will only be validated and not replaced."
+)
+INPUT_PATH_MSG = (
+    "The replace-certificates yaml configuration file path."
 )
 
 components = []
@@ -829,6 +848,58 @@ def restart(include_components, verbose=False, force=False):
     stop(include_components, verbose, force)
     start(include_components, verbose)
     _print_time()
+
+
+@argh.decorators.named('replace-certificates')
+@argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
+@argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
+def replace_certificates(input_path=None,
+                         only_validate=False):
+    """ Replacing the certificates on the current instance """
+    config.load_config()
+    _handle_replace_certs_config_path(input_path)
+    if only_validate:
+        _only_validate()
+    else:
+        _replace_certificates()
+
+
+def _replace_certificates():
+    logger.info('Replacing certificates')
+    for component in _get_components_list([]):
+        try:
+            component.replace_certificates()
+        except Exception as err:  # There isn't a specific exception
+            raise ReplaceCertificatesError(
+                'An error occurred while replacing certificates: '
+                '{0}'.format(err))
+
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        systemd.restart(MGMTWORKER)
+        systemd.restart(AMQP_POSTGRES)
+
+    systemd.restart(STATUS_REPORTER)
+
+
+def _handle_replace_certs_config_path(replace_certs_config_path):
+    if not replace_certs_config_path:
+        return
+    replace_certs_config = read_yaml_file(replace_certs_config_path)
+    for cert_name, cert_path in replace_certs_config.items():
+        new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
+        if cert_path != new_cert_local_path:
+            copy(cert_path, new_cert_local_path)
+
+
+def _only_validate():
+    logger.info('Validating new certificates')
+    for component in _get_components_list([]):
+        try:
+            component.validate_new_certs()
+        except (ValueError, ValidationError, ProcessExecutionError) as err:
+            raise ReplaceCertificatesError(
+                'An error occurred while replacing certificates: '
+                '{0}'.format(err))
 
 
 def main():

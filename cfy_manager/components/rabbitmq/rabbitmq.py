@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import json
 import time
 import socket
@@ -125,9 +126,7 @@ class RabbitMQ(BaseComponent):
         rabbitmq_username = config[RABBITMQ]['username']
         rabbitmq_password = config[RABBITMQ]['password']
         if not self.user_exists(rabbitmq_username):
-            logger.info('Creating new user and setting permissions...'.format(
-                rabbitmq_username, rabbitmq_password)
-            )
+            logger.info('Creating new user and setting permissions...')
             self._rabbitmqctl(['add_user',
                                rabbitmq_username,
                                rabbitmq_password])
@@ -403,13 +402,7 @@ class RabbitMQ(BaseComponent):
             logger.info('Updated /etc/hosts')
 
     def _generate_rabbitmq_certs(self):
-        supplied = self.use_supplied_certificates(
-            cert_destination=constants.BROKER_CERT_LOCATION,
-            key_destination=constants.BROKER_KEY_LOCATION,
-            ca_destination=constants.BROKER_CA_LOCATION,
-            owner='rabbitmq',
-            group='rabbitmq',
-        )
+        supplied = self.handle_certificates()
 
         if supplied:
             logger.info('Using supplied certificates.')
@@ -466,6 +459,48 @@ class RabbitMQ(BaseComponent):
             key_path=config[RABBITMQ]['key_path'],
             sign_cert=sign_cert,
             sign_key=sign_key,
+        )
+
+    def handle_certificates(self):
+        cert_config = {
+            'cert_destination': constants.BROKER_CERT_LOCATION,
+            'key_destination': constants.BROKER_KEY_LOCATION,
+            'ca_destination': constants.BROKER_CA_LOCATION,
+            'owner': 'rabbitmq',
+            'group': 'rabbitmq',
+        }
+
+        return self.use_supplied_certificates(**cert_config)
+
+    def replace_certificates(self):
+        if (os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH) or
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            self.logger.info(
+                'Replacing certificates on the rabbitmq component')
+            self._write_certs_to_config()
+            self.handle_certificates()
+            systemd.restart(RABBITMQ, ignore_failure=True)
+            systemd.verify_alive(RABBITMQ)
+
+    @staticmethod
+    def _write_certs_to_config():
+        if os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH):
+            config[RABBITMQ]['cert_path'] = \
+                constants.NEW_BROKER_CERT_FILE_PATH
+            config[RABBITMQ]['key_path'] = \
+                constants.NEW_BROKER_KEY_FILE_PATH
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            config[RABBITMQ]['ca_path'] = \
+                constants.NEW_BROKER_CA_CERT_FILE_PATH
+
+    def validate_new_certs(self):
+        certificates.get_and_validate_certs_for_replacement(
+            default_cert_location=constants.BROKER_CERT_LOCATION,
+            default_key_location=constants.BROKER_KEY_LOCATION,
+            default_ca_location=constants.BROKER_CA_LOCATION,
+            new_cert_location=constants.NEW_BROKER_CERT_FILE_PATH,
+            new_key_location=constants.NEW_BROKER_KEY_FILE_PATH,
+            new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH
         )
 
     def _set_rabbitmq_policy(self, name, expression, policy, priority):
