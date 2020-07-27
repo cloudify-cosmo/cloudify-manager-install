@@ -50,7 +50,9 @@ from .components.service_names import (
     COMPOSER,
     MANAGER,
     POSTGRESQL_SERVER,
-    SANITY
+    SANITY,
+    AMQP_POSTGRES,
+    MGMTWORKER
 )
 from .components.validations import validate, validate_dependencies
 from .config import config
@@ -59,9 +61,11 @@ from .constants import (
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
     SUPERVISORD_CONFIG_DIR,
+    NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import (BootstrapError, ValidationError,
+                         ProcessExecutionError, ReplaceCertificatesError)
 from .logger import (
     get_file_handlers_level,
     get_logger,
@@ -81,6 +85,7 @@ from .utils.common import (
     run,
     sudo,
     mkdir,
+    copy,
     can_lookup_hostname,
     is_installed
 )
@@ -88,10 +93,10 @@ from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
     remove as _remove,
     remove_temp_files,
-    touch
+    touch,
+    read_yaml_file
 )
 from ._compat import xmlrpclib
-
 
 logger = get_logger('Main')
 
@@ -157,6 +162,13 @@ DB_NODE_ID_HELP_MSG = (
 )
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
+)
+VALIDATE_HELP_MSG = (
+    "Validate the provided certificates. If this flag is on, then the "
+    "certificates will only be validated and not replaced."
+)
+INPUT_PATH_MSG = (
+    "The replace-certificates yaml configuration file path."
 )
 
 
@@ -1051,6 +1063,60 @@ def run_init():
             ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
 
 
+@argh.decorators.named('replace-certificates')
+@argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
+@argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
+def replace_certificates(input_path=None,
+                         only_validate=False):
+    """ Replacing the certificates on the current instance """
+    config.load_config()
+    _handle_replace_certs_config_path(input_path)
+    if only_validate:
+        _only_validate()
+    else:
+        _replace_certificates()
+
+
+def _replace_certificates():
+    logger.info('Replacing certificates')
+    for component in _get_components():
+        try:
+            component.replace_certificates()
+        except Exception as err:  # There isn't a specific exception
+            raise ReplaceCertificatesError(
+                'An error occurred while replacing certificates: '
+                '{0}'.format(err))
+
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        service.restart(MGMTWORKER)
+        service.restart(AMQP_POSTGRES)
+
+
+def _handle_replace_certs_config_path(replace_certs_config_path):
+    if not replace_certs_config_path:
+        return
+    replace_certs_config = read_yaml_file(replace_certs_config_path)
+    for cert_name, cert_path in replace_certs_config.items():
+        new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
+        if cert_path != new_cert_local_path:
+            copy(cert_path, new_cert_local_path)
+
+
+def _only_validate():
+    logger.info('Validating new certificates')
+    certs_valid = True
+    for component in _get_components():
+        try:
+            component.validate_new_certs()
+        except (ValueError, ValidationError, ProcessExecutionError) as err:
+            print(err, file=sys.stderr)  # For fabric
+            certs_valid = False
+
+    if not certs_valid:  # This way we can finish validating all components
+        raise ReplaceCertificatesError('An error happened while validating '
+                                       'new certificates')
+
+
 def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
@@ -1073,7 +1139,8 @@ def main():
         reset_admin_password,
         image_starter,
         wait_for_starter,
-        run_init
+        run_init,
+        replace_certificates
     ])
 
     parser.add_commands([

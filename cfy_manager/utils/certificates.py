@@ -25,7 +25,7 @@ from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
 from ..exceptions import ProcessExecutionError
 from .files import write_to_file, write_to_tempfile
-from ..components.validations import check_certificates
+from ..components.validations import check_certificates, validate_certificates
 
 from ..logger import get_logger, setup_console_logger
 from .. import constants as const
@@ -426,7 +426,8 @@ def use_supplied_certificates(component_name,
                               prefix='',
                               just_ca_cert=False,
                               update_config=True,
-                              sub_component=None):
+                              sub_component=None,
+                              validate_certs_src_exist=False):
     """Use user-supplied certificates, checking they're not broken.
 
     Any private key password will be removed, and the config will be
@@ -441,6 +442,14 @@ def use_supplied_certificates(component_name,
     cert_path = prefix + 'cert_path'
     ca_path = prefix + 'ca_path'
     key_password = prefix + 'key_password'
+
+    # The ssl_inputs has different names for some of the certificates
+    if component_name == SSL_INPUTS:
+        if prefix == 'internal_':
+            ca_path = 'ca_cert_path'
+            key_password = 'ca_key_password'
+        elif prefix == 'external_':
+            ca_path = prefix + 'ca_cert_path'
 
     if just_ca_cert:
         ca_path = cert_path
@@ -468,18 +477,22 @@ def use_supplied_certificates(component_name,
         logger.debug('No user-supplied certificates were present.')
         return False
 
+    if validate_certs_src_exist and not (cert_src and key_src):
+        logger.debug('The certificate and key were not provided.')
+        return False
+
     # Put the files in the correct place
     logger.info('Ensuring files are in correct locations.')
 
     if cert_destination and cert_src != cert_destination:
-        copy(cert_src, cert_destination)
+        copy(cert_src, cert_destination, True)
     if key_destination and key_src != key_destination:
-        copy(key_src, key_destination)
+        copy(key_src, key_destination, True)
     if ca_destination and ca_src != ca_destination:
         if ca_src:
-            copy(ca_src, ca_destination)
+            copy(ca_src, ca_destination, True)
         else:
-            copy(cert_destination, ca_destination)
+            copy(cert_destination, ca_destination, True)
 
     if key_pass:
         remove_key_encryption(
@@ -513,3 +526,43 @@ def use_supplied_certificates(component_name,
 
     # Supplied certificates were used
     return True
+
+
+def get_and_validate_certs_for_replacement(
+        default_cert_location,
+        default_key_location,
+        default_ca_location,
+        new_cert_location,
+        new_key_location,
+        new_ca_location):
+    """Validates the new certificates for replacement.
+
+    This function validates the new specified certificates for replacement,
+    based on the new certificates specified and the current ones. E.g. if
+    onlt a new certificate and key were specified, then it will validate them
+    with the current CA.
+    """
+
+    cert_filename, key_filename = get_cert_and_key_filenames(
+        new_cert_location, new_key_location,
+        default_cert_location, default_key_location)
+
+    ca_filename = get_ca_filename(new_ca_location, default_ca_location)
+
+    validate_certificates(cert_filename, key_filename, ca_filename)
+    return cert_filename, key_filename, ca_filename
+
+
+def get_cert_and_key_filenames(new_cert_location,
+                               new_key_location,
+                               default_cert_location,
+                               default_key_location):
+    if os.path.exists(new_cert_location):
+        return new_cert_location, new_key_location
+
+    return default_cert_location, default_key_location
+
+
+def get_ca_filename(new_ca_location, default_ca_location):
+    return (new_ca_location if os.path.exists(new_ca_location)
+            else default_ca_location)

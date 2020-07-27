@@ -19,6 +19,7 @@ from os.path import join
 from tempfile import gettempdir
 
 from ..base_component import BaseComponent
+from ..validations import validate_certificates
 from ..service_names import MANAGER, RABBITMQ, QUEUE_SERVICE
 from ..components_constants import CONFIG, SERVICES_TO_INSTALL
 from ... import constants
@@ -99,6 +100,12 @@ class Manager(BaseComponent):
         common.mkdir(join(resources_root, 'packages', 'scripts'))
         common.mkdir(join(resources_root, 'packages', 'templates'))
 
+    @staticmethod
+    def handle_certificates():
+        use_supplied_certificates(component_name=RABBITMQ,
+                                  logger=logger,
+                                  ca_destination=constants.BROKER_CA_LOCATION)
+
     def _prepare_certificates(self):
         if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):
             common.mkdir(constants.SSL_CERTS_TARGET_DIR)
@@ -111,11 +118,21 @@ class Manager(BaseComponent):
         if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
             # ...but only if one was provided.
             if config[RABBITMQ]['ca_path']:
-                use_supplied_certificates(
-                    component_name=RABBITMQ,
-                    logger=logger,
-                    ca_destination=constants.BROKER_CA_LOCATION,
-                )
+                self.handle_certificates()
+
+    def replace_certificates(self):
+        if (QUEUE_SERVICE not in config[SERVICES_TO_INSTALL] and
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            logger.info('Replacing rabbitmq CA cert on the manager component')
+            config[RABBITMQ]['ca_path'] = \
+                constants.NEW_BROKER_CA_CERT_FILE_PATH
+            self.handle_certificates()
+
+    def validate_new_certs(self):
+        if (QUEUE_SERVICE not in config[SERVICES_TO_INSTALL] and
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            validate_certificates(
+                ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
 
     def _configure(self):
         self._prepare_certificates()

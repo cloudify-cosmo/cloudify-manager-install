@@ -404,13 +404,7 @@ class RabbitMQ(BaseComponent):
             logger.info('Updated /etc/hosts')
 
     def _generate_rabbitmq_certs(self):
-        supplied = self.use_supplied_certificates(
-            cert_destination=constants.BROKER_CERT_LOCATION,
-            key_destination=constants.BROKER_KEY_LOCATION,
-            ca_destination=constants.BROKER_CA_LOCATION,
-            owner='rabbitmq',
-            group='rabbitmq',
-        )
+        supplied = self.handle_certificates()
 
         if supplied:
             logger.info('Using supplied certificates.')
@@ -468,6 +462,48 @@ class RabbitMQ(BaseComponent):
             sign_key=sign_key,
         )
 
+    def handle_certificates(self):
+        cert_config = {
+            'cert_destination': constants.BROKER_CERT_LOCATION,
+            'key_destination': constants.BROKER_KEY_LOCATION,
+            'ca_destination': constants.BROKER_CA_LOCATION,
+            'owner': 'rabbitmq',
+            'group': 'rabbitmq',
+        }
+
+        return self.use_supplied_certificates(**cert_config)
+
+    def replace_certificates(self):
+        if (os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH) or
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            self.logger.info(
+                'Replacing certificates on the rabbitmq component')
+            self._write_certs_to_config()
+            self.handle_certificates()
+            service.restart(RABBITMQ, ignore_failure=True)
+            service.verify_alive(RABBITMQ)
+
+    @staticmethod
+    def _write_certs_to_config():
+        if os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH):
+            config[RABBITMQ]['cert_path'] = \
+                constants.NEW_BROKER_CERT_FILE_PATH
+            config[RABBITMQ]['key_path'] = \
+                constants.NEW_BROKER_KEY_FILE_PATH
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            config[RABBITMQ]['ca_path'] = \
+                constants.NEW_BROKER_CA_CERT_FILE_PATH
+
+    def validate_new_certs(self):
+        certificates.get_and_validate_certs_for_replacement(
+            default_cert_location=constants.BROKER_CERT_LOCATION,
+            default_key_location=constants.BROKER_KEY_LOCATION,
+            default_ca_location=constants.BROKER_CA_LOCATION,
+            new_cert_location=constants.NEW_BROKER_CERT_FILE_PATH,
+            new_key_location=constants.NEW_BROKER_KEY_FILE_PATH,
+            new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH
+        )
+
     # Give rabbit time to finish starting
     @retry(stop_max_attempt_number=20, wait_fixed=3000)
     def _validate_rabbitmq_running(self):
@@ -506,6 +542,11 @@ class RabbitMQ(BaseComponent):
         )
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_SERVER_SCRIPT)
         common.chmod('755', RABBITMQ_SERVER_SCRIPT)
+
+    def _restart_rabbitmq(self):
+        service.restart(RABBITMQ, ignore_failure=True)
+        wait_for_port(SECURE_PORT)
+        self._validate_rabbitmq_running()
 
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
@@ -575,10 +616,7 @@ class RabbitMQ(BaseComponent):
             self._write_definitions_file()
         # rabbitmq start exits with 143 status code that is valid
         # in this case.
-        service.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
-
-        self._validate_rabbitmq_running()
+        self._restart_rabbitmq()
         self._possibly_join_cluster()
         logger.notice('RabbitMQ successfully started')
 

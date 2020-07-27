@@ -15,9 +15,10 @@
 
 from __future__ import print_function
 
+import os
 import csv
 import glob
-import os
+import time
 import shlex
 import socket
 import logging
@@ -72,14 +73,13 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     if proc.aggr_stderr is not None:
         proc.aggr_stderr = proc.aggr_stderr.decode('utf-8')
     if proc.returncode != 0:
-        command_str = ' '.join(command)
         if retries:
-            logger.warn('Failed running command: {0}. Retrying. '
-                        '({1} left)'.format(command_str, retries))
+            logger.warn('Failed running command: %s. Retrying. '
+                        '(%s left)', command, retries)
             proc = run(command, retries - 1)
         elif not ignore_failures:
             msg = 'Failed running command: {0} ({1}).'.format(
-                command_str, proc.aggr_stderr)
+                command, proc.aggr_stderr)
             err = ProcessExecutionError(msg, proc.returncode)
             err.aggr_stdout = proc.aggr_stdout
             err.aggr_stderr = proc.aggr_stderr
@@ -162,8 +162,16 @@ def ensure_destination_dir_exists(destination):
         sudo(['mkdir', '-p', destination_dir])
 
 
-def copy(source, destination):
-    ensure_destination_dir_exists(destination)
+def copy(source, destination, backup=False):
+    if os.path.exists(destination):
+        if backup:
+            modified_name = time.strftime('%Y%m%d-%H%M%S_') + \
+                            os.path.basename(destination)
+            new_dest = os.path.join(os.path.dirname(destination),
+                                    modified_name)
+            sudo(['cp', '-rp', destination, new_dest])
+    else:
+        ensure_destination_dir_exists(destination)
     sudo(['cp', '-rp', source, destination])
 
 

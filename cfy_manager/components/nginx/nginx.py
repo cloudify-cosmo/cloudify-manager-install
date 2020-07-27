@@ -104,7 +104,7 @@ class Nginx(BaseComponent):
         if config[SSL_INPUTS]['external_ca_key_password']:
             config[SSL_INPUTS]['external_ca_key_password'] = '<removed>'
 
-    def _handle_internal_cert(self):
+    def _handle_internal_cert(self, replacing_ca=False):
         """
         The user might provide the internal cert and the internal key, or
         neither. It is an error to only provide one of them. If the user did
@@ -117,21 +117,109 @@ class Nginx(BaseComponent):
             'cert_destination': constants.INTERNAL_CERT_PATH,
             'key_destination': constants.INTERNAL_KEY_PATH,
         }
-        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL) and \
-                MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL):
+        if ((MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL) and
+                MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL)) or
+                replacing_ca):
             cert_destinations['ca_destination'] = constants.CA_CERT_PATH
         logger.info('Handling internal certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
             self.logger,
             prefix='internal_',
+            validate_certs_src_exist=True,
             **cert_destinations
         )
 
-        if deployed:
-            logger.info('Deployed user provided external cert and key')
+        if deployed:  # In case of replacing certs, deployed==True always
+            logger.info('Deployed user provided internal cert and key')
         else:
             self._generate_internal_certs()
+
+    def replace_certificates(self):
+        if self._needs_to_replace_internal_certs():
+            self._replace_internal_certs()
+        if self._needs_to_replace_external_certs():
+            self._replace_external_certs()
+
+        if (self._needs_to_replace_internal_certs() or
+                self._needs_to_replace_external_certs()):
+            service.restart(NGINX, append_prefix=False)
+            service.verify_alive(NGINX, append_prefix=False)
+
+    @staticmethod
+    def _needs_to_replace_internal_certs():
+        return (exists(constants.NEW_INTERNAL_CERT_FILE_PATH) or
+                exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH))
+
+    @staticmethod
+    def _needs_to_replace_external_certs():
+        return (exists(constants.NEW_EXTERNAL_CERT_FILE_PATH) or
+                exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH))
+
+    def validate_new_certs(self):
+        self._validate_internal_certs()
+        self._validate_external_certs()
+
+    def _validate_internal_certs(self):
+        if self._needs_to_replace_internal_certs():
+            certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=constants.INTERNAL_CERT_PATH,
+                    default_key_location=constants.INTERNAL_KEY_PATH,
+                    default_ca_location=constants.CA_CERT_PATH,
+                    new_cert_location=constants.NEW_INTERNAL_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_INTERNAL_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+                )
+
+    def _validate_external_certs(self):
+        if self._needs_to_replace_external_certs():
+            certificates.get_and_validate_certs_for_replacement(
+                default_cert_location=constants.EXTERNAL_CERT_PATH,
+                default_key_location=constants.EXTERNAL_KEY_PATH,
+                default_ca_location=constants.CA_CERT_PATH,
+                new_cert_location=constants.NEW_EXTERNAL_CERT_FILE_PATH,
+                new_key_location=constants.NEW_EXTERNAL_KEY_FILE_PATH,
+                new_ca_location=constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
+            )
+
+    def _replace_internal_certs(self):
+        self._validate_internal_certs()
+        self.log_replacing_certificates('internal certificates')
+        self._write_internal_certs_to_config()
+        replacing_ca = exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
+        self._handle_internal_cert(replacing_ca=replacing_ca)
+
+    def _replace_external_certs(self):
+        self._validate_external_certs()
+        self.log_replacing_certificates('external certificates')
+        self._write_external_certs_to_config()
+        replacing_ca = exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH)
+        self._handle_external_cert(replacing_ca=replacing_ca)
+
+    def log_replacing_certificates(self, certs_type):
+        self.logger.info('Replacing %s on nginx component', certs_type)
+
+    @staticmethod
+    def _write_internal_certs_to_config():
+        if exists(constants.NEW_INTERNAL_CERT_FILE_PATH):
+            config[SSL_INPUTS]['internal_cert_path'] = \
+                constants.NEW_INTERNAL_CERT_FILE_PATH
+            config[SSL_INPUTS]['internal_key_path'] = \
+                constants.NEW_INTERNAL_KEY_FILE_PATH
+        if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            config[SSL_INPUTS]['ca_cert_path'] = \
+                constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+
+    @staticmethod
+    def _write_external_certs_to_config():
+        if exists(constants.NEW_EXTERNAL_CERT_FILE_PATH):
+            config[SSL_INPUTS]['external_cert_path'] = \
+                constants.NEW_EXTERNAL_CERT_FILE_PATH
+            config[SSL_INPUTS]['external_key_path'] = \
+                constants.NEW_EXTERNAL_KEY_FILE_PATH
+        if exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH):
+            config[SSL_INPUTS]['external_ca_cert_path'] = \
+                constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
 
     def _internal_certs_exist(self):
         return (
@@ -139,17 +227,23 @@ class Nginx(BaseComponent):
             and exists(constants.INTERNAL_KEY_PATH)
         )
 
-    def _handle_external_cert(self):
+    def _handle_external_cert(self, replacing_ca=False):
+        cert_destinations = {
+            'cert_destination': constants.EXTERNAL_CERT_PATH,
+            'key_destination': constants.EXTERNAL_KEY_PATH,
+        }
+        if replacing_ca:
+            cert_destinations['ca_destination'] = \
+                constants.EXTERNAL_CA_CERT_PATH
         logger.info('Handling external certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
             self.logger,
-            cert_destination=constants.EXTERNAL_CERT_PATH,
-            key_destination=constants.EXTERNAL_KEY_PATH,
             prefix='external_',
+            **cert_destinations
         )
 
-        if deployed:
+        if deployed:  # in case of replacing certs, deployed==True always
             logger.info('Deployed user provided external cert and key')
         else:
             self._generate_external_certs()
