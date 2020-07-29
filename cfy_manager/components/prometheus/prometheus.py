@@ -16,7 +16,7 @@
 
 import json
 from os import sep
-from os.path import isfile, join
+from os.path import isfile, join, exists
 import subprocess
 
 from ..base_component import BaseComponent
@@ -124,6 +124,37 @@ class Prometheus(BaseComponent):
             )
         logger.notice('Prometheus successfully configured')
 
+    def replace_certificates(self):
+        if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
+                exists(constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH)):
+            self.validate_new_certs()
+            logger.info('Replacing certificates on prometheus component')
+            self.write_new_certs_to_config()
+            _handle_certs()
+
+    def validate_new_certs(self):
+        if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
+                exists(constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH)):
+            certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=constants.MONITORING_CERT_PATH,
+                    default_key_location=constants.MONITORING_KEY_PATH,
+                    default_ca_location=constants.MONITORING_CA_CERT_PATH,
+                    new_cert_location=constants.NEW_PROMETHEUS_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_PROMETHEUS_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH
+                )
+
+    @staticmethod
+    def write_new_certs_to_config():
+        if exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH):
+            config['prometheus']['cert_path'] = \
+                constants.NEW_PROMETHEUS_CERT_FILE_PATH
+            config['prometheus']['key_path'] = \
+                constants.NEW_PROMETHEUS_KEY_FILE_PATH
+        if exists(constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH):
+            config['prometheus']['ca_path'] = \
+                constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH
+
     def remove(self):
         logger.notice('Removing Prometheus and exporters...')
         remove_files_list = [PROMETHEUS_DATA_DIR, ]
@@ -202,7 +233,7 @@ def _handle_certs():
         cert_destination=constants.MONITORING_CERT_PATH,
         key_destination=constants.MONITORING_KEY_PATH,
         ca_destination=constants.MONITORING_CA_CERT_PATH)
-    if supplied:
+    if supplied:  # When replacing certificates, supplied==True always
         logger.info('Deployed user provided external cert and key')
     else:
         config[PROMETHEUS]['ca_path'] = constants.MONITORING_CA_CERT_PATH
