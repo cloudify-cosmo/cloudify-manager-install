@@ -52,7 +52,8 @@ from .components.service_names import (
     POSTGRESQL_SERVER,
     SANITY,
     AMQP_POSTGRES,
-    MGMTWORKER
+    MGMTWORKER,
+    STAGE
 )
 from .components.validations import validate, validate_dependencies
 from .config import config
@@ -1088,8 +1089,10 @@ def _replace_certificates():
                 '{0}'.format(err))
 
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-        service.restart(MGMTWORKER)
-        service.restart(AMQP_POSTGRES)
+        # restart services that might not have been restarted
+        for service_name in MGMTWORKER, AMQP_POSTGRES, STAGE, COMPOSER:
+            service.restart(service_name)
+            service.verify_alive(service_name)
 
 
 def _handle_replace_certs_config_path(replace_certs_config_path):

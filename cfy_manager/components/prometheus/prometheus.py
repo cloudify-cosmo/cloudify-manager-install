@@ -131,6 +131,10 @@ class Prometheus(BaseComponent):
             logger.info('Replacing certificates on prometheus component')
             self.write_new_certs_to_config()
             _handle_certs()
+            service.reload(PROMETHEUS, append_prefix=False,
+                           ignore_failure=True)
+            service.restart(BLACKBOX_EXPORTER, append_prefix=True,
+                            ignore_failure=True)
 
     def validate_new_certs(self):
         if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
@@ -154,6 +158,9 @@ class Prometheus(BaseComponent):
         if exists(constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH):
             config['prometheus']['ca_path'] = \
                 constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH
+        if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            config[PROMETHEUS][BLACKBOX_EXPORTER]['ca_cert_path'] = \
+                constants.NEW_INTERNAL_CA_CERT_FILE_PATH
 
     def remove(self):
         logger.notice('Removing Prometheus and exporters...')
