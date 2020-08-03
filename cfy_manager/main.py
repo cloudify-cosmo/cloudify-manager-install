@@ -984,6 +984,8 @@ def wait_for_starter(timeout=300):
         else:
             raise BootstrapError('Timed out waiting for starter')
     finally:
+        # allow a some time for tail to finish displaying logs
+        time.sleep(1)
         tail_log.terminate()
         tail_log.wait()
 
