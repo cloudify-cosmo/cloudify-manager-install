@@ -432,6 +432,9 @@ class RestService(BaseComponent):
     def _replace_ca_certs_on_db(self):
         if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
             self._replace_manager_ca_on_db()
+            if common.is_all_in_one_manager():
+                self._replace_rabbitmq_ca_on_db()
+                return
         if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
             self._replace_rabbitmq_ca_on_db()
 
@@ -446,8 +449,11 @@ class RestService(BaseComponent):
 
     def _replace_rabbitmq_ca_on_db(self):
         self._log_replacing_certs_on_db('rabbitmq-ca')
+        cert_path = (constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+                     if common.is_all_in_one_manager()
+                     else constants.NEW_BROKER_CA_CERT_FILE_PATH)
         script_input = {
-            'cert_path': constants.NEW_BROKER_CA_CERT_FILE_PATH,
+            'cert_path': cert_path,
             'name': 'rabbitmq-ca'
         }
         self._run_replace_certs_on_db_script(script_input)
@@ -469,7 +475,8 @@ class RestService(BaseComponent):
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
             validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
             logger.info('Replacing ldap CA cert on the restservice component')
-            config['ldap']['ca_cert'] = constants.NEW_LDAP_CA_CERT_PATH
+            config['restservice']['ldap']['ca_cert'] = \
+                constants.NEW_LDAP_CA_CERT_PATH
             self.handle_ldap_certificate()
 
     def _replace_haproxy_cert(self):
