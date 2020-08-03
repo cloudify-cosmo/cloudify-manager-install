@@ -22,7 +22,6 @@ import sys
 import time
 import logging
 import subprocess
-from xml.parsers import expat
 from traceback import format_exception
 
 import argh
@@ -927,8 +926,6 @@ def _is_unit_finished(unit_name):
 
 def _wait_systemd_starter(timeout):
     deadline = time.time() + timeout
-    journalctl = subprocess.Popen([
-        '/bin/journalctl', '-fu', 'cloudify-starter.service'])
     while time.time() < deadline:
         if _is_unit_finished('cloudify-starter.service'):
             break
@@ -936,7 +933,6 @@ def _wait_systemd_starter(timeout):
             time.sleep(1)
     else:
         raise BootstrapError('Timed out waiting for the starter service')
-    journalctl.kill()
 
 
 def _get_starter_service_response():
@@ -954,36 +950,15 @@ def _get_starter_service_response():
     return status_response
 
 
-def _get_starter_service_log(offset, length):
-    server = xmlrpclib.Server(
-        'http://',
-        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
-    try:
-        service_log = server.supervisor.readLog(offset, length)
-        return service_log
-    except xmlrpclib.Fault as e:
-        raise BootstrapError(
-            'Error {0} while trying to get log for {1}'
-            ''.format(e, STARTER_SERVICE)
-        )
-    except expat.ExpatError:
-        logger.debug('No more logs to show for {0}'.format(STARTER_SERVICE))
-
-
 def _wait_supervisord_starter(timeout):
     deadline = time.time() + timeout
-    offset = 0
     while time.time() < deadline:
         # Avoid FileNotFoundError by checking first if the supervisord
         # socket file is ready to start connection to the supervisord server
         if os.path.exists('/tmp/supervisor.sock'):
-            service_log = _get_starter_service_log(offset, 0)
             status_response = _get_starter_service_response()
             service_status = status_response['statename']
             exit_status = status_response['exitstatus']
-            if service_log:
-                logger.info(service_log)
-                offset += len(service_log)
             if service_status == 'EXITED':
                 if exit_status != 0:
                     raise BootstrapError(
@@ -1000,10 +975,14 @@ def _wait_supervisord_starter(timeout):
 @argh.decorators.named('wait-for-starter')
 def wait_for_starter(timeout=300):
     config.load_config()
+    tail_log = subprocess.Popen([
+        '/usr/bin/tail', '-F', '/var/log/cloudify/manager/cfy_manager.log'])
     if is_supervisord_service():
         _wait_supervisord_starter(timeout)
     else:
         _wait_systemd_starter(timeout)
+    tail_log.terminate()
+    tail_log.wait()
 
 
 def _guess_private_ip():
