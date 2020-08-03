@@ -989,12 +989,16 @@ def wait_for_starter(timeout=300):
     config.load_config()
     tail_log = subprocess.Popen([
         '/usr/bin/tail', '-F', '/var/log/cloudify/manager/cfy_manager.log'])
-    if is_supervisord_service():
-        _wait_supervisord_starter(timeout)
-    else:
-        _wait_systemd_starter(timeout)
-    tail_log.terminate()
-    tail_log.wait()
+    try:
+        if is_supervisord_service():
+            _wait_supervisord_starter(timeout)
+        else:
+            _wait_systemd_starter(timeout)
+    except BootstrapError:
+        sys.exit(1)
+    finally:
+        tail_log.terminate()
+        tail_log.wait()
 
 
 def _guess_private_ip():
@@ -1031,8 +1035,11 @@ def image_starter(verbose=False):
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
         args += ['--public-ip', private_ip]
-    subprocess.check_call(command + ['configure'] + args)
-    subprocess.check_call(command + ['start'] + args)
+    try:
+        subprocess.check_call(command + ['configure'] + args)
+        subprocess.check_call(command + ['start'] + args)
+    except subprocess.CalledProcessError:
+        sys.exit(1)
 
 
 @argh.decorators.named('run-init')
