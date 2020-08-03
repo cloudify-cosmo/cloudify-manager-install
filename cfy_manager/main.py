@@ -982,9 +982,7 @@ def wait_for_starter(timeout=300):
                 break
             time.sleep(0.5)
         else:
-            raise BootstrapError('Timed out')
-    except BootstrapError:
-        sys.exit(1)
+            raise BootstrapError('Timed out waiting for starter')
     finally:
         tail_log.terminate()
         tail_log.wait()
