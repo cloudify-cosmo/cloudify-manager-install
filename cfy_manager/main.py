@@ -926,7 +926,7 @@ def _is_unit_finished(unit_name='cloudify-starter.service'):
         name, _, value = line.strip().partition(b'=')
         if name == b'ExecMainExitTimestampMonotonic':
             rv = int(value) > 0
-        if name == b'ExecMainCode':
+        if name == b'ExecMainStatus':
             try:
                 value = int(value)
             except ValueError:
