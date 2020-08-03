@@ -916,12 +916,24 @@ def restart(include_components, verbose=False, force=False):
 
 
 def _is_unit_finished(unit_name):
-    unit_details = subprocess.check_output([
-        '/bin/systemctl', 'show', unit_name]).splitlines()
+    try:
+        unit_details = subprocess.check_output([
+            '/bin/systemctl', 'show', unit_name]).splitlines()
+    except subprocess.CalledProcessError:
+        return False
     for line in unit_details:
         name, _, value = line.strip().partition(b'=')
         if name == b'ExecMainExitTimestampMonotonic':
-            return int(value) > 0
+            rv = int(value) > 0
+        if name == b'ExecMainCode':
+            try:
+                value = int(value)
+            except ValueError:
+                continue
+            if value > 0:
+                raise BootstrapError(
+                    'Starter service exited with code {0}'.format(value))
+    return rv
 
 
 def _wait_systemd_starter(timeout):
