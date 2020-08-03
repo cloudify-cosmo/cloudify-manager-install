@@ -917,8 +917,10 @@ def restart(include_components, verbose=False, force=False):
 
 def _is_unit_finished(unit_name='cloudify-starter.service'):
     try:
-        unit_details = subprocess.check_output([
-            '/bin/systemctl', 'show', unit_name]).splitlines()
+        unit_details = subprocess.check_output(
+            ['/bin/systemctl', 'show', unit_name],
+            stderr=subprocess.STDOUT
+        ).splitlines()
     except subprocess.CalledProcessError:
         # systemd is not ready yet
         return False
@@ -971,12 +973,15 @@ def _is_supervisord_service_finished():
 @argh.decorators.named('wait-for-starter')
 def wait_for_starter(timeout=300):
     config.load_config()
+
     tail_log = subprocess.Popen([
-        '/usr/bin/tail', '-F', '/var/log/cloudify/manager/cfy_manager.log'])
+        '/usr/bin/tail', '-F', '/var/log/cloudify/manager/cfy_manager.log'
+    ])
+
     is_started = _is_supervisord_service_finished \
         if is_supervisord_service() else _is_unit_finished
+    deadline = time.time() + timeout
     try:
-        deadline = time.time() + timeout
         while time.time() < deadline:
             if is_started():
                 break
