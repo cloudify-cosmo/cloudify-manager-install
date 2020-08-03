@@ -975,7 +975,8 @@ def wait_for_starter(timeout=300):
     config.load_config()
 
     tail_log = subprocess.Popen([
-        '/usr/bin/tail', '-F', '/var/log/cloudify/manager/cfy_manager.log'
+        '/usr/bin/tail', '-F', '--max-unchanged-stats', '5', '-s', '0.5',
+        '/var/log/cloudify/manager/cfy_manager.log'
     ])
 
     is_started = _is_supervisord_service_finished \
