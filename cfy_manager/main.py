@@ -915,11 +915,12 @@ def restart(include_components, verbose=False, force=False):
     _print_time()
 
 
-def _is_unit_finished(unit_name):
+def _is_unit_finished(unit_name='cloudify-starter.service'):
     try:
         unit_details = subprocess.check_output([
             '/bin/systemctl', 'show', unit_name]).splitlines()
     except subprocess.CalledProcessError:
+        # systemd is not ready yet
         return False
     for line in unit_details:
         name, _, value = line.strip().partition(b'=')
@@ -936,52 +937,35 @@ def _is_unit_finished(unit_name):
     return rv
 
 
-def _wait_systemd_starter(timeout):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if _is_unit_finished('cloudify-starter.service'):
-            break
-        else:
-            time.sleep(1)
-    else:
-        raise BootstrapError('Timed out waiting for the starter service')
-
-
 def _get_starter_service_response():
     server = xmlrpclib.Server(
         'http://',
         transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
     try:
-        status_response = server.supervisor.getProcessInfo(
-            STARTER_SERVICE)
+        status_response = server.supervisor.getProcessInfo(STARTER_SERVICE)
     except xmlrpclib.Fault as e:
         raise BootstrapError(
-            'Error {0} while trying to lookup {1}'
-            ''.format(e, STARTER_SERVICE)
+            'Error {0} while trying to lookup {1}'.format(e, STARTER_SERVICE)
         )
     return status_response
 
 
-def _wait_supervisord_starter(timeout):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        # Avoid FileNotFoundError by checking first if the supervisord
-        # socket file is ready to start connection to the supervisord server
-        if os.path.exists('/tmp/supervisor.sock'):
-            status_response = _get_starter_service_response()
-            service_status = status_response['statename']
-            exit_status = status_response['exitstatus']
-            if service_status == 'EXITED':
-                if exit_status != 0:
-                    raise BootstrapError(
-                        '{0} service exit with error status '
-                        'code {1}'.format(STARTER_SERVICE, exit_status)
-                    )
-                logger.info('{0} service finished'.format(STARTER_SERVICE))
-                break
-        time.sleep(0.5)
-    else:
-        raise BootstrapError('Timed out waiting for the starter service')
+def _is_supervisord_service_finished():
+    if not os.path.exists('/tmp/supervisor.sock'):
+        # supervisord did not start yet
+        return False
+
+    status_response = _get_starter_service_response()
+    service_status = status_response['statename']
+    exit_status = status_response['exitstatus']
+    if service_status == 'EXITED':
+        if exit_status != 0:
+            raise BootstrapError(
+                '{0} service exit with error status '
+                'code {1}'.format(STARTER_SERVICE, exit_status)
+            )
+        return True
+    return False
 
 
 @argh.decorators.named('wait-for-starter')
@@ -989,11 +973,16 @@ def wait_for_starter(timeout=300):
     config.load_config()
     tail_log = subprocess.Popen([
         '/usr/bin/tail', '-F', '/var/log/cloudify/manager/cfy_manager.log'])
+    is_started = _is_supervisord_service_finished \
+        if is_supervisord_service() else _is_unit_finished
     try:
-        if is_supervisord_service():
-            _wait_supervisord_starter(timeout)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if is_started():
+                break
+            time.sleep(0.5)
         else:
-            _wait_systemd_starter(timeout)
+            raise BootstrapError('Timed out')
     except BootstrapError:
         sys.exit(1)
     finally:
