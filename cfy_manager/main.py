@@ -1064,7 +1064,7 @@ def run_init():
             ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
 
 
-@argh.decorators.named('replace-certificates')
+@argh.named('replace')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
 def replace_certificates(input_path=None,
@@ -1143,8 +1143,11 @@ def main():
         image_starter,
         wait_for_starter,
         run_init,
-        replace_certificates
     ])
+
+    parser.add_commands([
+        replace_certificates
+    ], namespace='certificates')
 
     parser.add_commands([
         brokers_add,
