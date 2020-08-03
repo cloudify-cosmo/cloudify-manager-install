@@ -117,6 +117,7 @@ def setup_console_logger(verbose=False):
     global logging_initialized
     if logging_initialized:
         return
+    _setup_logger()
     # Requests is fairly verbose at INFO level; make it verbose only when
     # requested
     logging.getLogger('requests').setLevel(
@@ -152,9 +153,6 @@ def _setup_file_logger(logger):
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter(FORMAT_MESSAGE))
     logger.addHandler(fh)
-
-
-_setup_logger()
 
 
 def get_logger(logger_name):
