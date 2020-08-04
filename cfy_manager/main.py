@@ -514,6 +514,8 @@ def _print_finish_message():
                 protocol=protocol,
                 ip=manager_config[PUBLIC_IP])
         )
+        # reload the config in case the admin password changed
+        config.load_config()
         password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
         print('Admin password: {0}'.format(password))
         print('#' * 50)
@@ -1057,9 +1059,11 @@ def image_starter(verbose=False):
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
         args += ['--public-ip', private_ip]
+    if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD):
+        args += ['--admin-password', 'admin']
     try:
         subprocess.check_call(command + ['configure'] + args)
-        subprocess.check_call(command + ['start'] + args)
+        subprocess.check_call(command + ['start'])
     except subprocess.CalledProcessError:
         sys.exit(1)
 
