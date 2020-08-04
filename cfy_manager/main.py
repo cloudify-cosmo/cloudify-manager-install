@@ -1057,6 +1057,8 @@ def image_starter(verbose=False):
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
         args += ['--public-ip', private_ip]
+    if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD):
+        args += ['--admin-password', 'admin']
     try:
         subprocess.check_call(command + ['configure'] + args)
         subprocess.check_call(command + ['start'] + args)
