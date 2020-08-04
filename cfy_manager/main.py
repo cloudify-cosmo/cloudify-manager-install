@@ -517,20 +517,12 @@ def _print_finish_message():
                 protocol=protocol,
                 ip=manager_config[PUBLIC_IP])
         )
-        print_credentials_to_screen()
-        logger.notice('#' * 50)
-        logger.notice("To install the default plugins bundle run:")
-        logger.notice("'cfy plugins bundle-upload'")
-        logger.notice('#' * 50)
-
-
-def print_credentials_to_screen():
-    password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-
-    current_level = get_file_handlers_level()
-    set_file_handlers_level(logging.ERROR)
-    logger.notice('Admin password: %s', password)
-    set_file_handlers_level(current_level)
+        password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+        print('Admin password: {0}'.format(password))
+        print('#' * 50)
+        print("To install the default plugins bundle run:")
+        print("'cfy plugins bundle-upload'")
+        print('#' * 50)
 
 
 def _are_components_installed():
@@ -567,7 +559,6 @@ def _finish_configuration(only_install=None):
     remove_temp_files()
     _create_initial_install_file()
     if not only_install:
-        _print_finish_message()
         _create_initial_configure_file()
     _print_time()
     config.dump_config()
@@ -784,6 +775,8 @@ def install(verbose=False,
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
     _finish_configuration(only_install)
+    if not only_install:
+        _print_finish_message()
 
 
 @install_args
@@ -1030,6 +1023,7 @@ def wait_for_starter(timeout=300):
     else:
         raise BootstrapError('Timed out waiting for starter')
     _follow.poll()
+    _print_finish_message()
 
 
 def _guess_private_ip():
