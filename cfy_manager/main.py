@@ -1061,7 +1061,7 @@ def image_starter(verbose=False):
         args += ['--admin-password', 'admin']
     try:
         subprocess.check_call(command + ['configure'] + args)
-        subprocess.check_call(command + ['start'] + args)
+        subprocess.check_call(command + ['start'])
     except subprocess.CalledProcessError:
         sys.exit(1)
 
