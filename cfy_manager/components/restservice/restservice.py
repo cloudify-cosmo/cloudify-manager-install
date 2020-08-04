@@ -26,6 +26,7 @@ from collections import namedtuple
 import requests
 
 from . import db
+from ..validations import validate_certificates
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
@@ -63,6 +64,7 @@ from ...logger import get_logger
 from ...utils import (
     certificates,
     common,
+    files,
     service
 )
 from ...exceptions import BootstrapError
@@ -87,6 +89,8 @@ logger = get_logger(RESTSERVICE)
 CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(REST_HOME_DIR, 'license_key.pem.pub')
 REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
 LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
+CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
+RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 
 class RestService(BaseComponent):
@@ -199,11 +203,24 @@ class RestService(BaseComponent):
             constants.MANAGER_RESOURCES_HOME
         )
 
+    def _configure_restservice_wrapper_script(self):
+        if self.service_type == 'supervisord':
+            deploy(
+                join(
+                    SCRIPTS_PATH,
+                    'restservice-wrapper-script.sh'
+                ),
+                '/etc/cloudify',
+                render=False
+            )
+            common.chmod('755', '/etc/cloudify/restservice-wrapper-script.sh')
+
     def _configure_restservice(self):
         self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
+        self._configure_restservice_wrapper_script()
 
     def _verify_restservice_alive(self):
         logger.info('Verifying Rest service is up...')
@@ -231,7 +248,10 @@ class RestService(BaseComponent):
                 db.create_amqp_resources(configs)
             else:
                 db.validate_schema_version(configs)
-                self._join_cluster(configs)
+                cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
+                if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
+                    self._prepare_cluster_config_update(cluster_cfg_fn,
+                                                        rabbitmq_ca_fn)
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
@@ -281,7 +301,7 @@ class RestService(BaseComponent):
         self._validate_cluster_join()
         config[CLUSTER_JOIN] = True
         certificates.handle_ca_cert(self.logger, generate_if_missing=False)
-        db.insert_manager(configs)
+        return db.insert_manager(configs)
 
     def _generate_password(self, length=12):
         chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
@@ -358,14 +378,7 @@ class RestService(BaseComponent):
 
     def _configure_db_proxy(self):
         self._set_haproxy_connect_any(True)
-
-        certificates.use_supplied_certificates(
-            component_name='postgresql_client',
-            logger=self.logger,
-            ca_destination='/etc/haproxy/ca.crt',
-            owner='haproxy',
-            group='haproxy',
-        )
+        self.handle_haproxy_certificate()
 
         deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
                '/etc/haproxy/haproxy.cfg')
@@ -383,6 +396,99 @@ class RestService(BaseComponent):
             service.enable('haproxy', append_prefix=False)
         service.restart('haproxy', append_prefix=False)
         self._wait_for_haproxy_startup()
+
+    def handle_haproxy_certificate(self):
+        certificates.use_supplied_certificates(
+            logger=self.logger,
+            ca_destination='/etc/haproxy/ca.crt',
+            owner='haproxy',
+            group='haproxy',
+            component_name='postgresql_client'
+        )
+
+    @staticmethod
+    def handle_ldap_certificate():
+        certificates.use_supplied_certificates(
+            logger=logger,
+            ca_destination=LDAP_CA_CERT_PATH,
+            component_name=RESTSERVICE,
+            sub_component='ldap',
+            just_ca_cert=True
+        )
+
+    def replace_certificates(self):
+        if common.manager_using_db_cluster():
+            self._replace_haproxy_cert()
+        self._replace_ldap_cert()
+        self._replace_ca_certs_on_db()
+        service.restart(RESTSERVICE)
+        self._verify_restservice_alive()
+
+    def validate_new_certs(self):
+        # All other certs are validated in other components
+        if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
+            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
+
+    def _replace_ca_certs_on_db(self):
+        if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            self._replace_manager_ca_on_db()
+            if common.is_all_in_one_manager():
+                self._replace_rabbitmq_ca_on_db()
+                return
+        if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
+            self._replace_rabbitmq_ca_on_db()
+
+    def _replace_manager_ca_on_db(self):
+        cert_name = '{0}-ca'.format(config[MANAGER][HOSTNAME])
+        self._log_replacing_certs_on_db(cert_name)
+        script_input = {
+            'cert_path': constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
+            'name': cert_name
+        }
+        self._run_replace_certs_on_db_script(script_input)
+
+    def _replace_rabbitmq_ca_on_db(self):
+        self._log_replacing_certs_on_db('rabbitmq-ca')
+        cert_path = (constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+                     if common.is_all_in_one_manager()
+                     else constants.NEW_BROKER_CA_CERT_FILE_PATH)
+        script_input = {
+            'cert_path': cert_path,
+            'name': 'rabbitmq-ca'
+        }
+        self._run_replace_certs_on_db_script(script_input)
+
+    @staticmethod
+    def _run_replace_certs_on_db_script(script_input):
+        configs = {
+            'rest_config': REST_CONFIG_PATH,
+            'authorization_config': REST_AUTHORIZATION_CONFIG_PATH,
+            'security_config': REST_SECURITY_CONFIG_PATH
+        }
+        output = db.run_script('replace_certs_on_db.py', script_input, configs)
+        logger.info(output)
+
+    def _log_replacing_certs_on_db(self, cert_type):
+        self.logger.info('Replacing %s in Certificate table', cert_type)
+
+    def _replace_ldap_cert(self):
+        if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
+            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
+            logger.info('Replacing ldap CA cert on the restservice component')
+            config['restservice']['ldap']['ca_cert'] = \
+                constants.NEW_LDAP_CA_CERT_PATH
+            self.handle_ldap_certificate()
+
+    def _replace_haproxy_cert(self):
+        if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
+            # The certificate was validated in the PostgresqlClient component
+            self.logger.info(
+                'Replacing haproxy cert on the restservice component')
+            config[POSTGRESQL_CLIENT]['ca_path'] = \
+                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+            self.handle_haproxy_certificate()
+            service.reload('haproxy', append_prefix=False)
+            self._wait_for_haproxy_startup()
 
     @staticmethod
     def _upload_cloudify_license():
@@ -438,18 +544,29 @@ class RestService(BaseComponent):
                                             envvars=self._create_process_env())
         log_script_run_results(result)
 
+    def _prepare_cluster_config_update(self, cluster_cfg_filename,
+                                       rabbitmq_ca_cert_filename):
+        logger.notice('Updating cluster configuration for monitoring service')
+        common.chmod('644', cluster_cfg_filename)
+        with open(cluster_cfg_filename, 'r') as fp:
+            cfg = json.load(fp)
+        if (rabbitmq_ca_cert_filename and
+                not os.path.isfile(RABBITMQ_CA_CERT_PATH)):
+            files.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
+            files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                        RABBITMQ_CA_CERT_PATH)
+            cfg['rabbitmq']['ca_path'] = RABBITMQ_CA_CERT_PATH
+        with open(CLUSTER_DETAILS_PATH, 'w') as fp:
+            json.dump(cfg, fp)
+        files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                    CLUSTER_DETAILS_PATH)
+        files.remove(cluster_cfg_filename, ignore_failure=True)
+
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
         logger.info('Checking for ldaps CA cert to deploy.')
-        certificates.use_supplied_certificates(
-            RESTSERVICE,
-            logger,
-            sub_component='ldap',
-            just_ca_cert=True,
-            ca_destination=LDAP_CA_CERT_PATH,
-        )
-
+        self.handle_ldap_certificate()
         if common.manager_using_db_cluster():
             self._configure_db_proxy()
 

@@ -19,6 +19,7 @@ from os.path import join
 from tempfile import gettempdir
 
 from ..base_component import BaseComponent
+from ..validations import validate_certificates
 from ..service_names import MANAGER, RABBITMQ, QUEUE_SERVICE
 from ..components_constants import CONFIG, SERVICES_TO_INSTALL
 from ... import constants
@@ -31,7 +32,6 @@ from ...utils.files import (replace_in_file,
                             touch)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers, allow_user_to_sudo_command
-from ...utils.users import create_service_user
 
 CONFIG_PATH = join(constants.COMPONENTS_DIR, MANAGER, CONFIG)
 
@@ -40,7 +40,6 @@ logger = get_logger(MANAGER)
 
 class Manager(BaseComponent):
     def _install(self):
-        self._create_cloudify_user()
         self._create_sudoers_file_and_disable_sudo_requiretty()
         if self.service_type == 'supervisord':
             self._allow_run_supervisorctl_command()
@@ -58,19 +57,6 @@ class Manager(BaseComponent):
     def _get_exec_tempdir(self):
         return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or \
                gettempdir()
-
-    def _create_cloudify_user(self):
-        create_service_user(
-            user=constants.CLOUDIFY_USER,
-            group=constants.CLOUDIFY_GROUP,
-            home=constants.CLOUDIFY_HOME_DIR
-        )
-        common.mkdir(constants.CLOUDIFY_HOME_DIR)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            constants.CLOUDIFY_HOME_DIR,
-        )
 
     def _create_sudoers_file_and_disable_sudo_requiretty(self):
         common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
@@ -114,6 +100,12 @@ class Manager(BaseComponent):
         common.mkdir(join(resources_root, 'packages', 'scripts'))
         common.mkdir(join(resources_root, 'packages', 'templates'))
 
+    @staticmethod
+    def handle_certificates():
+        use_supplied_certificates(component_name=RABBITMQ,
+                                  logger=logger,
+                                  ca_destination=constants.BROKER_CA_LOCATION)
+
     def _prepare_certificates(self):
         if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):
             common.mkdir(constants.SSL_CERTS_TARGET_DIR)
@@ -126,11 +118,21 @@ class Manager(BaseComponent):
         if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
             # ...but only if one was provided.
             if config[RABBITMQ]['ca_path']:
-                use_supplied_certificates(
-                    component_name=RABBITMQ,
-                    logger=logger,
-                    ca_destination=constants.BROKER_CA_LOCATION,
-                )
+                self.handle_certificates()
+
+    def replace_certificates(self):
+        if (QUEUE_SERVICE not in config[SERVICES_TO_INSTALL] and
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            logger.info('Replacing rabbitmq CA cert on the manager component')
+            config[RABBITMQ]['ca_path'] = \
+                constants.NEW_BROKER_CA_CERT_FILE_PATH
+            self.handle_certificates()
+
+    def validate_new_certs(self):
+        if (QUEUE_SERVICE not in config[SERVICES_TO_INSTALL] and
+                os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
+            validate_certificates(
+                ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
 
     def _configure(self):
         self._prepare_certificates()

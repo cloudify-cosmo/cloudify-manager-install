@@ -28,7 +28,6 @@ import requests
 from retrying import retry
 from ruamel.yaml import YAML
 
-
 from cfy_manager.exceptions import (
     BootstrapError,
     ClusteringError,
@@ -61,7 +60,8 @@ from ...utils import (
     files,
     db,
     network,
-    service
+    service,
+    certificates
 )
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
@@ -169,6 +169,32 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(PGSQL_SOCK_DIR)
         common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
+    def _configure_postgresql_server_service(self):
+        if self.service_type == 'supervisord':
+            service.configure(
+                POSTGRES_SERVICE_NAME,
+                append_prefix=False,
+                src_dir='postgresql_server',
+                config_path='config/supervisord'
+            )
+            files.deploy(
+                join(
+                    SCRIPTS_PATH,
+                    'postgresql_server_wrapper_script.sh'
+                ),
+                '/var/lib/pgsql/',
+                render=False
+            )
+            common.chown(
+                'postgres',
+                'postgres',
+                '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
+            )
+            common.chmod(
+                '755',
+                '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
+            )
+
     def _read_old_file_lines(self, file_path):
         temp_file_path = files.write_to_tempfile('')
         common.copy(file_path, temp_file_path)
@@ -263,9 +289,9 @@ class PostgresqlServer(BaseComponent):
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
-                    f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1')
+                    f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
                 else:
-                    f.write('hostssl all all 0.0.0.0/0 md5')
+                    f.write('hostssl all all 0.0.0.0/0 md5\n')
         return temp_hba_path
 
     def _configure_ssl(self):
@@ -275,14 +301,7 @@ class PostgresqlServer(BaseComponent):
         Cluster certificates are handled in _configure_cluster.
         """
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
-            self.use_supplied_certificates(
-                cert_destination=PG_SERVER_CERT_PATH,
-                key_destination=PG_SERVER_KEY_PATH,
-                ca_destination=PG_CA_CERT_PATH,
-                owner=POSTGRES_USER,
-                group=POSTGRES_GROUP,
-                key_perms='400',
-            )
+            self.handle_all_in_one_certificates()
 
     def _update_configuration(self, enable_remote_connections):
         logger.info('Updating PostgreSQL Server configuration...')
@@ -348,10 +367,19 @@ class PostgresqlServer(BaseComponent):
             options = []
 
         service.start('etcd', append_prefix=False, options=options)
+        self._wait_for_etcd()
+        logger.info('etcd has started')
+
+    def _restart_etcd(self):
+        logger.info('Restarting etcd')
+        service.restart('etcd', append_prefix=False, ignore_failure=True)
+        self._wait_for_etcd()
+        logger.info('etcd has restarted')
+
+    def _wait_for_etcd(self):
         while not self._etcd_is_running():
             logger.info('Waiting for etcd to start...')
             time.sleep(1)
-        logger.info('etcd has started')
 
     def _patronictl_command(self, command):
         """Execute a patronictl command."""
@@ -463,8 +491,7 @@ class PostgresqlServer(BaseComponent):
                 'patroni',
                 src_dir='postgresql_server',
                 append_prefix=False,
-                render=False,
-                config_path='config/supervisord'
+                render=False
             )
         else:
             service.configure(
@@ -474,6 +501,109 @@ class PostgresqlServer(BaseComponent):
                 render=False,
             )
 
+    def handle_cluster_certificates(self):
+        # We currently use the same certificates for etcd, patroni,
+        # and postgres. This should be a reasonable starting approach as
+        # these reside on the same machine and all have the same impact if
+        # compromised (full access to data directly or via injected
+        # configuration changes).
+
+        etcd_certs_config = {
+            'cert_destination': ETCD_SERVER_CERT_PATH,
+            'key_destination': ETCD_SERVER_KEY_PATH,
+            'ca_destination': ETCD_CA_PATH,
+            'owner': ETCD_USER,
+            'group': ETCD_GROUP,
+            'key_perms': '400'
+        }
+
+        patroni_rest_certs_config = {
+            'cert_destination': PATRONI_REST_CERT_PATH,
+            'key_destination': PATRONI_REST_KEY_PATH,
+            'owner': POSTGRES_USER,
+            'group': POSTGRES_GROUP,
+            'key_perms': '400',
+        }
+
+        patroni_db_certs_config = {
+            'cert_destination': PATRONI_DB_CERT_PATH,
+            'key_destination': PATRONI_DB_KEY_PATH,
+            'ca_destination': PATRONI_DB_CA_PATH,
+            'owner': POSTGRES_USER,
+            'group': POSTGRES_GROUP,
+            'key_perms': '400'
+        }
+
+        for cert_config in [etcd_certs_config,
+                            patroni_rest_certs_config,
+                            patroni_db_certs_config]:
+            self.use_supplied_certificates(**cert_config)
+
+    def handle_all_in_one_certificates(self):
+        cert_config = {
+            'cert_destination': PG_SERVER_CERT_PATH,
+            'key_destination': PG_SERVER_KEY_PATH,
+            'ca_destination': PG_CA_CERT_PATH,
+            'owner': POSTGRES_USER,
+            'group': POSTGRES_GROUP,
+            'key_perms': '400'
+        }
+
+        self.use_supplied_certificates(**cert_config)
+
+    def replace_certificates(self):
+        if (os.path.exists(constants.NEW_POSTGRESQL_CERT_FILE_PATH) or
+                os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH)):
+            self.log_replacing_certificates()
+            self._write_certs_to_config()
+            if common.is_all_in_one_manager():
+                if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+                    self.handle_all_in_one_certificates()
+                    service.restart(POSTGRES_SERVICE_NAME, ignore_failure=True)
+                    service.verify_alive(POSTGRES_SERVICE_NAME)
+
+            else:
+                self.handle_cluster_certificates()
+                self._restart_etcd()
+                service.restart('patroni', append_prefix=False)
+                service.verify_alive('patroni', append_prefix=False)
+
+    @staticmethod
+    def _write_certs_to_config():
+        if os.path.exists(constants.NEW_POSTGRESQL_CERT_FILE_PATH):
+            config[POSTGRESQL_SERVER]['cert_path'] = \
+                constants.NEW_POSTGRESQL_CERT_FILE_PATH
+            config[POSTGRESQL_SERVER]['key_path'] = \
+                constants.NEW_POSTGRESQL_KEY_FILE_PATH
+        if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
+            config[POSTGRESQL_SERVER]['ca_path'] = \
+                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+
+    def validate_new_certs(self):
+        if common.is_all_in_one_manager():
+            if config[POSTGRESQL_SERVER][SSL_ENABLED]:
+                certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=PG_SERVER_CERT_PATH,
+                    default_key_location=PG_SERVER_KEY_PATH,
+                    default_ca_location=PG_CA_CERT_PATH,
+                    new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+                )
+        else:
+            certificates.get_and_validate_certs_for_replacement(
+                default_cert_location=ETCD_SERVER_CERT_PATH,
+                default_key_location=ETCD_SERVER_KEY_PATH,
+                default_ca_location=ETCD_CA_PATH,
+                new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
+                new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
+                new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+            )
+
+    def log_replacing_certificates(self):
+        self.logger.info(
+            'Replacing certificates on the postgresql_server component')
+
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
@@ -482,34 +612,8 @@ class PostgresqlServer(BaseComponent):
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
         common.chmod('a+x', '/var/lib/patroni')
-        # We currently use the same certificates for etcd, patroni,
-        # and postgres. This should be a reasonable starting approach as
-        # these reside on the same machine and all have the same impact if
-        # compromised (full access to data directly or via injected
-        # configuration changes).
-        self.use_supplied_certificates(
-            cert_destination=ETCD_SERVER_CERT_PATH,
-            key_destination=ETCD_SERVER_KEY_PATH,
-            ca_destination=ETCD_CA_PATH,
-            owner=ETCD_USER,
-            group=ETCD_GROUP,
-            key_perms='400',
-        )
-        self.use_supplied_certificates(
-            cert_destination=PATRONI_REST_CERT_PATH,
-            key_destination=PATRONI_REST_KEY_PATH,
-            owner=POSTGRES_USER,
-            group=POSTGRES_GROUP,
-            key_perms='400',
-        )
-        self.use_supplied_certificates(
-            cert_destination=PATRONI_DB_CERT_PATH,
-            key_destination=PATRONI_DB_KEY_PATH,
-            ca_destination=PATRONI_DB_CA_PATH,
-            owner=POSTGRES_USER,
-            group=POSTGRES_GROUP,
-            key_perms='400',
-        )
+
+        self.handle_cluster_certificates()
         common.chmod('a-x', '/var/lib/patroni')
 
         logger.info('Deploying patroni initial startup monitor.')
@@ -1475,13 +1579,7 @@ class PostgresqlServer(BaseComponent):
     def configure(self):
         logger.notice('Configuring PostgreSQL Server...')
         files.copy_notice(POSTGRESQL_SERVER)
-        if self.service_type == 'supervisord':
-            service.configure(
-                POSTGRES_SERVICE_NAME,
-                append_prefix=False,
-                src_dir='postgresql_server',
-                config_path='config/supervisord'
-            )
+        self._configure_postgresql_server_service()
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
         else:

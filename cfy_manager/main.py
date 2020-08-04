@@ -20,9 +20,7 @@ import os
 import re
 import sys
 import time
-import logging
 import subprocess
-from xml.parsers import expat
 from traceback import format_exception
 
 import argh
@@ -50,7 +48,10 @@ from .components.service_names import (
     COMPOSER,
     MANAGER,
     POSTGRESQL_SERVER,
-    SANITY
+    SANITY,
+    AMQP_POSTGRES,
+    MGMTWORKER,
+    STAGE
 )
 from .components.validations import validate, validate_dependencies
 from .config import config
@@ -58,14 +59,15 @@ from .constants import (
     VERBOSE_HELP_MSG,
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
+    SUPERVISORD_CONFIG_DIR,
+    NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import BootstrapError
+from .exceptions import (BootstrapError, ValidationError,
+                         ProcessExecutionError, ReplaceCertificatesError)
 from .logger import (
-    get_file_handlers_level,
     get_logger,
     setup_console_logger,
-    set_file_handlers_level,
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
@@ -77,13 +79,19 @@ from .utils.certificates import (
     _generate_ssl_certificate,
 )
 from .utils.common import (
-    run, can_lookup_hostname, is_installed
+    run,
+    sudo,
+    mkdir,
+    copy,
+    can_lookup_hostname,
+    is_installed
 )
-from .utils.install import yum_install, yum_remove
+from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
     remove as _remove,
     remove_temp_files,
-    touch
+    touch,
+    read_yaml_file
 )
 from ._compat import xmlrpclib
 
@@ -151,6 +159,13 @@ DB_NODE_ID_HELP_MSG = (
 )
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
+)
+VALIDATE_HELP_MSG = (
+    "Validate the provided certificates. If this flag is on, then the "
+    "certificates will only be validated and not replaced."
+)
+INPUT_PATH_MSG = (
+    "The replace-certificates yaml configuration file path."
 )
 
 
@@ -499,20 +514,14 @@ def _print_finish_message():
                 protocol=protocol,
                 ip=manager_config[PUBLIC_IP])
         )
-        print_credentials_to_screen()
-        logger.notice('#' * 50)
-        logger.notice("To install the default plugins bundle run:")
-        logger.notice("'cfy plugins bundle-upload'")
-        logger.notice('#' * 50)
-
-
-def print_credentials_to_screen():
-    password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-
-    current_level = get_file_handlers_level()
-    set_file_handlers_level(logging.ERROR)
-    logger.notice('Admin password: %s', password)
-    set_file_handlers_level(current_level)
+        # reload the config in case the admin password changed
+        config.load_config()
+        password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+        print('Admin password: {0}'.format(password))
+        print('#' * 50)
+        print("To install the default plugins bundle run:")
+        print("'cfy plugins bundle-upload'")
+        print('#' * 50)
 
 
 def _are_components_installed():
@@ -521,6 +530,10 @@ def _are_components_installed():
 
 def _are_components_configured():
     return os.path.isfile(INITIAL_CONFIGURE_FILE)
+
+
+def is_supervisord_service():
+    return service._get_service_type() == 'supervisord'
 
 
 def _create_initial_install_file():
@@ -545,7 +558,6 @@ def _finish_configuration(only_install=None):
     remove_temp_files()
     _create_initial_install_file()
     if not only_install:
-        _print_finish_message()
         _create_initial_configure_file()
     _print_time()
     config.dump_config()
@@ -603,7 +615,10 @@ def _get_components(include_components=None):
             components.MgmtWorker(),
             components.Stage(),
         ]
-        if not config[COMPOSER]['skip_installation']:
+        if (
+            is_premium_installed()
+            and not config[COMPOSER]['skip_installation']
+        ):
             _components += [
                 components.Composer(),
             ]
@@ -679,7 +694,8 @@ def sanity_check(verbose=False, private_ip=None):
     """Run the Cloudify Manager sanity check"""
     _prepare_execution(verbose=verbose, private_ip=private_ip)
     sanity = components.Sanity()
-    sanity.run_sanity_check()
+    with sanity.sanity_check_mode():
+        sanity.run_sanity_check()
 
 
 def _get_packages():
@@ -709,6 +725,14 @@ def _get_packages():
         packages += sources.prometheus_cluster
 
     return packages
+
+
+def _configure_supervisord():
+    mkdir(SUPERVISORD_CONFIG_DIR)
+    # These services will be relevant for using supervisord on VM not on
+    # containers
+    sudo('systemctl enable supervisord.service', ignore_failures=True)
+    sudo('systemctl restart supervisord', ignore_failures=True)
 
 
 @argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
@@ -750,6 +774,8 @@ def install(verbose=False,
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
     _finish_configuration(only_install)
+    if not only_install:
+        _print_finish_message()
 
 
 @install_args
@@ -774,7 +800,9 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
-
+    # This only relevant for restarting services on VM that use supervisord
+    if is_supervisord_service():
+        _configure_supervisord()
     if clean_db:
         for component in components:
             component.stop()
@@ -811,6 +839,9 @@ def remove(verbose=False, force=False):
 
     if _are_components_configured():
         _remove(INITIAL_CONFIGURE_FILE)
+
+    if is_supervisord_service():
+        _remove(SUPERVISORD_CONFIG_DIR)
 
     logger.notice('Cloudify Manager successfully removed!')
     _print_time()
@@ -876,27 +907,28 @@ def restart(include_components, verbose=False, force=False):
     _print_time()
 
 
-def _is_unit_finished(unit_name):
-    unit_details = subprocess.check_output([
-        '/bin/systemctl', 'show', unit_name]).splitlines()
+def _is_unit_finished(unit_name='cloudify-starter.service'):
+    try:
+        unit_details = subprocess.check_output(
+            ['/bin/systemctl', 'show', unit_name],
+            stderr=subprocess.STDOUT
+        ).splitlines()
+    except subprocess.CalledProcessError:
+        # systemd is not ready yet
+        return False
     for line in unit_details:
         name, _, value = line.strip().partition(b'=')
         if name == b'ExecMainExitTimestampMonotonic':
-            return int(value) > 0
-
-
-def _wait_systemd_starter(timeout):
-    deadline = time.time() + timeout
-    journalctl = subprocess.Popen([
-        '/bin/journalctl', '-fu', 'cloudify-starter.service'])
-    while time.time() < deadline:
-        if _is_unit_finished('cloudify-starter.service'):
-            break
-        else:
-            time.sleep(1)
-    else:
-        raise BootstrapError('Timed out waiting for the starter service')
-    journalctl.kill()
+            rv = int(value) > 0
+        if name == b'ExecMainStatus':
+            try:
+                value = int(value)
+            except ValueError:
+                continue
+            if value > 0:
+                raise BootstrapError(
+                    'Starter service exited with code {0}'.format(value))
+    return rv
 
 
 def _get_starter_service_response():
@@ -904,58 +936,93 @@ def _get_starter_service_response():
         'http://',
         transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
     try:
-        status_response = server.supervisor.getProcessInfo(
-            STARTER_SERVICE)
+        status_response = server.supervisor.getProcessInfo(STARTER_SERVICE)
     except xmlrpclib.Fault as e:
         raise BootstrapError(
-            'Error {0} while trying to lookup {1}'
-            ''.format(e, STARTER_SERVICE)
+            'Error {0} while trying to lookup {1}'.format(e, STARTER_SERVICE)
         )
     return status_response
 
 
-def _get_starter_service_log(offset, length):
-    server = xmlrpclib.Server(
-        'http://',
-        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
-    try:
-        service_log = server.supervisor.readLog(offset, length)
-        logger.info(service_log)
-    except xmlrpclib.Fault as e:
-        raise BootstrapError(
-            'Error {0} while trying to get log for {1}'
-            ''.format(e, STARTER_SERVICE)
-        )
-    except expat.ExpatError:
-        logger.debug('No more logs to show for {0}'.format(STARTER_SERVICE))
+def _is_supervisord_service_finished():
+    if not os.path.exists('/tmp/supervisor.sock'):
+        # supervisord did not start yet
+        return False
+
+    status_response = _get_starter_service_response()
+    service_status = status_response['statename']
+    exit_status = status_response['exitstatus']
+    if service_status == 'EXITED':
+        if exit_status != 0:
+            raise BootstrapError(
+                '{0} service exit with error status '
+                'code {1}'.format(STARTER_SERVICE, exit_status)
+            )
+        return True
+    return False
 
 
-def _wait_supervisord_starter(timeout):
-    deadline = time.time() + timeout
-    offset = 0
-    while time.time() < deadline:
-        _get_starter_service_log(offset, offset + 100)
-        status_response = _get_starter_service_response()
-        service_status = status_response['statename']
-        if service_status == 'EXITED':
-            logger.info('{0} service finished'.format(STARTER_SERVICE))
-            break
-        else:
-            offset += 100
-            time.sleep(1)
-    else:
-        raise BootstrapError('Timed out waiting for the starter service')
+class _FileFollow(object):
+    """Follow a text file and print lines from it.
+
+    Like tail -F, but as resilient as possible. tail -F will give up
+    when a file doesn't exist on some filesystems ()
+    """
+    def __init__(self, filename):
+        self._filename = filename
+        self._offset = 0
+
+    def seek_to_end(self):
+        """Set the initial file offset.
+
+        If the file doesn't exist or is otherwise inaccessible, keep
+        the default offset of 0.
+        """
+        try:
+            with open(self._filename) as f:
+                f.seek(0, 2)
+                self._offset = f.tell()
+        except IOError:
+            pass
+
+    def poll(self):
+        """Try and read all new lines from the file.
+
+        If we can't access the file, just do nothing. Maybe it will
+        become available later.
+        """
+        try:
+            with open(self._filename) as f:
+                f.seek(self._offset)
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    print(line, end='')
+                self._offset = f.tell()
+        except IOError:
+            pass
 
 
 @argh.decorators.named('wait-for-starter')
-def wait_for_starter(verbose=False, timeout=180):
-    _prepare_execution(verbose, config_write_required=False)
+def wait_for_starter(timeout=300):
     config.load_config()
-    service_type = service._get_service_type()
-    if service_type == 'supervisord':
-        _wait_supervisord_starter(timeout)
+
+    _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
+    _follow.seek_to_end()
+
+    is_started = _is_supervisord_service_finished \
+        if is_supervisord_service() else _is_unit_finished
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        _follow.poll()
+        if is_started():
+            break
+        time.sleep(0.5)
     else:
-        _wait_systemd_starter(timeout)
+        raise BootstrapError('Timed out waiting for starter')
+    _follow.poll()
+    _print_finish_message()
 
 
 def _guess_private_ip():
@@ -992,8 +1059,88 @@ def image_starter(verbose=False):
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
         args += ['--public-ip', private_ip]
-    subprocess.check_call(command + ['configure'] + args)
-    subprocess.check_call(command + ['start'] + args)
+    if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD):
+        args += ['--admin-password', 'admin']
+    try:
+        subprocess.check_call(command + ['configure'] + args)
+        subprocess.check_call(command + ['start'])
+    except subprocess.CalledProcessError:
+        sys.exit(1)
+
+
+@argh.decorators.named('run-init')
+def run_init():
+    """Run the configured init system/service management system.
+
+    Based on the configuration, run either systemd or supervisord.
+    This is to be used for the docker image. Full OS images should run
+    systemd on their own.
+    """
+    config.load_config()
+    if is_supervisord_service():
+        os.execv(
+            "/usr/bin/supervisord",
+            ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
+    else:
+        os.execv(
+            "/bin/bash",
+            ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
+
+
+@argh.named('replace')
+@argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
+@argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
+def replace_certificates(input_path=None,
+                         only_validate=False):
+    """ Replacing the certificates on the current instance """
+    config.load_config()
+    _handle_replace_certs_config_path(input_path)
+    if only_validate:
+        _only_validate()
+    else:
+        _replace_certificates()
+
+
+def _replace_certificates():
+    logger.info('Replacing certificates')
+    for component in _get_components():
+        try:
+            component.replace_certificates()
+        except Exception as err:  # There isn't a specific exception
+            raise ReplaceCertificatesError(
+                'An error occurred while replacing certificates: '
+                '{0}'.format(err))
+
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        # restart services that might not have been restarted
+        for service_name in MGMTWORKER, AMQP_POSTGRES, STAGE, COMPOSER:
+            service.restart(service_name)
+            service.verify_alive(service_name)
+
+
+def _handle_replace_certs_config_path(replace_certs_config_path):
+    if not replace_certs_config_path:
+        return
+    replace_certs_config = read_yaml_file(replace_certs_config_path)
+    for cert_name, cert_path in replace_certs_config.items():
+        new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
+        if cert_path != new_cert_local_path:
+            copy(cert_path, new_cert_local_path)
+
+
+def _only_validate():
+    logger.info('Validating new certificates')
+    certs_valid = True
+    for component in _get_components():
+        try:
+            component.validate_new_certs()
+        except (ValueError, ValidationError, ProcessExecutionError) as err:
+            print(err, file=sys.stderr)  # For fabric
+            certs_valid = False
+
+    if not certs_valid:  # This way we can finish validating all components
+        raise ReplaceCertificatesError('An error happened while validating '
+                                       'new certificates')
 
 
 def main():
@@ -1017,8 +1164,13 @@ def main():
         generate_test_cert,
         reset_admin_password,
         image_starter,
-        wait_for_starter
+        wait_for_starter,
+        run_init,
     ])
+
+    parser.add_commands([
+        replace_certificates
+    ], namespace='certificates')
 
     parser.add_commands([
         brokers_add,

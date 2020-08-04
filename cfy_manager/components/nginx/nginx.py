@@ -15,10 +15,12 @@
 
 from collections import namedtuple
 from os.path import join, exists
+from tempfile import NamedTemporaryFile
 
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
+    SCRIPTS,
     PRIVATE_IP,
     PUBLIC_IP,
     SSL_INPUTS,
@@ -26,7 +28,10 @@ from ..components_constants import (
     HOSTNAME,
     SERVICES_TO_INSTALL
 )
-from ..service_names import NGINX, MANAGER, MANAGER_SERVICE, MONITORING_SERVICE
+from ..service_names import (NGINX, MANAGER, MANAGER_SERVICE,
+                             MONITORING_SERVICE, PROMETHEUS,
+                             DATABASE_SERVICE, POSTGRESQL_SERVER,
+                             QUEUE_SERVICE, RABBITMQ, )
 from ... import constants
 from ...config import config
 from ...exceptions import ValidationError
@@ -41,6 +46,11 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
+SCRIPTS_PATH = join(
+    constants.COMPONENTS_DIR,
+    NGINX,
+    SCRIPTS
+)
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 
 logger = get_logger(NGINX)
@@ -94,7 +104,7 @@ class Nginx(BaseComponent):
         if config[SSL_INPUTS]['external_ca_key_password']:
             config[SSL_INPUTS]['external_ca_key_password'] = '<removed>'
 
-    def _handle_internal_cert(self):
+    def _handle_internal_cert(self, replacing_ca=False):
         """
         The user might provide the internal cert and the internal key, or
         neither. It is an error to only provide one of them. If the user did
@@ -107,21 +117,109 @@ class Nginx(BaseComponent):
             'cert_destination': constants.INTERNAL_CERT_PATH,
             'key_destination': constants.INTERNAL_KEY_PATH,
         }
-        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL) and \
-                MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL):
+        if ((MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL) and
+                MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL)) or
+                replacing_ca):
             cert_destinations['ca_destination'] = constants.CA_CERT_PATH
         logger.info('Handling internal certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
             self.logger,
             prefix='internal_',
+            validate_certs_src_exist=True,
             **cert_destinations
         )
 
-        if deployed:
-            logger.info('Deployed user provided external cert and key')
+        if deployed:  # In case of replacing certs, deployed==True always
+            logger.info('Deployed user provided internal cert and key')
         else:
             self._generate_internal_certs()
+
+    def replace_certificates(self):
+        if self._needs_to_replace_internal_certs():
+            self._replace_internal_certs()
+        if self._needs_to_replace_external_certs():
+            self._replace_external_certs()
+
+        if (self._needs_to_replace_internal_certs() or
+                self._needs_to_replace_external_certs()):
+            service.restart(NGINX, append_prefix=False)
+            service.verify_alive(NGINX, append_prefix=False)
+
+    @staticmethod
+    def _needs_to_replace_internal_certs():
+        return (exists(constants.NEW_INTERNAL_CERT_FILE_PATH) or
+                exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH))
+
+    @staticmethod
+    def _needs_to_replace_external_certs():
+        return (exists(constants.NEW_EXTERNAL_CERT_FILE_PATH) or
+                exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH))
+
+    def validate_new_certs(self):
+        self._validate_internal_certs()
+        self._validate_external_certs()
+
+    def _validate_internal_certs(self):
+        if self._needs_to_replace_internal_certs():
+            certificates.get_and_validate_certs_for_replacement(
+                    default_cert_location=constants.INTERNAL_CERT_PATH,
+                    default_key_location=constants.INTERNAL_KEY_PATH,
+                    default_ca_location=constants.CA_CERT_PATH,
+                    new_cert_location=constants.NEW_INTERNAL_CERT_FILE_PATH,
+                    new_key_location=constants.NEW_INTERNAL_KEY_FILE_PATH,
+                    new_ca_location=constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+                )
+
+    def _validate_external_certs(self):
+        if self._needs_to_replace_external_certs():
+            certificates.get_and_validate_certs_for_replacement(
+                default_cert_location=constants.EXTERNAL_CERT_PATH,
+                default_key_location=constants.EXTERNAL_KEY_PATH,
+                default_ca_location=constants.CA_CERT_PATH,
+                new_cert_location=constants.NEW_EXTERNAL_CERT_FILE_PATH,
+                new_key_location=constants.NEW_EXTERNAL_KEY_FILE_PATH,
+                new_ca_location=constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
+            )
+
+    def _replace_internal_certs(self):
+        self._validate_internal_certs()
+        self.log_replacing_certificates('internal certificates')
+        self._write_internal_certs_to_config()
+        replacing_ca = exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
+        self._handle_internal_cert(replacing_ca=replacing_ca)
+
+    def _replace_external_certs(self):
+        self._validate_external_certs()
+        self.log_replacing_certificates('external certificates')
+        self._write_external_certs_to_config()
+        replacing_ca = exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH)
+        self._handle_external_cert(replacing_ca=replacing_ca)
+
+    def log_replacing_certificates(self, certs_type):
+        self.logger.info('Replacing %s on nginx component', certs_type)
+
+    @staticmethod
+    def _write_internal_certs_to_config():
+        if exists(constants.NEW_INTERNAL_CERT_FILE_PATH):
+            config[SSL_INPUTS]['internal_cert_path'] = \
+                constants.NEW_INTERNAL_CERT_FILE_PATH
+            config[SSL_INPUTS]['internal_key_path'] = \
+                constants.NEW_INTERNAL_KEY_FILE_PATH
+        if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            config[SSL_INPUTS]['ca_cert_path'] = \
+                constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+
+    @staticmethod
+    def _write_external_certs_to_config():
+        if exists(constants.NEW_EXTERNAL_CERT_FILE_PATH):
+            config[SSL_INPUTS]['external_cert_path'] = \
+                constants.NEW_EXTERNAL_CERT_FILE_PATH
+            config[SSL_INPUTS]['external_key_path'] = \
+                constants.NEW_EXTERNAL_KEY_FILE_PATH
+        if exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH):
+            config[SSL_INPUTS]['external_ca_cert_path'] = \
+                constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
 
     def _internal_certs_exist(self):
         return (
@@ -129,17 +227,23 @@ class Nginx(BaseComponent):
             and exists(constants.INTERNAL_KEY_PATH)
         )
 
-    def _handle_external_cert(self):
+    def _handle_external_cert(self, replacing_ca=False):
+        cert_destinations = {
+            'cert_destination': constants.EXTERNAL_CERT_PATH,
+            'key_destination': constants.EXTERNAL_KEY_PATH,
+        }
+        if replacing_ca:
+            cert_destinations['ca_destination'] = \
+                constants.EXTERNAL_CA_CERT_PATH
         logger.info('Handling external certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
             self.logger,
-            cert_destination=constants.EXTERNAL_CERT_PATH,
-            key_destination=constants.EXTERNAL_KEY_PATH,
             prefix='external_',
+            **cert_destinations
         )
 
-        if deployed:
+        if deployed:  # in case of replacing certs, deployed==True always
             logger.info('Deployed user provided external cert and key')
         else:
             self._generate_external_certs()
@@ -179,7 +283,7 @@ class Nginx(BaseComponent):
                 src=join(CONFIG_PATH, file_name),
                 dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
             file_name in [
-                'https-internal-rest-server.cloudify',
+                'https-monitoring-server.cloudify',
                 'cloudify.conf',
                 'logs-conf.cloudify',
             ]
@@ -214,12 +318,52 @@ class Nginx(BaseComponent):
 
     def _deploy_nginx_config_files(self):
         logger.info('Deploying Nginx configuration files...')
+        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
+            self._update_credentials_config()
+            self._create_htpasswd_files()
         for resource in self._config_files():
             deploy(resource.src, resource.dst)
 
         # remove the default configuration which reserves localhost:80 for a
         # nginx default landing page
         common.remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
+
+    def _update_credentials_config(self):
+        prometheus_credentials_cfg = config.get(PROMETHEUS).get('credentials',
+                                                                {})
+        if (prometheus_credentials_cfg.get('username') and
+                prometheus_credentials_cfg.get('password')):
+            return
+        if 'credentials' not in config.get(PROMETHEUS):
+            config[PROMETHEUS]['credentials'] = {}
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            manager_security_cfg = config.get(MANAGER).get('security', {})
+            config[PROMETHEUS]['credentials']['username'] = \
+                manager_security_cfg.get('admin_username')
+            config[PROMETHEUS]['credentials']['password'] = \
+                manager_security_cfg.get('admin_password')
+        elif DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+            postgres_password = \
+                config.get(POSTGRESQL_SERVER).get('postgres_password')
+            config[PROMETHEUS]['credentials']['username'] = 'postgres'
+            config[PROMETHEUS]['credentials']['password'] = postgres_password
+        elif QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+            rabbitmq_cfg = config.get(RABBITMQ)
+            config[PROMETHEUS]['credentials']['username'] = \
+                rabbitmq_cfg.get('username')
+            config[PROMETHEUS]['credentials']['password'] = \
+                rabbitmq_cfg.get('password')
+
+    def _create_htpasswd_files(self):
+        username = config.get(PROMETHEUS).get('credentials').get('username')
+        password = config.get(PROMETHEUS).get('credentials').get('password')
+        htpassword_file_name = '/etc/nginx/conf.d/monitoring-htpasswd.cloudify'
+        with NamedTemporaryFile(delete=False, mode='w') as f:
+            f.write('{0}:{1}'.format(username, common.run(
+                ['openssl', 'passwd', '-apr1', password]).aggr_stdout))
+        common.move(f.name, htpassword_file_name)
+        common.chown('nginx', 'nginx', htpassword_file_name)
+        common.chmod('600', htpassword_file_name)
 
     def _verify_nginx(self):
         # TODO: This code requires the restservice to be installed, but
@@ -241,7 +385,30 @@ class Nginx(BaseComponent):
         if output.aggr_stdout.strip() not in {'200', '401'}:
             raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
+    def _configure_wait_on_restart_wrapper_service(self):
+        deploy(
+            join(
+                SCRIPTS_PATH,
+                'wait_on_restart.sh'
+            ),
+            '/etc/cloudify',
+            render=False
+        )
+        common.chmod('755', '/etc/cloudify/wait_on_restart.sh')
+        # Configure service wait_on_restart
+        service.configure(
+            'wait_on_restart',
+            src_dir='nginx',
+            append_prefix=False,
+            render=False,
+        )
+        # Enable wait_on_restart service so that it can be called when
+        # updating the ssl state as it required to restart nginx
+        service.enable('wait_on_restart', append_prefix=False)
+
     def _configure(self):
+        if self.service_type == 'supervisord':
+            self._configure_wait_on_restart_wrapper_service()
         self._deploy_nginx_config_files()
 
     def install(self):
@@ -267,10 +434,11 @@ class Nginx(BaseComponent):
 
     def start(self):
         logger.notice('Starting NGINX...')
-        self._handle_certs()
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._handle_certs()
         if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
-        service.start(NGINX, append_prefix=False)
+        service.restart(NGINX, append_prefix=False)
         service.verify_alive(NGINX, append_prefix=False)
         logger.notice('NGINX successfully started')
 

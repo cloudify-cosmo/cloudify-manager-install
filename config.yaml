@@ -40,6 +40,13 @@ manager:
   # For clusters this must be supplied, and will only be used, on the first manager
   cloudify_license_path: ''
 
+  # Parameters for accessing the manager's monitoring service remotely
+  monitoring:
+    # This is copied from manager.security.admin_username by default.
+    username: ''
+    # This is copied from manager.security.admin_password by default.
+    password: ''
+
 provider_context:
   policy_engine:
     start_timeout: 30
@@ -212,6 +219,13 @@ rabbitmq:
       ha-sync-mode: automatic
       ha-sync-batch-size: 50
 
+  # Parameters for accessing the rabbitmq's monitoring service remotely
+  monitoring:
+    # Username is copied from rabbitmq.username by default.
+    username: ''
+    # Password is copied rabbitmq.password by default.
+    password: ''
+
 # IMPORTANT: some of the configuration keys in the "postgresql_server" and
 # "postgresql_client" sections are only applicable for certain use cases.
 #
@@ -346,6 +360,13 @@ postgresql_client:
   ssl_enabled: false
   # If true, client SSL certificates will need to be supplied for database connections
   ssl_client_verification: false
+
+  # Parameters for accessing the postgresql_server's monitoring service remotely
+  monitoring:
+    # This one is copied from postgresql_client.server_username by default.
+    username: ''
+    # This one is copied from postgresql_client.server_password by default.
+    password: ''
 
 stage:
   # If set to true, Cloudify UI will not be installed
@@ -559,20 +580,35 @@ usage_collector:
     interval_in_days: 1
 
 prometheus:
+  # A public certificate, a private key, and a CA certificate file paths for the Nginx
+  # HTTPS proxy for the Prometheus.  All will be copied to the appropriate location and
+  # have permissions and ownership set appropriately.
+  cert_path: ''
+  key_path: ''
+  ca_path: ''
   port: 9090
   node_exporter:
     metrics_port: 9100
   blackbox_exporter:
     metrics_port: 9115
+    # ca_cert_path is a path to the CA certificate, which is used currently by the blackbox_exporter
+    # to connect to the HTTPS services that use certificates signed with this CA certificate.
+    ca_cert_path: ''
   postgres_exporter:
     username: ''
     sslmode: disable
     metrics_port: 9187
   rabbitmq_prometheus:
     metrics_port: 15692
-  # ca_cert_path is a path to the CA certificate, which is used currently by the blackbox_exporter
-  # to connect to the HTTPS services that use certificates signed with this CA certificate.
-  ca_cert_path: ''
+  # Parameters that will be used to access the monitoring service remotely
+  credentials:
+    # If those values are left empty, credentials will be copied from manager's credentials or
+    # rabbitmq's, or postgresql_server's (in this order)
+    username: ''
+    password: ''
+  # How long should status reporter wait for Prometheus response (in seconds).
+  request_timeout: 4
+
 
 flask_security: {}
 

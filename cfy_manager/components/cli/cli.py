@@ -26,7 +26,8 @@ from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
 from ...utils import common, certificates
-from ...constants import EXTERNAL_CERT_PATH, EXTERNAL_CA_CERT_PATH
+from ...constants import (EXTERNAL_CERT_PATH,
+                          EXTERNAL_CA_CERT_PATH)
 
 logger = get_logger(CLI)
 
@@ -52,7 +53,7 @@ class Cli(BaseComponent):
         password = config[MANAGER][SECURITY]['admin_password']
 
         manager = config[MANAGER]['cli_local_profile_host_name']
-        use_cmd = ['cfy', 'profiles', 'use', manager,
+        use_cmd = ['profiles', 'use', manager,
                    '--skip-credentials-validation']
         if config['nginx']['port']:
             use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
@@ -63,7 +64,7 @@ class Cli(BaseComponent):
         cert_path = self._deploy_external_cert()
         current_user = getuser()
         set_cmd = [
-            'cfy', 'profiles', 'set', '-u', username,
+            'profiles', 'set', '-u', username,
             '-p', password, '-t', 'default_tenant',
             '-c', cert_path, '--ssl', ssl_enabled
         ]
@@ -76,15 +77,14 @@ class Cli(BaseComponent):
         # to log file
         current_level = get_file_handlers_level()
         set_file_handlers_level(logging.ERROR)
-        common.run(use_cmd)
-        common.run(set_cmd)
+        common.cfy(*use_cmd)
+        common.cfy(*set_cmd)
         self._set_colors(is_root=False)
 
         if current_user != 'root':
             logger.info('Setting CLI for the root user...')
             for cmd in (use_cmd, set_cmd):
-                root_cmd = ['sudo', '-u', 'root'] + cmd
-                common.run(root_cmd)
+                common.cfy(*cmd, sudo=True)
             self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
         logger.notice('Cloudify CLI successfully configured')
@@ -93,7 +93,7 @@ class Cli(BaseComponent):
         profile_name = config[MANAGER]['cli_local_profile_host_name']
 
         def _remove_profile_and_check(cli_cmd):
-            proc = common.run(cli_cmd, ignore_failures=True)
+            proc = common.cfy(*cli_cmd, ignore_failures=True)
             if proc.returncode == 0:
                 logger.notice('CLI profile removed')
             else:
@@ -103,7 +103,7 @@ class Cli(BaseComponent):
         try:
             logger.notice('Removing CLI profile...')
 
-            cmd = ['cfy', 'profiles', 'delete', profile_name]
+            cmd = ['profiles', 'delete', profile_name]
             _remove_profile_and_check(cmd)
 
             current_user = getuser()

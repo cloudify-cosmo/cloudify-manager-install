@@ -35,6 +35,11 @@ postgresql_client:
   server_password: 'somesecretvalue123!'
   ssl_client_verification: true
 
+prometheus:
+  cert_path: /etc/cloudify/cert.pem
+  key_path: /etc/cloudify/key.pem
+  ca_path: /etc/cloudify/ca.pem
+
 ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
   postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem
@@ -48,3 +53,5 @@ ssl_inputs:
 services_to_install:
 - manager_service
 - monitoring_service
+
+service_management: supervisord

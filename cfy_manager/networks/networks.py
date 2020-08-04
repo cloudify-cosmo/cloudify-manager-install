@@ -17,7 +17,7 @@ import json
 import argh
 from os.path import join
 
-from ..logger import get_logger
+from ..logger import get_logger, setup_console_logger
 from ..constants import (
     NETWORKS_DIR,
 )
@@ -76,10 +76,13 @@ def _update_metadata_file(metadata, networks):
           help='Specify whether we skip generating certificates, so the user '
                'can provide their own, e.g. signed by a public CA',
           default=False)
-def add_networks(networks=None, skip_generating_certificates=False):
+def add_networks(networks=None,
+                 skip_generating_certificates=False,
+                 verbose=False):
     """
     Add new networks to a running Cloudify Manager
     """
+    setup_console_logger(verbose)
     logger.info('Trying to add new networks to Manager...')
 
     networks = json.loads(networks)

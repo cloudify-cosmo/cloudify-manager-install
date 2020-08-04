@@ -1,0 +1,54 @@
+# Those alerts are automatically generated during configuration phase of Cloudify installation.
+# Keep that in mind when attempting to alter them.
+groups:
+  - name: postgresql
+    rules:
+{% if 'database_service' in services_to_install %}
+      - alert: PostgreSQLDown
+        expr: pg_up{instance="localhost:{{ prometheus.postgres_exporter.metrics_port }}", job="postgresql"} != 1
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL database server is down
+      - alert: PostgresExporterDown
+        expr: up{instance="localhost:{{ prometheus.postgres_exporter.metrics_port }}", job="postgresql"} != 1
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: Postgres Exporter is down
+{% endif %}
+{% if postgresql_server.cluster.nodes|length > 0 %}
+{% for host, postgres in postgresql_server.cluster.nodes.items() %}
+      - alert: PostgreSQLDown
+        expr: pg_up{instance="{{ postgres.ip }}:{{ constants.monitoring_port }}", job="federate_postgresql"} != 1
+        for: 5s
+        labels:
+          severity: warning
+        annotations:
+          summary: PostgreSQL database server is down
+      - alert: PostgresExporterDown
+        expr: up{instance="{{ postgres.ip }}:{{ constants.monitoring_port }}", job="federate_postgresql"} != 1
+        for: 5s
+        labels:
+          severity: warning
+        annotations:
+          summary: Postgres Exporter is down
+{% endfor %}
+      # Below threshold values were automatically calculated during Cloudify configuration.
+      - alert: PostgreSQLClusterDegraded
+        expr: job:postgresql_in_cluster:sum < {{ postgresql_server.cluster.nodes|length }}
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL cluster is degraded
+      - alert: PostgreSQLClusterDown
+        expr: job:postgresql_in_cluster:sum < {{ (postgresql_server.cluster.nodes|length / 2)|round(0, 'ceil') }}
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL database cluster is down
+{% endif %}

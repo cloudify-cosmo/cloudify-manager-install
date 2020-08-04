@@ -32,6 +32,7 @@ SUDOERS_INCLUDE_DIR = '/etc/sudoers.d'
 CLOUDIFY_SUDOERS_FILE = join(SUDOERS_INCLUDE_DIR, CLOUDIFY_USER)
 INITIAL_INSTALL_FILE = join(CLOUDIFY_HOME_DIR, '.installed')
 INITIAL_CONFIGURE_FILE = join(CLOUDIFY_HOME_DIR, '.configured')
+SUPERVISORD_CONFIG_DIR = '/etc/supervisord.d'
 
 BASE_RESOURCES_PATH = '/opt/cloudify'
 CLOUDIFY_SOURCES_PATH = join(BASE_RESOURCES_PATH, 'sources')
@@ -45,6 +46,7 @@ DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'config.yaml')
 BASE_LOG_DIR = '/var/log/cloudify'
 
 INTERNAL_REST_PORT = 53333
+MONITORING_PORT = 8009
 
 SSL_CERTS_TARGET_DIR = join(CLOUDIFY_HOME_DIR, 'ssl')
 
@@ -58,6 +60,9 @@ EXTERNAL_KEY_FILENAME = 'cloudify_external_key.pem'
 POSTGRESQL_CLIENT_CERT_FILENAME = 'postgresql.crt'
 POSTGRESQL_CLIENT_KEY_FILENAME = 'postgresql.key'
 POSTGRESQL_CA_CERT_FILENAME = 'postgresql_ca.crt'
+MONITORING_CA_CERT_FILENAME = 'monitoring_ca_cert.pem'
+MONITORING_CERT_FILENAME = 'monitoring_cert.pem'
+MONITORING_KEY_FILENAME = 'monitoring_key.pem'
 BROKER_CERT_LOCATION = '/etc/cloudify/ssl/rabbitmq-cert.pem'
 BROKER_KEY_LOCATION = '/etc/cloudify/ssl/rabbitmq-key.pem'
 BROKER_CA_LOCATION = '/etc/cloudify/ssl/rabbitmq-ca.pem'
@@ -75,6 +80,12 @@ POSTGRESQL_CLIENT_KEY_PATH = \
     join(SSL_CERTS_TARGET_DIR, POSTGRESQL_CLIENT_KEY_FILENAME)
 POSTGRESQL_CA_CERT_PATH = \
     join(SSL_CERTS_TARGET_DIR, POSTGRESQL_CA_CERT_FILENAME)
+MONITORING_CA_CERT_PATH = \
+    join(SSL_CERTS_TARGET_DIR, MONITORING_CA_CERT_FILENAME)
+MONITORING_CERT_PATH = \
+    join(SSL_CERTS_TARGET_DIR, MONITORING_CERT_FILENAME)
+MONITORING_KEY_PATH = \
+    join(SSL_CERTS_TARGET_DIR, MONITORING_KEY_FILENAME)
 CERT_METADATA_FILE_PATH = join(SSL_CERTS_TARGET_DIR, 'certificate_metadata')
 
 CFY_EXEC_TEMPDIR_ENVVAR = 'CFY_EXEC_TEMP'
@@ -95,3 +106,39 @@ WHERE username
 VERBOSE_HELP_MSG = (
     "Used to give more verbose output."
 )
+
+NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
+
+NEW_BROKER_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_cert.pem'
+NEW_BROKER_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_key.pem'
+NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                'new_rabbitmq_ca_cert.pem')
+
+NEW_POSTGRESQL_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                 'new_postgresql_server_cert.pem')
+NEW_POSTGRESQL_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                'new_postgresql_server_key.pem')
+NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                        'new_postgresql_client_cert.pem')
+NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                       'new_postgresql_client_key.pem')
+NEW_POSTGRESQL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                    'new_postgresql_server_ca_cert.pem')
+
+NEW_INTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_cert.pem'
+NEW_INTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_key.pem'
+NEW_INTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ca_cert.pem')
+
+NEW_EXTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_cert.pem'
+NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
+NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                  'new_external_ca_cert.pem')
+
+NEW_LDAP_CA_CERT_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ldap_ca_cert.pem')
+
+NEW_PROMETHEUS_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                 'new_prometheus_cert.pem')
+NEW_PROMETHEUS_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                'new_prometheus_key.pem')
+NEW_PROMETHEUS_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                    'new_prometheus_ca_cert.pem')

@@ -19,6 +19,7 @@ Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python3 >= 3.6, python3-devel >= 3.6, createrepo, gcc
 Requires:       python3 >= 3.6
+Requires(pre):  shadow-utils
 
 %description
 Cloudify Manager installer.
@@ -35,13 +36,17 @@ mkdir -p %{buildroot}/etc/cloudify
 mkdir -p %{buildroot}/opt/cloudify
 cp ${RPM_SOURCE_DIR}/config.yaml %{buildroot}/etc/cloudify/config.yaml
 cp ${RPM_SOURCE_DIR}/rpms %{buildroot}/opt/cloudify/sources -Lfr
+cp -R ${RPM_SOURCE_DIR}/packaging/files/* %{buildroot}
 
 mv %_venv %{buildroot}%_venv
 ln -s %_venv/bin/cfy_manager %{buildroot}/usr/bin/cfy_manager
+ln -s %_venv/bin/supervisorctl %{buildroot}/usr/bin/supervisorctl
+ln -s %_venv/bin/supervisord %{buildroot}/usr/bin/supervisord
 
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
+mkdir -p %{buildroot}/var/log/cloudify
 
 %pre
 ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
@@ -50,6 +55,9 @@ if (( $(awk 'BEGIN {print ("'$ver'"<"'$min_ver'")}') )); then
     >&2 echo "[ERROR] OS version earlier than $min_ver, exiting."
     exit 1;
 fi
+
+groupadd -fr cfyuser
+getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
 %post
 echo "
@@ -68,5 +76,11 @@ cfy_manager install
 %files
 /usr/bin/cfy_manager
 /opt/cloudify
+%attr(755,cfyuser,cfyuser) /etc/cloudify
 %attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
 /etc/yum.repos.d/Cloudify-Local.repo
+/usr/lib/systemd/system/supervisord.service
+/etc/supervisord.conf
+/usr/bin/supervisorctl
+/usr/bin/supervisord
+%attr(755,cfyuser,cfyuser) /var/log/cloudify

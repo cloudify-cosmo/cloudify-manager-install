@@ -170,11 +170,11 @@ jobs:
       - run:
           name: Check Manager Status
           command: |
+            sleep 20
             .circleci/cluster/validate_status.sh ${CONTAINER_NAME}
       - run:
           name: Run the sanity check
           command: |
-            docker exec ${CONTAINER_NAME} touch /opt/manager/sanity_mode
             docker exec ${CONTAINER_NAME} cfy_manager sanity-check
 
   install_cluster:
@@ -288,6 +288,7 @@ jobs:
                   -e "s/DB3_IP/${DB3_IP}/g" \
                   .circleci/cluster/db_config.yaml > db2_config.yaml
 
+            echo "service_management: supervisord" >> db2_config.yaml
             docker run \
               -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock -d \
               --name ${DB2_NAME} \
@@ -367,12 +368,15 @@ jobs:
               -v $(pwd)/external_key_2.pem:/etc/cloudify/external_key.pem \
               -v $(pwd)/db_client_2_key.pem:/etc/cloudify/postgres_client_key.pem \
               -v $(pwd)/db_client_2_cert.pem:/etc/cloudify/postgres_client_cert.pem \
+              -v $(pwd)/prometheus_cert_2.pem:/etc/cloudify/prometheus_cert.pem \
+              -v $(pwd)/prometheus_key_2.pem:/etc/cloudify/prometheus_key.pem \
               ${CLUSTER_IMAGE}
       - wait_for_container:
           container_name: MANAGER2_NAME
       - run:
           name: Check Cluster Status
           command: |
+            sleep 20
             .circleci/cluster/validate_status.sh ${MANAGER1_NAME} ${MANAGER2_NAME}
 
   flake8:

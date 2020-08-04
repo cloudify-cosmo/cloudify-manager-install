@@ -1,0 +1,7 @@
+{% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}
+groups:
+  - name: rabbitmq
+    rules:
+      - record: job:rabbitmq_in_cluster:sum
+        expr: sum by (job) (up{job="federate_rabbitmq"})
+{% endif %}

@@ -8,6 +8,9 @@ location ~ ^/monitoring {
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
 
+    auth_basic "Cloudify Monitoring Service";
+    auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
+
     gzip on;
     gzip_types application/json;
     gzip_min_length 1000;
@@ -24,6 +27,9 @@ location /metrics/node {
     proxy_set_header   X-Server-Port     $server_port;
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
+
+    auth_basic "Cloudify Monitoring Service";
+    auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
 }{% if 'database_service' in services_to_install %}
 location /metrics/postgres {
     rewrite            /metrics/postgres(.*)  /metrics$1  break;
@@ -36,6 +42,9 @@ location /metrics/postgres {
     proxy_set_header   X-Server-Port     $server_port;
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
+
+    auth_basic "Cloudify Monitoring Service";
+    auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
 }{% endif %}{% if 'queue_service' in services_to_install %}
 location /metrics/rabbitmq {
     rewrite            /metrics/rabbitmq(.*)  /metrics$1  break;
@@ -48,4 +57,22 @@ location /metrics/rabbitmq {
     proxy_set_header   X-Server-Port     $server_port;
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
+
+    auth_basic "Cloudify Monitoring Service";
+    auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
+}{% endif %}{% if 'manager_service' in services_to_install %}
+location /metrics/blackbox {
+    rewrite            /metrics/blackbox(.*)  /metrics$1  break;
+
+    proxy_pass         http://cloudify-monitoring-blackbox;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+
+    auth_basic "Cloudify Monitoring Service";
+    auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
 }{% endif %}
