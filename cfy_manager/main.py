@@ -20,7 +20,6 @@ import os
 import re
 import sys
 import time
-import logging
 import subprocess
 from traceback import format_exception
 
@@ -67,10 +66,8 @@ from .encryption.encryption import update_encryption_key
 from .exceptions import (BootstrapError, ValidationError,
                          ProcessExecutionError, ReplaceCertificatesError)
 from .logger import (
-    get_file_handlers_level,
     get_logger,
     setup_console_logger,
-    set_file_handlers_level,
 )
 from .networks.networks import add_networks
 from .accounts import reset_admin_password
