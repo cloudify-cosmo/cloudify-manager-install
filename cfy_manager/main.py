@@ -970,30 +970,66 @@ def _is_supervisord_service_finished():
     return False
 
 
+class _FileFollow(object):
+    """Follow a text file and print lines from it.
+
+    Like tail -F, but as resilient as possible. tail -F will give up
+    when a file doesn't exist on some filesystems ()
+    """
+    def __init__(self, filename):
+        self._filename = filename
+        self._offset = 0
+
+    def seek_to_end(self):
+        """Set the initial file offset.
+
+        If the file doesn't exist or is otherwise inaccessible, keep
+        the default offset of 0.
+        """
+        try:
+            with open(self._filename) as f:
+                f.seek(0, 2)
+                self._offset = f.tell()
+        except IOError:
+            pass
+
+    def poll(self):
+        """Try and read all new lines from the file.
+
+        If we can't access the file, just do nothing. Maybe it will
+        become available later.
+        """
+        try:
+            with open(self._filename) as f:
+                f.seek(self._offset)
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    print(line, end='')
+                self._offset = f.tell()
+        except IOError:
+            pass
+
+
 @argh.decorators.named('wait-for-starter')
 def wait_for_starter(timeout=300):
     config.load_config()
 
-    tail_log = subprocess.Popen([
-        '/usr/bin/tail', '-F', '--max-unchanged-stats', '5', '-s', '0.5',
-        '/var/log/cloudify/manager/cfy_manager.log'
-    ])
+    _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
+    _follow.seek_to_end()
 
     is_started = _is_supervisord_service_finished \
         if is_supervisord_service() else _is_unit_finished
     deadline = time.time() + timeout
-    try:
-        while time.time() < deadline:
-            if is_started():
-                break
-            time.sleep(0.5)
-        else:
-            raise BootstrapError('Timed out waiting for starter')
-    finally:
-        # allow a some time for tail to finish displaying logs
-        time.sleep(1)
-        tail_log.terminate()
-        tail_log.wait()
+    while time.time() < deadline:
+        _follow.poll()
+        if is_started():
+            break
+        time.sleep(0.5)
+    else:
+        raise BootstrapError('Timed out waiting for starter')
+    _follow.poll()
 
 
 def _guess_private_ip():
