@@ -596,6 +596,7 @@ prometheus:
     ca_cert_path: ''
   postgres_exporter:
     username: ''
+    password: ''
     sslmode: disable
     metrics_port: 9187
   rabbitmq_prometheus:
