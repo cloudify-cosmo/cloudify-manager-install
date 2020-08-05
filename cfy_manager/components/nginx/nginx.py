@@ -283,9 +283,7 @@ class Nginx(BaseComponent):
                 src=join(CONFIG_PATH, file_name),
                 dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
             file_name in [
-                'https-monitoring-server.cloudify',
                 'cloudify.conf',
-                'logs-conf.cloudify',
             ]
         ]
         if do_manager:
@@ -294,13 +292,13 @@ class Nginx(BaseComponent):
                     src=join(CONFIG_PATH, file_name),
                     dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
                 file_name in [
+                    'logs-conf.cloudify',
                     'http-external-rest-server.cloudify',
                     'https-external-rest-server.cloudify',
                     'https-internal-rest-server.cloudify',
-                    'https-file-server.cloudify',
-                    'cloudify.conf',
                     'rest-location.cloudify',
                     'rest-proxy.cloudify',
+                    'https-file-server.cloudify',
                     'fileserver-location.cloudify',
                     'redirect-to-fileserver.cloudify',
                     'ui-locations.cloudify',
@@ -310,9 +308,12 @@ class Nginx(BaseComponent):
         if do_monitoring:
             resources_list += [
                 resource(
-                    src=join(CONFIG_PATH, 'redirect-to-monitoring.cloudify'),
-                    dst='/etc/nginx/conf.d/redirect-to-monitoring.cloudify'
-                ),
+                    src=join(CONFIG_PATH, file_name),
+                    dst='/etc/nginx/conf.d/{0}'.format(file_name)) for
+                file_name in [
+                    'https-monitoring-server.cloudify',
+                    'redirect-to-monitoring.cloudify'
+                ]
             ]
         return resources_list
 
