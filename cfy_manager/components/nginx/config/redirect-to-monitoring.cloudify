@@ -30,7 +30,7 @@ location /metrics/node {
 
     auth_basic "Cloudify Monitoring Service";
     auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
-}{% if 'database_service' in services_to_install %}
+}
 location /metrics/postgres {
     rewrite            /metrics/postgres(.*)  /metrics$1  break;
 
@@ -45,7 +45,7 @@ location /metrics/postgres {
 
     auth_basic "Cloudify Monitoring Service";
     auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
-}{% endif %}{% if 'queue_service' in services_to_install %}
+}
 location /metrics/rabbitmq {
     rewrite            /metrics/rabbitmq(.*)  /metrics$1  break;
 
@@ -60,7 +60,7 @@ location /metrics/rabbitmq {
 
     auth_basic "Cloudify Monitoring Service";
     auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
-}{% endif %}{% if 'manager_service' in services_to_install %}
+}
 location /metrics/blackbox {
     rewrite            /metrics/blackbox(.*)  /metrics$1  break;
 
@@ -75,4 +75,4 @@ location /metrics/blackbox {
 
     auth_basic "Cloudify Monitoring Service";
     auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
-}{% endif %}
+}
