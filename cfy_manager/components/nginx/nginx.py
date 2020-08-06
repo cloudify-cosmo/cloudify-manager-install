@@ -300,7 +300,6 @@ class Nginx(BaseComponent):
                     'rest-proxy.cloudify',
                     'https-file-server.cloudify',
                     'fileserver-location.cloudify',
-                    'redirect-to-fileserver.cloudify',
                     'ui-locations.cloudify',
                     'composer-location.cloudify',
                 ]
