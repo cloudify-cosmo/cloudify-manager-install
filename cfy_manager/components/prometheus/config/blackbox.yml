@@ -5,10 +5,10 @@ modules:
       tls_config:
         insecure_skip_verify: false
         ca_file: {{ prometheus.blackbox_exporter.ca_cert_path }}
-  http_40x:
+  http_401:
     prober: http
     http:
-      valid_status_codes: [400,401,]
+      valid_status_codes: [401,]
       tls_config:
         insecure_skip_verify: false
         ca_file: {{ prometheus.blackbox_exporter.ca_cert_path }}
