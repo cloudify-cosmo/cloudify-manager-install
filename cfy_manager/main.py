@@ -153,10 +153,6 @@ DB_NODE_ADDRESS_HELP_MSG = (
 DB_NODE_FORCE_HELP_MSG = (
     "Force removal of cluster node even if it is the master."
 )
-DB_NODE_ID_HELP_MSG = (
-    "Cloudify's auto-generated id of target DB cluster node. "
-    "Run `cfy_manager node get-id` on the DB cluster node to retrieve it."
-)
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
 )
@@ -377,8 +373,6 @@ def db_node_list(**kwargs):
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
-                     required=True)
-@argh.decorators.arg('-i', '--node-id', help=DB_NODE_ID_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-n', '--hostname', help=DB_HOSTNAME_HELP_MSG)
 def db_node_add(**kwargs):
