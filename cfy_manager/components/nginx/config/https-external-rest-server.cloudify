@@ -45,9 +45,5 @@ server {
   location / {
     return 308 https://$host$request_uri;
   }
-
-  location /resources/cloudify_agent {
-    include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
-  }
 }
 {% endif %}
