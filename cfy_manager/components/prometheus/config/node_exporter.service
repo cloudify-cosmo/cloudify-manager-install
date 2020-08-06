@@ -12,7 +12,7 @@ ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/node_exporter \
 {%- if service_management == 'supervisord' %}
   --collector.supervisord \
-{%- else -%}
+{%- else %}
   --collector.systemd \
 {%- endif %}
   --web.listen-address=127.0.0.1:{{ prometheus.node_exporter.metrics_port }}
