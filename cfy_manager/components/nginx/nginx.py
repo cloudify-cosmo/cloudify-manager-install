@@ -298,9 +298,7 @@ class Nginx(BaseComponent):
                     'https-internal-rest-server.cloudify',
                     'rest-location.cloudify',
                     'rest-proxy.cloudify',
-                    'https-file-server.cloudify',
                     'fileserver-location.cloudify',
-                    'redirect-to-fileserver.cloudify',
                     'ui-locations.cloudify',
                     'composer-location.cloudify',
                 ]

@@ -20,7 +20,7 @@ server {
   include "/etc/nginx/conf.d/rest-location.cloudify";
 
   # Serves the File Server (backed by the cloudify-resources upstream).
-  include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
+  include "/etc/nginx/conf.d/fileserver-location.cloudify";
 }
 
 {#
@@ -44,10 +44,6 @@ server {
   # to HTTPS using HTTP code 308 to preserve the request's body.
   location / {
     return 308 https://$host$request_uri;
-  }
-
-  location /resources/cloudify_agent {
-    include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
   }
 }
 {% endif %}

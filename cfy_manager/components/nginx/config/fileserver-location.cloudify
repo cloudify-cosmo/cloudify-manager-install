@@ -1,16 +1,15 @@
-location / {
-    root              {{ manager.file_server_root }};
-    auth_request /auth;
-    allow             all;
-    deny              all;
+location /resources {
+    alias {{ manager.file_server_root }};
+    auth_request /resources-auth;
 
     # A special location that doesn't require authentication for agents upgrade
-    location /cloudify_agent {
+    location /resources/cloudify_agent {
         auth_request off;
     }
 }
 
-location /auth {
+location /resources-auth {
+    internal;
     proxy_pass http://cloudify-rest/api/v3.1/file-server-auth;
     proxy_set_header X-Original-URI $request_uri;
 }
