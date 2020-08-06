@@ -23,8 +23,10 @@ scrape_configs:
       module: [http_200]  # Look for a HTTP 200 respose
     static_configs:
       - targets:
+{%- if manager.premium_edition == 'premium' %}
           - http://127.0.0.1:3000/  # Cloudify composer
           - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
+{%- endif %}
           - http://127.0.0.1:8088/  # Cloudify stage
           - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
           - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify external
