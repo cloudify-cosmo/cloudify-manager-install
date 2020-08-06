@@ -47,7 +47,6 @@ scrape_configs:
     static_configs:
       - targets:
           - http://127.0.0.1:8100/api/v3.1/status  # Cloudify rest service
-          - https://127.0.0.1:53229/  # Cloudify resources service
         labels:
           host: {{ manager.private_ip }}
     relabel_configs:
