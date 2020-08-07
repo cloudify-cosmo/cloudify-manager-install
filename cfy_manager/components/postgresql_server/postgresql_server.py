@@ -1295,7 +1295,7 @@ class PostgresqlServer(BaseComponent):
 
     def _restart_manager_db_dependent_services(self):
         logger.info('Restarting DB proxy service.')
-        service.restart('haproxy')
+        service.restart('haproxy', append_prefix=False)
         self.logger.info('Restarting DB-dependent services.')
         service.restart('amqp-postgres')
         service.restart('restservice')
