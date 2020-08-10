@@ -139,7 +139,8 @@ class Nginx(BaseComponent):
             self._replace_external_certs()
 
         if (self._needs_to_replace_internal_certs() or
-                self._needs_to_replace_external_certs()):
+                self._needs_to_replace_external_certs() or
+                MONITORING_SERVICE in config[SERVICES_TO_INSTALL]):
             service.restart(NGINX, append_prefix=False)
             service.verify_alive(NGINX, append_prefix=False)
 

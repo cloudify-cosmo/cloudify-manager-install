@@ -1087,6 +1087,7 @@ def run_init():
 def replace_certificates(input_path=None,
                          only_validate=False):
     """ Replacing the certificates on the current instance """
+    setup_console_logger()
     config.load_config()
     _handle_replace_certs_config_path(input_path)
     if only_validate:
