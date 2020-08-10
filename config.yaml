@@ -508,21 +508,6 @@ sanity:
   # performed during Cloudify Manager installation
   skip_sanity: false
 
-dev:
-  # Constraints (in standard `pip` constraints format) to pass on to `pip`
-  # when installing overlays (such as `rest_service_source_url`, `dsl_parser_source_url`
-  # and so on). Example:
-  # requests==2.13.0
-  # requests-toolbelt==0.7.1
-  pip_constraints: ''
-  sources:
-    cloudify_resources_url: ''
-    rest_client_source_url: ''
-    plugins_common_source_url: ''
-    script_plugin_source_url: ''
-    agent_source_url: ''
-    dsl_parser_source_url: ''
-
 validations:
   # If set to true, install/configuration validations will not be performed
   skip_validations: false
