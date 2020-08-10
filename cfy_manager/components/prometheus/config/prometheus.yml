@@ -16,6 +16,8 @@ scrape_configs:
   - job_name: 'node'
     static_configs:
       - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
+        labels:
+          host: {{ manager.private_ip }}
 {% if 'manager_service' in services_to_install %}
   - job_name: 'http_200'
     metrics_path: /probe
@@ -75,6 +77,24 @@ scrape_configs:
 {% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default != manager.private_ip %}
         - {{ rabbitmq.networks.default }}:{{ constants.monitoring_port }}
 {% endif %}{% endfor %}
+  - job_name: 'federate_rabbitmq_node'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ rabbitmq.monitoring.username }}
+      password: {{ rabbitmq.monitoring.password }}
+    metrics_path: /metrics/node
+    params:
+      'match[]':
+        - '{job="node"}'
+    static_configs:
+      - targets:
+{% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default != manager.private_ip %}
+        - {{ rabbitmq.networks.default }}:{{ constants.monitoring_port }}
+{% endif %}{% endfor %}
 {% endif %}{% if postgresql_server.cluster.nodes|length > 0 %}
   - job_name: 'federate_postgresql'
     scrape_interval: 15s
@@ -89,6 +109,24 @@ scrape_configs:
     params:
       'match[]':
         - '{job="postgresql"}'
+    static_configs:
+      - targets:
+{% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip != manager.private_ip %}
+        - {{ postgres.ip }}:{{ constants.monitoring_port }}
+{% endif %}{% endfor %}
+  - job_name: 'federate_postgresql_node'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ postgresql_client.monitoring.username }}
+      password: {{ postgresql_client.monitoring.password }}
+    metrics_path: /metrics/node
+    params:
+      'match[]':
+        - '{job="node"}'
     static_configs:
       - targets:
 {% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip != manager.private_ip %}

@@ -10,6 +10,7 @@ User=cfyuser
 Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/node_exporter \
+  --collector.systemd \
   --web.listen-address=127.0.0.1:{{ prometheus.node_exporter.metrics_port }}
 SyslogIdentifier=node_exporter
 Restart=always
