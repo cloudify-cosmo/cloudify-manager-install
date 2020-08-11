@@ -158,8 +158,6 @@ class PostgresqlServer(BaseComponent):
         except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
 
-        logger.debug('Installing PostgreSQL Server service...')
-
         logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
         common.mkdir(LOG_DIR)
@@ -339,17 +337,18 @@ class PostgresqlServer(BaseComponent):
             delimiter = delimiter.rstrip('$')
             delimiter = delimiter + 'a$'
 
-        common.sudo([
-            '-u', 'postgres',
-            '/usr/bin/psql', '-n',  # -n disables history
-            '-c',
-            'ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim}'.format(
+        common.sudo(
+            [
+                '-u', 'postgres',
+                '/usr/bin/psql', '-n',  # -n disables history
+            ],
+            # Piped to avoid password appearing in sudoers log
+            stdin='ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim}'
+            .format(
                 delim=delimiter,
                 pwd=postgres_password,
-            )
-        ])
-        logger.info('Removing postgres password from config.yaml')
-        config[POSTGRESQL_SERVER][POSTGRES_PASSWORD] = '<removed>'
+            ),
+        )
         logger.notice('postgres password successfully updated')
 
     def _etcd_is_running(self):
@@ -1587,8 +1586,6 @@ class PostgresqlServer(BaseComponent):
             enable_remote_connections = \
                 config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
             self._update_configuration(enable_remote_connections)
-            if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
-                self._update_postgres_password()
 
         logger.notice('PostgreSQL Server successfully configured')
 
@@ -1618,6 +1615,9 @@ class PostgresqlServer(BaseComponent):
             service.enable(POSTGRES_SERVICE_NAME, append_prefix=False)
             service.start(POSTGRES_SERVICE_NAME, append_prefix=False)
             service.verify_alive(POSTGRES_SERVICE_NAME, append_prefix=False)
+            if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
+                # This cannot be done without the server being started
+                self._update_postgres_password()
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):

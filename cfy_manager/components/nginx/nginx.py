@@ -100,9 +100,6 @@ class Nginx(BaseComponent):
             sign_key=config[SSL_INPUTS]['external_ca_key_path'],
             sign_key_password=config[SSL_INPUTS]['external_ca_key_password'],
         )
-        # don't store the password in the config file
-        if config[SSL_INPUTS]['external_ca_key_password']:
-            config[SSL_INPUTS]['external_ca_key_password'] = '<removed>'
 
     def _handle_internal_cert(self, replacing_ca=False):
         """
@@ -142,7 +139,8 @@ class Nginx(BaseComponent):
             self._replace_external_certs()
 
         if (self._needs_to_replace_internal_certs() or
-                self._needs_to_replace_external_certs()):
+                self._needs_to_replace_external_certs() or
+                MONITORING_SERVICE in config[SERVICES_TO_INSTALL]):
             service.restart(NGINX, append_prefix=False)
             service.verify_alive(NGINX, append_prefix=False)
 

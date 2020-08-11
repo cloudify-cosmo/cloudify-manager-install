@@ -45,7 +45,6 @@ from ..components_constants import (
     CLUSTER_JOIN,
     ADMIN_PASSWORD,
     FLASK_SECURITY,
-    SERVER_PASSWORD,
     SERVICES_TO_INSTALL,
     HOSTNAME
 )
@@ -607,9 +606,6 @@ class RestService(BaseComponent):
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
-        if config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
-            logger.info('Removing postgres password from config.yaml')
-            config[POSTGRESQL_CLIENT][SERVER_PASSWORD] = '<removed>'
         service.restart(RESTSERVICE)
         if config[CLUSTER_JOIN]:
             logger.info('Extra node in cluster, will verify rest-service '
