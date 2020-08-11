@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
 import json
 from os import sep
 from os.path import isfile, join, exists
@@ -37,6 +36,7 @@ from ..service_names import (
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
     RABBITMQ,
+    NGINX,
 
     DATABASE_SERVICE,
     MANAGER_SERVICE,
@@ -133,8 +133,24 @@ class Prometheus(BaseComponent):
             _handle_certs()
             service.reload(PROMETHEUS, append_prefix=False,
                            ignore_failure=True)
-            service.restart(BLACKBOX_EXPORTER, append_prefix=True,
+        if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
+            self._handle_blackbox_exporter_ca()
+            service.restart(BLACKBOX_EXPORTER, append_prefix=False,
                             ignore_failure=True)
+            service.verify_alive(BLACKBOX_EXPORTER, append_prefix=False)
+            service.restart(NGINX, append_prefix=False)
+            service.verify_alive(NGINX, append_prefix=False)
+
+    @staticmethod
+    def _handle_blackbox_exporter_ca():
+        blackbox_path = join(PROMETHEUS_CONFIG_DIR, 'exporters',
+                             'blackbox.yml')
+        blackbox_config = files.read_yaml_file(blackbox_path)
+        for job in 'http_200', 'http_401':
+            blackbox_config['modules'][job]['http']['tls_config'][
+                'ca_file'] = constants.CA_CERT_PATH
+        files.update_yaml_file(blackbox_path, CLOUDIFY_USER, CLOUDIFY_GROUP,
+                               blackbox_config)
 
     def validate_new_certs(self):
         if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
