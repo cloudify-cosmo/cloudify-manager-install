@@ -133,8 +133,7 @@ class Prometheus(BaseComponent):
             _handle_certs()
             service.reload(PROMETHEUS, append_prefix=False,
                            ignore_failure=True)
-        if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH) and \
-                MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
             self._handle_blackbox_exporter_ca()
             service.restart(BLACKBOX_EXPORTER, append_prefix=False,
                             ignore_failure=True)
