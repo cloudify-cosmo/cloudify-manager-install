@@ -239,7 +239,6 @@ rabbitmq:
 #     the "ca_path" field under "postgresql_server".
 postgresql_server:
   # Password to set for the PostgreSQL user.
-  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES
   postgres_password: ''
 
   # postgresql.conf overrides
@@ -336,7 +335,6 @@ postgresql_client:
   # name is "mycfydb" and your username is "test", then "server_username"
   # should be "mycfydb@test".
   #
-  # THE PASSWORD WILL BE REMOVED FROM THE FILE AFTER THE INSTALLATION FINISHES.
   server_db_name: postgres
   server_username: postgres
   server_password: ''
