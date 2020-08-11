@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import time
 import json
 from os import sep
 from os.path import isfile, join, exists
@@ -138,19 +137,9 @@ class Prometheus(BaseComponent):
             self._handle_blackbox_exporter_ca()
             service.restart(BLACKBOX_EXPORTER, append_prefix=False,
                             ignore_failure=True)
-            self._wait_for_blackbox_exporter()
+            service.verify_alive(BLACKBOX_EXPORTER, append_prefix=False)
             service.restart(NGINX, append_prefix=False)
             service.verify_alive(NGINX, append_prefix=False)
-
-    @staticmethod
-    def _wait_for_blackbox_exporter():
-        def blackbox_exporter_is_running():
-            status = service.is_active(BLACKBOX_EXPORTER, append_prefix=False)
-            return status in ('running', 'active', 'activating')
-
-        while not blackbox_exporter_is_running():
-            logger.info('Waiting for blackbox_exporter')
-            time.sleep(1)
 
     @staticmethod
     def _handle_blackbox_exporter_ca():
