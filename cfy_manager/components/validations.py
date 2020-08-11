@@ -657,39 +657,6 @@ def _validate_external_postgres():
                 )
 
 
-def _validate_not_reusing_removed_passwords():
-    """Confirm we are not reusing removed passwords.
-    Passwords that we remove after use should not accept the 'removed'
-    value as a password, as that may result in a remove+reinstall of the
-    manager changing the password to a publically known value.
-    """
-    removed_value = '<removed>'
-    check_keys = (
-        (POSTGRESQL_CLIENT, SERVER_PASSWORD),
-        (POSTGRESQL_SERVER, POSTGRES_PASSWORD),
-        (SSL_INPUTS, 'external_ca_key_password'),
-    )
-
-    problem_locations = []
-    for path in check_keys:
-        target = config
-        # Descend to the appropriate key
-        for key in path:
-            target = target[key]
-        if target == removed_value:
-            problem_locations.append('.'.join(path))
-
-    if problem_locations:
-        raise ValidationError(
-            'Previously removed password(s) detected. Password values '
-            'must be changed to something other than "{removed}". '
-            'Locations: {locations}'.format(
-                removed=removed_value,
-                locations=problem_locations,
-            )
-        )
-
-
 def _validate_ldap_certificate_setting():
     """Confirm that if using ldaps we have the required ca cert."""
     ldaps = config['restservice']['ldap']['server'].startswith('ldaps://')
@@ -718,7 +685,6 @@ def validate(components, skip_validations=False, only_install=False):
 
     if not only_install:
         _validate_ldap_certificate_setting()
-        _validate_not_reusing_removed_passwords()
         _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
