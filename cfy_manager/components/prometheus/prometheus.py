@@ -28,6 +28,7 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
 )
 from ..service_names import (
+    COMPOSER,
     MANAGER,
     PROMETHEUS,
     NODE_EXPORTER,
@@ -441,7 +442,10 @@ def _deploy_prometheus_configuration():
     files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
                  PROMETHEUS_CONFIG_PATH,
                  additional_render_context={
-                     'is_premium_installed': is_premium_installed()
+                     'is_premium_installed':
+                         is_premium_installed(),
+                     'composer_skip_installation':
+                         config[COMPOSER]['skip_installation'],
                  })
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_PATH)
     if MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL, []):
