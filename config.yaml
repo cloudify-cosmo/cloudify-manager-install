@@ -316,6 +316,11 @@ postgresql_server:
   # If this is set, ssl_only_connections must be enabled
   ssl_client_verification: false
 
+  # A PostgreSQL account used for monitoring
+  db_monitoring:
+    username: cloudify_db_monitoring
+    password: c10udify_db_monitoring
+
 postgresql_client:
   # Host name (or IP address) of the database. If you are using an external
   # database, update accordingly; otherwise use the default.
@@ -578,7 +583,6 @@ prometheus:
     # to connect to the HTTPS services that use certificates signed with this CA certificate.
     ca_cert_path: ''
   postgres_exporter:
-    username: ''
     sslmode: disable
     metrics_port: 9187
   rabbitmq_prometheus:

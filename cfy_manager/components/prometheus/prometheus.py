@@ -345,16 +345,6 @@ def _deploy_configuration():
 
 
 def _update_config():
-    def postgresql_username():
-        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(POSTGRESQL_CLIENT, {}).get('server_username')
-        return 'postgres'
-
-    def postgresql_password():
-        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(POSTGRESQL_CLIENT, {}).get('server_password')
-        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(POSTGRESQL_SERVER, {}).get('postgres_password')
 
     def postgresql_ip_address():
         if config.get(POSTGRESQL_SERVER, {}).get(ENABLE_REMOTE_CONNECTIONS):
@@ -409,14 +399,6 @@ def _update_config():
 
     logger.notice('Updating Prometheus configuration...')
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
-        if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
-                not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
-            config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'username': postgresql_username()})
-        if ('password' in config[PROMETHEUS][POSTGRES_EXPORTER] and
-                not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
-            config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'password': postgresql_password()})
         if ('ip_address' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
