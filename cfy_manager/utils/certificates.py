@@ -19,7 +19,7 @@ import json
 from contextlib import contextmanager
 
 from . import network
-from .common import sudo, remove, chown, copy
+from .common import sudo, remove, chown, chmod, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
@@ -211,7 +211,11 @@ def _generate_ssl_certificate(ips,
                               key_path,
                               sign_cert=None,
                               sign_key=None,
-                              sign_key_password=None):
+                              sign_key_password=None,
+                              key_perms='440',
+                              cert_perms='444',
+                              owner='cfyuser',
+                              group='cfyuser'):
     """Generate a public SSL certificate and a private SSL key
 
     :param ips: the ips (or names) to be used for subjectAltNames
@@ -226,6 +230,14 @@ def _generate_ssl_certificate(ips,
     :type sign_cert: str
     :param sign_key: path to the signing cert's key (self-signed by default)
     :type sign_key: str
+    :param key_perms: permissions to apply to created key file
+    :type key_perms: str
+    :param cert_perms: permissions to apply to created cert file
+    :type cert_perms: str
+    :param owner: owner of key and certificate
+    :type owner: str
+    :param group: group of key and certificate
+    :type owner: str
     :return: The path to the cert and key files on the manager
     """
     # Remove duplicates from ips and ensure CN is in SANs
@@ -248,6 +260,8 @@ def _generate_ssl_certificate(ips,
             '-out', csr_path,
             '-keyout', key_path,
         ])
+        chown(owner, group, key_path)
+        chmod(key_perms, key_path)
         x509_command = [
             'openssl', 'x509',
             '-days', '3650',
@@ -274,6 +288,8 @@ def _generate_ssl_certificate(ips,
                 '-signkey', key_path
             ]
         sudo(x509_command)
+        chown(owner, group, cert_path)
+        chmod(cert_perms, cert_path)
         remove(csr_path)
 
     logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
@@ -503,15 +519,14 @@ def use_supplied_certificates(component_name,
 
     for path in cert_destination, key_destination, ca_destination:
         if path:
-            sudo(['chown', '{owner}.{group}'.format(owner=owner, group=group),
-                  path])
+            chown(owner, group, path)
     # Make key only readable by user and group
     if key_destination:
-        sudo(['chmod', key_perms, key_destination])
+        chmod(key_perms, key_destination)
     # Make certs readable by anyone
     for path in cert_destination, ca_destination:
         if path:
-            sudo(['chmod', cert_perms, path])
+            chmod(cert_perms, path)
 
     if update_config:
         logger.info('Updating configured certification locations.')

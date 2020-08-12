@@ -461,6 +461,8 @@ class RabbitMQ(BaseComponent):
             key_path=config[RABBITMQ]['key_path'],
             sign_cert=sign_cert,
             sign_key=sign_key,
+            owner='rabbitmq',
+            group='rabbitmq',
         )
 
     def handle_certificates(self):
