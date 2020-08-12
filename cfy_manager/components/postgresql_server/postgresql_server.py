@@ -50,6 +50,7 @@ from ..service_names import (
     POSTGRESQL_SERVER,
     MANAGER,
     MANAGER_SERVICE,
+    MONITORING_SERVICE,
     DATABASE_SERVICE
 )
 from ... import constants
@@ -350,6 +351,27 @@ class PostgresqlServer(BaseComponent):
             ),
         )
         logger.notice('postgres password successfully updated')
+
+    def _create_db_monitoring_account(self):
+        logger.notice('Creating db_monitoring account...')
+        section = config[POSTGRESQL_SERVER]['db_monitoring']
+        delimiter = '$password$'
+        while delimiter in section.get('password'):
+            delimiter = delimiter.rstrip('$')
+            delimiter = delimiter + 'a$'
+        common.sudo(
+            [
+                '-u', 'postgres',
+                '/usr/bin/psql', '-n',  # -n disables history
+            ],
+            # Piped to avoid password appearing in sudoers log
+            stdin='CREATE USER {role} WITH PASSWORD {dlm}{pwd}{dlm}'.format(
+                role=section.get('username'),
+                dlm=delimiter,
+                pwd=section.get('password'),
+            ),
+        )
+        logger.notice('db_monitoring account successfully created')
 
     def _etcd_is_running(self):
         status = service.is_active('etcd', append_prefix=False)
@@ -1618,6 +1640,8 @@ class PostgresqlServer(BaseComponent):
             if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
                 # This cannot be done without the server being started
                 self._update_postgres_password()
+            if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
+                self._create_db_monitoring_account()
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
