@@ -583,8 +583,10 @@ prometheus:
     # to connect to the HTTPS services that use certificates signed with this CA certificate.
     ca_cert_path: ''
   postgres_exporter:
-    sslmode: disable
     metrics_port: 9187
+    # ca_cert_path is a path to the CA certificate, which is used by the postgres_exporter
+    # to connect to the PostgreSQL Server that use certificates signed with this CA certificate.
+    ca_cert_path: ''
   rabbitmq_prometheus:
     metrics_port: 15692
   # Parameters that will be used to access the monitoring service remotely

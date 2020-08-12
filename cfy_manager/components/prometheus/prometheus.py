@@ -403,6 +403,17 @@ def _update_config():
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'ip_address': postgresql_ip_address()})
+        if config.get(POSTGRESQL_SERVER, {}).get('ssl_enabled'):
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'sslmode': 'verify-full'})
+            if ('ca_cert_path' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
+                    not config[PROMETHEUS][POSTGRES_EXPORTER]['ca_cert_path']):
+                config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                    {'ca_cert_path':
+                        config[CONSTANTS].get('postgresql_ca_cert_path')})
+        else:
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'sslmode': 'disable'})
     if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
         ('ca_cert_path' not in config.get(PROMETHEUS,
                                           {}).get(BLACKBOX_EXPORTER, {}) or
