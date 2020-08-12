@@ -26,6 +26,7 @@ from ..components_constants import (
     HOSTNAME,
     PRIVATE_IP,
     SERVICES_TO_INSTALL,
+    SSL_ENABLED,
 )
 from ..service_names import (
     COMPOSER,
@@ -403,7 +404,7 @@ def _update_config():
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'ip_address': postgresql_ip_address()})
-        if config.get(POSTGRESQL_SERVER, {}).get('ssl_enabled'):
+        if config.get(POSTGRESQL_SERVER, {}).get(SSL_ENABLED):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'sslmode': 'verify-full'})
             if ('ca_cert_path' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
