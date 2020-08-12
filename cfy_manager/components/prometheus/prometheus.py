@@ -352,6 +352,15 @@ def _update_config():
             return config.get(MANAGER, {}).get(PRIVATE_IP)
         return 'localhost'
 
+    def postgres_ca_cert_path():
+        if ('ca_path' in config[POSTGRESQL_SERVER] and
+                config[POSTGRESQL_SERVER]['ca_path']):
+            return config[POSTGRESQL_SERVER]['ca_path']
+        if ('postgresql_ca_cert_path' in config[CONSTANTS] and
+                config[CONSTANTS]['postgresql_ca_cert_path']):
+            return config[CONSTANTS]['postgresql_ca_cert_path']
+        return ''
+
     def update_cluster_details(file_name):
         with open(file_name, 'r') as fp:
             cluster_cfg = json.load(fp)
@@ -410,8 +419,7 @@ def _update_config():
             if ('ca_cert_path' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
                     not config[PROMETHEUS][POSTGRES_EXPORTER]['ca_cert_path']):
                 config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                    {'ca_cert_path':
-                        config[CONSTANTS].get('postgresql_ca_cert_path')})
+                    {'ca_cert_path': postgres_ca_cert_path()})
         else:
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'sslmode': 'disable'})
