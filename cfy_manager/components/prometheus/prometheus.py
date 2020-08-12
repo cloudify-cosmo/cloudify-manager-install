@@ -307,6 +307,8 @@ def _generate_certs():
         sign_cert=sign_cert,
         sign_key=sign_key,
     )
+    if has_ca_key:
+        common.copy(constants.CA_CERT_PATH, constants.MONITORING_CA_CERT_PATH)
 
 
 def _installing_manager():
