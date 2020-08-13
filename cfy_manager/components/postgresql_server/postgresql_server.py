@@ -353,24 +353,69 @@ class PostgresqlServer(BaseComponent):
         logger.notice('postgres password successfully updated')
 
     def _create_db_monitoring_account(self):
+
+        def create_user_sql(credentials):
+            delimiter = '$password$'
+            while delimiter in credentials.get('password'):
+                delimiter = delimiter.rstrip('$')
+                delimiter = delimiter + 'a$'
+            return 'CREATE USER {username} WITH PASSWORD '\
+                   '{delim}{password}{delim}'.format(
+                       username=credentials.get('username'),
+                       delim=delimiter,
+                       password=credentials.get('password'))
+
+        def create_in_standalone_db(credentials):
+            common.sudo(
+                [
+                    '-u', 'postgres',
+                    '/usr/bin/psql', '-n',  # -n disables history
+                ],
+                # Piped to avoid password appearing in sudoers log
+                stdin=create_user_sql(credentials),
+            )
+
+        def create_in_clustered_db(credentials):
+            try:
+                self._etcd_command(['member', 'list'], )
+            except Exception as ex:
+                logger.notice('Database cluster not yet ready (will '
+                              'try on the next database node). %s', ex)
+                return
+            try:
+                pgpass = files.read(PATRONI_PGPASS_PATH)
+            except Exception as ex:
+                logger.notice('Patroni pgpass file (%s) unreadable (will '
+                              'try on the next database node). %s',
+                              PATRONI_PGPASS_PATH, ex)
+                return
+            hostname = pgpass.split(':')[0]
+            pgpass_file = files.write_to_tempfile(
+                '{host}:5432:postgres:postgres:{password}'.format(
+                    host=hostname,
+                    password=config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]))
+            common.chown('postgres', 'postgres', pgpass_file)
+            common.chmod('600', pgpass_file)
+            common.sudo(
+                [
+                    '-u', 'postgres',
+                    '/usr/bin/psql', '-n',  # -n disables history
+                    '-h', hostname,
+                    '-U', 'postgres',
+                    '-w',  # -w do not wait for password (use PGPASSFILE)
+                    'postgres'
+                ],
+                # Piped to avoid password appearing in sudoers log
+                stdin=create_user_sql(credentials),
+                env={'PGPASSFILE': pgpass_file}
+            )
+            files.remove(pgpass_file)
+
         logger.notice('Creating db_monitoring account...')
-        section = config[POSTGRESQL_SERVER]['db_monitoring']
-        delimiter = '$password$'
-        while delimiter in section.get('password'):
-            delimiter = delimiter.rstrip('$')
-            delimiter = delimiter + 'a$'
-        common.sudo(
-            [
-                '-u', 'postgres',
-                '/usr/bin/psql', '-n',  # -n disables history
-            ],
-            # Piped to avoid password appearing in sudoers log
-            stdin='CREATE USER {role} WITH PASSWORD {dlm}{pwd}{dlm}'.format(
-                role=section.get('username'),
-                dlm=delimiter,
-                pwd=section.get('password'),
-            ),
-        )
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            create_in_clustered_db(config[POSTGRESQL_SERVER]['db_monitoring'])
+        else:
+            create_in_standalone_db(config[POSTGRESQL_SERVER]['db_monitoring'])
         logger.notice('db_monitoring account successfully created')
 
     def _etcd_is_running(self):
@@ -1640,8 +1685,8 @@ class PostgresqlServer(BaseComponent):
             if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
                 # This cannot be done without the server being started
                 self._update_postgres_password()
-            if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
-                self._create_db_monitoring_account()
+        if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._create_db_monitoring_account()
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
