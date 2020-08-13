@@ -109,11 +109,6 @@ class Manager(BaseComponent):
     def _prepare_certificates(self):
         if not os.path.exists(constants.SSL_CERTS_TARGET_DIR):
             common.mkdir(constants.SSL_CERTS_TARGET_DIR)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            constants.SSL_CERTS_TARGET_DIR,
-        )
         # Move the broker certificate if we're not installing it locally
         if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
             # ...but only if one was provided.

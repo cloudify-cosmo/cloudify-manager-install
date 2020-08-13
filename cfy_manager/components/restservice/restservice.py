@@ -552,8 +552,6 @@ class RestService(BaseComponent):
         if (rabbitmq_ca_cert_filename and
                 not os.path.isfile(RABBITMQ_CA_CERT_PATH)):
             files.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
-            files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                        RABBITMQ_CA_CERT_PATH)
             cfg['rabbitmq']['ca_path'] = RABBITMQ_CA_CERT_PATH
         with open(CLUSTER_DETAILS_PATH, 'w') as fp:
             json.dump(cfg, fp)
