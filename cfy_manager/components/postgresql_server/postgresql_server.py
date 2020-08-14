@@ -272,6 +272,13 @@ class PostgresqlServer(BaseComponent):
 
         return temp_pgconfig_path
 
+    def _get_monitoring_user_hba_entry(self):
+        return 'hostssl all {monitoring_user} {host}/32 md5'.format(
+            monitoring_user=config[POSTGRESQL_SERVER][
+                'db_monitoring']['username'],
+            host=config[MANAGER][PRIVATE_IP],
+        )
+
     def _write_new_hba_file(self, lines, enable_remote_connections):
         fd, temp_hba_path = mkstemp()
         os.close(fd)
@@ -286,6 +293,9 @@ class PostgresqlServer(BaseComponent):
                 f.write('host all all 0.0.0.0/0 md5\n')
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
+                # Allow access for monitoring user, locally only, without
+                # client certs
+                f.write(self._get_monitoring_user_hba_entry() + '\n')
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
                     f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
@@ -995,6 +1005,7 @@ class PostgresqlServer(BaseComponent):
                     'postgresql': {
                         'pg_hba': [
                             'hostssl replication replicator 127.0.0.1/32 md5',
+                            self._get_monitoring_user_hba_entry(),
                             'hostssl all all 0.0.0.0/0 md5{0}'.format(
                                 ' clientcert=1'
                                 if pgsrv['ssl_client_verification'] else '')
