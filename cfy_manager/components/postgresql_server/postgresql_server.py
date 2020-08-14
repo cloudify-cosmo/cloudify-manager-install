@@ -332,11 +332,7 @@ class PostgresqlServer(BaseComponent):
         logger.notice('Updating postgres password...')
         postgres_password = \
             config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
-
-        delimiter = '$password$'
-        while delimiter in postgres_password:
-            delimiter = delimiter.rstrip('$')
-            delimiter = delimiter + 'a$'
+        delimiter = self._delimiter_for(postgres_password)
 
         common.sudo(
             [
@@ -355,10 +351,7 @@ class PostgresqlServer(BaseComponent):
     def _create_db_monitoring_account(self):
 
         def create_user_sql(credentials):
-            delimiter = '$password$'
-            while delimiter in credentials.get('password'):
-                delimiter = delimiter.rstrip('$')
-                delimiter = delimiter + 'a$'
+            delimiter = self._delimiter_for(credentials.get('password'))
             return 'CREATE USER {username} WITH PASSWORD '\
                    '{delim}{password}{delim}'.format(
                        username=credentials.get('username'),
@@ -394,22 +387,24 @@ class PostgresqlServer(BaseComponent):
                 '{host}:5432:postgres:postgres:{password}'.format(
                     host=hostname,
                     password=config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]))
-            common.chown('postgres', 'postgres', pgpass_file)
-            common.chmod('600', pgpass_file)
-            common.sudo(
-                [
-                    '-u', 'postgres',
-                    '/usr/bin/psql', '-n',  # -n disables history
-                    '-h', hostname,
-                    '-U', 'postgres',
-                    '-w',  # -w do not wait for password (use PGPASSFILE)
-                    'postgres'
-                ],
-                # Piped to avoid password appearing in sudoers log
-                stdin=create_user_sql(credentials),
-                env={'PGPASSFILE': pgpass_file}
-            )
-            files.remove(pgpass_file)
+            try:
+                common.chown('postgres', 'postgres', pgpass_file)
+                common.chmod('600', pgpass_file)
+                common.sudo(
+                    [
+                        '-u', 'postgres',
+                        '/usr/bin/psql', '-n',  # -n disables history
+                        '-h', hostname,
+                        '-U', 'postgres',
+                        '-w',  # -w do not wait for password (use PGPASSFILE)
+                        'postgres'
+                    ],
+                    # Piped to avoid password appearing in sudoers log
+                    stdin=create_user_sql(credentials),
+                    env={'PGPASSFILE': pgpass_file}
+                )
+            finally:
+                files.remove(pgpass_file)
 
         logger.notice('Creating db_monitoring account...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
@@ -417,6 +412,13 @@ class PostgresqlServer(BaseComponent):
         else:
             create_in_standalone_db(config[POSTGRESQL_SERVER]['db_monitoring'])
         logger.notice('db_monitoring account successfully created')
+
+    def _delimiter_for(self, text):
+        delim = '$password$'
+        while delim in text:
+            delim = delim.rstrip('$')
+            delim = delim + 'a$'
+        return delim
 
     def _etcd_is_running(self):
         status = service.is_active('etcd', append_prefix=False)
