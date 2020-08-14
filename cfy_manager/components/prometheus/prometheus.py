@@ -26,6 +26,7 @@ from ..components_constants import (
     HOSTNAME,
     PRIVATE_IP,
     SERVICES_TO_INSTALL,
+    SSL_ENABLED,
 )
 from ..service_names import (
     COMPOSER,
@@ -345,21 +346,20 @@ def _deploy_configuration():
 
 
 def _update_config():
-    def postgresql_username():
-        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(POSTGRESQL_CLIENT, {}).get('server_username')
-        return 'postgres'
-
-    def postgresql_password():
-        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(POSTGRESQL_CLIENT, {}).get('server_password')
-        if DATABASE_SERVICE in config.get(SERVICES_TO_INSTALL, []):
-            return config.get(POSTGRESQL_SERVER, {}).get('postgres_password')
 
     def postgresql_ip_address():
         if config.get(POSTGRESQL_SERVER, {}).get(ENABLE_REMOTE_CONNECTIONS):
             return config.get(MANAGER, {}).get(PRIVATE_IP)
         return 'localhost'
+
+    def postgres_ca_cert_path():
+        if ('ca_path' in config[POSTGRESQL_SERVER] and
+                config[POSTGRESQL_SERVER]['ca_path']):
+            return config[POSTGRESQL_SERVER]['ca_path']
+        if ('postgresql_ca_cert_path' in config[CONSTANTS] and
+                config[CONSTANTS]['postgresql_ca_cert_path']):
+            return config[CONSTANTS]['postgresql_ca_cert_path']
+        return ''
 
     def update_cluster_details(file_name):
         with open(file_name, 'r') as fp:
@@ -409,18 +409,20 @@ def _update_config():
 
     logger.notice('Updating Prometheus configuration...')
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
-        if ('username' in config[PROMETHEUS][POSTGRES_EXPORTER] and
-                not config[PROMETHEUS][POSTGRES_EXPORTER]['username']):
-            config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'username': postgresql_username()})
-        if ('password' in config[PROMETHEUS][POSTGRES_EXPORTER] and
-                not config[PROMETHEUS][POSTGRES_EXPORTER]['password']):
-            config[PROMETHEUS][POSTGRES_EXPORTER].update(
-                {'password': postgresql_password()})
         if ('ip_address' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
             config[PROMETHEUS][POSTGRES_EXPORTER].update(
                 {'ip_address': postgresql_ip_address()})
+        if config.get(POSTGRESQL_SERVER, {}).get(SSL_ENABLED):
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'sslmode': 'verify-full'})
+            if ('ca_cert_path' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
+                    not config[PROMETHEUS][POSTGRES_EXPORTER]['ca_cert_path']):
+                config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                    {'ca_cert_path': postgres_ca_cert_path()})
+        else:
+            config[PROMETHEUS][POSTGRES_EXPORTER].update(
+                {'sslmode': 'disable'})
     if (MANAGER_SERVICE in config[SERVICES_TO_INSTALL] and
         ('ca_cert_path' not in config.get(PROMETHEUS,
                                           {}).get(BLACKBOX_EXPORTER, {}) or
