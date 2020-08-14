@@ -52,6 +52,7 @@ SCRIPTS_PATH = join(
     SCRIPTS
 )
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
+HTPASSWD_FILE = '/etc/nginx/conf.d/monitoring-htpasswd.cloudify'
 
 logger = get_logger(NGINX)
 
@@ -317,7 +318,7 @@ class Nginx(BaseComponent):
         logger.info('Deploying Nginx configuration files...')
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._update_credentials_config()
-            self._create_htpasswd_files()
+            self._create_htpasswd_file()
         for resource in self._config_files():
             deploy(resource.src, resource.dst)
 
@@ -351,16 +352,15 @@ class Nginx(BaseComponent):
             config[PROMETHEUS]['credentials']['password'] = \
                 rabbitmq_cfg.get('password')
 
-    def _create_htpasswd_files(self):
+    def _create_htpasswd_file(self):
         username = config.get(PROMETHEUS).get('credentials').get('username')
         password = config.get(PROMETHEUS).get('credentials').get('password')
-        htpassword_file_name = '/etc/nginx/conf.d/monitoring-htpasswd.cloudify'
         with NamedTemporaryFile(delete=False, mode='w') as f:
             f.write('{0}:{1}'.format(username, common.run(
                 ['openssl', 'passwd', '-apr1', password]).aggr_stdout))
-        common.move(f.name, htpassword_file_name)
-        common.chown('nginx', 'nginx', htpassword_file_name)
-        common.chmod('600', htpassword_file_name)
+        common.move(f.name, HTPASSWD_FILE)
+        common.chown('nginx', 'nginx', HTPASSWD_FILE)
+        common.chmod('600', HTPASSWD_FILE)
 
     def _verify_nginx(self):
         # TODO: This code requires the restservice to be installed, but
@@ -426,7 +426,8 @@ class Nginx(BaseComponent):
         remove_files([
             join('/var/cache', NGINX),
             LOG_DIR,
-            UNIT_OVERRIDE_PATH
+            UNIT_OVERRIDE_PATH,
+            HTPASSWD_FILE,
         ] + [resource.dst for resource in self._config_files()])
 
     def start(self):
