@@ -182,7 +182,7 @@ class Prometheus(BaseComponent):
 
     def remove(self):
         logger.notice('Removing Prometheus and exporters...')
-        remove_files_list = [PROMETHEUS_DATA_DIR, ]
+        remove_files_list = [PROMETHEUS_DATA_DIR, PROMETHEUS_CONFIG_DIR]
         for dir_name in (
                 'rules', 'rules.d', 'files_sd', 'exporters', 'alerts',):
             remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, dir_name))
