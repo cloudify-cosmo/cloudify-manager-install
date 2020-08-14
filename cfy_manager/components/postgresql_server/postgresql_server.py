@@ -272,11 +272,11 @@ class PostgresqlServer(BaseComponent):
 
         return temp_pgconfig_path
 
-    def _get_monitoring_user_hba_entry(self):
+    def _get_monitoring_user_hba_entry(self, host):
         return 'hostssl all {monitoring_user} {host}/32 md5'.format(
             monitoring_user=config[POSTGRESQL_SERVER][
                 'db_monitoring']['username'],
-            host=config[MANAGER][PRIVATE_IP],
+            host=host,
         )
 
     def _write_new_hba_file(self, lines, enable_remote_connections):
@@ -295,7 +295,9 @@ class PostgresqlServer(BaseComponent):
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # Allow access for monitoring user, locally only, without
                 # client certs
-                f.write(self._get_monitoring_user_hba_entry() + '\n')
+                f.write(self._get_monitoring_user_hba_entry(
+                    config[MANAGER][PRIVATE_IP],
+                ) + '\n')
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
                     f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
@@ -977,6 +979,16 @@ class PostgresqlServer(BaseComponent):
         manager_ip = config['manager'][PRIVATE_IP]
         pgsrv = config[POSTGRESQL_SERVER]
 
+        hba_entries = ['hostssl replication replicator 127.0.0.1/32 md5']
+        for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
+            hba_entries.append(
+                self._get_monitoring_user_hba_entry(node['ip']))
+        hba_entries.append(
+            'hostssl all all 0.0.0.0/0 md5{0}'.format(
+                ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
+            )
+        )
+
         patroni_conf = {
             'scope': 'postgres',
             'namespace': '/db/',
@@ -1003,13 +1015,7 @@ class PostgresqlServer(BaseComponent):
                     'synchronous_mode_strict': True,
                     'check_timeline': True,
                     'postgresql': {
-                        'pg_hba': [
-                            'hostssl replication replicator 127.0.0.1/32 md5',
-                            self._get_monitoring_user_hba_entry(),
-                            'hostssl all all 0.0.0.0/0 md5{0}'.format(
-                                ' clientcert=1'
-                                if pgsrv['ssl_client_verification'] else '')
-                        ],
+                        'pg_hba': hba_entries,
                         'parameters': {
                             'unix_socket_directories': '.',
                             'synchronous_commit': 'on',
