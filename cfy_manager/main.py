@@ -63,8 +63,7 @@ from .constants import (
     NEW_CERTS_TMP_DIR_PATH
 )
 from .encryption.encryption import update_encryption_key
-from .exceptions import (BootstrapError, ValidationError,
-                         ProcessExecutionError, ReplaceCertificatesError)
+from .exceptions import BootstrapError
 from .logger import (
     get_logger,
     setup_console_logger,
@@ -170,6 +169,7 @@ INPUT_PATH_MSG = (
 def generate_test_cert(**kwargs):
     """Generate keys with certificates signed by a test CA.
     Not for production use. """
+    setup_console_logger()
     sans = kwargs['sans'].split(',')
     if not os.path.exists(TEST_CA_CERT_PATH):
         print('CA cert not found, generating CA certs.')
@@ -1084,10 +1084,12 @@ def run_init():
 @argh.named('replace')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG)
 def replace_certificates(input_path=None,
-                         only_validate=False):
+                         only_validate=False,
+                         verbose=False):
     """ Replacing the certificates on the current instance """
-    setup_console_logger()
+    setup_console_logger(verbose)
     config.load_config()
     _handle_replace_certs_config_path(input_path)
     if only_validate:
@@ -1099,12 +1101,7 @@ def replace_certificates(input_path=None,
 def _replace_certificates():
     logger.info('Replacing certificates')
     for component in _get_components():
-        try:
-            component.replace_certificates()
-        except Exception as err:  # There isn't a specific exception
-            raise ReplaceCertificatesError(
-                'An error occurred while replacing certificates: '
-                '{0}'.format(err))
+        component.replace_certificates()
 
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         # restart services that might not have been restarted
@@ -1125,17 +1122,8 @@ def _handle_replace_certs_config_path(replace_certs_config_path):
 
 def _only_validate():
     logger.info('Validating new certificates')
-    certs_valid = True
     for component in _get_components():
-        try:
-            component.validate_new_certs()
-        except (ValueError, ValidationError, ProcessExecutionError) as err:
-            print(err, file=sys.stderr)  # For fabric
-            certs_valid = False
-
-    if not certs_valid:  # This way we can finish validating all components
-        raise ReplaceCertificatesError('An error happened while validating '
-                                       'new certificates')
+        component.validate_new_certs()
 
 
 def main():
