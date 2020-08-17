@@ -452,7 +452,6 @@ def _exception_handler(type_, value, traceback):
     error = type_.__name__
     if str(value):
         error = '{0}: {1}'.format(error, str(value))
-    print(error, file=sys.stderr)
     logger.error(error)
     debug_traceback = ''.join(format_exception(type_, value, traceback))
     logger.debug(debug_traceback)

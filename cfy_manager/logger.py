@@ -125,10 +125,14 @@ def setup_console_logger(verbose=False):
     )
     logger = logging.getLogger()
     log_level = logging.DEBUG if verbose else logging.INFO
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(log_level)
-    sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))
-    logger.addHandler(sh)
+    out_sh = logging.StreamHandler(sys.stdout)
+    out_sh.setLevel(log_level)
+    out_sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))
+
+    err_sh = logging.StreamHandler(sys.stderr)
+    err_sh.setLevel(logging.ERROR)
+    logger.addHandler(out_sh)
+    logger.addHandler(err_sh)
     logging_initialized = True
 
 
