@@ -379,6 +379,7 @@ class PostgresqlServer(BaseComponent):
                 # Piped to avoid password appearing in sudoers log
                 stdin=create_user_sql(credentials),
             )
+            return True
 
         def create_in_clustered_db(credentials):
             try:
@@ -386,14 +387,14 @@ class PostgresqlServer(BaseComponent):
             except Exception as ex:
                 logger.notice('Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
-                return
+                return False
             try:
                 pgpass = files.read(PATRONI_PGPASS_PATH)
             except Exception as ex:
                 logger.notice('Patroni pgpass file (%s) unreadable (will '
                               'try on the next database node). %s',
                               PATRONI_PGPASS_PATH, ex)
-                return
+                return False
             hostname = pgpass.split(':')[0]
             pgpass_file = files.write_to_tempfile(
                 '{host}:5432:postgres:postgres:{password}'.format(
@@ -415,15 +416,22 @@ class PostgresqlServer(BaseComponent):
                     stdin=create_user_sql(credentials),
                     env={'PGPASSFILE': pgpass_file}
                 )
+                return True
             finally:
                 files.remove(pgpass_file)
 
         logger.notice('Creating db_monitoring account...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            create_in_clustered_db(config[POSTGRESQL_SERVER]['db_monitoring'])
+            created = create_in_clustered_db(
+                config[POSTGRESQL_SERVER]['db_monitoring'])
         else:
-            create_in_standalone_db(config[POSTGRESQL_SERVER]['db_monitoring'])
-        logger.notice('db_monitoring account successfully created')
+            created = create_in_standalone_db(
+                config[POSTGRESQL_SERVER]['db_monitoring'])
+        if created:
+            logger.notice('db_monitoring account successfully created')
+        else:
+            logger.notice('db_monitoring account not yet created. '
+                          'An attempt will be made on the next node(s).')
 
     def _delimiter_for(self, text):
         delim = '$password$'
