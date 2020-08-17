@@ -71,7 +71,3 @@ class YumError(BootstrapError):
 class RPMNotFound(YumError):
     def __init__(self, package):
         super(RPMNotFound, self).__init__(package)
-
-
-class ReplaceCertificatesError(Exception):
-    pass
