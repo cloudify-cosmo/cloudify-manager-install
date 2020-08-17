@@ -389,7 +389,7 @@ class PostgresqlServer(BaseComponent):
                               'try on the next database node). %s', ex)
                 return False
             try:
-                pgpass = files.read(PATRONI_PGPASS_PATH)
+                pgpass = files.sudo_read(PATRONI_PGPASS_PATH)
             except Exception as ex:
                 logger.notice('Patroni pgpass file (%s) unreadable (will '
                               'try on the next database node). %s',
