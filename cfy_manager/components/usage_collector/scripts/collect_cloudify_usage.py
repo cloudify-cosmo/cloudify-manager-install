@@ -38,7 +38,7 @@ def _get_cpu_model():
         return None
 
     # Get only the model name
-    return stdout.strip().split(': ')[1]
+    return str(stdout).strip().split(': ')[1].rstrip("\\n'")
 
 
 def _collect_system_data(data):
