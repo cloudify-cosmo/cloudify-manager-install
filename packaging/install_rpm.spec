@@ -58,6 +58,8 @@ fi
 
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
+groupadd -fr rabbitmq
+usermod -aG rabbitmq cfyuser
 
 %post
 echo "
