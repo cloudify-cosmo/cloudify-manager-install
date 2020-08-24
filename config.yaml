@@ -104,16 +104,12 @@ rabbitmq:
   # If installing an all-in-one manager this section can be left blank.
   # Example:
   # cluster_members:
-  #   <hostname of rabbit node>:
-  #     node_id: <Cloudify's auto-generated id of the rabbit node>
-  #              Run `cfy_manager node get-id` on the rabbit node to retrieve it.
-  #              (only needed on the first manager installed in a cluster)
+  #   <hostname of first rabbit node>:
   #     networks:
   #       default: <address of rabbit node> (not needed if node name is resolvable via DNS)
   #       <other network name>: <address for this node on 'other network'>
   #     ...
-  #   <name of second rabbit node>:
-  #     node_id: ...
+  #   <hostname of second rabbit node>:
   #     networks:
   #       default: ...
   #     ...
@@ -267,17 +263,12 @@ postgresql_server:
     # components will be installed.
     # The nodes must be provided with IPs, e.g.
     # nodes:
-    #   <hostname of postgres node>:
-    #     ip: <ip of postgres node>
-    #     node_id: <Cloudify's auto-generated id of the postgres node>
-    #              Run `cfy_manager node get-id` on the postgres node to retrieve it.
-    #              (only needed on the first manager installed in a cluster)
-    #   postgres_2:
-    #     ip: 192.0.2.2
-    #     node_id: c5c39913-b8d5-4130-99be-c29a2c970605
-    #   postgres_3:
-    #     ip: 192.0.2.3
-    #     node_id: 9e20bb07-0521-4b04-b675-d14a6995fa6d
+    #   <hostname of first postgres node>:
+    #     ip: <ip of first postgres node>
+    #   <hostname of second postgres node>:
+    #     ip: <ip of second postgres node>
+    #   <hostname of third postgres node>:
+    #     ip: <ip of third postgres node>
     nodes: {}
 
     # During DB cluster installation, all of the following cluster config
