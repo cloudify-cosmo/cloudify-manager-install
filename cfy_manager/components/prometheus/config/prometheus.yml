@@ -66,8 +66,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ rabbitmq.monitoring.username }}
-      password: {{ rabbitmq.monitoring.password }}
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
     metrics_path: /metrics/rabbitmq
     params:
       'match[]':
@@ -84,8 +84,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ rabbitmq.monitoring.username }}
-      password: {{ rabbitmq.monitoring.password }}
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
     metrics_path: /metrics/node
     params:
       'match[]':
@@ -103,8 +103,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ postgresql_client.monitoring.username }}
-      password: {{ postgresql_client.monitoring.password }}
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
     metrics_path: /metrics/postgres
     params:
       'match[]':
@@ -121,8 +121,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ postgresql_client.monitoring.username }}
-      password: {{ postgresql_client.monitoring.password }}
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
     metrics_path: /metrics/node
     params:
       'match[]':

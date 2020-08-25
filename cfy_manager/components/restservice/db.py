@@ -34,6 +34,7 @@ from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
+    PROMETHEUS,
     RABBITMQ,
     RESTSERVICE,
     DATABASE_SERVICE
@@ -131,15 +132,15 @@ def _create_populate_db_args_dict():
     return args_dict
 
 
-def _create_rabbitmq_info():
-    monitoring_username = config[RABBITMQ].get(
-        'monitoring', {}).get('username')
-    monitoring_password = config[RABBITMQ].get(
-        'monitoring', {}).get('password')
-    if not monitoring_username or not monitoring_password:
-        monitoring_username = config[RABBITMQ].get('username')
-        monitoring_password = config[RABBITMQ].get('password')
+def _get_monitoring_credentials():
+    return {
+        'username': config[PROMETHEUS].get('credentials', {}).get('username'),
+        'password': config[PROMETHEUS].get('credentials', {}).get('password'),
+    }
 
+
+def _create_rabbitmq_info():
+    monitoring_credentials = _get_monitoring_credentials()
     return [
         {
             'name': name,
@@ -153,29 +154,23 @@ def _create_rabbitmq_info():
             'params': None,
             'networks': broker[NETWORKS],
             'is_external': broker.get('networks', {}).get('default') is None,
-            'monitoring_username': monitoring_username,
-            'monitoring_password': monitoring_password,
+            'monitoring_username': monitoring_credentials['username'],
+            'monitoring_password': monitoring_credentials['password'],
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
 
 
 def _create_db_nodes_info():
-    monitoring_username = config[POSTGRESQL_CLIENT].get(
-        'monitoring', {}).get('username')
-    monitoring_password = config[POSTGRESQL_CLIENT].get(
-        'monitoring', {}).get('password')
-    if not monitoring_username or not monitoring_password:
-        monitoring_username = config[POSTGRESQL_CLIENT].get('server_username')
-        monitoring_password = config[POSTGRESQL_CLIENT].get('server_password')
+    monitoring_credentials = _get_monitoring_credentials()
 
     if common.is_all_in_one_manager():
         return [{
             'name': config[MANAGER][HOSTNAME],
             'host': config[NETWORKS]['default'],
             'is_external': False,
-            'monitoring_username': monitoring_username,
-            'monitoring_password': monitoring_password,
+            'monitoring_username': monitoring_credentials['username'],
+            'monitoring_password': monitoring_credentials['password'],
         }]
 
     if common.manager_using_db_cluster():
@@ -185,8 +180,8 @@ def _create_db_nodes_info():
                 'name': name,
                 'host': db['ip'],
                 'is_external': False,
-                'monitoring_username': monitoring_username,
-                'monitoring_password': monitoring_password,
+                'monitoring_username': monitoring_credentials['username'],
+                'monitoring_password': monitoring_credentials['password'],
             }
             for name, db in db_nodes.items()
         ]
@@ -196,8 +191,8 @@ def _create_db_nodes_info():
         'name': config[POSTGRESQL_CLIENT]['host'],
         'host': config[POSTGRESQL_CLIENT]['host'],
         'is_external': True,
-        'monitoring_username': monitoring_username,
-        'monitoring_password': monitoring_password,
+        'monitoring_username': monitoring_credentials['username'],
+        'monitoring_password': monitoring_credentials['password'],
     }]
 
 
@@ -254,13 +249,7 @@ def populate_db(configs):
 
 def insert_manager(configs):
     logger.notice('Registering manager in the DB...')
-    monitoring_username = config['manager'].get(
-        'monitoring', {}).get('username')
-    monitoring_password = config['manager'].get(
-        'monitoring', {}).get('password')
-    if not monitoring_username or not monitoring_password:
-        monitoring_username = config['manager']['security']['admin_username']
-        monitoring_password = config['manager']['security']['admin_password']
+    monitoring_credentials = _get_monitoring_credentials()
     args = {
         'manager': {
             'public_ip': config['manager']['public_ip'],
@@ -268,8 +257,8 @@ def insert_manager(configs):
             'private_ip': config['manager']['private_ip'],
             'networks': config[NETWORKS],
             'last_seen': common.get_formatted_timestamp(),
-            'monitoring_username': monitoring_username,
-            'monitoring_password': monitoring_password,
+            'monitoring_username': monitoring_credentials['username'],
+            'monitoring_password': monitoring_credentials['password'],
         }
     }
 
