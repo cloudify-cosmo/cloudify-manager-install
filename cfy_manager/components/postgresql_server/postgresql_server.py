@@ -1698,6 +1698,10 @@ class PostgresqlServer(BaseComponent):
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
         service.remove(POSTGRES_SERVICE_NAME, append_prefix=False)
+        logger.info('Removing postgres bin links')
+        files.remove_files(
+            [os.path.join('/usr/sbin', pg_bin) for pg_bin in PG_BINS],
+            ignore_failure=True)
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')
