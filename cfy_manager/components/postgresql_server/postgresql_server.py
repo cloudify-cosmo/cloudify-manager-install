@@ -388,12 +388,26 @@ class PostgresqlServer(BaseComponent):
                 logger.notice('Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
                 return False
-            try:
-                pgpass = files.sudo_read(PATRONI_PGPASS_PATH)
-            except Exception as ex:
+            pgpass = None
+            for attempt in range(30):
+                try:
+                    pgpass = files.sudo_read(PATRONI_PGPASS_PATH)
+                    if pgpass:
+                        break
+                    else:
+                        # Don't accept an empty pgpass file, it'll break
+                        # the next steps
+                        pgpass = None
+                except Exception as err:
+                    logger.info(
+                        'Failed reading pgpass: {err}'.format(err=err))
+                    pass
+                logger.info('Waiting for pgpass to be populated...')
+                time.sleep(1)
+            if pgpass is None:
                 logger.notice('Patroni pgpass file (%s) unreadable (will '
-                              'try on the next database node). %s',
-                              PATRONI_PGPASS_PATH, ex)
+                              'try on the next database node).',
+                              PATRONI_PGPASS_PATH)
                 return False
             hostname = pgpass.split(':')[0]
             pgpass_file = files.write_to_tempfile(
