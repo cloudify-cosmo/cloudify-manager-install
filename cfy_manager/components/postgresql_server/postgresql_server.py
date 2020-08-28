@@ -766,6 +766,7 @@ class PostgresqlServer(BaseComponent):
                         members=valid_names,
                     )
                 )
+        etcd_name_suffix = etcd_name_suffix.replace('.', '_')
 
         files.deploy(
             os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
