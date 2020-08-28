@@ -60,7 +60,8 @@ from .constants import (
     INITIAL_INSTALL_FILE,
     INITIAL_CONFIGURE_FILE,
     SUPERVISORD_CONFIG_DIR,
-    NEW_CERTS_TMP_DIR_PATH
+    NEW_CERTS_TMP_DIR_PATH,
+    CLOUDIFY_HOME_DIR,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -162,6 +163,12 @@ VALIDATE_HELP_MSG = (
 INPUT_PATH_MSG = (
     "The replace-certificates yaml configuration file path."
 )
+CONFIG_FILE_HELP_MSG = (
+    'Specify a configuration file to be used. File path is relative to the '
+    '{0} (meaning only files in this location are considered valid). If '
+    'more than one file is provided, these are merged in order from left '
+    'to right.'.format(CLOUDIFY_HOME_DIR)
+)
 
 
 @argh.decorators.arg('-s', '--sans', help=TEST_CA_GENERATE_SAN_HELP_TEXT,
@@ -221,6 +228,8 @@ def _only_on_brokers():
 
 
 @argh.named('add')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -234,7 +243,7 @@ def brokers_add(**kwargs):
     join_node = kwargs['join_node']
 
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
@@ -260,6 +269,8 @@ def brokers_add(**kwargs):
 
 
 @argh.named('remove')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-r', '--remove-node', help=BROKER_REMOVE_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -273,7 +284,7 @@ def brokers_remove(**kwargs):
     """
     _validate_components_prepared('brokers_remove')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
@@ -306,6 +317,8 @@ def brokers_remove(**kwargs):
 
 
 @argh.named('list')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def brokers_list(**kwargs):
@@ -314,7 +327,7 @@ def brokers_list(**kwargs):
     """
     _validate_components_prepared('brokers_list')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
@@ -345,13 +358,15 @@ def complain_about_dead_broker_cluster(nodes):
 
 
 @argh.named('list')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     _validate_components_prepared('db_cluster_list')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     db = components.PostgresqlServer()
 
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
@@ -370,6 +385,8 @@ def db_node_list(**kwargs):
 
 
 @argh.named('add')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -379,7 +396,7 @@ def db_node_add(**kwargs):
     """Add a DB cluster node."""
     _validate_components_prepared('db_node_add')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.add_cluster_node(kwargs['address'], kwargs.get('hostname'))
@@ -388,6 +405,8 @@ def db_node_add(**kwargs):
 
 
 @argh.named('remove')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -396,7 +415,7 @@ def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     _validate_components_prepared('db_node_remove')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.remove_cluster_node(kwargs['address'])
@@ -405,6 +424,8 @@ def db_node_remove(**kwargs):
 
 
 @argh.named('reinit')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -413,7 +434,7 @@ def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
     _validate_components_prepared('db_node_reinit')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.reinit_cluster_node(kwargs['address'])
@@ -422,6 +443,8 @@ def db_node_reinit(**kwargs):
 
 
 @argh.named('set-master')
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -430,7 +453,7 @@ def db_node_set_master(**kwargs):
     """Switch the current DB master node."""
     _validate_components_prepared('db_node_set_master')
     setup_console_logger(verbose=kwargs['verbose'])
-    config.load_config()
+    config.load_config(kwargs.get('config_file'))
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.set_master(kwargs['address'])
@@ -487,10 +510,11 @@ def _prepare_execution(verbose=False,
                        admin_password=None,
                        clean_db=False,
                        config_write_required=False,
-                       only_install=False):
+                       only_install=False,
+                       config_file=None):
     setup_console_logger(verbose)
 
-    config.load_config()
+    config.load_config(config_file)
     if not only_install:
         # We don't validate anything that applies to the install anyway,
         # but we do populate things that are not relevant.
@@ -498,7 +522,7 @@ def _prepare_execution(verbose=False,
                                              admin_password, clean_db)
 
 
-def _print_finish_message():
+def _print_finish_message(config_file=None):
     if is_installed(MANAGER_SERVICE):
         manager_config = config[MANAGER]
         protocol = \
@@ -509,7 +533,7 @@ def _print_finish_message():
                 ip=manager_config[PUBLIC_IP])
         )
         # reload the config in case the admin password changed
-        config.load_config()
+        config.load_config(config_file)
         password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
         print('Admin password: {0}'.format(password))
         print('#' * 50)
@@ -656,7 +680,9 @@ def install_args(f):
         argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
         argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
-        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG)
+        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
+        argh.arg('-c', '--config-file', action='append', default=None,
+                 help=CONFIG_FILE_HELP_MSG),
     ]
     for arg in args:
         f = arg(f)
@@ -669,6 +695,7 @@ def validate_command(verbose=False,
                      private_ip=None,
                      public_ip=None,
                      admin_password=None,
+                     config_file=None,
                      clean_db=False):
     _prepare_execution(
         verbose,
@@ -676,7 +703,8 @@ def validate_command(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=False
+        config_write_required=False,
+        config_file=config_file,
     )
     components = _get_components()
     validate(components=components)
@@ -684,9 +712,15 @@ def validate_command(verbose=False,
 
 
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
-def sanity_check(verbose=False, private_ip=None):
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def sanity_check(verbose=False, private_ip=None, config_file=None):
     """Run the Cloudify Manager sanity check"""
-    _prepare_execution(verbose=verbose, private_ip=private_ip)
+    _prepare_execution(
+        verbose=verbose,
+        private_ip=private_ip,
+        config_file=config_file,
+    )
     sanity = components.Sanity()
     with sanity.sanity_check_mode():
         sanity.run_sanity_check()
@@ -736,7 +770,8 @@ def install(verbose=False,
             public_ip=None,
             admin_password=None,
             clean_db=False,
-            only_install=None):
+            only_install=None,
+            config_file=None):
     """ Install Cloudify Manager """
 
     _prepare_execution(
@@ -746,6 +781,7 @@ def install(verbose=False,
         admin_password,
         clean_db,
         config_write_required=True,
+        config_file=config_file,
         only_install=only_install,
     )
     logger.notice('Installing desired components...')
@@ -769,7 +805,7 @@ def install(verbose=False,
     logger.notice('Installation finished successfully!')
     _finish_configuration(only_install)
     if not only_install:
-        _print_finish_message()
+        _print_finish_message(config_file=config_file)
 
 
 @install_args
@@ -777,6 +813,7 @@ def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
+              config_file=None,
               clean_db=False):
     """ Configure Cloudify Manager """
 
@@ -786,7 +823,8 @@ def configure(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=True
+        config_write_required=True,
+        config_file=config_file,
     )
 
     _validate_components_prepared('configure')
@@ -809,10 +847,12 @@ def configure(verbose=False,
     _finish_configuration()
 
 
-def remove(verbose=False, force=False):
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def remove(verbose=False, force=False, config_file=None):
     """ Uninstall Cloudify Manager """
 
-    _prepare_execution(verbose)
+    _prepare_execution(verbose, config_file=config_file)
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
@@ -848,6 +888,7 @@ def start(include_components,
           private_ip=None,
           public_ip=None,
           admin_password=None,
+          config_file=None,
           clean_db=False,
           only_install=None):
     """ Start Cloudify Manager services """
@@ -857,7 +898,8 @@ def start(include_components,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=True
+        config_write_required=True,
+        config_file=config_file,
     )
     _validate_components_prepared('start')
     set_globals()
@@ -869,9 +911,11 @@ def start(include_components,
 
 
 @argh.arg('include_components', nargs='*')
-def stop(include_components, verbose=False, force=False):
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def stop(include_components, verbose=False, force=False, config_file=None):
     """ Stop Cloudify Manager services """
-    _prepare_execution(verbose)
+    _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('stop')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
@@ -885,10 +929,12 @@ def stop(include_components, verbose=False, force=False):
 
 
 @argh.arg('include_components', nargs='*')
-def restart(include_components, verbose=False, force=False):
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def restart(include_components, verbose=False, force=False, config_file=None):
     """ Restart Cloudify Manager services """
 
-    _prepare_execution(verbose)
+    _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart')
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
@@ -999,8 +1045,10 @@ class _FileFollow(object):
 
 
 @argh.decorators.named('wait-for-starter')
-def wait_for_starter(timeout=300):
-    config.load_config()
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def wait_for_starter(timeout=300, config_file=None):
+    config.load_config(config_file)
 
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
     _follow.seek_to_end()
@@ -1016,7 +1064,7 @@ def wait_for_starter(timeout=300):
     else:
         raise BootstrapError('Timed out waiting for starter')
     _follow.poll()
-    _print_finish_message()
+    _print_finish_message(config_file=config_file)
 
 
 def _guess_private_ip():
@@ -1032,18 +1080,24 @@ def _guess_private_ip():
 
 
 @argh.decorators.named('image-starter')
-def image_starter(verbose=False):
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def image_starter(verbose=False, config_file=None):
     """Guess the IPs if needed and run cfy_manager configure + start
 
     This is to be used as a "starter service" for an image: with a
     preinstalled image, set this to run on boot, and it will start
     a configured manager.
     """
-    _prepare_execution(verbose, config_write_required=False)
+    _prepare_execution(
+        verbose,
+        config_write_required=False,
+        config_file=config_file,
+    )
     if _are_components_configured():
         logger.info('Components already configured - nothing to do')
         return
-    config.load_config()
+    config.load_config(config_file)
     command = [sys.executable, '-m', 'cfy_manager.main']
     args = []
     private_ip = config[MANAGER].get(PRIVATE_IP)
@@ -1063,14 +1117,16 @@ def image_starter(verbose=False):
 
 
 @argh.decorators.named('run-init')
-def run_init():
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
+def run_init(config_file=None):
     """Run the configured init system/service management system.
 
     Based on the configuration, run either systemd or supervisord.
     This is to be used for the docker image. Full OS images should run
     systemd on their own.
     """
-    config.load_config()
+    config.load_config(config_file)
     if is_supervisord_service():
         os.execv(
             "/usr/bin/supervisord",
@@ -1084,13 +1140,16 @@ def run_init():
 @argh.named('replace')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG)
 def replace_certificates(input_path=None,
                          only_validate=False,
+                         config_file=None,
                          verbose=False):
     """ Replacing the certificates on the current instance """
     setup_console_logger(verbose)
-    config.load_config()
+    config.load_config(config_file)
     _handle_replace_certs_config_path(input_path)
     if only_validate:
         _only_validate()
