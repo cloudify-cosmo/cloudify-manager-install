@@ -123,7 +123,9 @@ class Config(CommentedMap):
 
     def load_config(self, config_files=None):
         self._load_defaults_config()
-        for config_file in config_files or [DEFAULT_CONFIG_FILE_NAME]:
+        if not config_files:
+            config_files = [DEFAULT_CONFIG_FILE_NAME]
+        for config_file in config_files:
             config_file_path = self._sanitized_config_path(config_file)
             if config_file_path:
                 logger.info('Loading configuration from %s',
