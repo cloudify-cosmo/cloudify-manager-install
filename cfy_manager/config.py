@@ -16,8 +16,9 @@
 import collections
 from contextlib import contextmanager
 from getpass import getuser
-from os.path import isfile
+from os.path import isfile, join, abspath
 import pwd
+import re
 import subprocess
 
 from ruamel.yaml import YAML
@@ -25,7 +26,13 @@ from ruamel.yaml.error import YAMLError
 from ruamel.yaml.comments import CommentedMap
 
 from .exceptions import InputError, BootstrapError
-from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH, CLOUDIFY_USER
+from .constants import (
+    CONFIG_FILE_NAME,
+    USER_CONFIG_PATH,
+    DEFAULT_CONFIG_PATH,
+    CLOUDIFY_USER,
+    CLOUDIFY_HOME_DIR,
+)
 yaml = YAML()
 
 
@@ -54,11 +61,11 @@ class Config(CommentedMap):
         default_config = self._load_yaml(DEFAULT_CONFIG_PATH)
         self.update(default_config)
 
-    def _load_user_config(self):
-        # Allow `config.yaml` not to exist - this is normal for teardown
-        if isfile(USER_CONFIG_PATH):
-            # Override any default values with values from config.yaml
-            user_config = self._load_yaml(USER_CONFIG_PATH)
+    def _load_user_config(self, config_file):
+        # Allow config_file not to exist - this is normal for teardown
+        if isfile(config_file):
+            # Override any default values with values from config_file
+            user_config = self._load_yaml(config_file)
             dict_merge(self, user_config)
 
     @contextmanager
@@ -113,9 +120,18 @@ class Config(CommentedMap):
                 )
             )
 
-    def load_config(self):
+    def load_config(self, config_files=None):
         self._load_defaults_config()
-        self._load_user_config()
+        for config_file in config_files or [CONFIG_FILE_NAME]:
+            config_file_path = self._sanitized_config_path(config_file)
+            if config_file_path:
+                self._load_user_config(config_file_path)
+
+    def _sanitized_config_path(self, file_path):
+        """Returns a file path in the CLOUDIFY_HOME_DIR or None."""
+        sanitized = abspath(join(CLOUDIFY_HOME_DIR,
+                                 re.sub(r'^(\.*/)+', '', file_path)))
+        return sanitized if sanitized.startswith(CLOUDIFY_HOME_DIR) else None
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault(self.TEMP_PATHS, [])
