@@ -26,7 +26,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from ruamel.yaml.comments import CommentedMap
 
-from .exceptions import InputError, BootstrapError
+from .exceptions import InputError, BootstrapError, ValidationError
 from .constants import (
     CONFIG_FILE_NAME,
     USER_CONFIG_PATH,
@@ -130,12 +130,9 @@ class Config(CommentedMap):
                 logger.info('Loading configuration from %s',
                             config_file_path)
                 self._load_user_config(config_file_path)
-            else:
-                logger.warning(
-                    'Configuration file path {0} is not valid. Use a file '
-                    'located in {1} directory'.format(config_file_path,
-                                                      CLOUDIFY_HOME_DIR)
-                )
+            raise ValidationError(
+                'Configuration file path %s is not valid. Use a file '
+                'located in %s directory', config_file, CLOUDIFY_HOME_DIR)
 
     def _sanitized_config_path(self, file_path):
         """Returns a file path in the CLOUDIFY_HOME_DIR or None."""
