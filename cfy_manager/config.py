@@ -27,7 +27,7 @@ from ruamel.yaml.comments import CommentedMap
 
 from .exceptions import InputError, BootstrapError, ValidationError
 from .constants import (
-    CONFIG_FILE_NAME,
+    DEFAULT_CONFIG_FILE_NAME,
     USER_CONFIG_PATH,
     DEFAULT_CONFIG_PATH,
     CLOUDIFY_USER,
@@ -123,7 +123,7 @@ class Config(CommentedMap):
 
     def load_config(self, config_files=None):
         self._load_defaults_config()
-        for config_file in config_files or [CONFIG_FILE_NAME]:
+        for config_file in config_files or [DEFAULT_CONFIG_FILE_NAME]:
             config_file_path = self._sanitized_config_path(config_file)
             if config_file_path:
                 logger.info('Loading configuration from %s',
