@@ -16,6 +16,7 @@
 import collections
 from contextlib import contextmanager
 from getpass import getuser
+import logging
 from os.path import isfile, join, abspath
 import pwd
 import re
@@ -34,6 +35,7 @@ from .constants import (
     CLOUDIFY_HOME_DIR,
 )
 yaml = YAML()
+logger = logging.getLogger('[CONFIG]')
 
 
 def dict_merge(dct, merge_dct):
@@ -125,7 +127,15 @@ class Config(CommentedMap):
         for config_file in config_files or [CONFIG_FILE_NAME]:
             config_file_path = self._sanitized_config_path(config_file)
             if config_file_path:
+                logger.info('Loading configuration from '
+                            '{0}'.format(config_file_path))
                 self._load_user_config(config_file_path)
+            else:
+                logger.warning(
+                    'Configuration file path {0} is not valid. Use a file '
+                    'located in {1} directory'.format(config_file_path,
+                                                      CLOUDIFY_HOME_DIR)
+                )
 
     def _sanitized_config_path(self, file_path):
         """Returns a file path in the CLOUDIFY_HOME_DIR or None."""
