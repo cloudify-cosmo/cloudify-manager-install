@@ -133,9 +133,8 @@ class Config(CommentedMap):
                 self._load_user_config(config_file_path)
             else:
                 raise ValidationError(
-                    'Configuration file path {0} is not valid. Use a file '
-                    'located in {1} directory'.format(config_file,
-                                                      CLOUDIFY_HOME_DIR))
+                    'Expected configuration files to be in {0}, but '
+                    'got: {1}'.format(CLOUDIFY_HOME_DIR, config_file))
 
     def _sanitized_config_path(self, file_path):
         """Returns a file path in the CLOUDIFY_HOME_DIR or None."""
