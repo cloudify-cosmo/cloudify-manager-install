@@ -136,8 +136,7 @@ class Config(CommentedMap):
 
     def _sanitized_config_path(self, file_path):
         """Returns a file path in the CLOUDIFY_HOME_DIR or None."""
-        sanitized = abspath(join(CLOUDIFY_HOME_DIR,
-                                 re.sub(r'^(\.*/)+', '', file_path)))
+        sanitized = abspath(join(CLOUDIFY_HOME_DIR, file_path))
         return sanitized if sanitized.startswith(CLOUDIFY_HOME_DIR) else None
 
     def add_temp_path_to_clean(self, new_path_to_remove):
