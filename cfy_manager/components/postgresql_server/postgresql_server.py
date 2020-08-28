@@ -24,6 +24,7 @@ from getpass import getuser
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
+import ipaddress
 import requests
 from retrying import retry
 from ruamel.yaml import YAML
@@ -274,10 +275,17 @@ class PostgresqlServer(BaseComponent):
         return temp_pgconfig_path
 
     def _get_monitoring_user_hba_entry(self, host):
-        return 'hostssl all {monitoring_user} {host}/32 md5'.format(
+        try:
+            host = ipaddress.ip_address(host)
+            suffix = '/{}'.format(host.max_prefixlen)
+        except ValueError:
+            host = host
+            suffix = ''
+        return 'hostssl all {monitoring_user} {host}{suffix} md5'.format(
             monitoring_user=config[POSTGRESQL_SERVER][
                 'db_monitoring']['username'],
             host=host,
+            suffix=suffix,
         )
 
     def _write_new_hba_file(self, lines, enable_remote_connections):
@@ -754,7 +762,7 @@ class PostgresqlServer(BaseComponent):
                     'public IP {public} or private IP {private}. '
                     'Members were: {members}.'.format(
                         public=public_ip,
-                        private_ip=private_ip,
+                        private=private_ip,
                         members=valid_names,
                     )
                 )
