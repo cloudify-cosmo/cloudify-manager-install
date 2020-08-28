@@ -24,6 +24,7 @@ from getpass import getuser
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
+import ipaddress
 import requests
 from retrying import retry
 from ruamel.yaml import YAML
@@ -40,6 +41,7 @@ from ..components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
+    PUBLIC_IP,
     SCRIPTS,
     SERVICES_TO_INSTALL,
     SSL_CLIENT_VERIFICATION,
@@ -273,10 +275,17 @@ class PostgresqlServer(BaseComponent):
         return temp_pgconfig_path
 
     def _get_monitoring_user_hba_entry(self, host):
-        return 'hostssl all {monitoring_user} {host}/32 md5'.format(
+        try:
+            host = ipaddress.ip_address(host)
+            suffix = '/{}'.format(host.max_prefixlen)
+        except ValueError:
+            host = host
+            suffix = ''
+        return 'hostssl all {monitoring_user} {host}{suffix} md5'.format(
             monitoring_user=config[POSTGRESQL_SERVER][
                 'db_monitoring']['username'],
             host=host,
+            suffix=suffix,
         )
 
     def _write_new_hba_file(self, lines, enable_remote_connections):
@@ -725,10 +734,45 @@ class PostgresqlServer(BaseComponent):
         self._create_patroni_config(PATRONI_CONFIG_PATH)
         common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
         common.chmod('640', PATRONI_CONFIG_PATH)
+
+        # The etcd name must match one of the cluster node IP/hostnames
+        valid_names = [
+            node['ip']
+            for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+        ]
+        private_ip = config[MANAGER][PRIVATE_IP]
+        public_ip = config[MANAGER][PUBLIC_IP]
+        if private_ip in valid_names or public_ip in valid_names:
+            etcd_name_suffix = (
+                private_ip if private_ip in valid_names else public_ip
+            )
+        else:
+            hostname_lookup = {
+                socket.gethostbyname(name): name
+                for name in valid_names
+            }
+            if private_ip in hostname_lookup:
+                etcd_name_suffix = hostname_lookup[private_ip]
+            elif public_ip in hostname_lookup:
+                etcd_name_suffix = hostname_lookup[public_ip]
+            else:
+                raise BootstrapError(
+                    'Could not match this node with any cluster node '
+                    'members. No members matched or could be resolved to '
+                    'public IP {public} or private IP {private}. '
+                    'Members were: {members}.'.format(
+                        public=public_ip,
+                        private=private_ip,
+                        members=valid_names,
+                    )
+                )
+        etcd_name_suffix = etcd_name_suffix.replace('.', '_')
+
         files.deploy(
             os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
             additional_render_context={
-                'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+                'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP]),
+                'etcd_name_suffix': etcd_name_suffix,
             })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
         common.chmod('440', ETCD_CONFIG_PATH)
