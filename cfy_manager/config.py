@@ -19,7 +19,6 @@ from getpass import getuser
 import logging
 from os.path import isfile, join, abspath
 import pwd
-import re
 import subprocess
 
 from ruamel.yaml import YAML
