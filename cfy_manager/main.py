@@ -170,6 +170,9 @@ CONFIG_FILE_HELP_MSG = (
     'to right.'.format(CLOUDIFY_HOME_DIR)
 )
 
+config_arg = argh.arg('-c', '--config-file', action='append', default=None,
+                      help=CONFIG_FILE_HELP_MSG)
+
 
 @argh.decorators.arg('-s', '--sans', help=TEST_CA_GENERATE_SAN_HELP_TEXT,
                      required=True)
@@ -228,8 +231,7 @@ def _only_on_brokers():
 
 
 @argh.named('add')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -269,8 +271,7 @@ def brokers_add(**kwargs):
 
 
 @argh.named('remove')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-r', '--remove-node', help=BROKER_REMOVE_NODE_HELP_MSG,
                      required=True)
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
@@ -317,8 +318,7 @@ def brokers_remove(**kwargs):
 
 
 @argh.named('list')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def brokers_list(**kwargs):
@@ -358,8 +358,7 @@ def complain_about_dead_broker_cluster(nodes):
 
 
 @argh.named('list')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 def db_node_list(**kwargs):
@@ -385,8 +384,7 @@ def db_node_list(**kwargs):
 
 
 @argh.named('add')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -405,8 +403,7 @@ def db_node_add(**kwargs):
 
 
 @argh.named('remove')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -424,8 +421,7 @@ def db_node_remove(**kwargs):
 
 
 @argh.named('reinit')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -443,8 +439,7 @@ def db_node_reinit(**kwargs):
 
 
 @argh.named('set-master')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
@@ -681,8 +676,7 @@ def install_args(f):
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
         argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
         argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
-        argh.arg('-c', '--config-file', action='append', default=None,
-                 help=CONFIG_FILE_HELP_MSG),
+        config_arg,
     ]
     for arg in args:
         f = arg(f)
@@ -712,8 +706,7 @@ def validate_command(verbose=False,
 
 
 @argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def sanity_check(verbose=False, private_ip=None, config_file=None):
     """Run the Cloudify Manager sanity check"""
     _prepare_execution(
@@ -847,8 +840,7 @@ def configure(verbose=False,
     _finish_configuration()
 
 
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def remove(verbose=False, force=False, config_file=None):
     """ Uninstall Cloudify Manager """
 
@@ -911,8 +903,7 @@ def start(include_components,
 
 
 @argh.arg('include_components', nargs='*')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def stop(include_components, verbose=False, force=False, config_file=None):
     """ Stop Cloudify Manager services """
     _prepare_execution(verbose, config_file=config_file)
@@ -929,8 +920,7 @@ def stop(include_components, verbose=False, force=False, config_file=None):
 
 
 @argh.arg('include_components', nargs='*')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def restart(include_components, verbose=False, force=False, config_file=None):
     """ Restart Cloudify Manager services """
 
@@ -1045,8 +1035,7 @@ class _FileFollow(object):
 
 
 @argh.decorators.named('wait-for-starter')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def wait_for_starter(timeout=300, config_file=None):
     config.load_config(config_file)
 
@@ -1080,8 +1069,7 @@ def _guess_private_ip():
 
 
 @argh.decorators.named('image-starter')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def image_starter(verbose=False, config_file=None):
     """Guess the IPs if needed and run cfy_manager configure + start
 
@@ -1117,8 +1105,7 @@ def image_starter(verbose=False, config_file=None):
 
 
 @argh.decorators.named('run-init')
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 def run_init(config_file=None):
     """Run the configured init system/service management system.
 
@@ -1140,8 +1127,7 @@ def run_init(config_file=None):
 @argh.named('replace')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
-@argh.arg('-c', '--config-file', action='append', default=None,
-          help=CONFIG_FILE_HELP_MSG)
+@config_arg
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG)
 def replace_certificates(input_path=None,
                          only_validate=False,
