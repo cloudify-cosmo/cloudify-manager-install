@@ -70,18 +70,18 @@ class Config(CommentedMap):
             dict_merge(self, user_config)
 
     @contextmanager
-    def _own_config_file(self):
+    def _own_config_file(self, config_file_path=USER_CONFIG_PATH):
         try:
             # Not using common module because of circular import issues
             subprocess.check_call([
-                'sudo', 'chown', getuser() + '.', USER_CONFIG_PATH
+                'sudo', 'chown', getuser() + '.', config_file_path
             ])
             yield
         finally:
             try:
                 pwd.getpwnam('cfyuser')
                 subprocess.check_call([
-                    'sudo', 'chown', CLOUDIFY_USER + '.', USER_CONFIG_PATH
+                    'sudo', 'chown', CLOUDIFY_USER + '.', config_file_path
                 ])
             except KeyError:
                 # No cfyuser, don't pass ownnership back (this is probably a
@@ -90,7 +90,7 @@ class Config(CommentedMap):
 
     def _load_yaml(self, path_to_yaml):
         try:
-            with self._own_config_file():
+            with self._own_config_file(path_to_yaml):
                 with open(path_to_yaml, 'r') as f:
                     return yaml.load(f)
         except YAMLError as e:
