@@ -88,3 +88,4 @@ Set `"postgres": {"create_db": false}"` in the config file.
 assuming the RPM was somehow delivered to the machine.
 * Detailed debug logs of the installation process are available in
 `/var/log/cloudify/manager/cfy_manager.log`
+
