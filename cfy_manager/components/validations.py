@@ -16,7 +16,6 @@
 import os
 import sys
 import platform
-import subprocess
 import netifaces
 from getpass import getuser
 from collections import namedtuple
@@ -51,7 +50,7 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, sudo
+from ..utils.common import run, sudo, ProcessExecutionError
 from cfy_manager.utils.files import is_file
 
 logger = get_logger(VALIDATIONS)
@@ -315,7 +314,7 @@ def _check_signed_by(ca_filename, cert_filename):
     ]
     try:
         sudo(ca_check_command)
-    except subprocess.CalledProcessError:
+    except ProcessExecutionError:
         raise ValidationError(
             'Provided certificate {cert} was not signed by provided '
             'CA {ca}'.format(
