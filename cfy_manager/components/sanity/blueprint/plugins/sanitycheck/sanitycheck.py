@@ -1,5 +1,6 @@
 import subprocess
 import tempfile
+import shutil
 from os.path import expanduser
 
 from cloudify.decorators import operation
@@ -23,6 +24,4 @@ def uninstall_agent(ctx, **_):
                           env={'CLOUDIFY_DAEMON_STORAGE_DIRECTORY':
                                expanduser('~cfyuser/.cfy-agent/')})
 
-    runner_delete_cmd = ['rm', '-rf',
-                         expanduser('~cfyuser/{0}'.format(ctx.instance.id))]
-    subprocess.check_call(runner_delete_cmd)
+    shutil.rmtree(expanduser('~cfyuser/{0}'.format(ctx.instance.id)))
