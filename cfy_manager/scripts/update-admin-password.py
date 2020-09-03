@@ -19,6 +19,7 @@ def _update_admin_password(new_password):
         user.password = hash_password(new_password)
         # Unlock account
         user.failed_logins_counter = 0
+        user.active = True
         user_datastore.commit()
 
 
