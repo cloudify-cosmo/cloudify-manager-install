@@ -346,12 +346,6 @@ stage:
   # If set to true, Cloudify UI will not be installed
   skip_installation: false
 
-  # Number of Cloudify Stage processes to be started
-  #   0/max  - to spread the app across all CPUs
-  #   -1     - to spread the app across all CPUs - 1
-  #   number - to spread the app across number CPUs
-  instances: 0
-
 composer:
   # If set to true, Cloudify Composer will not be installed
   skip_installation: false
