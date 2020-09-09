@@ -79,4 +79,9 @@ def generate_db_env(database, username=None, password=None):
         if pg_config[SSL_CLIENT_VERIFICATION]:
             db_env['PGSSLCERT'] = POSTGRESQL_CLIENT_CERT_PATH
             db_env['PGSSLKEY'] = POSTGRESQL_CLIENT_KEY_PATH
+    else:
+        # If we're not using SSL then we should fail if we try to talk to an
+        # ssl-enabled server, rather than leaking credentials on an untrusted
+        # connection
+        db_env['PGSSLMODE'] = 'disable'
     return db_env

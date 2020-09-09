@@ -127,9 +127,9 @@ def _apply_forced_settings():
 def set_globals(only_install=False):
     if only_install:
         return
+    _apply_forced_settings()
     _set_ip_config()
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_hostname()
     _possibly_override_rabbit_local_management()
-    _apply_forced_settings()

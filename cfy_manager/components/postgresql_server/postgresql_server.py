@@ -355,6 +355,9 @@ class PostgresqlServer(BaseComponent):
             config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
         delimiter = self._delimiter_for(postgres_password)
 
+        # As this is only run using peer authentication for non-clustered DBs,
+        # we don't need to get the DB SSL settings (it only runs on local
+        # connections)
         common.sudo(
             [
                 '-u', 'postgres',
