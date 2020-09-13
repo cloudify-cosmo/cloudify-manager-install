@@ -79,21 +79,23 @@ class Stage(BaseComponent):
             ],
         )
 
-    def _handle_ca_certificate(self):
+    @staticmethod
+    def _handle_ca_certificate():
         certificates.use_supplied_certificates(
             component_name=POSTGRESQL_CLIENT,
-            logger=self.logger,
+            logger=logger,
             ca_destination=DB_CA_PATH,
             owner=STAGE_USER,
             group=STAGE_GROUP,
             update_config=False,
         )
 
-    def _handle_cert_and_key(self):
+    @staticmethod
+    def _handle_cert_and_key():
         certificates.use_supplied_certificates(
             component_name=SSL_INPUTS,
             prefix='postgresql_client_',
-            logger=self.logger,
+            logger=logger,
             cert_destination=DB_CLIENT_CERT_PATH,
             key_destination=DB_CLIENT_KEY_PATH,
             owner=STAGE_USER,
@@ -121,8 +123,9 @@ class Stage(BaseComponent):
             service.restart(STAGE)
             service.verify_alive(STAGE)
 
-    def log_replacing_certs(self, certs_type):
-        self.logger.info(
+    @staticmethod
+    def log_replacing_certs(certs_type):
+        logger.info(
             'Replacing {0} on stage component'.format(certs_type))
 
     def _set_db_url(self):
