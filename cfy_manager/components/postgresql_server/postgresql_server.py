@@ -565,7 +565,7 @@ class PostgresqlServer(BaseComponent):
         return 'pg' + ip.replace('.', '_')
 
     def _etcd_requires_auth(self):
-        self.logger.info('Checking whether etcd requires auth.')
+        logger.info('Checking whether etcd requires auth.')
         # This allows ~15 seconds for the etcd cluster to become available
         # It shouldn't wait too long because this will always timeout before
         # a majority of the nodes are installed.
@@ -581,16 +581,16 @@ class PostgresqlServer(BaseComponent):
             # This command will only succeed if the cluster is up and auth is
             # not yet enabled
             if cluster_auth_check.returncode == 0:
-                self.logger.info('Etcd does not require auth.')
+                logger.info('Etcd does not require auth.')
                 return False
             elif cluster_auth_check.returncode == 4:
                 # This will be insufficient if etcdctl starts localising error
                 # messages
                 if 'user authentication' in cluster_auth_check.aggr_stderr:
-                    self.logger.info('Etcd requires auth.')
+                    logger.info('Etcd requires auth.')
                     return True
 
-            self.logger.debug('Etcd connection error: {err}'.format(
+            logger.debug('Etcd connection error: {err}'.format(
                 err=cluster_auth_check.aggr_stderr,
             ))
             time.sleep(wait_time)
@@ -674,7 +674,8 @@ class PostgresqlServer(BaseComponent):
     def replace_certificates(self):
         if (os.path.exists(constants.NEW_POSTGRESQL_CERT_FILE_PATH) or
                 os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH)):
-            self.log_replacing_certificates()
+            logger.info(
+                'Replacing certificates on the postgresql_server component')
             self._write_certs_to_config()
             if common.is_all_in_one_manager():
                 if config[POSTGRESQL_SERVER][SSL_ENABLED]:
@@ -719,10 +720,6 @@ class PostgresqlServer(BaseComponent):
                 new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
                 new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
             )
-
-    def log_replacing_certificates(self):
-        self.logger.info(
-            'Replacing certificates on the postgresql_server component')
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
@@ -1220,7 +1217,7 @@ class PostgresqlServer(BaseComponent):
 
             replicas = [node for node in nodes if node != master]
         elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-            backends = common.get_haproxy_servers(self.logger)
+            backends = common.get_haproxy_servers(logger)
             for backend in backends:
                 # svname will be in the form postgresql_192.0.2.48_5432
                 server_name = backend['svname'].split('_')[1]
@@ -1456,7 +1453,7 @@ class PostgresqlServer(BaseComponent):
     def _restart_manager_db_dependent_services(self):
         logger.info('Restarting DB proxy service.')
         service.restart('haproxy', append_prefix=False)
-        self.logger.info('Restarting DB-dependent services.')
+        logger.info('Restarting DB-dependent services.')
         service.restart('amqp-postgres')
         service.restart('restservice')
 
@@ -1522,7 +1519,7 @@ class PostgresqlServer(BaseComponent):
                 'add the node.'.format(address=address)
             )
 
-        self.logger.info('Updating DB proxy configuration.')
+        logger.info('Updating DB proxy configuration.')
         common.sudo(
             ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
             stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
@@ -1559,7 +1556,7 @@ class PostgresqlServer(BaseComponent):
                     'removal.'.format(addr=address)
                 )
 
-            self.logger.info(
+            logger.info(
                 'Removing etcd node {name}'.format(name=address)
             )
             self._etcd_command(
@@ -1568,7 +1565,7 @@ class PostgresqlServer(BaseComponent):
                 local_only=True,
             )
 
-            self.logger.info(
+            logger.info(
                 'Updating pg_hba to remove {address}'.format(address=address)
             )
             patroni_config = self._get_patroni_dcs_conf()
@@ -1579,9 +1576,9 @@ class PostgresqlServer(BaseComponent):
                 if exclusion_string not in entry
             ]
             self._set_patroni_dcs_conf(patroni_config)
-            self.logger.info('Node {addr} removed.'.format(addr=address))
+            logger.info('Node {addr} removed.'.format(addr=address))
         else:
-            self.logger.info('Updating DB proxy configuration.')
+            logger.info('Updating DB proxy configuration.')
             entry = HAPROXY_NODE_ENTRY.format(addr=address).replace(
                 '/', '\\/',
             )
