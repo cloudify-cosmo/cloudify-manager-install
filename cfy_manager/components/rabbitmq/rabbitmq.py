@@ -417,7 +417,7 @@ class RabbitMQ(BaseComponent):
         logger.info('Generating rabbitmq certificate...')
 
         if self._installing_manager():
-            has_ca_key = certificates.handle_ca_cert(self.logger)
+            has_ca_key = certificates.handle_ca_cert(logger)
         else:
             has_ca_key = False
             # If we're not installing the manager and user certs were not
@@ -470,19 +470,23 @@ class RabbitMQ(BaseComponent):
                           common.is_all_in_one_manager()
                           else constants.BROKER_CA_LOCATION)
         cert_config = {
+            'component_name': self.component_name,
+            'logger': logger,
             'cert_destination': constants.BROKER_CERT_LOCATION,
             'key_destination': constants.BROKER_KEY_LOCATION,
             'ca_destination': ca_destination,
             'owner': 'rabbitmq',
             'group': 'rabbitmq',
+            'key_perms': '440',
+            'cert_perms': '444',
         }
 
-        return self.use_supplied_certificates(**cert_config)
+        return certificates.use_supplied_certificates(**cert_config)
 
     def replace_certificates(self):
         if (os.path.exists(constants.NEW_BROKER_CERT_FILE_PATH) or
                 os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
-            self.logger.info(
+            logger.info(
                 'Replacing certificates on the rabbitmq component')
             self._write_certs_to_config()
             self.handle_certificates()

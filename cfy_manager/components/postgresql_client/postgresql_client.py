@@ -145,16 +145,18 @@ class PostgresqlClient(BaseComponent):
             if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
                 self._handle_cert_and_key()
 
-    def _handle_ca_certificate(self):
+    @staticmethod
+    def _handle_ca_certificate():
         certificates.use_supplied_certificates(
-            logger=self.logger,
+            logger=logger,
             ca_destination=POSTGRESQL_CA_CERT_PATH,
             component_name=POSTGRESQL_CLIENT
         )
 
-    def _handle_cert_and_key(self):
+    @staticmethod
+    def _handle_cert_and_key():
         certificates.use_supplied_certificates(
-            logger=self.logger,
+            logger=logger,
             cert_destination=POSTGRESQL_CLIENT_CERT_PATH,
             key_destination=POSTGRESQL_CLIENT_KEY_PATH,
             key_perms='400',
@@ -169,14 +171,14 @@ class PostgresqlClient(BaseComponent):
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             self.validate_new_certs()
             if replacing_ca:
-                self.logger.info(
+                logger.info(
                     'Replacing CA cert on postgresql_client component')
                 config[POSTGRESQL_CLIENT]['ca_path'] = \
                     NEW_POSTGRESQL_CA_CERT_FILE_PATH
                 self._handle_ca_certificate()
             if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
                     replacing_cert_and_key):
-                self.logger.info(
+                logger.info(
                     'Replacing cert and key on postgresql_client component')
                 config[SSL_INPUTS]['postgresql_client_cert_path'] = \
                     NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH

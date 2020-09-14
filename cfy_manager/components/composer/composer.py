@@ -73,7 +73,7 @@ class Composer(BaseComponent):
     def _handle_ca_certificate(self):
         certificates.use_supplied_certificates(
             component_name=POSTGRESQL_CLIENT,
-            logger=self.logger,
+            logger=logger,
             ca_destination=DB_CA_PATH,
             owner=COMPOSER_USER,
             group=COMPOSER_GROUP,
@@ -84,7 +84,7 @@ class Composer(BaseComponent):
         certificates.use_supplied_certificates(
             component_name=SSL_INPUTS,
             prefix='postgresql_client_',
-            logger=self.logger,
+            logger=logger,
             cert_destination=DB_CLIENT_CERT_PATH,
             key_destination=DB_CLIENT_KEY_PATH,
             owner=COMPOSER_USER,
@@ -112,7 +112,7 @@ class Composer(BaseComponent):
             self._verify_composer_alive()
 
     def log_replacing_certs(self, certs_type):
-        self.logger.info('Replacing %s on composer component', certs_type)
+        logger.info('Replacing %s on composer component', certs_type)
 
     def _update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')

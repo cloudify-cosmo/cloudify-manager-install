@@ -15,10 +15,8 @@
 
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
-from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
-from ...utils.certificates import use_supplied_certificates
 from ...utils import service
 from ...logger import get_logger
 
@@ -84,26 +82,6 @@ class BaseComponent(object):
             self.logger.debug(
                 'All prerequisites for {class_name} are met'.format(
                     class_name=self.__class__.__name__))
-
-    def use_supplied_certificates(self,
-                                  cert_destination=None,
-                                  key_destination=None,
-                                  ca_destination=None,
-                                  owner=CLOUDIFY_USER,
-                                  group=CLOUDIFY_GROUP,
-                                  key_perms='440',
-                                  cert_perms='444'):
-        return use_supplied_certificates(
-            component_name=self.component_name,
-            logger=self.logger,
-            cert_destination=cert_destination,
-            key_destination=key_destination,
-            ca_destination=ca_destination,
-            owner=owner,
-            group=group,
-            key_perms=key_perms,
-            cert_perms=cert_perms,
-        )
 
     def replace_certificates(self):
         pass

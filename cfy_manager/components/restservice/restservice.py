@@ -255,7 +255,7 @@ class RestService(BaseComponent):
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
         self._generate_passwords()
-        certificates.handle_ca_cert(self.logger)
+        certificates.handle_ca_cert(logger)
         db.prepare_db()
         db.populate_db(configs)
         db.insert_manager(configs)
@@ -299,7 +299,7 @@ class RestService(BaseComponent):
         logger.info('Manager not in DB, will join the cluster...')
         self._validate_cluster_join()
         config[CLUSTER_JOIN] = True
-        certificates.handle_ca_cert(self.logger, generate_if_missing=False)
+        certificates.handle_ca_cert(logger, generate_if_missing=False)
         return db.insert_manager(configs)
 
     def _generate_password(self, length=12):
@@ -398,7 +398,7 @@ class RestService(BaseComponent):
 
     def handle_haproxy_certificate(self):
         certificates.use_supplied_certificates(
-            logger=self.logger,
+            logger=logger,
             ca_destination='/etc/haproxy/ca.crt',
             owner='haproxy',
             group='haproxy',
@@ -467,8 +467,9 @@ class RestService(BaseComponent):
         output = db.run_script('replace_certs_on_db.py', script_input, configs)
         logger.info(output)
 
-    def _log_replacing_certs_on_db(self, cert_type):
-        self.logger.info('Replacing %s in Certificate table', cert_type)
+    @staticmethod
+    def _log_replacing_certs_on_db(cert_type):
+        logger.info('Replacing %s in Certificate table', cert_type)
 
     def _replace_ldap_cert(self):
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
@@ -481,7 +482,7 @@ class RestService(BaseComponent):
     def _replace_haproxy_cert(self):
         if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
             # The certificate was validated in the PostgresqlClient component
-            self.logger.info(
+            logger.info(
                 'Replacing haproxy cert on the restservice component')
             config[POSTGRESQL_CLIENT]['ca_path'] = \
                 constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH

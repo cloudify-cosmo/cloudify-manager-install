@@ -128,7 +128,7 @@ class Cli(BaseComponent):
         if exists(config[SSL_INPUTS]['external_ca_cert_path']):
             certificates.use_supplied_certificates(
                 SSL_INPUTS,
-                self.logger,
+                logger,
                 ca_destination=EXTERNAL_CA_CERT_PATH,
                 prefix='external_ca_',
                 just_ca_cert=True,

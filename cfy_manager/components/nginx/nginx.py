@@ -122,7 +122,7 @@ class Nginx(BaseComponent):
         logger.info('Handling internal certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
-            self.logger,
+            logger,
             prefix='internal_',
             validate_certs_src_exist=True,
             **cert_destinations
@@ -196,7 +196,7 @@ class Nginx(BaseComponent):
         self._handle_external_cert(replacing_ca=replacing_ca)
 
     def log_replacing_certificates(self, certs_type):
-        self.logger.info('Replacing %s on nginx component', certs_type)
+        logger.info('Replacing %s on nginx component', certs_type)
 
     @staticmethod
     def _write_internal_certs_to_config():
@@ -237,7 +237,7 @@ class Nginx(BaseComponent):
         logger.info('Handling external certificate...')
         deployed = certificates.use_supplied_certificates(
             SSL_INPUTS,
-            self.logger,
+            logger,
             prefix='external_',
             **cert_destinations
         )

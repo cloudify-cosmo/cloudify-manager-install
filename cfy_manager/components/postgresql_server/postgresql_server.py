@@ -651,19 +651,25 @@ class PostgresqlServer(BaseComponent):
         for cert_config in [etcd_certs_config,
                             patroni_rest_certs_config,
                             patroni_db_certs_config]:
-            self.use_supplied_certificates(**cert_config)
+            cert_config.update({'component_name': self.component_name,
+                                'logger': logger,
+                                'cert_perms': '444'})
+            certificates.use_supplied_certificates(**cert_config)
 
     def handle_all_in_one_certificates(self):
         cert_config = {
+            'component_name': self.component_name,
+            'logger': logger,
             'cert_destination': PG_SERVER_CERT_PATH,
             'key_destination': PG_SERVER_KEY_PATH,
             'ca_destination': PG_CA_CERT_PATH,
             'owner': POSTGRES_USER,
             'group': POSTGRES_GROUP,
-            'key_perms': '400'
+            'key_perms': '400',
+            'cert_perms': '444'
         }
 
-        self.use_supplied_certificates(**cert_config)
+        certificates.use_supplied_certificates(**cert_config)
 
     def replace_certificates(self):
         if (os.path.exists(constants.NEW_POSTGRESQL_CERT_FILE_PATH) or
