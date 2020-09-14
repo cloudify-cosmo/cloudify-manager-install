@@ -183,20 +183,17 @@ class Nginx(BaseComponent):
 
     def _replace_internal_certs(self):
         self._validate_internal_certs()
-        self.log_replacing_certificates('internal certificates')
+        logger.info('Replacing %s on nginx component', 'internal certificates')
         self._write_internal_certs_to_config()
         replacing_ca = exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
         self._handle_internal_cert(replacing_ca=replacing_ca)
 
     def _replace_external_certs(self):
         self._validate_external_certs()
-        self.log_replacing_certificates('external certificates')
+        logger.info('Replacing %s on nginx component', 'external certificates')
         self._write_external_certs_to_config()
         replacing_ca = exists(constants.NEW_EXTERNAL_CA_CERT_FILE_PATH)
         self._handle_external_cert(replacing_ca=replacing_ca)
-
-    def log_replacing_certificates(self, certs_type):
-        logger.info('Replacing %s on nginx component', certs_type)
 
     @staticmethod
     def _write_internal_certs_to_config():
