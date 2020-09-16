@@ -561,6 +561,8 @@ prometheus:
   # How long should status reporter wait for Prometheus response (in seconds).
   request_timeout: 4
 
+# Set this to supervisord to use supervisord. Only systemd and supervisord are supported.
+service_management: systemd
 
 flask_security: {}
 
