@@ -781,6 +781,9 @@ def install(verbose=False,
     set_globals(only_install=only_install)
     yum_install(_get_packages())
 
+    if is_supervisord_service():
+        _configure_supervisord()
+
     components = _get_components()
     validate(components=components, only_install=only_install)
     validate_dependencies(components=components)
