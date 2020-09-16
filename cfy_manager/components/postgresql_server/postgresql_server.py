@@ -1755,6 +1755,7 @@ class PostgresqlServer(BaseComponent):
                 '/etc/patroni.conf',
                 '/etc/etcd',
             ])
+        service.remove('patroni_startup_check', append_prefix=False)
         logger.notice('Removing PostgreSQL...')
         files.remove_files([
             '/var/lib/pgsql/9.5/data',
