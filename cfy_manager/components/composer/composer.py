@@ -35,8 +35,11 @@ from ...utils import (
     service
 )
 from ...utils.network import wait_for_port
-from ...constants import (NEW_POSTGRESQL_CA_CERT_FILE_PATH,
-                          NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
+from ...constants import (
+    CLOUDIFY_USER,
+    NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+)
 
 logger = get_logger(COMPOSER)
 
@@ -185,6 +188,16 @@ class Composer(BaseComponent):
         service.verify_alive(COMPOSER)
         wait_for_port(3000)
 
+    def _chown_for_syncthing(self):
+        logger.info('Applying permissions changes for syncthing')
+        common.chown(CLOUDIFY_USER, COMPOSER_GROUP, CONF_DIR)
+        for excluded_file in ['db_ca.crt', 'prod.json']:
+            excluded_file = os.path.join(
+                CONF_DIR, excluded_file,
+            )
+            if files.is_file(excluded_file):
+                common.chown(COMPOSER_USER, COMPOSER_GROUP, excluded_file)
+
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         self._update_composer_config()
@@ -198,6 +211,7 @@ class Composer(BaseComponent):
             group=COMPOSER_GROUP,
             external_configure_params=external_configure_params
         )
+        self._chown_for_syncthing()
         logger.notice('Cloudify Composer successfully configured')
 
     def remove(self):
