@@ -38,8 +38,11 @@ from ...utils import (
 )
 from ...utils.network import wait_for_port
 from ...utils.install import is_premium_installed
-from ...constants import (NEW_POSTGRESQL_CA_CERT_FILE_PATH,
-                          NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
+from ...constants import (
+    CLOUDIFY_USER,
+    NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
+)
 
 logger = get_logger(STAGE)
 
@@ -210,6 +213,17 @@ class Stage(BaseComponent):
         service.verify_alive(STAGE)
         wait_for_port(8088)
 
+    def _chown_for_syncthing(self):
+        logger.info('Applying permissions changes for syncthing')
+        config_path = os.path.join(HOME_DIR, 'conf')
+        common.chown(CLOUDIFY_USER, STAGE_GROUP, config_path)
+        for excluded_file in ['db_ca.crt', 'manager.json']:
+            excluded_file = os.path.join(
+                config_path, excluded_file,
+            )
+            if files.is_file(excluded_file):
+                common.chown(STAGE_USER, STAGE_GROUP, excluded_file)
+
     def configure(self):
         logger.notice('Configuring Stage...')
         self._set_db_url()
@@ -225,6 +239,7 @@ class Stage(BaseComponent):
             group=STAGE_GROUP,
             external_configure_params=external_configure_params
         )
+        self._chown_for_syncthing()
         logger.notice('Stage successfully configured!')
 
     def remove(self):
