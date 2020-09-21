@@ -1177,8 +1177,9 @@ def _only_validate():
 
 @argh.named('version')
 def version():
+    setup_console_logger()
     cfy_version = pkg_resources.require('cloudify-manager-install')[0].version
-    print('Cloudify {}'.format(cfy_version))
+    logger.info('Cloudify {}'.format(cfy_version))
 
 
 def main():
