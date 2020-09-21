@@ -21,6 +21,7 @@ import re
 import sys
 import time
 import subprocess
+import pkg_resources
 from traceback import format_exception
 
 import argh
@@ -1174,6 +1175,11 @@ def _only_validate():
         component.validate_new_certs()
 
 
+@argh.named('version')
+def version():
+    return pkg_resources.require('cloudify-manager-install')[0].version
+
+
 def main():
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
@@ -1197,6 +1203,7 @@ def main():
         image_starter,
         wait_for_starter,
         run_init,
+        version
     ])
 
     parser.add_commands([
