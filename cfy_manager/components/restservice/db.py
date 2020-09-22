@@ -141,13 +141,14 @@ def _get_monitoring_credentials():
 
 def _create_rabbitmq_info():
     monitoring_credentials = _get_monitoring_credentials()
+    use_hostnames = config[RABBITMQ]['use_hostnames_in_db']
     return [
         {
             'name': name,
-            'host': broker[NETWORKS]['default'],
+            'host': name if use_hostnames else broker[NETWORKS]['default'],
             'management_host': (
                 '127.0.0.1' if config[RABBITMQ]['management_only_local']
-                else broker[NETWORKS]['default']
+                else name if use_hostnames else broker[NETWORKS]['default']
             ),
             'username': config[RABBITMQ]['username'],
             'password': config[RABBITMQ]['password'],
