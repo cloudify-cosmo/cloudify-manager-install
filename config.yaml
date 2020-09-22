@@ -116,6 +116,11 @@ rabbitmq:
   # Will default to cert_path if installing a broker locally.
   ca_path: ''
 
+  # Set this to true if the cluster member hostnames should be used to refer to cluster members in the DB.
+  # If this is left false, the default network address for each member will be used.
+  # If these are the same (e.g. due to using a proxy) then the cluster status reporter will fail.
+  use_hostnames_in_db: false
+
   #####################################################
   #                                                   #
   #             RABBITMQ SERVER SETTINGS              #
