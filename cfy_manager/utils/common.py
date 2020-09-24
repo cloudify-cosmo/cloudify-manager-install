@@ -260,11 +260,11 @@ def is_installed(service):
     return service in config[SERVICES_TO_INSTALL]
 
 
-def get_installed_service_name():
-    """Returns the installed service name. Relevant only for a cluster."""
-    for service_name in DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE:
-        if is_installed(service_name):
-            return service_name
+def get_installed_services_names():
+    """Returns the installed services list."""
+    return [service_name for service_name in
+            [DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE]
+            if is_installed(service_name)]
 
 
 def is_manager_service_only_installed():

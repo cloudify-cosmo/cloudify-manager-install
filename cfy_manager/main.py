@@ -87,8 +87,7 @@ from .utils.common import (
     can_lookup_hostname,
     is_installed,
     is_dir_empty,
-    get_installed_service_name,
-    is_all_in_one_manager
+    get_installed_services_names,
 )
 from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
@@ -173,7 +172,6 @@ CONFIG_FILE_HELP_MSG = (
     'more than one file is provided, these are merged in order from left '
     'to right.'.format(CLOUDIFY_HOME_DIR)
 )
-SERVICE_NAMES = [DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE]
 
 config_arg = argh.arg('-c', '--config-file', action='append', default=None,
                       help=CONFIG_FILE_HELP_MSG)
@@ -543,23 +541,15 @@ def _print_finish_message(config_file=None):
 
 
 def _are_components_installed():
-    if is_all_in_one_manager():
-        return all(
-            os.path.isfile(os.path.join(INITIAL_INSTALL_DIR, service_name))
-            for service_name in SERVICE_NAMES)
-    else:
-        return os.path.isfile(
-            os.path.join(INITIAL_INSTALL_DIR, get_installed_service_name()))
+    return all(
+        os.path.isfile(os.path.join(INITIAL_INSTALL_DIR, service_name))
+        for service_name in get_installed_services_names())
 
 
 def _are_components_configured():
-    if is_all_in_one_manager():
-        return all(
-            os.path.isfile(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
-            for service_name in SERVICE_NAMES)
-    else:
-        return os.path.isfile(
-            os.path.join(INITIAL_CONFIGURE_DIR, get_installed_service_name()))
+    return all(
+        os.path.isfile(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
+        for service_name in get_installed_services_names())
 
 
 def is_supervisord_service():
@@ -568,17 +558,13 @@ def is_supervisord_service():
 
 def _create_initial_install_file():
     """
-    Create /etc/cloudify/.installed/service_name if the
+    Create /etc/cloudify/.installed/<service_name> if the
     service installation finished successfully for the first time
     """
     if not _are_components_installed():
         mkdir(INITIAL_INSTALL_DIR)
-        if is_all_in_one_manager():
-            for service_name in SERVICE_NAMES:
-                touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
-        else:
-            touch(os.path.join(INITIAL_INSTALL_DIR,
-                               get_installed_service_name()))
+        for service_name in get_installed_services_names():
+            touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
 
 
 def _create_initial_configure_file():
@@ -588,11 +574,8 @@ def _create_initial_configure_file():
     """
     if not _are_components_configured():
         mkdir(INITIAL_CONFIGURE_DIR)
-        if is_all_in_one_manager():
-            for service_name in SERVICE_NAMES:
-                touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
-        touch(os.path.join(INITIAL_CONFIGURE_DIR,
-                           get_installed_service_name()))
+        for service_name in get_installed_services_names():
+            touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
 
 def _finish_configuration(only_install=None):
@@ -606,17 +589,17 @@ def _finish_configuration(only_install=None):
 
 def _validate_components_prepared(cmd):
     error_message = (
-        'Could not find {touched_file}.\nThis most likely means '
+        'Could not find {touched_files}.\nThis most likely means '
         'that you need to run `cfy_manager {fix_cmd}` before '
         'running `cfy_manager {cmd}`'
     )
-    installed_service = get_installed_service_name()
+    files_list = [os.path.join(INITIAL_INSTALL_DIR, installed_service) for
+                  installed_service in get_installed_services_names()]
     if not _are_components_installed():
         raise BootstrapError(
             error_message.format(
                 fix_cmd='install',
-                touched_file=os.path.join(INITIAL_INSTALL_DIR,
-                                          installed_service),
+                touched_files=', '.join(files_list),
                 cmd=cmd
             )
         )
@@ -624,8 +607,7 @@ def _validate_components_prepared(cmd):
         raise BootstrapError(
             error_message.format(
                 fix_cmd='configure',
-                touched_file=os.path.join(INITIAL_CONFIGURE_DIR,
-                                          installed_service),
+                touched_files=', '.join(files_list),
                 cmd=cmd
             )
         )
@@ -894,13 +876,15 @@ def remove(verbose=False, force=False, config_file=None):
 
     yum_remove(_get_packages())
 
-    installed_service = get_installed_service_name()
+    installed_services = get_installed_services_names()
     if _are_components_installed():
-        _remove(os.path.join(INITIAL_INSTALL_DIR, installed_service))
+        for installed_service in installed_services:
+            _remove(os.path.join(INITIAL_INSTALL_DIR, installed_service))
         if is_dir_empty(INITIAL_INSTALL_DIR):
             _remove(INITIAL_INSTALL_DIR)
     if _are_components_configured():
-        _remove(os.path.join(INITIAL_CONFIGURE_DIR, installed_service))
+        for installed_service in installed_services:
+            _remove(os.path.join(INITIAL_CONFIGURE_DIR, installed_service))
         if is_dir_empty(INITIAL_CONFIGURE_DIR):
             _remove(INITIAL_CONFIGURE_DIR)
 
