@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from .amqp_postgres import AmqpPostgres  # NOQA
 from .cli import Cli  # NOQA
 from .composer import Composer  # NOQA
+from .haveged import Haveged  # NOQA
 from .manager import Manager  # NOQA
 from .manager_ip_setter import ManagerIpSetter  # NOQA
 from .mgmtworker import MgmtWorker  # NOQA
@@ -30,4 +31,10 @@ from .restservice import RestService  # NOQA
 from .sanity import Sanity  # NOQA
 from .stage import Stage  # NOQA
 from .usage_collector import UsageCollector  # NOQA
-from .service_names import DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE, MONITORING_SERVICE  # NOQA
+from .service_names import (  # NOQA
+    DATABASE_SERVICE,
+    ENTROPY_SERVICE,
+    MANAGER_SERVICE,
+    MONITORING_SERVICE,
+    QUEUE_SERVICE,
+)

@@ -579,10 +579,16 @@ flask_security: {}
 #   - queue_service
 #   - manager_service
 #   - monitoring_service
+#   - entropy_service
+#
+# entropy_service should not be installed on docker containers.
+# It is used to generate entropy (haveged) to avoid hanging executions.
+# It is not useful on nodes that do not have manager_service.
 services_to_install:
 - database_service
 - queue_service
 - manager_service
 - monitoring_service
+- entropy_service
 
 unconfigured_install: true
