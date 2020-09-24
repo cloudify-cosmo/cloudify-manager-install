@@ -153,6 +153,14 @@ def untar(source,
     return destination
 
 
+def is_dir_empty(dir_path):
+    if (not os.path.exists(dir_path)) or (not os.path.isdir(dir_path)):
+        return
+
+    dir_contents = sudo(['ls', dir_path]).aggr_stdout.strip()
+    return not dir_contents
+
+
 def ensure_destination_dir_exists(destination):
     destination_dir = os.path.dirname(destination)
     if not os.path.exists(destination_dir):
@@ -250,6 +258,13 @@ def is_all_in_one_manager():
 
 def is_installed(service):
     return service in config[SERVICES_TO_INSTALL]
+
+
+def get_installed_service_name():
+    """Returns the installed service name. Relevant only for a cluster."""
+    for service_name in DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE:
+        if is_installed(service_name):
+            return service_name
 
 
 def is_manager_service_only_installed():
