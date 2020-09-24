@@ -8,33 +8,19 @@ global:
 scrape_configs:
   - job_name: 'prometheus'
     metrics_path: /monitoring/metrics
-    static_configs:
-      - targets: ['127.0.0.1:{{ prometheus.port }}']
-        labels:
-          host: {{ manager.private_ip }}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/local_prometheus.yml'
 
   - job_name: 'node'
-    static_configs:
-      - targets: ['localhost:{{ prometheus.node_exporter.metrics_port }}']
-        labels:
-          host: {{ manager.private_ip }}
-{% if 'manager_service' in services_to_install %}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/local_node_exporter.yml'
+
   - job_name: 'http_200'
     metrics_path: /probe
     params:
-      module: [http_200]  # Look for a HTTP 200 respose
-    static_configs:
-      - targets:
-{%- if is_premium_installed and not composer_skip_installation %}
-          - http://127.0.0.1:3000/  # Cloudify composer
-          - http://{{ manager.private_ip }}/composer  # Cloudify composer (via proxy)
-{%- endif %}
-          - http://127.0.0.1:8088/  # Cloudify stage
-          - http://{{ manager.private_ip }}/  # Cloudify stage (via proxy)
-          - {{ manager.external_rest_protocol }}://{{ manager.public_ip }}:{{ manager.external_rest_port }}/ # Cloudify external
-          - https://{{ manager.private_ip }}:53333/ # Cloudify internal
-        labels:
-          host: {{ manager.private_ip }}
+      module: [http_200]
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -42,15 +28,14 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: 127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/http_200_manager.yml'
+
   - job_name: 'http_401'
     metrics_path: /probe
     params:
-      module: [http_401]  # Look for a HTTP 401 respose
-    static_configs:
-      - targets:
-          - http://127.0.0.1:8100/api/v3.1/status  # Cloudify rest service
-        labels:
-          host: {{ manager.private_ip }}
+      module: [http_401]
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -58,7 +43,15 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
-{% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/http_401_manager.yml'
+
+  - job_name: 'rabbitmq'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/local_rabbit.yml'
+
   - job_name: 'federate_rabbitmq'
     scrape_interval: 15s
     honor_labels: true
@@ -72,11 +65,10 @@ scrape_configs:
     params:
       'match[]':
         - '{job="rabbitmq"}'
-    static_configs:
-      - targets:
-{% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default != manager.private_ip %}
-        - {{ rabbitmq.networks.default }}:{{ constants.monitoring_port }}
-{% endif %}{% endfor %}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_rabbits.yml'
+
   - job_name: 'federate_rabbitmq_node'
     scrape_interval: 15s
     honor_labels: true
@@ -90,12 +82,15 @@ scrape_configs:
     params:
       'match[]':
         - '{job="node"}'
-    static_configs:
-      - targets:
-{% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default != manager.private_ip %}
-        - {{ rabbitmq.networks.default }}:{{ constants.monitoring_port }}
-{% endif %}{% endfor %}
-{% endif %}{% if postgresql_server.cluster.nodes|length > 0 %}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_rabbits.yml'
+
+  - job_name: 'postgresql'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/local_postgres.yml'
+
   - job_name: 'federate_postgresql'
     scrape_interval: 15s
     honor_labels: true
@@ -109,11 +104,10 @@ scrape_configs:
     params:
       'match[]':
         - '{job="postgresql"}'
-    static_configs:
-      - targets:
-{% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip != manager.private_ip %}
-        - {{ postgres.ip }}:{{ constants.monitoring_port }}
-{% endif %}{% endfor %}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_postgres.yml'
+
   - job_name: 'federate_postgresql_node'
     scrape_interval: 15s
     honor_labels: true
@@ -127,33 +121,6 @@ scrape_configs:
     params:
       'match[]':
         - '{job="node"}'
-    static_configs:
-      - targets:
-{% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip != manager.private_ip %}
-        - {{ postgres.ip }}:{{ constants.monitoring_port }}
-{% endif %}{% endfor %}
-{% endif %}{% endif %}{% if 'queue_service' in services_to_install or add_rabbitmq %}
-  - job_name: 'rabbitmq'
-    static_configs:
-      - targets: ['localhost:{{ prometheus.rabbitmq_prometheus.metrics_port }}']
-        labels:
-          host: {{ manager.private_ip }}
-{% elif 'manager_service' in services_to_install %}{% if rabbitmq.cluster_members|length > 0 and rabbitmq.cluster_members[rabbitmq.cluster_members|first].address != 'ALL_IN_ONE' %}{% for host, rabbitmq in rabbitmq.cluster_members.items() %}{% if rabbitmq.networks.default == manager.private_ip %}
-  - job_name: 'rabbitmq'
-    static_configs:
-      - targets: ['localhost:{{ prometheus.rabbitmq_prometheus.metrics_port }}']
-        labels:
-          host: {{ manager.private_ip }}
-{% endif %}{% endfor %}{% endif %}{% endif %}{% if 'database_service' in services_to_install or add_postgresql %}
-  - job_name: 'postgresql'
-    static_configs:
-      - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']
-        labels:
-          host: {{ manager.private_ip }}
-{% elif 'manager_service' in services_to_install %}{% if postgresql_server.cluster.nodes|length > 0 %}{% for host, postgres in postgresql_server.cluster.nodes.items() %}{% if postgres.ip == manager.private_ip %}
-  - job_name: 'postgresql'
-    static_configs:
-      - targets: ['localhost:{{ prometheus.postgres_exporter.metrics_port }}']
-        labels:
-          host: {{ manager.private_ip }}
-{% endif %}{% endfor %}{% endif %}{% endif %}
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_postgres.yml'

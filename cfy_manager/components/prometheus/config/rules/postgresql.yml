@@ -1,7 +1,0 @@
-{% if postgresql_server.cluster.nodes|length > 0 %}
-groups:
-  - name: postgresql
-    rules:
-      - record: job:postgresql_in_cluster:sum
-        expr: sum by (job) (up{job="federate_postgresql"} and pg_up{job="federate_postgresql"})
-{% endif %}

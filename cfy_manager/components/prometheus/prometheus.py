@@ -15,7 +15,7 @@
 
 import json
 from os import sep
-from os.path import isfile, join, exists
+from os.path import join, exists
 import subprocess
 
 from ..base_component import BaseComponent
@@ -25,6 +25,7 @@ from ..components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     HOSTNAME,
     PRIVATE_IP,
+    PUBLIC_IP,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
 )
@@ -38,7 +39,6 @@ from ..service_names import (
     POSTGRESQL_SERVER,
     RABBITMQ,
     NGINX,
-
     DATABASE_SERVICE,
     MANAGER_SERVICE,
     MONITORING_SERVICE,
@@ -63,6 +63,7 @@ SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
 SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
+PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
 CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
 
@@ -169,21 +170,25 @@ class Prometheus(BaseComponent):
                 constants.NEW_INTERNAL_CA_CERT_FILE_PATH
 
     def remove(self):
-        logger.notice('Removing Prometheus and exporters...')
-        remove_files_list = [PROMETHEUS_DATA_DIR, PROMETHEUS_CONFIG_DIR]
-        for dir_name in (
-                'rules', 'rules.d', 'files_sd', 'exporters', 'alerts',):
-            remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, dir_name))
-        for file_name in ('prometheus.yml',):
-            remove_files_list.append(join(PROMETHEUS_CONFIG_DIR, file_name))
-        files.remove_files(remove_files_list, ignore_failure=True)
-        for exporter in _prometheus_exporters():
-            service.remove(exporter['name'], append_prefix=False)
-        service.remove(PROMETHEUS, append_prefix=False)
-        logger.notice('Successfully removed Prometheus and exporters files')
+        logger.info('Updating prometheus configuration for removal...')
+        _update_prometheus_configuration(uninstalling=True)
+
+        if _prometheus_targets_exist():
+            logger.info(
+                'Prometheus targets still exist, not removing prometheus.')
+            logger.info('To remove prometheus, remove remaining components.')
+        else:
+            logger.notice('Removing Prometheus and exporters...')
+            remove_files_list = [PROMETHEUS_DATA_DIR, PROMETHEUS_CONFIG_DIR]
+            files.remove_files(remove_files_list)
+            for exporter in _prometheus_exporters():
+                service.remove(exporter['name'], append_prefix=False)
+            service.remove(PROMETHEUS, append_prefix=False)
+            logger.notice(
+                'Successfully removed Prometheus and exporters files')
 
     def start(self):
-        if isfile(CLUSTER_DETAILS_PATH):
+        if files.is_file(CLUSTER_DETAILS_PATH):
             logger.notice(
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
@@ -310,7 +315,6 @@ def _create_prometheus_directories():
     for dir_name in ('rules', 'exporters',):
         dest_dir_name = join(PROMETHEUS_CONFIG_DIR, dir_name)
         common.mkdir(dest_dir_name)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_dir_name)
 
 
 def _chown_resources_dir():
@@ -322,13 +326,12 @@ def _chown_resources_dir():
     for exporter in _prometheus_exporters():
         common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP,
                      join(BIN_DIR, exporter['name']))
-    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_DATA_DIR)
 
 
 def _deploy_configuration():
     _update_config()
-    _deploy_prometheus_configuration()
+    _update_prometheus_configuration()
     _deploy_exporters_configuration()
 
 
@@ -393,36 +396,182 @@ def _update_config():
         config[PROMETHEUS][BLACKBOX_EXPORTER].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
-    if isfile(CLUSTER_DETAILS_PATH):
+    if files.is_file(CLUSTER_DETAILS_PATH):
         update_cluster_details(CLUSTER_DETAILS_PATH)
         files.remove(CLUSTER_DETAILS_PATH, ignore_failure=True)
 
 
-def _deploy_prometheus_configuration():
-    logger.notice('Deploying Prometheus configuration...')
-    files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
-                 PROMETHEUS_CONFIG_PATH,
-                 additional_render_context={
-                     'is_premium_installed':
-                         is_premium_installed(),
-                     'composer_skip_installation':
-                         config[COMPOSER]['skip_installation'],
-                 })
-    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_PATH)
-    if MANAGER_SERVICE not in config.get(SERVICES_TO_INSTALL, []):
+def _update_prometheus_configuration(uninstalling=False):
+    logger.notice('Updating Prometheus configuration...')
+
+    if not uninstalling:
+        files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
+                     PROMETHEUS_CONFIG_PATH)
+        common.sudo(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
+
+    private_ip = config[MANAGER][PRIVATE_IP]
+
+    _update_base_targets(private_ip, uninstalling)
+
+    if common.is_installed(MANAGER_SERVICE):
+        _update_manager_targets(private_ip, uninstalling)
+
+    if common.is_installed(DATABASE_SERVICE):
+        _update_local_postgres_targets(private_ip, uninstalling)
+
+    if common.is_installed(QUEUE_SERVICE):
+        _update_local_rabbit_targets(private_ip, uninstalling)
+
+    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
+
+
+def _prometheus_targets_exist():
+    logger.info('Checking whether any prometheus targets still exist.')
+    for conf in [
+        'http_200_manager.yml',
+        'http_401_manager.yml',
+        'local_postgres.yml',
+        'local_rabbit.yml',
+        'other_rabbits.yml',
+        'other_postgres.yml',
+    ]:
+        conf_path = join(PROMETHEUS_TARGETS_DIR, conf)
+        logger.debug('Checking %s', conf_path)
+        config = files.read_yaml_file(conf_path)
+        if config and config[0].get('targets'):
+            logger.info('Found remaining prometheus targets.')
+            return True
+    logger.info('No prometheus targets remain.')
+    return False
+
+
+def _update_local_rabbit_targets(private_ip, uninstalling):
+    if uninstalling:
+        logger.info(
+            'Uninstall: prometheus local rabbit targets will be cleared.')
+        local_rabbit_targets = []
+        local_rabbit_labels = {}
+    else:
+        logger.info('Generating prometheus local rabbit targets.')
+        local_rabbit_targets = ['localhost:15692']
+        local_rabbit_labels = {'host': private_ip}
+    logger.info('Updating prometheus local rabbit target configs')
+    _deploy_targets('local_rabbit.yml',
+                    local_rabbit_targets, local_rabbit_labels)
+
+
+def _update_local_postgres_targets(private_ip, uninstalling):
+    if uninstalling:
+        logger.info(
+            'Uninstall: prometheus local postgres targets will be cleared.')
+        local_postgres_targets = []
+        local_postgres_labels = {}
+    else:
+        logger.info('Generating prometheus local postgres targets.')
+        local_postgres_targets = ['localhost:9187']
+        local_postgres_labels = {'host': private_ip}
+    logger.info('Updating prometheus local postgres target configs')
+    _deploy_targets('local_postgres.yml',
+                    local_postgres_targets, local_postgres_labels)
+
+
+def _update_manager_targets(private_ip, uninstalling):
+    http_200_targets = []
+    http_200_labels = {}
+    http_401_targets = []
+    http_401_labels = {}
+    rabbit_targets = []
+    rabbit_labels = {}
+    postgres_targets = []
+    postgres_labels = {}
+    if uninstalling:
+        logger.info('Uninstall: prometheus manager targets will be cleared.')
+    else:
+        logger.info('Generating prometheus manager targets.')
+        http_200_labels['host'] = private_ip
+        composer_installed = (
+            is_premium_installed()
+            and not config[COMPOSER]['skip_installation']
+        )
+        if composer_installed:
+            # Monitor composer directly and via nginx
+            http_200_targets.append('http://127.0.0.1:3000/')
+            http_200_targets.append('http://{}/composer'.format(private_ip))
+        # Monitor stage directly and via nginx
+        http_200_targets.append('http://127.0.0.1:8088')
+        http_200_targets.append(
+            '{proto}://{public_ip}:{port}/'.format(
+                proto=config[MANAGER]['external_rest_protocol'],
+                public_ip=config[MANAGER][PUBLIC_IP],
+                port=config[MANAGER]['external_rest_port'],
+            )
+        )
+        # Monitor cloudify's internal port
+        http_200_targets.append('https://{}:53333/'.format(private_ip))
+
+        # Monitor cloudify restservice
+        http_401_targets.append('http://127.0.0.1:8100/api/v3.1/status')
+        http_401_labels['host'] = private_ip
+
+        # Monitor remote rabbit nodes
+        use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
+        for host, rabbit in config[RABBITMQ]['cluster_members'].items():
+            target = (
+                host if use_rabbit_host else rabbit['networks']['default']
+            )
+            if target != private_ip:
+                rabbit_targets.append(
+                    target + ':' + str(config[CONSTANTS]['monitoring_port']))
+
+        # Monitor remote postgres nodes
+        for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
+            if node['ip'] != private_ip:
+                postgres_targets.append(private_ip)
+
+    logger.info('Updating prometheus manager target configs')
+    _deploy_targets('http_200_manager.yml',
+                    http_200_targets, http_200_labels)
+    _deploy_targets('http_401_manager.yml',
+                    http_401_targets, http_401_labels)
+    _deploy_targets('other_rabbits.yml',
+                    rabbit_targets, rabbit_labels)
+    _deploy_targets('other_postgres.yml',
+                    postgres_targets, postgres_labels)
+
+
+def _update_base_targets(private_ip, uninstalling):
+    if uninstalling:
+        logger.info('Uninstall: Doing nothing with base prometheus targets.')
         return
-    # deploy rules configuration files
-    for file_name in ['postgresql.yml', 'rabbitmq.yml', ]:
-        dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'rules', file_name)
-        files.deploy(join(CONFIG_DIR, 'rules', file_name),
-                     dest_file_name)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
-    # deploy alerts configuration files
-    for file_name in ['postgresql.yml', 'rabbitmq.yml', 'manager.yml', ]:
-        dest_file_name = join(PROMETHEUS_CONFIG_DIR, 'alerts', file_name)
-        files.deploy(join(CONFIG_DIR, 'alerts', file_name),
-                     dest_file_name)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
+
+    logger.info('Updating prometheus base monitoring targets.')
+    prometheus_targets = ['127.0.0.1:{}'.format(config[PROMETHEUS]['port'])]
+    prometheus_labels = {'host': private_ip}
+    _deploy_targets('local_prometheus.yml',
+                    prometheus_targets, prometheus_labels)
+    node_exporter_targets = [
+        'localhost:{}'.format(
+            config[PROMETHEUS]['node_exporter']['metrics_port']
+        )
+    ]
+    node_exporter_labels = {'host': private_ip}
+    _deploy_targets('local_node_exporter.yml',
+                    node_exporter_targets, node_exporter_labels)
+
+
+def _deploy_targets(destination, targets, labels):
+    """Deploy a target file for prometheus.
+    :param destination: Target file name in targets dir.
+    :param targets: List of targets for prometheus.
+    :param labels: Dict of labels with values for prometheus."""
+    files.deploy(
+        join(CONFIG_DIR, 'targets.yml'),
+        join(PROMETHEUS_TARGETS_DIR, destination),
+        additional_render_context={
+            'target_addresses': json.dumps(targets),
+            'target_labels': json.dumps(labels),
+        },
+    )
 
 
 def _deploy_exporters_configuration():
