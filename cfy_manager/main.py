@@ -58,11 +58,11 @@ from .components.validations import validate, validate_dependencies
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
-    INITIAL_INSTALL_FILE,
-    INITIAL_CONFIGURE_FILE,
     SUPERVISORD_CONFIG_DIR,
     NEW_CERTS_TMP_DIR_PATH,
     CLOUDIFY_HOME_DIR,
+    INITIAL_INSTALL_DIR,
+    INITIAL_CONFIGURE_DIR
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -85,7 +85,9 @@ from .utils.common import (
     mkdir,
     copy,
     can_lookup_hostname,
-    is_installed
+    is_installed,
+    is_dir_empty,
+    get_installed_services_names,
 )
 from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
@@ -539,11 +541,15 @@ def _print_finish_message(config_file=None):
 
 
 def _are_components_installed():
-    return os.path.isfile(INITIAL_INSTALL_FILE)
+    return all(
+        os.path.isfile(os.path.join(INITIAL_INSTALL_DIR, service_name))
+        for service_name in get_installed_services_names())
 
 
 def _are_components_configured():
-    return os.path.isfile(INITIAL_CONFIGURE_FILE)
+    return all(
+        os.path.isfile(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
+        for service_name in get_installed_services_names())
 
 
 def is_supervisord_service():
@@ -552,42 +558,48 @@ def is_supervisord_service():
 
 def _create_initial_install_file():
     """
-    Create /etc/cloudify/.installed if install finished successfully
-    for the first time
+    Create /etc/cloudify/.installed/<service_name> if the
+    service installation finished successfully for the first time
     """
     if not _are_components_installed():
-        touch(INITIAL_INSTALL_FILE)
+        mkdir(INITIAL_INSTALL_DIR)
+        for service_name in get_installed_services_names():
+            touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
 
 
 def _create_initial_configure_file():
     """
-    Create /etc/cloudify/.configured if configure finished successfully
-    for the first time
+    Create /etc/cloudify/.configured/service_name if the configuration
+    finished successfully for the first time
     """
     if not _are_components_configured():
-        touch(INITIAL_CONFIGURE_FILE)
+        mkdir(INITIAL_CONFIGURE_DIR)
+        for service_name in get_installed_services_names():
+            touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
 
 def _finish_configuration(only_install=None):
+    config.dump_config()
     remove_temp_files()
     _create_initial_install_file()
     if not only_install:
         _create_initial_configure_file()
     _print_time()
-    config.dump_config()
 
 
 def _validate_components_prepared(cmd):
     error_message = (
-        'Could not find {touched_file}.\nThis most likely means '
+        'Could not find {touched_files}.\nThis most likely means '
         'that you need to run `cfy_manager {fix_cmd}` before '
         'running `cfy_manager {cmd}`'
     )
+    files_list = [os.path.join(INITIAL_INSTALL_DIR, installed_service) for
+                  installed_service in get_installed_services_names()]
     if not _are_components_installed():
         raise BootstrapError(
             error_message.format(
                 fix_cmd='install',
-                touched_file=INITIAL_INSTALL_FILE,
+                touched_files=', '.join(files_list),
                 cmd=cmd
             )
         )
@@ -595,7 +607,7 @@ def _validate_components_prepared(cmd):
         raise BootstrapError(
             error_message.format(
                 fix_cmd='configure',
-                touched_file=INITIAL_INSTALL_FILE,
+                touched_files=', '.join(files_list),
                 cmd=cmd
             )
         )
@@ -864,11 +876,17 @@ def remove(verbose=False, force=False, config_file=None):
 
     yum_remove(_get_packages())
 
+    installed_services = get_installed_services_names()
     if _are_components_installed():
-        _remove(INITIAL_INSTALL_FILE)
-
+        for installed_service in installed_services:
+            _remove(os.path.join(INITIAL_INSTALL_DIR, installed_service))
+        if is_dir_empty(INITIAL_INSTALL_DIR):
+            _remove(INITIAL_INSTALL_DIR)
     if _are_components_configured():
-        _remove(INITIAL_CONFIGURE_FILE)
+        for installed_service in installed_services:
+            _remove(os.path.join(INITIAL_CONFIGURE_DIR, installed_service))
+        if is_dir_empty(INITIAL_CONFIGURE_DIR):
+            _remove(INITIAL_CONFIGURE_DIR)
 
     if is_supervisord_service():
         _remove(SUPERVISORD_CONFIG_DIR)
