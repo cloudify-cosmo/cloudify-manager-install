@@ -32,7 +32,8 @@ from .components import (
     QUEUE_SERVICE,
     DATABASE_SERVICE,
     MONITORING_SERVICE,
-    sources
+    ENTROPY_SERVICE,
+    sources,
 )
 from .components.components_constants import (
     CLEAN_DB,
@@ -659,6 +660,9 @@ def _get_components(include_components=None):
         if not is_installed(MANAGER_SERVICE):
             _components += [components.Nginx()]
 
+    if is_installed(ENTROPY_SERVICE):
+        _components += [components.Haveged()]
+
     if include_components:
         _components = _filter_components(_components, include_components)
     return _components
@@ -757,6 +761,9 @@ def _get_packages():
         packages += sources.prometheus
         # Premium components
         packages += sources.prometheus_cluster
+
+    if is_installed(ENTROPY_SERVICE):
+        packages += sources.haveged
 
     return packages
 

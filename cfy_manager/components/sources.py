@@ -35,3 +35,6 @@ prometheus = [
 prometheus_cluster = [
     'nginx',
 ]
+haveged = [
+    'haveged',
+]
