@@ -47,4 +47,5 @@ COMPONENTS_DEPENDENCIES = {
     'UsageCollector': [],
     'Patch': [],
     'Prometheus': [],
+    'Haveged': [],
 }
