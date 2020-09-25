@@ -19,10 +19,9 @@ import uuid
 import pkg_resources
 from contextlib import contextmanager
 
-from ..components_constants import CLUSTER_JOIN
+from ..restservice.db import get_manager_count
 from ..base_component import BaseComponent
 from ..service_names import SANITY
-from ...config import config
 from ...logger import get_logger
 from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common
@@ -84,8 +83,8 @@ class Sanity(BaseComponent):
         logger.notice('Sanity completed successfully')
 
     def start(self):
-        if config.get(CLUSTER_JOIN):
-            logger.notice('Not running the sanity check: joined a cluster')
+        if get_manager_count() > 1:
+            logger.notice('Not running the sanity check: part of a cluster')
             return
         with self.sanity_check_mode():
             self.run_sanity_check()

@@ -325,6 +325,16 @@ def manager_is_in_db():
     return int(result) == 1
 
 
+def get_manager_count():
+    result = utils_db.run_psql_command(
+        command=[
+            '-c', "SELECT COUNT(*) FROM managers",
+        ],
+        db_key='cloudify_db_name',
+    )
+    return int(result)
+
+
 def validate_schema_version(configs):
     """Check that the database schema version is the same as the current
     manager's migrations version.
