@@ -196,7 +196,10 @@ def read_yaml_file(yaml_path):
     return None
 
 
-def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
+def update_yaml_file(yaml_path,
+                     updated_content,
+                     user_owner=None,
+                     group_owner=None):
     if not isinstance(updated_content, dict):
         raise ValueError('Expected input of type dict, got {0} '
                          'instead'.format(type(updated_content)))
@@ -207,9 +210,8 @@ def update_yaml_file(yaml_path, user_owner, group_owner, updated_content):
     yaml.default_flow_style = False
     yaml.dump(yaml_content, stream)
     write_to_file(stream.getvalue(), yaml_path)
-    chown(user_owner,
-          group_owner,
-          yaml_path)
+    if user_owner and group_owner:
+        chown(user_owner, group_owner, yaml_path)
 
 
 def is_file(file_path):
