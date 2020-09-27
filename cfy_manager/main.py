@@ -65,7 +65,7 @@ from .constants import (
     INITIAL_INSTALL_DIR,
     INITIAL_CONFIGURE_DIR,
     INSTALLED_COPONENTS,
-    CONFIGURED_COPONENTS
+    INSTALLED_PACKAGES
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -89,7 +89,6 @@ from .utils.common import (
     copy,
     can_lookup_hostname,
     is_installed,
-    is_dir_empty,
     is_all_in_one_manager,
     get_installed_services_names,
 )
@@ -566,6 +565,8 @@ def _create_initial_install_file(installed_components_list):
         1. create the file /etc/cloudify/.installed/<service_name>.
         2. Update the file /etc/cloudify/.installed/components.yaml with the
            dictionary {<service_name>: components_installed}.
+        3. Update the file /etc/cloudify/.installed/packages.yaml with the
+           dictionary {<service_name>: packages}.
     """
     if not _are_components_installed():
         mkdir(INITIAL_INSTALL_DIR)
@@ -573,21 +574,19 @@ def _create_initial_install_file(installed_components_list):
             touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
             update_yaml_file(INSTALLED_COPONENTS,
                              {service_name: installed_components_list})
+            update_yaml_file(INSTALLED_PACKAGES,
+                             {service_name: _get_packages()})
 
 
-def _create_initial_configure_file(configured_components_list):
+def _create_initial_configure_file():
     """
     If the configuration finished successfully for the first time:
         1. create the file /etc/cloudify/.configured/<service_name>.
-        2. Update the file /etc/cloudify/.configured/components.yaml with the
-           dictionary {<service_name>: components_configured}.
     """
     if not _are_components_configured():
         mkdir(INITIAL_CONFIGURE_DIR)
         for service_name in get_installed_services_names():
             touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
-            update_yaml_file(CONFIGURED_COPONENTS,
-                             {service_name: configured_components_list})
 
 
 def _finish_configuration(installed_components_list, only_install=None):
@@ -597,7 +596,7 @@ def _finish_configuration(installed_components_list, only_install=None):
                                   for component in installed_components_list]
     _create_initial_install_file(installed_components_names)
     if not only_install:
-        _create_initial_configure_file(installed_components_names)
+        _create_initial_configure_file()
     _print_time()
 
 
@@ -876,32 +875,41 @@ def configure(verbose=False,
     _finish_configuration(components)
 
 
+def _all_services_removed(dir_path):
+    return all(
+        not os.path.exists(os.path.join(dir_path, service_name))
+        for service_name in [DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE])
+
+
 def _remove_services_from_initial_files(dir_path):
     for installed_service in get_installed_services_names():
         _remove(os.path.join(dir_path, installed_service))
-        update_yaml_file(os.path.join(dir_path, 'components.yaml'),
-                         {installed_service: []})
-    if is_dir_empty(dir_path):
+        if dir_path == INITIAL_INSTALL_DIR:
+            update_yaml_file(INSTALLED_COPONENTS, {installed_service: []})
+            update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
+    if _all_services_removed(dir_path):
         _remove(dir_path)
 
 
-def _get_components_to_remove():
+def _get_items_to_remove(items_file):
     """
-    This function returns a set of the components that can be removed
-    without affecting the remaining services. I.e it returns a set of
-    coponents that are relevant only for the removed service.
+    :param items_file: Can be either INSTALLED_COMPONENTS
+                       or INSTALLED_PACKAGES.
+    :return: A list of items (components or packages) that can be removed
+             without affecting the remaining services.
+
+    We use lists instead of sets to keep items' order.
     """
     removed_services = get_installed_services_names()
-    components_dict = read_yaml_file(INSTALLED_COPONENTS)
-    potential_components_to_remove = {
-        component for service_name in removed_services
-        for component in components_dict[service_name]}
+    items_dict = read_yaml_file(items_file)
+    potential_items_to_remove = [item for service_name in removed_services
+                                 for item in items_dict[service_name]]
     remaining_services = ({DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE}
                           - set(removed_services))
-    remaining_components = {
-        component for service_name in remaining_services
-        for component in components_dict[service_name]}
-    return potential_components_to_remove - remaining_components
+    remaining_items = [item for service_name in remaining_services
+                       for item in items_dict[service_name]]
+    return [item for item in potential_items_to_remove
+            if item not in remaining_items]
 
 
 @config_arg
@@ -921,13 +929,16 @@ def remove(verbose=False, force=False, config_file=None):
 
     should_stop = _are_components_configured()
     components_to_remove = _get_components(
-        include_components=_get_components_to_remove())
+        include_components=_get_items_to_remove(INSTALLED_COPONENTS))
+    logger.debug('Removing following components: %s',
+                 [component.__class__.__name__ for component
+                  in reversed(components_to_remove)])
     for component in reversed(components_to_remove):
         if should_stop:
             component.stop()
         component.remove()
 
-    yum_remove(_get_packages())
+    yum_remove(_get_items_to_remove(INSTALLED_PACKAGES))
 
     if _are_components_installed():
         _remove_services_from_initial_files(INITIAL_INSTALL_DIR)
@@ -937,7 +948,8 @@ def remove(verbose=False, force=False, config_file=None):
     if is_supervisord_service():
         _remove(SUPERVISORD_CONFIG_DIR)
 
-    logger.notice('Cloudify Manager successfully removed!')
+    logger.notice('Cloudify %s successfully removed!', (
+        'Manager' if is_all_in_one_manager() else ', '.join(removed_services)))
     _print_time()
 
 

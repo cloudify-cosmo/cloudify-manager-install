@@ -153,14 +153,6 @@ def untar(source,
     return destination
 
 
-def is_dir_empty(dir_path):
-    if (not os.path.exists(dir_path)) or (not os.path.isdir(dir_path)):
-        return
-
-    dir_contents = sudo(['ls', dir_path]).aggr_stdout.strip()
-    return not dir_contents
-
-
 def ensure_destination_dir_exists(destination):
     destination_dir = os.path.dirname(destination)
     if not os.path.exists(destination_dir):
