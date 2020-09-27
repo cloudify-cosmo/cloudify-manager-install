@@ -245,11 +245,10 @@ def brokers_add(**kwargs):
     the manager cluster has any running executions.
     Use the cfy command afterwards to register it with the manager cluster.
     """
-    _validate_components_prepared('brokers_add')
-    join_node = kwargs['join_node']
-
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('brokers_add')
+    join_node = kwargs['join_node']
     rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
@@ -287,9 +286,9 @@ def brokers_remove(**kwargs):
     destroyed.
     Use the cfy command afterwards to unregister it from the manager cluster.
     """
-    _validate_components_prepared('brokers_remove')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('brokers_remove')
     rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
@@ -329,9 +328,9 @@ def brokers_list(**kwargs):
     """List brokers in the broker cluster.
     Use the cfy command to list brokers registered with the manager cluster.
     """
-    _validate_components_prepared('brokers_list')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('brokers_list')
     rabbitmq = components.RabbitMQ()
     _only_on_brokers()
 
@@ -367,9 +366,9 @@ def complain_about_dead_broker_cluster(nodes):
                      default=False)
 def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
-    _validate_components_prepared('db_cluster_list')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('db_cluster_list')
     db = components.PostgresqlServer()
 
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
@@ -396,9 +395,9 @@ def db_node_list(**kwargs):
 @argh.decorators.arg('-n', '--hostname', help=DB_HOSTNAME_HELP_MSG)
 def db_node_add(**kwargs):
     """Add a DB cluster node."""
-    _validate_components_prepared('db_node_add')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('db_node_add')
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.add_cluster_node(kwargs['address'], kwargs.get('hostname'))
@@ -414,9 +413,9 @@ def db_node_add(**kwargs):
                      required=True)
 def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
-    _validate_components_prepared('db_node_remove')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('db_node_remove')
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.remove_cluster_node(kwargs['address'])
@@ -432,9 +431,9 @@ def db_node_remove(**kwargs):
                      required=True)
 def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
-    _validate_components_prepared('db_node_reinit')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('db_node_reinit')
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.reinit_cluster_node(kwargs['address'])
@@ -450,9 +449,9 @@ def db_node_reinit(**kwargs):
                      required=True)
 def db_node_set_master(**kwargs):
     """Switch the current DB master node."""
-    _validate_components_prepared('db_node_set_master')
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
+    _validate_components_prepared('db_node_set_master')
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.set_master(kwargs['address'])
