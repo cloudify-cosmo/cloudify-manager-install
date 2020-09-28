@@ -907,7 +907,6 @@ class PostgresqlServer(BaseComponent):
                 'Failed to get status of {target_type} node from {url}. '
                 'Error was: {err}'.format(
                     target_type=target_type,
-                    address=address,
                     url=url,
                     err=err,
                 )
