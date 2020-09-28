@@ -25,7 +25,10 @@ manager:
 
   # Sets whether the first time the manager's VM is booted from a Cloudify manager image
   # its private IP will be propagated to all relevant configuration files.
+  # Note that it is recommended to run a certificate update operation after booting an
+  # image using the IP setter.
   set_manager_ip_on_boot: false
+
   security:
     # When enabled, the external REST communication will be performed over HTTPS
     ssl_enabled: false
