@@ -14,12 +14,14 @@
 #  * limitations under the License.
 
 import collections
-from contextlib import contextmanager
-from getpass import getuser
 import logging
-from os.path import isfile, join, abspath
+import os
 import pwd
 import subprocess
+
+from contextlib import contextmanager
+from getpass import getuser
+from os.path import isfile, join, abspath
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -32,6 +34,7 @@ from .constants import (
     DEFAULT_CONFIG_PATH,
     CLOUDIFY_USER,
     CLOUDIFY_HOME_DIR,
+    INITIAL_INSTALL_DIR,
 )
 yaml = YAML()
 logger = logging.getLogger('[CONFIG]')
@@ -58,8 +61,23 @@ def dict_merge(dct, merge_dct):
 class Config(CommentedMap):
     TEMP_PATHS = 'temp_paths_to_remove'
 
+    def _get_installed_services(self):
+        """List of already installed services.
+
+        If some services are already installed, default the list of
+        services to that (it can still be overridden by the user's
+        config.yaml).
+        """
+        try:
+            return os.listdir(INITIAL_INSTALL_DIR)
+        except OSError:
+            return []
+
     def _load_defaults_config(self):
         default_config = self._load_yaml(DEFAULT_CONFIG_PATH)
+        already_installed = self._get_installed_services()
+        if already_installed:
+            default_config['services_to_install'] = already_installed
         self.update(default_config)
 
     def _load_user_config(self, config_file):
