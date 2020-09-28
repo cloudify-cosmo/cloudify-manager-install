@@ -34,7 +34,7 @@ from .constants import (
     DEFAULT_CONFIG_PATH,
     CLOUDIFY_USER,
     CLOUDIFY_HOME_DIR,
-    INITIAL_INSTALL_DIR
+    INITIAL_INSTALL_DIR,
 )
 yaml = YAML()
 logger = logging.getLogger('[CONFIG]')
