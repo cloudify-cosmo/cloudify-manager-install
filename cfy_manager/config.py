@@ -61,7 +61,8 @@ def dict_merge(dct, merge_dct):
 class Config(CommentedMap):
     TEMP_PATHS = 'temp_paths_to_remove'
 
-    def _get_installed_services(self):
+    @staticmethod
+    def _get_installed_services():
         """List of already installed services.
 
         If some services are already installed, default the list of
@@ -69,7 +70,9 @@ class Config(CommentedMap):
         config.yaml).
         """
         try:
-            return os.listdir(INITIAL_INSTALL_DIR)
+            return [service_name for service_name in
+                    os.listdir(INITIAL_INSTALL_DIR)
+                    if not service_name.endswith('yaml')]
         except OSError:
             return []
 
