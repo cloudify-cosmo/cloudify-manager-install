@@ -20,11 +20,11 @@ pipeline {
                             break
                         case "postgresql":
                             services = 'services_to_install: [database_service, monitoring_service]'
-                            label = 'cloudify-db'
+                            label = 'cloudify-postgresql'
                             break
                         case "rabbitmq":
                             services = 'services_to_install: [queue_service, monitoring_service]'
-                            label = 'cloudify-queue'
+                            label = 'cloudify-rabbitmq'
                             break
                         case 'manager-worker':
                             services = 'services_to_install: [manager_service, monitoring_service]'
