@@ -563,11 +563,11 @@ def is_supervisord_service():
 def _create_initial_install_file(installed_components_list):
     """
     If the installation finished successfully for the first time:
-        1. create the file /etc/cloudify/.installed/<service_name>.
-        2. Update the file /etc/cloudify/.installed/components.yaml with the
-           dictionary {<main_service_name>: components_installed}.
-        3. Update the file /etc/cloudify/.installed/packages.yaml with the
-           dictionary {<main_service_name>: packages}.
+        - create the file /etc/cloudify/.installed/<service_name>.
+        - Update the file /etc/cloudify/.installed/components.yaml with the
+          dictionary {<main_service_name>: components_installed}.
+        - Update the file /etc/cloudify/.installed/packages.yaml with the
+          dictionary {<main_service_name>: packages}.
     """
     if not _are_components_installed():
         mkdir(INITIAL_INSTALL_DIR)
