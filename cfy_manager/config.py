@@ -58,24 +58,26 @@ def dict_merge(dct, merge_dct):
             dct[k] = merge_dct[k]
 
 
+def get_installed_services():
+    try:
+        return [service_name for service_name in
+                os.listdir(INITIAL_INSTALL_DIR)
+                if not service_name.endswith('yaml')]
+    except OSError:
+        return []
+
+
 class Config(CommentedMap):
     TEMP_PATHS = 'temp_paths_to_remove'
 
-    def _get_installed_services(self):
-        """List of already installed services.
-
+    def _load_defaults_config(self):
+        """
         If some services are already installed, default the list of
         services to that (it can still be overridden by the user's
         config.yaml).
         """
-        try:
-            return os.listdir(INITIAL_INSTALL_DIR)
-        except OSError:
-            return []
-
-    def _load_defaults_config(self):
         default_config = self._load_yaml(DEFAULT_CONFIG_PATH)
-        already_installed = self._get_installed_services()
+        already_installed = get_installed_services()
         if already_installed:
             default_config['services_to_install'] = already_installed
         self.update(default_config)
