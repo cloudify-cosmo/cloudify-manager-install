@@ -92,8 +92,8 @@ class Cli(BaseComponent):
     def remove(self):
         profile_name = config[MANAGER]['cli_local_profile_host_name']
 
-        def _remove_profile_and_check(cli_cmd):
-            proc = common.cfy(*cli_cmd, ignore_failures=True)
+        def _remove_profile_and_check(cli_cmd, use_sudo=False):
+            proc = common.cfy(*cli_cmd, ignore_failures=True, sudo=use_sudo)
             if proc.returncode == 0:
                 logger.notice('CLI profile removed')
             else:
@@ -109,8 +109,7 @@ class Cli(BaseComponent):
             current_user = getuser()
             if current_user != 'root':
                 logger.notice('Removing CLI profile for root user...')
-                root_cmd = ['sudo', '-u', 'root'] + cmd
-                _remove_profile_and_check(root_cmd)
+                _remove_profile_and_check(cmd, use_sudo=True)
         except OSError as ex:
             if ex.errno == errno.ENOENT:
                 logger.warning('Could not find the `cfy` executable; it has '
