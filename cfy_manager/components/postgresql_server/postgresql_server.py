@@ -1186,14 +1186,8 @@ class PostgresqlServer(BaseComponent):
         master = None
         replicas = []
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-            etcd_cluster_health = common.run(
-                [
-                    'etcdctl',
-                    '--endpoint', 'https://127.0.0.1:2379',
-                    '--ca-file', ETCD_CA_PATH,
-                    'cluster-health',
-                ],
-                ignore_failures=True
+            etcd_cluster_health = self._etcd_command(
+                ['cluster-health'], ignore_failures=True
             ).aggr_stdout
             if (
                 'cluster is unavailable' in etcd_cluster_health
