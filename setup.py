@@ -56,7 +56,7 @@ setup(
         'argh==0.26.2',
         'netifaces==0.10.9',
         'ipaddress==1.0.19',
-        'psutil==3.3.0',
+        'psutil==5.6.6',
         'requests>=2.18,<3.0.0',
         'retrying==1.3.3',
         'psycopg2==2.7.4',
