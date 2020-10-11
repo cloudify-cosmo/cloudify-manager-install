@@ -1,7 +1,6 @@
 import json
 import time
 import logging
-from os import path
 import pkg_resources
 from requests import post
 from contextlib import contextmanager
@@ -16,7 +15,6 @@ HOURS_LOCK = 2
 BUFFER_TIME = 300
 DAYS_INTERVAL = 'days_interval'
 HOURS_INTERVAL = 'hours_interval'
-CLOUDIFY_IMAGE_INFO = '/opt/cfy/image.info'
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 LOGFILE = '/var/log/cloudify/usage_collector/usage_collector.log'
 
@@ -46,11 +44,6 @@ def get_storage_manager_instance():
 def collect_metadata(data):
     pkg_distribution = pkg_resources.get_distribution('cloudify-rest-service')
     manager_version = pkg_distribution.version
-    if path.exists(CLOUDIFY_IMAGE_INFO):
-        with open(CLOUDIFY_IMAGE_INFO) as image_file:
-            image_info = image_file.read().strip()
-    else:
-        image_info = 'rpm'
 
     with get_storage_manager_instance() as sm:
         usage_collector_info = (sm.list(models.UsageCollector))[0]
@@ -63,7 +56,7 @@ def collect_metadata(data):
         'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
-        'image_info': image_info
+        'image_info': 'rpm'
     }
 
 
