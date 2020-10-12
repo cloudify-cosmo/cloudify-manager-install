@@ -1394,7 +1394,8 @@ class PostgresqlServer(BaseComponent):
                     replica['errors'].append('Out of sync')
                     status = max(status, self.DEGRADED)
                 replica_log_location = replica.get('log_location')
-                if replica_log_location is None:
+                if (master_log_location is None or
+                        replica_log_location is None):
                     logger.warning(
                         'Could not get lag details for replica.'
                     )
