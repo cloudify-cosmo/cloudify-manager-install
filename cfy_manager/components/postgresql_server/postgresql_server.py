@@ -969,7 +969,7 @@ class PostgresqlServer(BaseComponent):
 
         logger.info('Creating postgres bin links for patroni')
         for pg_bin in PG_BINS:
-            common.sudo(['ln', '-s', os.path.join(PG_BIN_DIR, pg_bin),
+            common.sudo(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
                          '/usr/sbin'])
 
         logger.info('Starting patroni')
