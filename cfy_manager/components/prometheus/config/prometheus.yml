@@ -30,7 +30,7 @@ scrape_configs:
         replacement: 127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
     file_sd_configs:
       - files:
-        - '/etc/prometheus/targets/http_200_manager.yml'
+        - '/etc/prometheus/targets/local_http_200_manager.yml'
 
   - job_name: 'http_401'
     metrics_path: /probe
@@ -45,7 +45,42 @@ scrape_configs:
         replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
     file_sd_configs:
       - files:
-        - '/etc/prometheus/targets/http_401_manager.yml'
+        - '/etc/prometheus/targets/local_http_401_manager.yml'
+
+  - job_name: 'federate_http_200'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /probe/blackbox
+    params:
+      module: [http_200]
+      'match[]':
+        - '{job="http_200"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_http_200_managers.yml'
+
+  - job_name: 'federate_manager_node'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /metrics/node
+    params:
+      'match[]':
+        - '{job="node"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_managers.yml'
 
   - job_name: 'rabbitmq'
     file_sd_configs:
