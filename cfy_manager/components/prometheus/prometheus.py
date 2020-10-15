@@ -513,6 +513,8 @@ def _update_manager_targets(private_ip, uninstalling):
         http_401_targets.append('http://127.0.0.1:8100/api/v3.1/status')
         http_401_labels['host'] = private_ip
 
+        monitoring_port = str(config[CONSTANTS]['monitoring_port'])
+
         # Monitor remote rabbit nodes
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
         for host, rabbit in config[RABBITMQ]['cluster_members'].items():
@@ -521,12 +523,13 @@ def _update_manager_targets(private_ip, uninstalling):
             )
             if target != private_ip:
                 rabbit_targets.append(
-                    target + ':' + str(config[CONSTANTS]['monitoring_port']))
+                    target + ':' + monitoring_port)
 
         # Monitor remote postgres nodes
         for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
             if node['ip'] != private_ip:
-                postgres_targets.append(private_ip)
+                postgres_targets.append(
+                    node['ip'] + ':' + monitoring_port)
 
     logger.info('Updating prometheus manager target configs')
     _deploy_targets('http_200_manager.yml',
