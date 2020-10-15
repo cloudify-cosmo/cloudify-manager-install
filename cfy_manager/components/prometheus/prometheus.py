@@ -428,10 +428,12 @@ def _update_prometheus_configuration(uninstalling=False):
 def _prometheus_targets_exist():
     logger.info('Checking whether any prometheus targets still exist.')
     for conf in [
-        'http_200_manager.yml',
-        'http_401_manager.yml',
+        'local_http_200_manager.yml',
+        'local_http_401_manager.yml',
         'local_postgres.yml',
         'local_rabbit.yml',
+        'other_http_200_managers.yml',
+        'other_managers.yml',
         'other_rabbits.yml',
         'other_postgres.yml',
     ]:
@@ -529,14 +531,18 @@ def _update_manager_targets(private_ip, uninstalling):
                 postgres_targets.append(private_ip)
 
     logger.info('Updating prometheus manager target configs')
-    _deploy_targets('http_200_manager.yml',
+    _deploy_targets('local_http_200_manager.yml',
                     http_200_targets, http_200_labels)
-    _deploy_targets('http_401_manager.yml',
+    _deploy_targets('local_http_401_manager.yml',
                     http_401_targets, http_401_labels)
     _deploy_targets('other_rabbits.yml',
                     rabbit_targets, rabbit_labels)
     _deploy_targets('other_postgres.yml',
                     postgres_targets, postgres_labels)
+    _deploy_targets('other_http_200_managers.yml',
+                    [""], [])
+    _deploy_targets('other_managers.yml',
+                    [""], [])
 
 
 def _update_base_targets(private_ip, uninstalling):
