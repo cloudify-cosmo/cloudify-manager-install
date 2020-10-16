@@ -58,12 +58,28 @@ scrape_configs:
       password: {{ prometheus.credentials.password }}
     metrics_path: /probe/blackbox
     params:
-      module: [http_200]
       'match[]':
         - '{job="http_200"}'
     file_sd_configs:
       - files:
-        - '/etc/prometheus/targets/other_http_200_managers.yml'
+        - '/etc/prometheus/targets/other_managers.yml'
+
+  - job_name: 'federate_http_401'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /probe/blackbox
+    params:
+      'match[]':
+        - '{job="http_401"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_managers.yml'
 
   - job_name: 'federate_manager_node'
     scrape_interval: 15s
