@@ -37,6 +37,8 @@ def run_syncthing_configuration(
     if not bootstrap_cluster:
         sm = get_storage_manager()
         managers_list = sm.list(models.Manager)
+        # controller.add_manager() will trigger manager-added workflow which
+        # will also take care of upgrading Prometheus federation configuration
         controller.add_manager(managers_list)
         syncthing.wait_for_replication()
     syncthing.finish(service_management=service_management)
@@ -71,6 +73,6 @@ if __name__ == '__main__':
 
     run_syncthing_configuration(
         args_dict['hostname'],
-        args_dict['bootstrap_cluster'],
+        args_dict['bootstrap_syncthing'],
         args_dict['service_management']
     )

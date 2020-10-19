@@ -532,13 +532,13 @@ class RestService(BaseComponent):
                 env[envvar] = value
         return env
 
-    def _run_syncthing_configuration_script(self, bootstrap_cluster):
+    def _run_cluster_configuration_script(self, bootstrap_syncthing):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
-            'bootstrap_cluster': bootstrap_cluster,
+            'bootstrap_syncthing': bootstrap_syncthing,
             'service_management': self.service_type
         }
-        script_path = join(SCRIPTS_PATH, 'configure_syncthing_script.py')
+        script_path = join(SCRIPTS_PATH, 'configure_cluster_script.py')
         result = run_script_on_manager_venv(script_path,
                                             args_dict,
                                             envvars=self._create_process_env())
@@ -584,7 +584,7 @@ class RestService(BaseComponent):
                 'Adding manager "{0}" to the cluster, this may take a '
                 'while until config files finish replicating'.format(
                     config[MANAGER][HOSTNAME]))
-        self._run_syncthing_configuration_script(not to_join)
+        self._run_cluster_configuration_script(not to_join)
 
     def remove(self):
         service.remove(RESTSERVICE, service_file=False)
