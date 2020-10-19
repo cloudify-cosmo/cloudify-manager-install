@@ -56,10 +56,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /probe/blackbox
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="http_200"}'
+        - '{job="http_200",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_managers.yml'
@@ -73,10 +73,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /probe/blackbox
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="http_401"}'
+        - '{job="http_401",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_managers.yml'
@@ -90,10 +90,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/node
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="node"}'
+        - '{job="node",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_managers.yml'
@@ -112,10 +112,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/rabbitmq
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="rabbitmq"}'
+        - '{job="rabbitmq",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_rabbits.yml'
@@ -129,10 +129,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/node
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="node"}'
+        - '{job="node",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_rabbits.yml'
@@ -151,10 +151,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/postgres
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="postgresql"}'
+        - '{job="postgresql",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_postgres.yml'
@@ -168,10 +168,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/node
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="node"}'
+        - '{job="node",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_postgres.yml'
