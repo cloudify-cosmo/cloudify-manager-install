@@ -30,7 +30,7 @@ scrape_configs:
         replacement: 127.0.0.1:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
     file_sd_configs:
       - files:
-        - '/etc/prometheus/targets/http_200_manager.yml'
+        - '/etc/prometheus/targets/local_http_200_manager.yml'
 
   - job_name: 'http_401'
     metrics_path: /probe
@@ -45,7 +45,58 @@ scrape_configs:
         replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
     file_sd_configs:
       - files:
-        - '/etc/prometheus/targets/http_401_manager.yml'
+        - '/etc/prometheus/targets/local_http_401_manager.yml'
+
+  - job_name: 'federate_http_200'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /monitoring/federate
+    params:
+      'match[]':
+        - '{job="http_200",host!="{{ manager.private_ip }}"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_managers.yml'
+
+  - job_name: 'federate_http_401'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /monitoring/federate
+    params:
+      'match[]':
+        - '{job="http_401",host!="{{ manager.private_ip }}"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_managers.yml'
+
+  - job_name: 'federate_manager_node'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /monitoring/federate
+    params:
+      'match[]':
+        - '{job="node",host!="{{ manager.private_ip }}"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_managers.yml'
 
   - job_name: 'rabbitmq'
     file_sd_configs:
@@ -61,10 +112,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/rabbitmq
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="rabbitmq"}'
+        - '{job="rabbitmq",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_rabbits.yml'
@@ -78,10 +129,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/node
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="node"}'
+        - '{job="node",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_rabbits.yml'
@@ -100,10 +151,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/postgres
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="postgresql"}'
+        - '{job="postgresql",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_postgres.yml'
@@ -117,10 +168,10 @@ scrape_configs:
     basic_auth:
       username: {{ prometheus.credentials.username }}
       password: {{ prometheus.credentials.password }}
-    metrics_path: /metrics/node
+    metrics_path: /monitoring/federate
     params:
       'match[]':
-        - '{job="node"}'
+        - '{job="node",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_postgres.yml'

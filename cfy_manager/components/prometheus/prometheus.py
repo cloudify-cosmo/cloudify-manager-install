@@ -20,6 +20,7 @@ import subprocess
 
 from ..base_component import BaseComponent
 from ..components_constants import (
+    CLUSTER_JOIN,
     CONFIG,
     CONSTANTS,
     ENABLE_REMOTE_CONNECTIONS,
@@ -52,7 +53,7 @@ from ...constants import (
 )
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common, files, service, certificates
+from ...utils import common, db, files, service, certificates
 from ...utils.install import is_premium_installed
 
 
@@ -209,12 +210,8 @@ class Prometheus(BaseComponent):
             service.stop(exporter['name'], append_prefix=False)
         logger.notice('Prometheus and exporters successfully stopped')
 
-    def join_cluster(self, join_node):  # , restore_users_on_fail=False):
-        logger.info(
-            'Would be joining cluster via node {target_node}.'.format(
-                target_node=join_node,
-            )
-        )
+    def join_cluster(self):  # , restore_users_on_fail=False):
+        logger.info('Would be joining cluster.')
 
 
 def _set_selinux_permissive():
@@ -428,10 +425,11 @@ def _update_prometheus_configuration(uninstalling=False):
 def _prometheus_targets_exist():
     logger.info('Checking whether any prometheus targets still exist.')
     for conf in [
-        'http_200_manager.yml',
-        'http_401_manager.yml',
+        'local_http_200_manager.yml',
+        'local_http_401_manager.yml',
         'local_postgres.yml',
         'local_rabbit.yml',
+        'other_managers.yml',
         'other_rabbits.yml',
         'other_postgres.yml',
     ]:
@@ -484,6 +482,8 @@ def _update_manager_targets(private_ip, uninstalling):
     rabbit_labels = {}
     postgres_targets = []
     postgres_labels = {}
+    manager_targets = []
+    manager_labels = {}
     if uninstalling:
         logger.info('Uninstall: prometheus manager targets will be cleared.')
     else:
@@ -531,15 +531,24 @@ def _update_manager_targets(private_ip, uninstalling):
                 postgres_targets.append(
                     node['ip'] + ':' + monitoring_port)
 
+        # Monitor remote manager nodes
+        if config.get(CLUSTER_JOIN):
+            for manager in _get_managers_list():
+                if manager.get(PRIVATE_IP, private_ip) != private_ip:
+                    manager_targets.append(
+                        manager[PRIVATE_IP] + ':' + monitoring_port)
+
     logger.info('Updating prometheus manager target configs')
-    _deploy_targets('http_200_manager.yml',
+    _deploy_targets('local_http_200_manager.yml',
                     http_200_targets, http_200_labels)
-    _deploy_targets('http_401_manager.yml',
+    _deploy_targets('local_http_401_manager.yml',
                     http_401_targets, http_401_labels)
     _deploy_targets('other_rabbits.yml',
                     rabbit_targets, rabbit_labels)
     _deploy_targets('other_postgres.yml',
                     postgres_targets, postgres_labels)
+    _deploy_targets('other_managers.yml',
+                    manager_targets, manager_labels)
 
 
 def _update_base_targets(private_ip, uninstalling):
@@ -591,3 +600,22 @@ def _deploy_exporters_configuration():
 def _validate_prometheus_running():
     logger.info('Making sure Prometheus is live...')
     service.verify_alive(PROMETHEUS, append_prefix=False)
+
+
+def _get_managers_list():
+    records = db.run_psql_command(
+        command=[
+            '-c', "SELECT private_ip, public_ip, hostname FROM managers",
+        ],
+        db_key='cloudify_db_name',
+    )
+
+    return [
+        {
+            PRIVATE_IP: field[0].strip(),
+            PUBLIC_IP: field[1].strip(),
+            HOSTNAME: field[2].strip(),
+        }
+        for field in (record.split('|') for record in records.split('\n'))
+        if len(field) >= 2
+    ]

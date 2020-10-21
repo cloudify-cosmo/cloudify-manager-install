@@ -376,7 +376,7 @@ jobs:
       - run:
           name: Check Cluster Status
           command: |
-            sleep 20
+            sleep 50
             .circleci/cluster/validate_status.sh ${MANAGER1_NAME} ${MANAGER2_NAME}
 
   flake8:
