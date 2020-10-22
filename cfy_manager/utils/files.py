@@ -25,7 +25,8 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from .network import is_url, curl_download
-from .common import move, sudo, copy, remove, chown
+from .common import (move, sudo, copy, remove, chown,
+                     ensure_destination_dir_exists)
 
 from .._compat import StringIO
 from ..config import config
@@ -176,6 +177,7 @@ def temp_copy(source):
 
 def touch(file_path):
     """ Create an empty file in the provided path """
+    ensure_destination_dir_exists(file_path)
     sudo(['touch', file_path])
 
 
