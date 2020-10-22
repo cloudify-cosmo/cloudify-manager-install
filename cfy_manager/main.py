@@ -890,10 +890,10 @@ def _all_main_services_removed(dir_path):
 
 def _remove_services_from_initial_files(dir_path):
     for installed_service in get_main_services_from_config():
-        _remove(os.path.join(dir_path, installed_service))
-        if dir_path == INITIAL_INSTALL_DIR:
-            update_yaml_file(INSTALLED_COMPONENTS, {installed_service: []})
-            update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
+        service_file_path = os.path.join(dir_path, installed_service)
+        if os.path.exists(service_file_path):
+            _remove(service_file_path)
+
     if _all_main_services_removed(dir_path):
         _remove(dir_path)
 
@@ -952,15 +952,15 @@ def remove(verbose=False, force=False, config_file=None):
         if should_stop:
             component.stop()
         component.remove()
+    for installed_service in get_main_services_from_config():
+        update_yaml_file(INSTALLED_COMPONENTS, {installed_service: []})
 
     yum_remove(_get_items_to_remove(INSTALLED_PACKAGES))
     for installed_service in get_main_services_from_config():
         update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
 
-    if _are_components_installed():
-        _remove_services_from_initial_files(INITIAL_INSTALL_DIR)
-    if _are_components_configured():
-        _remove_services_from_initial_files(INITIAL_CONFIGURE_DIR)
+    _remove_services_from_initial_files(INITIAL_INSTALL_DIR)
+    _remove_services_from_initial_files(INITIAL_CONFIGURE_DIR)
 
     if is_supervisord_service():
         _remove(SUPERVISORD_CONFIG_DIR)
