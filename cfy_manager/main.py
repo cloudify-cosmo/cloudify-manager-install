@@ -883,19 +883,22 @@ def configure(verbose=False,
     _finish_configuration(only_install=False)
 
 
-def _all_main_services_removed(dir_path):
-    return all(not os.path.exists(os.path.join(dir_path, service_name))
-               for service_name in MAIN_SERVICES_NAMES)
+def _all_main_services_removed():
+    installed_components_dict = read_yaml_file(INSTALLED_COMPONENTS)
+    return all(not packages_list for packages_list in
+               installed_components_dict.values())
 
 
-def _remove_services_from_initial_files(dir_path):
-    for installed_service in get_main_services_from_config():
-        service_file_path = os.path.join(dir_path, installed_service)
-        if os.path.exists(service_file_path):
-            _remove(service_file_path)
+def _remove_installation_files():
+    for dir_path in INITIAL_INSTALL_DIR, INITIAL_CONFIGURE_DIR:
+        for installed_service in get_main_services_from_config():
+            service_file_path = os.path.join(dir_path, installed_service)
+            if os.path.exists(service_file_path):
+                _remove(service_file_path)
 
-    if _all_main_services_removed(dir_path):
-        _remove(dir_path)
+    if _all_main_services_removed():
+        _remove(INITIAL_INSTALL_DIR)
+        _remove(INITIAL_CONFIGURE_DIR)
 
 
 def _get_items_to_remove(items_file):
@@ -959,8 +962,7 @@ def remove(verbose=False, force=False, config_file=None):
     for installed_service in get_main_services_from_config():
         update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
 
-    _remove_services_from_initial_files(INITIAL_INSTALL_DIR)
-    _remove_services_from_initial_files(INITIAL_CONFIGURE_DIR)
+    _remove_installation_files()
 
     if is_supervisord_service():
         _remove(SUPERVISORD_CONFIG_DIR)
