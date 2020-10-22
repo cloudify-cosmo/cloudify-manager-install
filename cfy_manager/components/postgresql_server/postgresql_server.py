@@ -114,11 +114,6 @@ PATRONI_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/patroni')
 POSTGRES_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/postgres')
 POSTGRES_PATRONI_CONFIG_PATH = '/var/lib/pgsql/9.5/data/pg_patroni_base.conf'
 
-HAPROXY_NODE_ENTRY = (
-    '    server postgresql_{addr}_5432 {addr}:5432 '
-    'maxconn 100 check check-ssl port 8008 ca-file /etc/haproxy/ca.crt'
-)
-
 # Postgres bin files needing symlinking for patroni
 PG_BIN_DIR = '/usr/pgsql-9.5/bin'
 PG_BINS = [
@@ -1210,15 +1205,6 @@ class PostgresqlServer(BaseComponent):
                 master = None
 
             replicas = [node for node in nodes if node != master]
-        elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-            backends = common.get_haproxy_servers(logger)
-            for backend in backends:
-                # svname will be in the form postgresql_192.0.2.48_5432
-                server_name = backend['svname'].split('_')[1]
-                if backend['status'] == 'UP':
-                    master = server_name
-                else:
-                    replicas.append(server_name)
         else:
             raise DBNodeListError(
                 'Can only list DB nodes from a manager or DB node.'
@@ -1445,13 +1431,6 @@ class PostgresqlServer(BaseComponent):
 
         return status, db_nodes
 
-    def _restart_manager_db_dependent_services(self):
-        logger.info('Restarting DB proxy service.')
-        service.restart('haproxy', append_prefix=False)
-        logger.info('Restarting DB-dependent services.')
-        service.restart('amqp-postgres')
-        service.restart('restservice')
-
     def _node_is_in_db(self, host):
         result = db.run_psql_command(
             command=[
@@ -1514,17 +1493,10 @@ class PostgresqlServer(BaseComponent):
                 'add the node.'.format(address=address)
             )
 
-        logger.info('Updating DB proxy configuration.')
-        common.sudo(
-            ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
-            stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
-        )
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
         if not self._node_is_in_db(address):
             self._add_node_to_db((hostname or address), address)
-
-        self._restart_manager_db_dependent_services()
 
     def remove_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
@@ -1572,23 +1544,6 @@ class PostgresqlServer(BaseComponent):
             ]
             self._set_patroni_dcs_conf(patroni_config)
             logger.info('Node {addr} removed.'.format(addr=address))
-        else:
-            logger.info('Updating DB proxy configuration.')
-            entry = HAPROXY_NODE_ENTRY.format(addr=address).replace(
-                '/', '\\/',
-            )
-            common.sudo(
-                [
-                    'sed', '-i',
-                    '/{entry}/d'.format(entry=entry),
-                    '/etc/haproxy/haproxy.cfg',
-                ]
-            )
-
-            if self._node_is_in_db(address):
-                self._remove_node_from_db(address)
-
-            self._restart_manager_db_dependent_services()
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()

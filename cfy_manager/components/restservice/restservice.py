@@ -15,7 +15,6 @@
 
 import os
 import json
-import time
 import base64
 import random
 import string
@@ -53,7 +52,7 @@ from ..service_names import (
     MANAGER,
     RESTSERVICE,
     POSTGRESQL_CLIENT,
-    DATABASE_SERVICE,
+    POSTGRESQL_SERVER,
     MANAGER_SERVICE,
     MONITORING_SERVICE
 )
@@ -73,7 +72,6 @@ from ...utils.scripts import (run_script_on_manager_venv,
                               log_script_run_results)
 from ...utils.files import (
     deploy,
-    remove_files,
     sudo_read,
     write_to_file,
 )
@@ -105,10 +103,6 @@ class RestService(BaseComponent):
         resource = namedtuple('Resource', 'src dst')
         resources = [
             resource(
-                src=join(CONFIG_PATH, 'cloudify-rest.conf'),
-                dst=REST_CONFIG_PATH
-            ),
-            resource(
                 src=join(CONFIG_PATH, 'authorization.conf'),
                 dst=REST_AUTHORIZATION_CONFIG_PATH
             ),
@@ -120,6 +114,33 @@ class RestService(BaseComponent):
             deploy(resource.src, resource.dst)
             common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
                          resource.dst)
+        self._deploy_rest_conf()
+
+    def _deploy_rest_conf(self):
+        client_conf = config[POSTGRESQL_CLIENT]
+        constants = config['constants']
+        cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+        if cluster_nodes:
+            postgres_host = [db['ip'] for db in cluster_nodes]
+        else:
+            postgres_host = client_conf['host']
+        rest_conf = {
+            'postgresql_bin_path': '/usr/pgsql-9.5/bin/',
+            'postgresql_db_name': client_conf['cloudify_db_name'],
+            'postgresql_host': postgres_host,
+            'postgresql_username': client_conf['cloudify_username'],
+            'postgresql_password': client_conf['cloudify_password'],
+            'postgresql_ssl_enabled': client_conf['ssl_enabled'],
+            'postgresql_ssl_client_verification':
+                client_conf['ssl_client_verification'],
+            'postgresql_ssl_cert_path':
+                constants.get('postgresql_client_cert_path'),
+            'postgresql_ssl_key_path':
+                constants.get('postgresql_client_key_path'),
+            'postgresql_ca_cert_path': constants['postgresql_ca_cert_path'],
+            'ca_cert_path': constants['ca_cert_path'],
+        }
+        files.write_to_file(rest_conf, REST_CONFIG_PATH, json_dump=True)
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
@@ -330,81 +351,6 @@ class RestService(BaseComponent):
             random.SystemRandom().sample(ascii_alphanumeric, result_len)
         )
 
-    def _wait_for_haproxy_startup(self):
-        logger.info('Waiting for DB proxy startup to complete...')
-        healthy = False
-        for attempt in range(60):
-            servers = common.get_haproxy_servers(logger)
-
-            if not servers:
-                # No results yet
-                logger.info('Haproxy not responding, retrying...')
-                time.sleep(1)
-                continue
-
-            if any(server['check_status'] == 'INI' for server in servers):
-                logger.info('DB healthchecks still initialising...')
-                time.sleep(1)
-                continue
-
-            if not any(server['status'] == 'UP' for server in servers):
-                logger.info('DB proxy has not yet selected a backend DB...')
-                time.sleep(1)
-                continue
-
-            healthy = True
-            # If we got here, haproxy is happy!
-            break
-
-        if not healthy:
-            raise RuntimeError(
-                'DB proxy startup failed.'
-            )
-
-        logger.info('DB proxy startup complete.')
-
-    def _set_haproxy_connect_any(self, enable):
-        """Make SELinux allow/disallow haproxy listening on any ports.
-        This is required so that it can listen on port 5432 for postgres.
-        The alternatives to make it only able to do that have much greater
-        complexity, so this approach was selected.
-        """
-        value = '--on' if enable else '--off'
-        common.sudo(
-            ['semanage', 'boolean', '-m', value, 'haproxy_connect_any'],
-            ignore_failures=True
-        )
-
-    def _configure_db_proxy(self):
-        self._set_haproxy_connect_any(True)
-        self.handle_haproxy_certificate()
-
-        deploy(os.path.join(CONFIG_PATH, 'haproxy.cfg'),
-               '/etc/haproxy/haproxy.cfg')
-
-        # Configure the haproxy service for supervisord
-        if self.service_type == 'supervisord':
-            service.configure(
-                'haproxy',
-                user='haproxy',
-                group='haproxy',
-                src_dir='restservice',
-                append_prefix=False
-            )
-        else:
-            service.enable('haproxy', append_prefix=False)
-        service.restart('haproxy', append_prefix=False)
-        self._wait_for_haproxy_startup()
-
-    def handle_haproxy_certificate(self):
-        certificates.use_supplied_certificates(
-            logger=logger,
-            ca_destination='/etc/haproxy/ca.crt',
-            owner='haproxy',
-            group='haproxy',
-            component_name='postgresql_client'
-        )
-
     @staticmethod
     def handle_ldap_certificate():
         certificates.use_supplied_certificates(
@@ -416,8 +362,6 @@ class RestService(BaseComponent):
         )
 
     def replace_certificates(self):
-        if common.manager_using_db_cluster():
-            self._replace_haproxy_cert()
         self._replace_ldap_cert()
         self._replace_ca_certs_on_db()
         service.restart(RESTSERVICE)
@@ -478,17 +422,6 @@ class RestService(BaseComponent):
             config['restservice']['ldap']['ca_cert'] = \
                 constants.NEW_LDAP_CA_CERT_PATH
             self.handle_ldap_certificate()
-
-    def _replace_haproxy_cert(self):
-        if os.path.exists(constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH):
-            # The certificate was validated in the PostgresqlClient component
-            logger.info(
-                'Replacing haproxy cert on the restservice component')
-            config[POSTGRESQL_CLIENT]['ca_path'] = \
-                constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
-            self.handle_haproxy_certificate()
-            service.reload('haproxy', append_prefix=False)
-            self._wait_for_haproxy_startup()
 
     @staticmethod
     def _upload_cloudify_license():
@@ -565,8 +498,6 @@ class RestService(BaseComponent):
 
         logger.info('Checking for ldaps CA cert to deploy.')
         self.handle_ldap_certificate()
-        if common.manager_using_db_cluster():
-            self._configure_db_proxy()
 
         self._make_paths()
         self._configure_restservice()
@@ -591,13 +522,6 @@ class RestService(BaseComponent):
         remove_logrotate(RESTSERVICE)
 
         common.remove('/opt/manager')
-
-        if common.manager_using_db_cluster():
-            self._set_haproxy_connect_any(False)
-            common.remove('/etc/haproxy')
-
-        if DATABASE_SERVICE not in config[SERVICES_TO_INSTALL]:
-            remove_files(['/etc/haproxy'])
 
     def start(self):
         logger.notice('Starting Restservice...')
