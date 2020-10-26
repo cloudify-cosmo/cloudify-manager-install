@@ -16,7 +16,6 @@
 from __future__ import print_function
 
 import os
-import csv
 import glob
 import time
 import shlex
@@ -28,7 +27,6 @@ from functools import wraps
 from datetime import datetime
 
 import argh
-import requests
 
 from .._compat import text_type
 from ..config import config

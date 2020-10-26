@@ -39,6 +39,8 @@ from cfy_manager.exceptions import (
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
+    ETCD_CA_PATH,
+    PATRONI_DB_CA_PATH,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
     PUBLIC_IP,
@@ -96,12 +98,10 @@ PG_SERVER_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.key')
 # Cluster CA cert locations
 ETCD_SERVER_CERT_PATH = '/etc/etcd/etcd.crt'
 ETCD_SERVER_KEY_PATH = '/etc/etcd/etcd.key'
-ETCD_CA_PATH = '/etc/etcd/ca.crt'
 PATRONI_REST_CERT_PATH = '/var/lib/patroni/rest.crt'
 PATRONI_REST_KEY_PATH = '/var/lib/patroni/rest.key'
 PATRONI_DB_CERT_PATH = '/var/lib/patroni/db.crt'
 PATRONI_DB_KEY_PATH = '/var/lib/patroni/db.key'
-PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'
 PATRONI_PGPASS_PATH = '/var/lib/patroni/pgpass'
 
 # Cluster file locations
@@ -346,53 +346,27 @@ class PostgresqlServer(BaseComponent):
 
     def _update_postgres_password(self):
         logger.notice('Updating postgres password...')
-        postgres_password = \
-            config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
+        postgres_password = config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
         delimiter = self._delimiter_for(postgres_password)
-
-        # As this is only run using peer authentication for non-clustered DBs,
-        # we don't need to get the DB SSL settings (it only runs on local
-        # connections)
-        common.sudo(
-            [
-                '-u', 'postgres',
-                '/usr/bin/psql', '-n',  # -n disables history
-            ],
-            # Piped to avoid password appearing in sudoers log
-            stdin='ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim}'
-            .format(
+        db.run_psql_command(
+            "ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim};".format(
                 delim=delimiter,
                 pwd=postgres_password,
             ),
+            'server_db_name',
+            logger,
         )
         logger.notice('postgres password successfully updated')
 
     def _create_db_monitoring_account(self):
+        logger.notice('Creating db_monitoring account...')
 
-        def create_user_sql(credentials):
-            delimiter = self._delimiter_for(credentials.get('password'))
-            return 'CREATE USER {username} WITH PASSWORD '\
-                   '{delim}{password}{delim}'.format(
-                       username=credentials.get('username'),
-                       delim=delimiter,
-                       password=credentials.get('password'))
-
-        def create_in_standalone_db(credentials):
-            common.sudo(
-                [
-                    '-u', 'postgres',
-                    '/usr/bin/psql', '-n',  # -n disables history
-                ],
-                # Piped to avoid password appearing in sudoers log
-                stdin=create_user_sql(credentials),
-            )
-            return True
-
-        def create_in_clustered_db(credentials):
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             try:
                 self._etcd_command(['member', 'list'], )
             except Exception as ex:
-                logger.notice('Database cluster not yet ready (will '
+                logger.notice('db_monitoring account not yet created. '
+                              'Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
                 return False
             pgpass = None
@@ -402,8 +376,8 @@ class PostgresqlServer(BaseComponent):
                     if pgpass:
                         break
                     else:
-                        # Don't accept an empty pgpass file, it'll break
-                        # the next steps
+                        # Don't accept an empty pgpass file, it means the
+                        # cluster is not yet fully ready
                         pgpass = None
                 except Exception as err:
                     logger.info(
@@ -412,47 +386,24 @@ class PostgresqlServer(BaseComponent):
                 logger.info('Waiting for pgpass to be populated...')
                 time.sleep(1)
             if pgpass is None:
-                logger.notice('Patroni pgpass file (%s) unreadable (will '
+                logger.notice('db_monitoring account not yet created. '
+                              'Patroni pgpass file (%s) unreadable (will '
                               'try on the next database node).',
                               PATRONI_PGPASS_PATH)
                 return False
-            hostname = pgpass.split(':')[0]
-            pgpass_file = files.write_to_tempfile(
-                '{host}:5432:postgres:postgres:{password}'.format(
-                    host=hostname,
-                    password=config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]))
-            try:
-                common.chown('postgres', 'postgres', pgpass_file)
-                common.chmod('600', pgpass_file)
-                common.sudo(
-                    [
-                        '-u', 'postgres',
-                        '/usr/bin/psql', '-n',  # -n disables history
-                        '-h', hostname,
-                        '-U', 'postgres',
-                        '-w',  # -w do not wait for password (use PGPASSFILE)
-                        'postgres'
-                    ],
-                    # Piped to avoid password appearing in sudoers log
-                    stdin=create_user_sql(credentials),
-                    env={'PGPASSFILE': pgpass_file}
-                )
-                return True
-            finally:
-                files.remove(pgpass_file)
 
-        logger.notice('Creating db_monitoring account...')
-        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            created = create_in_clustered_db(
-                config[POSTGRESQL_SERVER]['db_monitoring'])
-        else:
-            created = create_in_standalone_db(
-                config[POSTGRESQL_SERVER]['db_monitoring'])
-        if created:
-            logger.notice('db_monitoring account successfully created')
-        else:
-            logger.notice('db_monitoring account not yet created. '
-                          'An attempt will be made on the next node(s).')
+        credentials = config[POSTGRESQL_SERVER]['db_monitoring']
+        delimiter = self._delimiter_for(credentials.get('password'))
+        db.run_psql_command(
+            "CREATE USER {user} WITH PASSWORD {delim}{pwd}{delim};".format(
+                user=credentials.get('username'),
+                delim=delimiter,
+                pwd=credentials.get('password'),
+            ),
+            'server_db_name',
+            logger,
+        )
+        logger.notice('db_monitoring account successfully created')
 
     def _delimiter_for(self, text):
         delim = '$password$'
@@ -1433,13 +1384,11 @@ class PostgresqlServer(BaseComponent):
 
     def _node_is_in_db(self, host):
         result = db.run_psql_command(
-            command=[
-                '-c',
-                "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
-                    host,
-                ),
-            ],
-            db_key='cloudify_db_name',
+            "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
+                host,
+            ),
+            'cloudify_db_name',
+            logger,
         )
 
         # As the name is a primary key, there can only ever be at most 1 entry
@@ -1448,23 +1397,18 @@ class PostgresqlServer(BaseComponent):
 
     def _add_node_to_db(self, name, host):
         db.run_psql_command(
-            command=[
-                '-c',
-                "INSERT INTO db_nodes (name, host)"
-                "VALUES ('{0}', '{1}');".format(
-                    name, host
-                ),
-            ],
-            db_key='cloudify_db_name',
+            "INSERT INTO db_nodes (name, host) VALUES ('{0}', '{1}');".format(
+                name, host
+            ),
+            'cloudify_db_name',
+            logger,
         )
 
     def _remove_node_from_db(self, host):
         db.run_psql_command(
-            command=[
-                '-c',
-                "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
-            ],
-            db_key='cloudify_db_name',
+            "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
+            'cloudify_db_name',
+            logger,
         )
 
     def add_cluster_node(self, address, hostname=None):

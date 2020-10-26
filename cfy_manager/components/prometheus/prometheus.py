@@ -677,10 +677,9 @@ def _validate_prometheus_running():
 
 def _get_managers_list():
     records = db.run_psql_command(
-        command=[
-            '-c', "SELECT private_ip, public_ip, hostname FROM managers",
-        ],
-        db_key='cloudify_db_name',
+        "SELECT private_ip, public_ip, hostname FROM managers",
+        'cloudify_db_name',
+        logger,
     )
 
     return [

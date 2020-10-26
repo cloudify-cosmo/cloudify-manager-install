@@ -60,3 +60,6 @@ UNCONFIGURED_INSTALL = 'unconfigured_install'
 CLUSTER_JOIN = 'join'
 
 # endregion
+
+ETCD_CA_PATH = '/etc/etcd/ca.crt'
+PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'

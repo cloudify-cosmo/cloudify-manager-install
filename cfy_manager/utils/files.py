@@ -169,12 +169,6 @@ def remove_notice(service_name):
     remove(_get_notice_path(service_name))
 
 
-def temp_copy(source):
-    """ Create a copy at a temporary location """
-    content = read(source)
-    return write_to_tempfile(content)
-
-
 def touch(file_path):
     """ Create an empty file in the provided path """
     ensure_destination_dir_exists(file_path)
