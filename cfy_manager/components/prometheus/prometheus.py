@@ -521,22 +521,19 @@ def _update_manager_targets(private_ip, uninstalling):
             target = (
                 host if use_rabbit_host else rabbit['networks']['default']
             )
-            if target != private_ip:
-                rabbit_targets.append(
-                    target + ':' + monitoring_port)
+            rabbit_targets.append(
+                target + ':' + monitoring_port)
 
         # Monitor remote postgres nodes
         for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
-            if node['ip'] != private_ip:
-                postgres_targets.append(
-                    node['ip'] + ':' + monitoring_port)
+            postgres_targets.append(
+                node['ip'] + ':' + monitoring_port)
 
         # Monitor remote manager nodes
         if config.get(CLUSTER_JOIN):
             for manager in _get_managers_list():
-                if manager.get(PRIVATE_IP, private_ip) != private_ip:
-                    manager_targets.append(
-                        manager[PRIVATE_IP] + ':' + monitoring_port)
+                manager_targets.append(
+                    manager[PRIVATE_IP] + ':' + monitoring_port)
 
     logger.info('Updating prometheus manager target configs')
     _deploy_targets('local_http_200_manager.yml',
