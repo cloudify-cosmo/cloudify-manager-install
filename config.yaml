@@ -13,7 +13,7 @@ manager:
 
   # Provide an IP or hostname to be used in the local CLI profile on the manager.
   # This might be useful when providing an external certificate.
-  cli_local_profile_host_name: localhost
+  cli_local_profile_host_name: ''
 
   ######################################################################################
   #

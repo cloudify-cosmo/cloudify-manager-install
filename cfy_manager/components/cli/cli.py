@@ -52,24 +52,20 @@ class Cli(BaseComponent):
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']
 
-        manager = config[MANAGER]['cli_local_profile_host_name']
-        use_cmd = ['profiles', 'use', manager,
-                   '--skip-credentials-validation']
-        if config['nginx']['port']:
-            use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
-
-        ssl_enabled = \
-            'on' if config[MANAGER][SECURITY]['ssl_enabled'] else 'off'
-
         cert_path = self._deploy_external_cert()
         current_user = getuser()
-        set_cmd = [
-            'profiles', 'set', '-u', username,
-            '-p', password, '-t', 'default_tenant',
-            '-c', cert_path, '--ssl', ssl_enabled
-        ]
+
+        manager = config[MANAGER]['cli_local_profile_host_name']
+        if not manager:
+            manager = config[MANAGER]['private_ip']
+
+        use_cmd = ['profiles', 'use', manager,
+                   '-u', username, '-p', password,
+                   '-t', 'default_tenant', '-c', cert_path]
+        if config[MANAGER][SECURITY]['ssl_enabled']:
+            use_cmd.append('--ssl')
         if config['nginx']['port']:
-            set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
+            use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
         logger.info('Setting CLI for the current user ({0})...'.format(
             current_user))
@@ -78,13 +74,14 @@ class Cli(BaseComponent):
         current_level = get_file_handlers_level()
         set_file_handlers_level(logging.ERROR)
         common.cfy(*use_cmd)
-        common.cfy(*set_cmd)
+        set_file_handlers_level(current_level)
         self._set_colors(is_root=False)
 
         if current_user != 'root':
             logger.info('Setting CLI for the root user...')
-            for cmd in (use_cmd, set_cmd):
-                common.cfy(*cmd, sudo=True)
+            set_file_handlers_level(logging.ERROR)
+            common.cfy(*use_cmd, sudo=True)
+            set_file_handlers_level(current_level)
             self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
         logger.notice('Cloudify CLI successfully configured')
