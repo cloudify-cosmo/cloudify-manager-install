@@ -104,23 +104,20 @@ def _format_ips(ips, cn=None):
     if cn:
         altnames.add(cn)
 
-    # Ensure we trust localhost
-    altnames.add('127.0.0.1')
-    altnames.add('localhost')
-
     subject_altdns = [
         'DNS:{name}'.format(name=name)
         for name in altnames
     ]
+
     subject_altips = []
     for name in altnames:
         if network.parse_ip(name):
             subject_altips.append('IP:{name}'.format(name=name))
 
-    cert_metadata = ','.join([
-        ','.join(subject_altdns),
-        ','.join(subject_altips),
-    ])
+    subjects = subject_altdns + subject_altips
+
+    cert_metadata = ','.join(subjects)
+
     return cert_metadata
 
 
