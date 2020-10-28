@@ -884,9 +884,12 @@ def configure(verbose=False,
 
 
 def _all_main_services_removed():
-    installed_components_dict = read_yaml_file(INSTALLED_COMPONENTS)
-    return all(not packages_list for packages_list in
-               installed_components_dict.values())
+    if os.path.exists(INSTALLED_PACKAGES):
+        installed_components_dict = read_yaml_file(INSTALLED_PACKAGES)
+        return all(not packages_list for packages_list in
+                   installed_components_dict.values())
+    else:
+        return True
 
 
 def _remove_installation_files():
@@ -944,23 +947,30 @@ def remove(verbose=False, force=False, config_file=None):
     logger.notice('Removing Cloudify %s...', (
         'Manager' if is_all_in_one_manager() else ', '.join(removed_services)))
 
-    components_to_remove = list(reversed(_get_components(
-        include_components=_get_items_to_remove(INSTALLED_COMPONENTS))))
-    logger.debug('Removing following components: %s',
-                 [component.__class__.__name__ for component
-                  in components_to_remove])
+    if os.path.exists(INSTALLED_COMPONENTS):
+        components_to_remove = list(reversed(_get_components(
+            include_components=_get_items_to_remove(INSTALLED_COMPONENTS))))
+        logger.debug('Removing following components: %s',
+                     [component.__class__.__name__ for component
+                      in components_to_remove])
 
-    should_stop = _are_components_configured()
-    for component in components_to_remove:
-        if should_stop:
-            component.stop()
-        component.remove()
-    for installed_service in get_main_services_from_config():
-        update_yaml_file(INSTALLED_COMPONENTS, {installed_service: []})
+        should_stop = _are_components_configured()
+        for component in components_to_remove:
+            if should_stop:
+                component.stop()
+            component.remove()
 
-    yum_remove(_get_items_to_remove(INSTALLED_PACKAGES))
-    for installed_service in get_main_services_from_config():
-        update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
+        for installed_service in get_main_services_from_config():
+            update_yaml_file(INSTALLED_COMPONENTS, {installed_service: []})
+    else:
+        logger.debug('No components to remove')
+
+    if os.path.exists(INSTALLED_PACKAGES):
+        yum_remove(_get_items_to_remove(INSTALLED_PACKAGES))
+        for installed_service in get_main_services_from_config():
+            update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
+    else:
+        logger.debug('No packages to remove')
 
     _remove_installation_files()
 
