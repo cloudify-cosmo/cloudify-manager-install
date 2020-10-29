@@ -221,7 +221,7 @@ class Nginx(BaseComponent):
     def _internal_certs_exist():
         if config[SSL_INPUTS]['internal_cert_path']:  # Certificate provided
             if exists(constants.INTERNAL_CERT_PATH):
-                return certificates.two_certs_identical(
+                return certificates.certs_identical(
                     config[SSL_INPUTS]['internal_cert_path'],
                     constants.INTERNAL_CERT_PATH)
             else:
@@ -254,7 +254,7 @@ class Nginx(BaseComponent):
     def _external_certs_exist():
         if config[SSL_INPUTS]['external_cert_path']:  # Certificate provided
             if exists(constants.EXTERNAL_CERT_PATH):
-                return certificates.two_certs_identical(
+                return certificates.certs_identical(
                     config[SSL_INPUTS]['external_cert_path'],
                     constants.EXTERNAL_CERT_PATH)
             else:

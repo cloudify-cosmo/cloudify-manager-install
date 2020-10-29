@@ -90,8 +90,8 @@ def handle_ca_cert(logger, generate_if_missing=True):
 def _ca_cert_deployed():
     if config[SSL_INPUTS]['ca_cert_path']:  # Certificate provided
         if os.path.exists(const.CA_CERT_PATH):
-            return two_certs_identical(config[SSL_INPUTS]['ca_cert_path'],
-                                       const.CA_CERT_PATH)
+            return certs_identical(config[SSL_INPUTS]['ca_cert_path'],
+                                   const.CA_CERT_PATH)
         else:
             return False
     else:
@@ -594,12 +594,7 @@ def get_ca_filename(new_ca_location, default_ca_location):
             else default_ca_location)
 
 
-def _get_md5_hash(cert_path):
-    content = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_path])
-    md5_res = sudo(['openssl', 'md5'], stdin=content.aggr_stdout)
-    md5_hash = md5_res.aggr_stdout.split('(stdin)= ')[1]
-    return md5_hash
-
-
-def two_certs_identical(cert_a, cert_b):
-    return _get_md5_hash(cert_a) == _get_md5_hash(cert_b)
+def certs_identical(cert_a, cert_b):
+    content_a = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_a])
+    content_b = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_b])
+    return content_a.aggr_stdout == content_b.aggr_stdout
