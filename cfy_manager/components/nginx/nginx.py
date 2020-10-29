@@ -24,6 +24,7 @@ from ..components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
     SSL_INPUTS,
+    CLEAN_DB,
     HOSTNAME,
     SERVICES_TO_INSTALL
 )
@@ -216,6 +217,12 @@ class Nginx(BaseComponent):
             config[SSL_INPUTS]['external_ca_cert_path'] = \
                 constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
 
+    def _internal_certs_exist(self):
+        return (
+            exists(constants.INTERNAL_CERT_PATH)
+            and exists(constants.INTERNAL_KEY_PATH)
+        )
+
     def _handle_external_cert(self, replacing_ca=False):
         cert_destinations = {
             'cert_destination': constants.EXTERNAL_CERT_PATH,
@@ -236,6 +243,26 @@ class Nginx(BaseComponent):
             logger.info('Deployed user provided external cert and key')
         else:
             self._generate_external_certs()
+
+    def _external_certs_exist(self):
+        return (
+            exists(constants.EXTERNAL_CERT_PATH)
+            and exists(constants.EXTERNAL_KEY_PATH)
+        )
+
+    def _handle_certs(self):
+        certs_handled = False
+        if config[CLEAN_DB] or not self._internal_certs_exist():
+            certs_handled = True
+            self._handle_internal_cert()
+        if config[CLEAN_DB] or not self._external_certs_exist():
+            certs_handled = True
+            self._handle_external_cert()
+
+        if not certs_handled:
+            logger.info('Skipping certificate handling. '
+                        'Pass the `--clean-db` flag in order to recreate '
+                        'all certificates')
 
     def _config_files(self):
         do_monitoring = MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL)
@@ -398,13 +425,18 @@ class Nginx(BaseComponent):
             LOG_DIR,
             UNIT_OVERRIDE_PATH,
             HTPASSWD_FILE,
+            constants.INTERNAL_CERT_PATH,
+            constants.INTERNAL_KEY_PATH,
+            constants.CA_CERT_PATH,
+            constants.EXTERNAL_CERT_PATH,
+            constants.EXTERNAL_KEY_PATH,
+            constants.EXTERNAL_CA_CERT_PATH
         ] + [resource.dst for resource in self._config_files()])
 
     def start(self):
         logger.notice('Starting NGINX...')
         if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-            self._handle_internal_cert()
-            self._handle_external_cert()
+            self._handle_certs()
         if self.service_type == 'supervisord':
             service.configure(NGINX, append_prefix=False)
         service.restart(NGINX, append_prefix=False)
