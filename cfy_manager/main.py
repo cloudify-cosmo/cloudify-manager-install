@@ -560,43 +560,32 @@ def is_supervisord_service():
     return service._get_service_type() == 'supervisord'
 
 
-def _create_initial_install_file(installed_components_list):
+def _create_initial_install_files():
     """
-    If the installation finished successfully for the first time:
-        - create the file /etc/cloudify/.installed/<service_name>.
-        - Update the file /etc/cloudify/.installed/components.yaml with the
-          dictionary {<main_service_name>: components_installed}.
-        - Update the file /etc/cloudify/.installed/packages.yaml with the
-          dictionary {<main_service_name>: packages}.
+    If the installation finished successfully for the first time,
+    create the file /etc/cloudify/.installed/<service_name>.
     """
     if not _are_components_installed():
-        mkdir(INITIAL_INSTALL_DIR)
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
-            if service_name in MAIN_SERVICES_NAMES:
-                update_yaml_file(INSTALLED_COMPONENTS,
-                                 {service_name: installed_components_list})
 
 
-def _create_initial_configure_file():
+def _create_initial_configure_files():
     """
-    If the configuration finished successfully for the first time:
-        1. create the file /etc/cloudify/.configured/<service_name>.
+    If the configuration finished successfully for the first time,
+    create the file /etc/cloudify/.configured/<service_name>.
     """
     if not _are_components_configured():
-        mkdir(INITIAL_CONFIGURE_DIR)
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
 
-def _finish_configuration(installed_components_list, only_install=None):
+def _finish_configuration(only_install):
     config.dump_config()
     remove_temp_files()
-    installed_components_names = [component.__class__.__name__.lower()
-                                  for component in installed_components_list]
-    _create_initial_install_file(installed_components_names)
+    _create_initial_install_files()
     if not only_install:
-        _create_initial_configure_file()
+        _create_initial_configure_files()
     _print_time()
 
 
@@ -788,11 +777,20 @@ def _configure_supervisord():
     sudo('systemctl restart supervisord', ignore_failures=True)
 
 
-def _create_packages_installed_file():
+def _create_packages_installed_file(packages_to_install):
     for service_name in config[SERVICES_TO_INSTALL]:
         if service_name in MAIN_SERVICES_NAMES:
             update_yaml_file(INSTALLED_PACKAGES,
-                             {service_name: _get_packages()})
+                             {service_name: packages_to_install})
+
+
+def _create_components_installed_file(components_list):
+    installed_components_names = [component.__class__.__name__.lower()
+                                  for component in components_list]
+    for service_name in config[SERVICES_TO_INSTALL]:
+        if service_name in MAIN_SERVICES_NAMES:
+            update_yaml_file(INSTALLED_COMPONENTS,
+                             {service_name: installed_components_names})
 
 
 @argh.arg('--only-install', help=ONLY_INSTALL_HELP_MSG, default=False)
@@ -818,8 +816,9 @@ def install(verbose=False,
     )
     logger.notice('Installing desired components...')
     set_globals(only_install=only_install)
-    yum_install(_get_packages())
-    _create_packages_installed_file()
+    packages_to_install = _get_packages()
+    _create_packages_installed_file(packages_to_install)
+    yum_install(packages_to_install)
 
     if is_supervisord_service():
         _configure_supervisord()
@@ -828,6 +827,7 @@ def install(verbose=False,
     validate(components=components, only_install=only_install)
     validate_dependencies(components=components)
 
+    _create_components_installed_file(components)
     for component in components:
         component.install()
 
@@ -839,7 +839,7 @@ def install(verbose=False,
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
-    _finish_configuration(components, only_install)
+    _finish_configuration(only_install)
     if not only_install:
         _print_finish_message(config_file=config_file)
 
@@ -880,22 +880,28 @@ def configure(verbose=False,
 
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
-    _finish_configuration(components)
+    _finish_configuration(only_install=False)
 
 
-def _all_main_services_removed(dir_path):
-    return all(not os.path.exists(os.path.join(dir_path, service_name))
-               for service_name in MAIN_SERVICES_NAMES)
+def _all_main_services_removed():
+    if os.path.exists(INSTALLED_PACKAGES):
+        installed_components_dict = read_yaml_file(INSTALLED_PACKAGES)
+        return all(not packages_list for packages_list in
+                   installed_components_dict.values())
+    else:
+        return True
 
 
-def _remove_services_from_initial_files(dir_path):
-    for installed_service in get_main_services_from_config():
-        _remove(os.path.join(dir_path, installed_service))
-        if dir_path == INITIAL_INSTALL_DIR:
-            update_yaml_file(INSTALLED_COMPONENTS, {installed_service: []})
-            update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
-    if _all_main_services_removed(dir_path):
-        _remove(dir_path)
+def _remove_installation_files():
+    for dir_path in INITIAL_INSTALL_DIR, INITIAL_CONFIGURE_DIR:
+        for installed_service in get_main_services_from_config():
+            service_file_path = os.path.join(dir_path, installed_service)
+            if os.path.exists(service_file_path):
+                _remove(service_file_path)
+
+    if _all_main_services_removed():
+        _remove(INITIAL_INSTALL_DIR)
+        _remove(INITIAL_CONFIGURE_DIR)
 
 
 def _get_items_to_remove(items_file):
@@ -941,25 +947,32 @@ def remove(verbose=False, force=False, config_file=None):
     logger.notice('Removing Cloudify %s...', (
         'Manager' if is_all_in_one_manager() else ', '.join(removed_services)))
 
-    should_stop = _are_components_configured()
-    components_to_remove = list(reversed(_get_components(
-        include_components=_get_items_to_remove(INSTALLED_COMPONENTS))))
-    logger.debug('Removing following components: %s',
-                 [component.__class__.__name__ for component
-                  in components_to_remove])
-    for component in components_to_remove:
-        if should_stop:
-            component.stop()
-        component.remove()
+    if os.path.exists(INSTALLED_COMPONENTS):
+        components_to_remove = list(reversed(_get_components(
+            include_components=_get_items_to_remove(INSTALLED_COMPONENTS))))
+        logger.debug('Removing following components: %s',
+                     [component.__class__.__name__ for component
+                      in components_to_remove])
 
-    yum_remove(_get_items_to_remove(INSTALLED_PACKAGES))
-    for installed_service in get_main_services_from_config():
-        update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
+        should_stop = _are_components_configured()
+        for component in components_to_remove:
+            if should_stop:
+                component.stop()
+            component.remove()
 
-    if _are_components_installed():
-        _remove_services_from_initial_files(INITIAL_INSTALL_DIR)
-    if _are_components_configured():
-        _remove_services_from_initial_files(INITIAL_CONFIGURE_DIR)
+        for installed_service in get_main_services_from_config():
+            update_yaml_file(INSTALLED_COMPONENTS, {installed_service: []})
+    else:
+        logger.debug('No components to remove')
+
+    if os.path.exists(INSTALLED_PACKAGES):
+        yum_remove(_get_items_to_remove(INSTALLED_PACKAGES))
+        for installed_service in get_main_services_from_config():
+            update_yaml_file(INSTALLED_PACKAGES, {installed_service: []})
+    else:
+        logger.debug('No packages to remove')
+
+    _remove_installation_files()
 
     if is_supervisord_service():
         _remove(SUPERVISORD_CONFIG_DIR)
