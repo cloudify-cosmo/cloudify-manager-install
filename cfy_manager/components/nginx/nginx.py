@@ -217,11 +217,17 @@ class Nginx(BaseComponent):
             config[SSL_INPUTS]['external_ca_cert_path'] = \
                 constants.NEW_EXTERNAL_CA_CERT_FILE_PATH
 
-    def _internal_certs_exist(self):
-        return (
-            exists(constants.INTERNAL_CERT_PATH)
-            and exists(constants.INTERNAL_KEY_PATH)
-        )
+    @staticmethod
+    def _internal_certs_exist():
+        if config[SSL_INPUTS]['internal_cert_path']:  # Certificate provided
+            if exists(constants.INTERNAL_CERT_PATH):
+                return certificates.certs_identical(
+                    config[SSL_INPUTS]['internal_cert_path'],
+                    constants.INTERNAL_CERT_PATH)
+            else:
+                return False
+        else:
+            return exists(constants.INTERNAL_CERT_PATH)
 
     def _handle_external_cert(self, replacing_ca=False):
         cert_destinations = {
@@ -244,11 +250,17 @@ class Nginx(BaseComponent):
         else:
             self._generate_external_certs()
 
-    def _external_certs_exist(self):
-        return (
-            exists(constants.EXTERNAL_CERT_PATH)
-            and exists(constants.EXTERNAL_KEY_PATH)
-        )
+    @staticmethod
+    def _external_certs_exist():
+        if config[SSL_INPUTS]['external_cert_path']:  # Certificate provided
+            if exists(constants.EXTERNAL_CERT_PATH):
+                return certificates.certs_identical(
+                    config[SSL_INPUTS]['external_cert_path'],
+                    constants.EXTERNAL_CERT_PATH)
+            else:
+                return False
+        else:
+            return exists(constants.EXTERNAL_CERT_PATH)
 
     def _handle_certs(self):
         certs_handled = False
