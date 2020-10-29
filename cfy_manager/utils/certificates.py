@@ -41,7 +41,7 @@ def handle_ca_cert(logger, generate_if_missing=True):
     :return: True if there's a CA key available (either passed or
     generated)
     """
-    if os.path.exists(const.CA_CERT_PATH):
+    if _ca_cert_deployed():
         # CA certificate already deployed, no action required
         return os.path.exists(const.CA_KEY_PATH)
     logger.info('Handling CA certificate...')
@@ -85,6 +85,17 @@ def handle_ca_cert(logger, generate_if_missing=True):
         has_ca_key = True
 
     return has_ca_key
+
+
+def _ca_cert_deployed():
+    if config[SSL_INPUTS]['ca_cert_path']:  # Certificate provided
+        if os.path.exists(const.CA_CERT_PATH):
+            return two_certs_identical(config[SSL_INPUTS]['ca_cert_path'],
+                                       const.CA_CERT_PATH)
+        else:
+            return False
+    else:
+        return os.path.exists(const.CA_CERT_PATH)
 
 
 def _format_ips(ips, cn=None):
@@ -581,3 +592,14 @@ def get_cert_and_key_filenames(new_cert_location,
 def get_ca_filename(new_ca_location, default_ca_location):
     return (new_ca_location if os.path.exists(new_ca_location)
             else default_ca_location)
+
+
+def _get_md5_hash(cert_path):
+    content = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_path])
+    md5_res = sudo(['openssl', 'md5'], stdin=content.aggr_stdout)
+    md5_hash = md5_res.aggr_stdout.split('(stdin)= ')[1]
+    return md5_hash
+
+
+def two_certs_identical(cert_a, cert_b):
+    return _get_md5_hash(cert_a) == _get_md5_hash(cert_b)
