@@ -60,8 +60,6 @@ logger = get_logger(POSTGRESQL_CLIENT)
 
 class PostgresqlClient(BaseComponent):
     def _install(self):
-        files.copy_notice(POSTGRESQL_CLIENT)
-
         db_server_username = config[POSTGRESQL_CLIENT]['server_username']
         if db_server_username == 'postgres' or not db_server_username:
             config[POSTGRESQL_CLIENT]['server_username'] = 'postgres'
