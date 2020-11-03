@@ -1730,7 +1730,6 @@ class PostgresqlServer(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring PostgreSQL Server...')
-        files.copy_notice(POSTGRESQL_SERVER)
         self._configure_postgresql_server_service()
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
