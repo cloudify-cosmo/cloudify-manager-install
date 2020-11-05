@@ -1,15 +1,15 @@
 groups:
-  - name: postgresql
+  - name: postgres
     rules:
 
-      - record: postgresql_healthy
+      - record: postgres_healthy
         expr: pg_up{job="postgresql"} == 1 and up{job="postgresql"} == 1
 
-      - record: postgresql_services_systemd
+      - record: postgres_service_systemd
         expr: sum by (host, name) (node_systemd_unit_state{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter|postgresql-9.5|nginx).service", state="active"})
 
-      - record: postgresql_services_supervisord
+      - record: postgres_service_supervisord
         expr: sum by (host, name) (node_supervisord_up{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter|postgresql-9.5|nginx).service"})
 
-      - record: postgresql_services
-        expr: postgresql_services_systemd or postgresql_services_supervisord
+      - record: postgres_service
+        expr: postgres_service_systemd or postgres_service_supervisord

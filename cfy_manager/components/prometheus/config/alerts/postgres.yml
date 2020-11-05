@@ -1,0 +1,34 @@
+groups:
+  - name: postgres
+    rules:
+
+      - alert: postgres_down
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        {% raw -%}
+        annotations:
+          summary: "PostgreSQL is down (host {{ $labels.host }})"
+        {%- endraw %}
+
+      - alert: postgres_exporter_down
+        expr: up{job="postgresql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        {% raw -%}
+        annotations:
+          summary: "PostgreSQL Exporter is down (host {{ $labels.host }})"
+        {%- endraw %}
+
+      - alert: db_node_service_down
+        expr: postgres_service == 0
+        for: 1m
+        labels:
+          severity: warning
+        {% raw -%}
+        annotations:
+          summary: "One of the db node services is down (host {{ $labels.host }})"
+          description: "System service {{ $labels.name }} is down on {{ $labels.host }}."
+        {%- endraw %}

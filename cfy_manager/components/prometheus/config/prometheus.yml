@@ -7,10 +7,13 @@ global:
 
 {% if 'manager_service' in services_to_install -%}
 rule_files:
-  - rules/postgres.yml
   - rules/manager.yml
+  - rules/postgres.yml
   - rules/rabbitmq.yml
-{% endif %}
+  - alerts/manager.yml
+  - alerts/postgres.yml
+  - alerts/rabbitmq.yml
+{%- endif %}
 
 scrape_configs:
   - job_name: 'prometheus'

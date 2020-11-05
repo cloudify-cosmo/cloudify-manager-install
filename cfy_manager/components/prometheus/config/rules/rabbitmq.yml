@@ -5,11 +5,11 @@ groups:
       - record: rabbitmq_healthy
         expr: sum by (host) (up{job="rabbitmq"}) == 1
 
-      - record: rabbitmq_services_systemd
+      - record: rabbitmq_service_systemd
         expr: sum by (host, name) (node_systemd_unit_state{name=~"(node_exporter|prometheus|cloudify-rabbitmq|nginx).service", state="active"})
 
-      - record: rabbitmq_services_supervisord
+      - record: rabbitmq_service_supervisord
         expr: sum by (host, name) (node_supervisord_up{name=~"(node_exporter|prometheus|cloudify-rabbitmq|nginx).service"})
 
-      - record: rabbitmq_services
-        expr: rabbitmq_services_systemd or rabbitmq_services_supervisord
+      - record: rabbitmq_service
+        expr: rabbitmq_service_systemd or rabbitmq_service_supervisord
