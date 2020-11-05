@@ -4,14 +4,9 @@ ARG rpm_file
 ARG config=config.yaml
 ARG uid=1500
 ARG gid=1500
-ARG reporter_uid=1501
-ARG reporter_gid=1501
 
 RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
-# reporter's primary group is still cfyuser
-RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $reporter_uid cfyreporter
-RUN groupadd -g $reporter_gid cfyreporter
 
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
