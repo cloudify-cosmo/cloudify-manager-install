@@ -3,7 +3,7 @@ groups:
     rules:
 
       - record: rabbitmq_healthy
-        expr: sum by (host) (up{job="rabbitmq"}) == 1
+        expr: sum by(host, instance, job, monitor) (up{job="rabbitmq"}) == 1
 
       - record: rabbitmq_service_systemd
         expr: sum by (host, name) (node_systemd_unit_state{name=~"(node_exporter|prometheus|cloudify-rabbitmq|nginx).service", state="active"})

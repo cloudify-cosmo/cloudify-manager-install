@@ -24,7 +24,7 @@ groups:
         {%- endraw %}
 
       - alert: manager_service_down
-        expr: manager_services == 0
+        expr: manager_service == 0
         for: 1m
         labels:
           severity: warning

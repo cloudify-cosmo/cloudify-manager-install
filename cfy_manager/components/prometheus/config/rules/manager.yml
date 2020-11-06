@@ -3,7 +3,7 @@ groups:
     rules:
 
       - record: manager_healthy
-        expr: count by (host) (sum by (host) (probe_success) == {{ number_of_http_probes }})
+        expr: count by (host, monitor) (sum by (host, monitor) (probe_success) == {{ number_of_http_probes }})
 
       - record: manager_service_systemd
         expr: sum by (host, name) (node_systemd_unit_state{name=~"(cloudify-amqp-postgres|blackbox_exporter|cloudify-composer|cloudify-stage|haproxy|cloudify-mgmtworker|cloudify-restservice|node_exporter|prometheus|cloudify-syncthing|nginx).service", state="active"})

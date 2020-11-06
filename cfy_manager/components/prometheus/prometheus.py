@@ -590,6 +590,7 @@ def _deploy_targets(destination, targets, labels):
 def _deploy_rules_configuration(number_of_http_probes):
     additional_config = {
         'number_of_http_probes': number_of_http_probes,
+        'all_in_one': common.is_all_in_one_manager(),
     }
     for rule_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} rules...'.format(rule_group))
