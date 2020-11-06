@@ -2,6 +2,17 @@ groups:
   - name: manager
     rules:
 
+      # Recording rules
+      - record: manager_healthy
+        expr: count by (host, monitor) (sum by (host, monitor) (probe_success) == {{ number_of_http_probes }})
+      - record: manager_service_systemd
+        expr: sum by (host, name) (node_systemd_unit_state{name=~"(cloudify-amqp-postgres|blackbox_exporter|cloudify-composer|cloudify-stage|haproxy|cloudify-mgmtworker|cloudify-restservice|node_exporter|prometheus|cloudify-syncthing|nginx).service", state="active"})
+      - record: manager_service_supervisord
+        expr: sum by (host, name) (node_supervisord_up{name=~"(cloudify-amqp-postgres|blackbox_exporter|cloudify-composer|cloudify-stage|haproxy|cloudify-mgmtworker|cloudify-restservice|node_exporter|prometheus|cloudify-syncthing|nginx).service"})
+      - record: manager_service
+        expr: manager_service_systemd or manager_service_supervisord
+
+      # Alerting rules
       - alert: manager_down
         expr: probe_success == 0
         for: 1m
@@ -12,7 +23,6 @@ groups:
           summary: "Manager is down (host {{ $labels.host }})"
           description: "A HTTP probe {{ $labels.instance }} failed on {{ $labels.host }}."
         {%- endraw %}
-
       - alert: blackbox_exporter_down
         expr: up{job=~"http_(200|401)"} == 0
         for: 1m
@@ -22,7 +32,6 @@ groups:
         annotations:
           summary: "PostgreSQL Exporter is down (host {{ $labels.host }})"
         {%- endraw %}
-
       - alert: manager_service_down
         expr: manager_service == 0
         for: 1m

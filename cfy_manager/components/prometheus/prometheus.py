@@ -65,7 +65,6 @@ SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_ALERTS_DIR = join(PROMETHEUS_CONFIG_DIR, 'alerts')
-PROMETHEUS_RULES_DIR = join(PROMETHEUS_CONFIG_DIR, 'rules')
 PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
 PROMETHEUS_CONFIG_PATH = join(PROMETHEUS_CONFIG_DIR, 'prometheus.yml')
 CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
@@ -310,7 +309,7 @@ def _create_prometheus_directories():
     logger.notice('Creating Prometheus directories')
     common.mkdir(PROMETHEUS_DATA_DIR)
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_DATA_DIR)
-    for dir_name in ('rules', 'exporters',):
+    for dir_name in ('alerts', 'exporters',):
         dest_dir_name = join(PROMETHEUS_CONFIG_DIR, dir_name)
         common.mkdir(dest_dir_name)
 
@@ -403,8 +402,10 @@ def _update_prometheus_configuration(uninstalling=False):
     logger.notice('Updating Prometheus configuration...')
 
     if not uninstalling:
+        render_context = {'all_in_one': common.is_all_in_one_manager()}
         files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
-                     PROMETHEUS_CONFIG_PATH)
+                     PROMETHEUS_CONFIG_PATH,
+                     additional_render_context=render_context)
         common.sudo(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
@@ -413,8 +414,7 @@ def _update_prometheus_configuration(uninstalling=False):
 
     if common.is_installed(MANAGER_SERVICE):
         http_probes_count = _update_manager_targets(private_ip, uninstalling)
-        _deploy_rules_configuration(http_probes_count)
-        _deploy_alerts_configuration()
+        _deploy_alerts_configuration(http_probes_count)
 
     if common.is_installed(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
@@ -587,26 +587,17 @@ def _deploy_targets(destination, targets, labels):
     )
 
 
-def _deploy_rules_configuration(number_of_http_probes):
-    additional_config = {
+def _deploy_alerts_configuration(number_of_http_probes):
+    render_context = {
         'number_of_http_probes': number_of_http_probes,
         'all_in_one': common.is_all_in_one_manager(),
     }
-    for rule_group in ['manager', 'postgres', 'rabbitmq']:
-        logger.notice('Deploying {0} rules...'.format(rule_group))
-        file_name = '{0}.yml'.format(rule_group)
-        dest_file_name = join(PROMETHEUS_RULES_DIR, file_name)
-        files.deploy(join(CONFIG_DIR, 'rules', file_name), dest_file_name,
-                     additional_render_context=additional_config)
-        common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
-
-
-def _deploy_alerts_configuration():
     for alert_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} alerts...'.format(alert_group))
         file_name = '{0}.yml'.format(alert_group)
         dest_file_name = join(PROMETHEUS_ALERTS_DIR, file_name)
-        files.deploy(join(CONFIG_DIR, 'alerts', file_name), dest_file_name)
+        files.deploy(join(CONFIG_DIR, 'alerts', file_name), dest_file_name,
+                     additional_render_context=render_context)
         common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
 
 

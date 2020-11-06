@@ -2,6 +2,17 @@ groups:
   - name: postgres
     rules:
 
+      # Recording rules
+      - record: postgres_healthy
+        expr: pg_up{job="postgresql"} == 1 and up{job="postgresql"} == 1
+      - record: postgres_service_systemd
+        expr: sum by (host, name) (node_systemd_unit_state{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter{% if all_in_one %}|postgresql-9.5{% endif %}|nginx).service", state="active"})
+      - record: postgres_service_supervisord
+        expr: sum by (host, name) (node_supervisord_up{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter{% if all_in_one %}|postgresql-9.5{% endif %}|nginx).service"})
+      - record: postgres_service
+        expr: postgres_service_systemd or postgres_service_supervisord
+
+      # Alerting rules
       - alert: postgres_down
         expr: pg_up == 0
         for: 1m
@@ -11,7 +22,6 @@ groups:
         annotations:
           summary: "PostgreSQL is down (host {{ $labels.host }})"
         {%- endraw %}
-
       - alert: postgres_exporter_down
         expr: up{job="postgresql"} == 0
         for: 1m
@@ -21,7 +31,6 @@ groups:
         annotations:
           summary: "PostgreSQL Exporter is down (host {{ $labels.host }})"
         {%- endraw %}
-
       - alert: db_node_service_down
         expr: postgres_service == 0
         for: 1m

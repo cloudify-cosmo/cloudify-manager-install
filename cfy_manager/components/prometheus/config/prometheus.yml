@@ -7,12 +7,14 @@ global:
 
 {% if 'manager_service' in services_to_install -%}
 rule_files:
-  - rules/manager.yml
-  - rules/postgres.yml
-  - rules/rabbitmq.yml
   - alerts/manager.yml
   - alerts/postgres.yml
   - alerts/rabbitmq.yml
+{% if not all_in_one -%}
+  - alerts/manager_missing.yml
+  - alerts/postgres_missing.yml
+  - alerts/rabbitmq_missing.yml
+{%- endif %}
 {%- endif %}
 
 scrape_configs:
