@@ -402,10 +402,8 @@ def _update_prometheus_configuration(uninstalling=False):
     logger.notice('Updating Prometheus configuration...')
 
     if not uninstalling:
-        render_context = {'all_in_one': common.is_all_in_one_manager()}
         files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
-                     PROMETHEUS_CONFIG_PATH,
-                     additional_render_context=render_context)
+                     PROMETHEUS_CONFIG_PATH)
         common.sudo(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
@@ -414,7 +412,7 @@ def _update_prometheus_configuration(uninstalling=False):
 
     if common.is_installed(MANAGER_SERVICE):
         http_probes_count = _update_manager_targets(private_ip, uninstalling)
-        _deploy_alerts_configuration(http_probes_count)
+        _deploy_alerts_configuration(http_probes_count, uninstalling)
 
     if common.is_installed(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
@@ -587,18 +585,53 @@ def _deploy_targets(destination, targets, labels):
     )
 
 
-def _deploy_alerts_configuration(number_of_http_probes):
+def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
     render_context = {
         'number_of_http_probes': number_of_http_probes,
         'all_in_one': common.is_all_in_one_manager(),
     }
+    manager_hosts = []
+    rabbitmq_hosts = []
+    postgres_hosts = []
+
+    if uninstalling:
+        logger.info('Uninstall: Prometheus "missing" alerts will be cleared.')
+    else:
+        if config.get(CLUSTER_JOIN):
+            for manager in _get_managers_list():
+                manager_hosts.append(manager[PRIVATE_IP])
+        else:
+            manager_hosts.append(config[MANAGER][PRIVATE_IP])
+
+        for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
+            postgres_hosts.append(node['ip'])
+
+        use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
+        for host, rabbit in config[RABBITMQ]['cluster_members'].items():
+            rabbitmq_hosts.append(host if use_rabbit_host
+                                  else rabbit['networks']['default'])
+
     for alert_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} alerts...'.format(alert_group))
+
         file_name = '{0}.yml'.format(alert_group)
         dest_file_name = join(PROMETHEUS_ALERTS_DIR, file_name)
         files.deploy(join(CONFIG_DIR, 'alerts', file_name), dest_file_name,
                      additional_render_context=render_context)
         common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
+
+    logger.notice('Deploying "missing" alerts...')
+    _deploy_alerts_missing('manager_missing.yml', 'manager', manager_hosts)
+    _deploy_alerts_missing('rabbitmq_missing.yml', 'rabbitmq', rabbitmq_hosts)
+    _deploy_alerts_missing('postgres_missing.yml', 'postgres', postgres_hosts)
+
+
+def _deploy_alerts_missing(destination, service_name, hosts):
+    render_context = {'name': service_name, 'hosts': hosts}
+    dest_file_name = join(PROMETHEUS_ALERTS_DIR, destination)
+    files.deploy(join(CONFIG_DIR, 'alerts', 'missing.yml'), dest_file_name,
+                 additional_render_context=render_context)
+    common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
 
 
 def _deploy_exporters_configuration():
