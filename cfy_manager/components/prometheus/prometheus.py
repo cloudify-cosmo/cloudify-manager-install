@@ -603,8 +603,11 @@ def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
         else:
             manager_hosts.append(config[MANAGER][PRIVATE_IP])
 
-        for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
-            postgres_hosts.append(node['ip'])
+        if config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
+            for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
+                postgres_hosts.append(node['ip'])
+        else:
+            postgres_hosts.append(config[MANAGER][PRIVATE_IP])
 
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
         for host, rabbit in config[RABBITMQ]['cluster_members'].items():
