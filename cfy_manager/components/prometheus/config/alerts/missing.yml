@@ -3,7 +3,7 @@ groups:
     rules:{% for host in hosts %}
       - alert: {{ name }}_missing
         expr: absent({{ name }}_healthy{host="{{ host }}"})
-        for: 1m
+        for: 15s
         labels:
           severity: critical
         annotations:
@@ -11,7 +11,7 @@ groups:
 
       - alert: prometheus_missing
         expr: absent(up{host="{{ host }}", job="prometheus"})
-        for: 1m
+        for: 15s
         labels:
           severity: critical
         annotations:

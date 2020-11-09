@@ -15,7 +15,7 @@ groups:
       # Alerting rules
       - alert: rabbitmq_down
         expr: up{job="rabbitmq"} == 0
-        for: 1m
+        for: 15s
         labels:
           severity: critical
         {% raw -%}
@@ -24,7 +24,7 @@ groups:
         {%- endraw %}
       - alert: rabbitmq_service_down
         expr: rabbitmq_service == 0
-        for: 1m
+        for: 15s
         labels:
           severity: warning
         {% raw -%}
