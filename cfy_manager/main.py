@@ -1,19 +1,4 @@
 #!/usr/bin/env python
-#########
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from __future__ import print_function
 
 import os
@@ -93,6 +78,7 @@ from .utils.common import (
     is_all_in_one_manager,
     get_main_services_from_config,
 )
+from cfy_manager.utils.db import get_psql_env_and_base_command
 from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
     remove as _remove,
@@ -163,6 +149,13 @@ DB_NODE_FORCE_HELP_MSG = (
 )
 DB_HOSTNAME_HELP_MSG = (
     "Hostname of target DB cluster node."
+)
+DB_SHELL_DBNAME_HELP_MSG = (
+    "Which DB to connect to using DB shell"
+)
+DB_SHELL_QUERY_HELP_MSG = (
+    "Optional query to run with the DB shell. If this is provided, the query "
+    "will be run and then the command will exit."
 )
 VALIDATE_HELP_MSG = (
     "Validate the provided certificates. If this flag is on, then the "
@@ -461,6 +454,29 @@ def db_node_set_master(**kwargs):
         db.set_master(kwargs['address'])
     else:
         logger.info('There is no database cluster associated with this node.')
+
+
+@argh.named('shell')
+@config_arg
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.decorators.arg('-d', '--dbname', help=DB_SHELL_DBNAME_HELP_MSG,
+                     default='cloudify_db')
+@argh.decorators.arg('query', nargs='?', help=DB_SHELL_QUERY_HELP_MSG)
+def db_shell(**kwargs):
+    """Access the current DB leader using psql"""
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config(kwargs.get('config_file'))
+    if is_installed(MANAGER_SERVICE):
+        db_env, base_command = get_psql_env_and_base_command(
+            logger, db_override=kwargs['dbname'])
+        command = ['/bin/sudo', '-E'] + base_command
+        if kwargs['query']:
+            command += ['-c', kwargs['query']]
+        os.execve(command[0], command, db_env)
+    else:
+        logger.error(
+            'DB shell is only accessible with the manager installed.')
 
 
 def _print_time():
@@ -1328,7 +1344,8 @@ def main():
         db_node_add,
         db_node_remove,
         db_node_reinit,
-        db_node_set_master
+        db_node_set_master,
+        db_shell,
     ], namespace='dbs')
 
     parser.dispatch()

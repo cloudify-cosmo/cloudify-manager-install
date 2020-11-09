@@ -21,6 +21,18 @@ from cfy_manager.exceptions import BootstrapError
 
 
 def run_psql_command(command, db_key, logger):
+    db_env, base_command = get_psql_env_and_base_command(logger, db_key)
+
+    # Run psql with just the results output without headers (-t),
+    # no psqlrc (-X), and not storing history (-n)
+    base_command.extend(['-t', '-X', '-n'])
+
+    result = sudo(base_command, env=db_env, stdin=command)
+    return result.aggr_stdout.strip()
+
+
+def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
+                                  db_override=None):
     base_command = []
     pg_config = config[POSTGRESQL_CLIENT]
     peer_authentication = False
@@ -32,17 +44,18 @@ def run_psql_command(command, db_key, logger):
             base_command.extend(['-u', 'postgres'])
             peer_authentication = True
 
-    # Run psql with just the results output without headers (-t),
-    # no psqlrc (-X), and not storing history (-n)
-    base_command.extend(['/usr/bin/psql', '-t', '-X', '-n'])
+    base_command.append('/usr/bin/psql')
+
     db_kwargs = {}
-    if db_key == 'cloudify_db_name' and not peer_authentication:
+    if not peer_authentication:
         db_kwargs['username'] = pg_config['cloudify_username']
         db_kwargs['password'] = pg_config['cloudify_password']
 
-    db_env = generate_db_env(pg_config[db_key], logger, **db_kwargs)
-    result = sudo(base_command, env=db_env, stdin=command)
-    return result.aggr_stdout.strip()
+    db_name = db_override or pg_config[db_key]
+
+    db_env = generate_db_env(db_name, logger, **db_kwargs)
+
+    return db_env, base_command
 
 
 def generate_db_env(database, logger, username=None, password=None):
