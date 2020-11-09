@@ -31,7 +31,7 @@ groups:
         annotations:
           summary: "PostgreSQL Exporter is down (host {{ $labels.host }})"
         {%- endraw %}
-      - alert: db_node_service_down
+      - alert: postgres_service_down
         expr: postgres_service == 0
         for: 1m
         labels:
