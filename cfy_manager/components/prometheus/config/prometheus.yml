@@ -91,6 +91,23 @@ scrape_configs:
       - files:
         - '/etc/prometheus/targets/other_managers.yml'
 
+  - job_name: 'federate_manager_prometheus'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /monitoring/federate
+    params:
+      'match[]':
+        - '{job="prometheus",host!="{{ manager.private_ip }}"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_managers.yml'
+
   - job_name: 'federate_manager_node'
     scrape_interval: 15s
     honor_labels: true
@@ -130,6 +147,23 @@ scrape_configs:
       - files:
         - '/etc/prometheus/targets/other_rabbits.yml'
 
+  - job_name: 'federate_rabbitmq_prometheus'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /monitoring/federate
+    params:
+      'match[]':
+        - '{job="prometheus",host!="{{ manager.private_ip }}"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_rabbits.yml'
+
   - job_name: 'federate_rabbitmq_node'
     scrape_interval: 15s
     honor_labels: true
@@ -165,6 +199,23 @@ scrape_configs:
     params:
       'match[]':
         - '{job="postgresql",host!="{{ manager.private_ip }}"}'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/other_postgres.yml'
+
+  - job_name: 'federate_postgresql_prometheus'
+    scrape_interval: 15s
+    honor_labels: true
+    scheme: 'https'
+    tls_config:
+      ca_file: {{ prometheus.ca_path }}
+    basic_auth:
+      username: {{ prometheus.credentials.username }}
+      password: {{ prometheus.credentials.password }}
+    metrics_path: /monitoring/federate
+    params:
+      'match[]':
+        - '{job="prometheus",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_postgres.yml'
