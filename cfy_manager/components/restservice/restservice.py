@@ -52,7 +52,6 @@ from ..service_names import (
     MANAGER,
     RESTSERVICE,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER,
     MANAGER_SERVICE,
     MONITORING_SERVICE
 )
@@ -65,6 +64,7 @@ from ...utils import (
     files,
     service
 )
+from cfy_manager.utils.db import get_postgres_host
 from ...exceptions import BootstrapError
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.install import is_premium_installed
@@ -119,15 +119,10 @@ class RestService(BaseComponent):
     def _deploy_rest_conf(self):
         client_conf = config[POSTGRESQL_CLIENT]
         constants = config['constants']
-        cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
-        if cluster_nodes:
-            postgres_host = [db['ip'] for db in cluster_nodes]
-        else:
-            postgres_host = client_conf['host']
         rest_conf = {
             'postgresql_bin_path': '/usr/pgsql-9.5/bin/',
             'postgresql_db_name': client_conf['cloudify_db_name'],
-            'postgresql_host': postgres_host,
+            'postgresql_host': get_postgres_host(),
             'postgresql_username': client_conf['cloudify_username'],
             'postgresql_password': client_conf['cloudify_password'],
             'postgresql_ssl_enabled': client_conf['ssl_enabled'],

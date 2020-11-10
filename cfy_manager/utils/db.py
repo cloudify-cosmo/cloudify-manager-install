@@ -47,7 +47,7 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
     base_command.append('/usr/bin/psql')
 
     db_kwargs = {}
-    if not peer_authentication:
+    if db_key == 'cloudify_db_name' and not peer_authentication:
         db_kwargs['username'] = pg_config['cloudify_username']
         db_kwargs['password'] = pg_config['cloudify_password']
 
@@ -147,3 +147,72 @@ def select_db_host(logger):
                 attempt += 1
     else:
         return client_config['host']
+
+
+def get_postgres_host():
+    cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+    if cluster_nodes:
+        return [db['ip'] for db in cluster_nodes]
+    return config[POSTGRESQL_CLIENT]['host']
+
+
+def get_ui_db_dialect_options_and_url(database, certs):
+    conn_string = 'postgres://{username}:{password}@{host}:{port}/{db}{params}'
+    postgres_host = get_postgres_host()
+
+    # For building URL string
+    params = {}
+
+    dialect_options = {}
+    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        params.update({
+            'sslmode': 'verify-full',
+            'sslrootcert': certs['ca'],
+        })
+
+        dialect_options['ssl'] = {
+            'ca': certs['ca'],
+            'rejectUnauthorized': True,
+        }
+
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            params.update({
+                'sslcert': certs['cert'],
+                'sslkey': certs['key'],
+            })
+
+            dialect_options['ssl']['cert'] = certs['cert']
+            dialect_options['ssl']['key'] = certs['key']
+    else:
+        dialect_options['ssl'] = False
+
+    if any(params.values()):
+        params = '?' + '&'.join('{0}={1}'.format(key, value)
+                                for key, value in params.items()
+                                if value)
+    else:
+        params = ''
+
+    if isinstance(postgres_host, list):
+        return dialect_options, [
+            conn_string.format(
+                username=config[POSTGRESQL_CLIENT]['cloudify_username'],
+                password=config[POSTGRESQL_CLIENT]['cloudify_password'],
+                host=host,
+                port=5432,
+                db=database,
+                params=params,
+            )
+            for host in postgres_host
+        ]
+    host_details = postgres_host.split(':')
+    host = host_details[0]
+    port = host_details[1] if 1 < len(host_details) else '5432'
+    return dialect_options, conn_string.format(
+        username=config[POSTGRESQL_CLIENT]['cloudify_username'],
+        password=config[POSTGRESQL_CLIENT]['cloudify_password'],
+        host=host,
+        port=port,
+        db=database,
+        params=params,
+    )

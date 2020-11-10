@@ -34,6 +34,7 @@ from ...utils import (
     certificates,
     service
 )
+from cfy_manager.utils.db import get_ui_db_dialect_options_and_url
 from ...utils.network import wait_for_port
 from ...constants import (
     CLOUDIFY_USER,
@@ -126,56 +127,21 @@ class Composer(BaseComponent):
             composer_config['managerConfig']['ip'] = \
                 config[SSL_INPUTS]['internal_manager_host']
 
-        host_details = config[POSTGRESQL_CLIENT]['host'].split(':')
-        database_host = host_details[0]
-        database_port = host_details[1] if 1 < len(host_details) else '5432'
+        certs = {
+            'cert': DB_CLIENT_CERT_PATH,
+            'key': DB_CLIENT_KEY_PATH,
+            'ca': DB_CA_PATH,
+        }
 
-        composer_config['db']['url'] = \
-            'postgres://{0}:{1}@{2}:{3}/composer'.format(
-                config[POSTGRESQL_CLIENT]['cloudify_username'],
-                config[POSTGRESQL_CLIENT]['cloudify_password'],
-                database_host,
-                database_port)
-
-        # For node-postgres
-        dialect_options = composer_config['db']['options']['dialectOptions']
-        # For building URL string
-        params = {}
+        dialect_options, url = get_ui_db_dialect_options_and_url('composer',
+                                                                 certs)
+        composer_config['db']['url'] = url
+        composer_config['db']['options']['dialectOptions'] = dialect_options
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             self._handle_ca_certificate()
-
-            params.update({
-                'sslmode': 'verify-full',
-                'sslrootcert': DB_CA_PATH,
-            })
-
-            dialect_options['ssl'] = {
-                'ca': DB_CA_PATH,
-                'rejectUnauthorized': True,
-            }
-
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                self._handle_cert_and_key()
-
-                params.update({
-                    'sslcert': DB_CLIENT_CERT_PATH,
-                    'sslkey': DB_CLIENT_KEY_PATH,
-                })
-
-                dialect_options['ssl']['key'] = DB_CLIENT_KEY_PATH
-                dialect_options['ssl']['cert'] = DB_CLIENT_CERT_PATH
-        else:
-            dialect_options = {
-                'ssl': False
-            }
-
-        if any(params.values()):
-            query = '&'.join('{0}={1}'.format(key, value)
-                             for key, value in params.items()
-                             if value)
-            composer_config['db']['url'] = '{0}?{1}'.format(
-                composer_config['db']['url'], query)
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            self._handle_cert_and_key()
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the composer
