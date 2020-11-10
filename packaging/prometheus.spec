@@ -1,7 +1,7 @@
 %define _tmpdir /tmp/prometheus
-%define _url    https://github.com/prometheus/prometheus/releases/download/v2.18.1/prometheus-2.18.1.linux-amd64.tar.gz
+%define _url    https://github.com/prometheus/prometheus/releases/download/v2.22.1/prometheus-2.22.1.linux-amd64.tar.gz
 Name:           prometheus
-Version:        2.18.1
+Version:        2.22.1
 Release:        1%{?dist}
 Summary:        The Prometheus monitoring system and time series database.
 Group:          Applications/Multimedia

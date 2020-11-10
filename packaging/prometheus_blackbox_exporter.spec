@@ -1,7 +1,7 @@
 %define _tmpdir /tmp/blackbox_exporter
-%define _url    https://github.com/prometheus/blackbox_exporter/releases/download/v0.16.0/blackbox_exporter-0.16.0.linux-amd64.tar.gz
+%define _url    https://github.com/prometheus/blackbox_exporter/releases/download/v0.18.0/blackbox_exporter-0.18.0.linux-amd64.tar.gz
 Name:           blackbox_exporter
-Version:        0.16.0
+Version:        0.18.0
 Release:        1%{?dist}
 Summary:        Prometheus blackbox_exporter
 Group:          Applications/Multimedia
