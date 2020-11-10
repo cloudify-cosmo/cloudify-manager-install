@@ -16,6 +16,7 @@
 import json
 from os import sep
 from os.path import join, exists
+import re
 import subprocess
 
 from ..base_component import BaseComponent
@@ -589,6 +590,8 @@ def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
     render_context = {
         'number_of_http_probes': number_of_http_probes,
         'all_in_one': common.is_all_in_one_manager(),
+        'alert_for': _calculate_alert_for(
+            config.get(PROMETHEUS, {}).get('scrape_interval')),
     }
     manager_hosts = []
     rabbitmq_hosts = []
@@ -624,13 +627,29 @@ def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
         common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
 
     logger.notice('Deploying "missing" alerts...')
-    _deploy_alerts_missing('manager_missing.yml', 'manager', manager_hosts)
-    _deploy_alerts_missing('rabbitmq_missing.yml', 'rabbitmq', rabbitmq_hosts)
-    _deploy_alerts_missing('postgres_missing.yml', 'postgres', postgres_hosts)
+    _deploy_alerts_missing(render_context, 'manager_missing.yml', 'manager',
+                           manager_hosts)
+    _deploy_alerts_missing(render_context, 'rabbitmq_missing.yml', 'rabbitmq',
+                           rabbitmq_hosts)
+    _deploy_alerts_missing(render_context, 'postgres_missing.yml', 'postgres',
+                           postgres_hosts)
 
 
-def _deploy_alerts_missing(destination, service_name, hosts):
-    render_context = {'name': service_name, 'hosts': hosts}
+def _calculate_alert_for(scrape_interval):
+    if scrape_interval:
+        scrape_interval = '{0}'.format(scrape_interval).lower()
+    m = re.match(r'^((\d+)s)?((\d+)ms)?', scrape_interval)
+    if not m or not m.lastindex or m.lastindex < 1:
+        return '15s'
+    scrape_seconds = int(m[2] or 0) + 0.001 * int(m[4] or 0)
+    if scrape_seconds >= 15.0:
+        return '15s'
+    else:
+        return m[0]
+
+
+def _deploy_alerts_missing(render_context, destination, service_name, hosts):
+    render_context.update({'name': service_name, 'hosts': hosts})
     dest_file_name = join(PROMETHEUS_ALERTS_DIR, destination)
     files.deploy(join(CONFIG_DIR, 'alerts', 'missing.yml'), dest_file_name,
                  additional_render_context=render_context)
