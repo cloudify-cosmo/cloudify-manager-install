@@ -563,6 +563,8 @@ prometheus:
   credentials:
     username: 'monitoring_user'
     password: 'm0n1torify'
+  # How frequently should Prometheus scrape its targets and evaluate rules.
+  scrape_interval: 15s
   # How long should status reporter wait for Prometheus response (in seconds).
   request_timeout: 4
 
