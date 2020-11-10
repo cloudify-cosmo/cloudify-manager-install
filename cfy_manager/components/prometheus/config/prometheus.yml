@@ -1,6 +1,6 @@
 global:
-  scrape_interval:     15s
-  evaluation_interval: 15s
+  scrape_interval: {{  prometheus.scrape_interval }}
+  evaluation_interval: {{  prometheus.scrape_interval }}
 
   external_labels:
     monitor: cloudify
@@ -58,7 +58,6 @@ scrape_configs:
         - '/etc/prometheus/targets/local_http_401_manager.yml'
 
   - job_name: 'federate_http_200'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -75,7 +74,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_managers.yml'
 
   - job_name: 'federate_http_401'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -92,7 +90,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_managers.yml'
 
   - job_name: 'federate_manager_prometheus'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -109,7 +106,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_managers.yml'
 
   - job_name: 'federate_manager_node'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -131,7 +127,6 @@ scrape_configs:
         - '/etc/prometheus/targets/local_rabbit.yml'
 
   - job_name: 'federate_rabbitmq'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -148,7 +143,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_rabbits.yml'
 
   - job_name: 'federate_rabbitmq_prometheus'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -165,7 +159,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_rabbits.yml'
 
   - job_name: 'federate_rabbitmq_node'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -187,7 +180,6 @@ scrape_configs:
         - '/etc/prometheus/targets/local_postgres.yml'
 
   - job_name: 'federate_postgresql'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -204,7 +196,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_postgres.yml'
 
   - job_name: 'federate_postgresql_prometheus'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
@@ -221,7 +212,6 @@ scrape_configs:
         - '/etc/prometheus/targets/other_postgres.yml'
 
   - job_name: 'federate_postgresql_node'
-    scrape_interval: 15s
     honor_labels: true
     scheme: 'https'
     tls_config:
