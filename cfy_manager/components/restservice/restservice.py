@@ -132,7 +132,8 @@ class RestService(BaseComponent):
                 constants.get('postgresql_client_cert_path'),
             'postgresql_ssl_key_path':
                 constants.get('postgresql_client_key_path'),
-            'postgresql_ca_cert_path': constants['postgresql_ca_cert_path'],
+            'postgresql_ca_cert_path': constants.get(
+                'postgresql_ca_cert_path'),
             'ca_cert_path': constants['ca_cert_path'],
         }
         files.write_to_file(rest_conf, REST_CONFIG_PATH, json_dump=True)
