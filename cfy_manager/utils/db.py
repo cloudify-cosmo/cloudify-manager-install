@@ -3,11 +3,16 @@ import time
 
 import requests
 
-from .common import sudo, is_all_in_one_manager
+from .common import sudo, is_all_in_one_manager, is_installed
 from ..config import config
-from ..constants import POSTGRESQL_CLIENT_CERT_PATH, POSTGRESQL_CLIENT_KEY_PATH
+from cfy_manager.constants import (
+    POSTGRESQL_CA_CERT_PATH,
+    POSTGRESQL_CLIENT_CERT_PATH,
+    POSTGRESQL_CLIENT_KEY_PATH,
+)
 
 from cfy_manager.components.service_names import (
+    DATABASE_SERVICE,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
 )
@@ -76,10 +81,13 @@ def generate_db_env(database, logger, username=None, password=None):
     if pg_config[SSL_ENABLED]:
         db_env['PGSSLMODE'] = 'verify-full'
 
-        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        if (
+            is_installed(DATABASE_SERVICE)
+            and config[POSTGRESQL_SERVER]['cluster']['nodes']
+        ):
             ca_path = PATRONI_DB_CA_PATH
         else:
-            ca_path = '/etc/cloudify/ssl/postgresql_ca.crt'
+            ca_path = POSTGRESQL_CA_CERT_PATH
 
         db_env['PGSSLROOTCERT'] = ca_path
 
@@ -113,11 +121,16 @@ def select_db_host(logger):
         attempt = 1
         for i, candidate in enumerate(itertools.cycle(cluster_nodes)):
             result = None
+            if is_installed(DATABASE_SERVICE):
+                # Use the etcd CA if this is a DB node as it'll be readable
+                ca_path = ETCD_CA_PATH
+            else:
+                # Otherwise, use the postgrs client cert
+                ca_path = POSTGRESQL_CA_CERT_PATH
             try:
                 result = requests.get(
                     'https://{}:8008'.format(candidate),
-                    # The etcd ca is accessible to us, the patroni one isn't
-                    verify=ETCD_CA_PATH,
+                    verify=ca_path,
                 )
             except Exception as err:
                 logger.error(
