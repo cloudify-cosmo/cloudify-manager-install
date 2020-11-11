@@ -118,7 +118,7 @@ class RestService(BaseComponent):
 
     def _deploy_rest_conf(self):
         client_conf = config[POSTGRESQL_CLIENT]
-        constants = config['constants']
+        const = config['constants']
         rest_conf = {
             'postgresql_bin_path': '/usr/pgsql-9.5/bin/',
             'postgresql_db_name': client_conf['cloudify_db_name'],
@@ -129,14 +129,15 @@ class RestService(BaseComponent):
             'postgresql_ssl_client_verification':
                 client_conf['ssl_client_verification'],
             'postgresql_ssl_cert_path':
-                constants.get('postgresql_client_cert_path'),
+                const.get('postgresql_client_cert_path'),
             'postgresql_ssl_key_path':
-                constants.get('postgresql_client_key_path'),
-            'postgresql_ca_cert_path': constants.get(
-                'postgresql_ca_cert_path'),
-            'ca_cert_path': constants['ca_cert_path'],
+                const.get('postgresql_client_key_path'),
+            'postgresql_ca_cert_path': const.get('postgresql_ca_cert_path'),
+            'ca_cert_path': const['ca_cert_path'],
         }
         files.write_to_file(rest_conf, REST_CONFIG_PATH, json_dump=True)
+        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                     REST_CONFIG_PATH)
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
