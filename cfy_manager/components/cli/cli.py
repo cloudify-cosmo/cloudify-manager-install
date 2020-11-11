@@ -61,9 +61,9 @@ class Cli(BaseComponent):
 
         use_cmd = ['profiles', 'use', manager,
                    '-u', username, '-p', password,
-                   '-t', 'default_tenant', '-c', cert_path]
+                   '-t', 'default_tenant']
         if config[MANAGER][SECURITY]['ssl_enabled']:
-            use_cmd.append('--ssl')
+            use_cmd.extend(['-c', cert_path])
         if config['nginx']['port']:
             use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
