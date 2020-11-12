@@ -31,6 +31,7 @@ postgresql_server:
         ip: DB3_IP
 
 postgresql_client:
+  host: 127.0.0.2
   ssl_enabled: true
   server_password: 'somesecretvalue123!'
   ssl_client_verification: true
