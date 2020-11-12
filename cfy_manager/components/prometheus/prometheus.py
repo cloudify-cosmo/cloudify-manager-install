@@ -636,8 +636,8 @@ def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
 
 
 def _calculate_alert_for(scrape_interval):
-    if scrape_interval:
-        scrape_interval = '{0}'.format(scrape_interval).lower()
+    scrape_interval = '{0}'.format(scrape_interval).lower() if scrape_interval\
+        else ''
     m = re.match(r'^((\d+)s)?((\d+)ms)?', scrape_interval)
     if not m or not m.lastindex or m.lastindex < 1:
         return '15s'
