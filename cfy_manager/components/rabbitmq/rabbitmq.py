@@ -255,7 +255,8 @@ class RabbitMQ(BaseComponent):
 
     def list_rabbit_nodes(self):
         nodes_url = 'https://localhost:15671/api/nodes'
-        if not config[RABBITMQ].get('management_only_local'):
+
+        if config[RABBITMQ]['cluster_members']:
             nodename = config[RABBITMQ]['nodename'].split('@')[-1]
             try:
                 default_ip = config[RABBITMQ]['cluster_members'][
@@ -266,6 +267,7 @@ class RabbitMQ(BaseComponent):
                                'back to localhost', nodename)
             else:
                 nodes_url = 'https://{0}:15671/api/nodes'.format(default_ip)
+
         auth = (
             config[RABBITMQ]['username'],
             config[RABBITMQ]['password'],
