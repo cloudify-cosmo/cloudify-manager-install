@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import re
 import time
@@ -507,8 +492,8 @@ class PostgresqlServer(BaseComponent):
     def _get_etcd_id(self, ip):
         return 'etcd' + ip.replace('.', '_')
 
-    def _get_patroni_id(self, ip):
-        return 'pg' + ip.replace('.', '_')
+    def _get_patroni_id(self, address):
+        return 'pg' + address.replace('.', '_')
 
     def _etcd_requires_auth(self):
         logger.info('Checking whether etcd requires auth.')
@@ -1244,13 +1229,13 @@ class PostgresqlServer(BaseComponent):
         return node
 
     def _get_sync_replicas(self, master_status):
-        sync_ips = []
+        sync_nodes = []
         master_replication = master_status.get('replication', [])
         if master_replication:
             for replica in master_replication:
                 if replica['sync_state'] == 'sync':
-                    sync_ips.append(replica['client_addr'])
-        return sync_ips
+                    sync_nodes.append(replica['application_name'])
+        return sync_nodes
 
     def _determine_cluster_status(self, db_nodes):
         status = self.HEALTHY
@@ -1264,7 +1249,7 @@ class PostgresqlServer(BaseComponent):
             'xlog', {}
         ).get('location')
         master_timeline = master['raw_status'].get('timeline')
-        sync_ips = self._get_sync_replicas(master['raw_status'])
+        sync_nodes = self._get_sync_replicas(master['raw_status'])
 
         if master['node_ip'] is None:
             logger.error('No master found.')
@@ -1274,7 +1259,7 @@ class PostgresqlServer(BaseComponent):
         # Master checks
         if not master['alive']:
             status = max(status, self.DOWN)
-        if not sync_ips:
+        if not sync_nodes:
             logger.error('No synchronous replicas found.')
             # The cluster is down if there are no sync replicas, because
             # writes will not be allowed
@@ -1368,10 +1353,11 @@ class PostgresqlServer(BaseComponent):
         master = self._get_node_status(master_address, master=True)
         replicas = []
         for address in replica_addresses:
+            patroni_id = self._get_patroni_id(address)
             replicas.append(
                 self._get_node_status(
                     address,
-                    sync_replica=address in self._get_sync_replicas(
+                    sync_replica=patroni_id in self._get_sync_replicas(
                         master['raw_status'],
                     ),
                 )
@@ -1516,9 +1502,9 @@ class PostgresqlServer(BaseComponent):
             )
 
     def _become_synchronous(self, candidate, master_address,
-                            sync_ips):
+                            sync_nodes):
         for i in range(30):
-            if sync_ips and i % 5 == 0:
+            if sync_nodes and i % 5 == 0:
                 # Retry this every 5 attempts. If there are more than 3 nodes
                 # this gives a chance to have the target node become sync.
                 logger.info(
@@ -1526,15 +1512,16 @@ class PostgresqlServer(BaseComponent):
                         addr=candidate,
                     )
                 )
-                self._patronictl_command(['restart', '--force', 'postgres',
-                                          self._get_patroni_id(sync_ips[0])])
+                self._patronictl_command(
+                    ['restart', '--force', 'postgres',
+                     self._get_patroni_id(sync_nodes[0])])
             master_status = self._get_node_status(master_address,
                                                   master=True)
-            sync_ips = self._get_sync_replicas(
+            sync_nodes = self._get_sync_replicas(
                 master_status['raw_status']
             )
-            if sync_ips:
-                if candidate in sync_ips:
+            if sync_nodes:
+                if candidate in sync_nodes:
                     logger.info(
                         '{addr} has become synchronous replica.'.format(
                             addr=candidate,
@@ -1577,8 +1564,8 @@ class PostgresqlServer(BaseComponent):
             )
 
         master_status = self._get_node_status(master_address, master=True)
-        sync_ips = self._get_sync_replicas(master_status['raw_status'])
-        if address not in sync_ips:
+        sync_nodes = self._get_sync_replicas(master_status['raw_status'])
+        if self._get_patroni_id(address) not in sync_nodes:
             # Patroni will only fail over to a synchronous replica, so we will
             # restart the current synchronous replica which will force the
             # current async replica to become synchronous
@@ -1589,7 +1576,7 @@ class PostgresqlServer(BaseComponent):
                 )
             )
             self._become_synchronous(address, master_address,
-                                     sync_ips)
+                                     sync_nodes)
 
         for i in range(30):
             if i in [0, 10, 20]:
