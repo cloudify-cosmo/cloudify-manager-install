@@ -1512,16 +1512,15 @@ class PostgresqlServer(BaseComponent):
                         addr=candidate,
                     )
                 )
-                self._patronictl_command(
-                    ['restart', '--force', 'postgres',
-                     self._get_patroni_id(sync_nodes[0])])
+                self._patronictl_command(['restart', '--force', 'postgres',
+                                          sync_nodes[0]])
             master_status = self._get_node_status(master_address,
                                                   master=True)
             sync_nodes = self._get_sync_replicas(
                 master_status['raw_status']
             )
             if sync_nodes:
-                if candidate in sync_nodes:
+                if self._get_patroni_id(candidate) in sync_nodes:
                     logger.info(
                         '{addr} has become synchronous replica.'.format(
                             addr=candidate,
