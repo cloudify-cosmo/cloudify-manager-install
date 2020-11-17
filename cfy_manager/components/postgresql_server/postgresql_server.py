@@ -1141,6 +1141,12 @@ class PostgresqlServer(BaseComponent):
                 master = None
 
             replicas = [node for node in nodes if node != master]
+        elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            manager_conf = files.read_yaml_file(
+                '/opt/manager/cloudify-rest.conf')
+            db_nodes = manager_conf['postgresql_host']
+            master = db.select_db_host(logger)
+            replicas = [node for node in db_nodes if node != master]
         else:
             raise DBNodeListError(
                 'Can only list DB nodes from a manager or DB node.'
