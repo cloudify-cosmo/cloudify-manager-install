@@ -238,10 +238,10 @@ class RabbitMQ(BaseComponent):
                 break
 
     def list_rabbit_nodes(self):
-        nodes_url = 'https://localhost:15671/api/nodes'
+        nodename = config[RABBITMQ]['nodename'].split('@')[-1]
+        nodes_url = 'https://{}:15671/api/nodes'.format(nodename)
 
         if config[RABBITMQ]['cluster_members']:
-            nodename = config[RABBITMQ]['nodename'].split('@')[-1]
             try:
                 default_ip = config[RABBITMQ]['cluster_members'][
                     nodename]['networks']['default']
