@@ -21,6 +21,7 @@ from os.path import join
 from .manager_config import make_manager_config
 from ..components_constants import (
     AGENT,
+    CONFIG,
     SCRIPTS,
     HOSTNAME,
     SECURITY,
@@ -47,12 +48,13 @@ from ...exceptions import ValidationError
 
 from ...utils import common, db as utils_db
 from ...utils.install import is_premium_installed
-from ...utils.files import temp_copy
+from ...utils.files import temp_copy, read_yaml_file
 from ...utils.scripts import run_script_on_manager_venv
 
 logger = get_logger('DB')
 
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
+CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 REST_HOME_DIR = '/opt/manager'
 NETWORKS = 'networks'
 UUID4HEX_LEN = 32
@@ -107,6 +109,10 @@ def _get_provider_context():
     return context
 
 
+def _get_permissions():
+    return read_yaml_file(join(CONFIG_PATH, 'authorization.conf'))
+
+
 def _create_populate_db_args_dict():
     """
     Create and return a dictionary with all the information necessary for the
@@ -116,7 +122,7 @@ def _create_populate_db_args_dict():
         'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
         'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
         'provider_context': _get_provider_context(),
-        'authorization_file_path': join(REST_HOME_DIR, 'authorization.conf'),
+        'permissions': _get_permissions(),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
