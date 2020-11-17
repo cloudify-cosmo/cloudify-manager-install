@@ -15,7 +15,7 @@
 
 from collections import namedtuple
 from os.path import join, exists
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from cfy_manager.components.prometheus import prometheus
 from ..base_component import BaseComponent
@@ -408,12 +408,26 @@ class Nginx(BaseComponent):
         # updating the ssl state as it required to restart nginx
         service.enable('wait_on_restart')
 
+    def _set_selinux_policies(self):
+        # Setup Cloudify SELinux policies for nginx
+        logger.info('Deploying SELinux policy for nginx...')
+        ports_to_allow = (('3000', '8088', '8100',)
+                          if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL)
+                          else ())
+        with TemporaryDirectory() as tmpdirname:
+            deploy(join(CONFIG_PATH, 'cloudify.te'),
+                   join(tmpdirname, 'cloudify.te'))
+            script_path = join(SCRIPTS_PATH, 'sepolicy_deploy.sh')
+            common.sudo([script_path, tmpdirname, " ".join(ports_to_allow)])
+        logger.info('SELinux policy for nginx.')
+
     def install(self):
         logger.notice('Installing NGINX...')
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
         if config.get('service_management') != 'supervisord':
             self._deploy_unit_override()
+        self._set_selinux_policies()
         set_logrotate(NGINX)
         logger.notice('NGINX successfully installed')
 
