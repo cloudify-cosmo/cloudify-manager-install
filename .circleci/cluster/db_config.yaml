@@ -37,6 +37,7 @@ prometheus:
     # `password` is a placeholder and will be updated during config file rendering, based on postgresql_server.postgres_password
     password: ''
     sslmode: require
+  scape_interval: 5s
 
 services_to_install:
 - database_service
