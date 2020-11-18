@@ -39,6 +39,7 @@ prometheus:
   cert_path: /etc/cloudify/cert.pem
   key_path: /etc/cloudify/key.pem
   ca_path: /etc/cloudify/ca.pem
+  scrape_interval: 5s
 
 ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
