@@ -15,7 +15,7 @@ postgresql_client:
   server_username: postgres
 
 prometheus:
-  scape_interval: 5s
+  scrape_interval: 5s
 
 services_to_install:
   - database_service
