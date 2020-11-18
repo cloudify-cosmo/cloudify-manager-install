@@ -23,6 +23,7 @@ from cfy_manager.components.components_constants import (
     SSL_ENABLED,
 )
 from cfy_manager.exceptions import BootstrapError
+from cfy_manager.utils import files
 
 
 def run_psql_command(command, db_key, logger):
@@ -163,9 +164,17 @@ def select_db_host(logger):
 
 
 def get_postgres_host():
-    cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+    rest_config = files.read_yaml_file('/opt/manager/cloudify-rest.conf')
+    if rest_config:
+        cluster_nodes = rest_config['postgresql_host']
+    else:
+        cluster_nodes = [
+            db['ip'] for db in
+            config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+        ]
+
     if cluster_nodes:
-        return [db['ip'] for db in cluster_nodes]
+        return cluster_nodes
     return config[POSTGRESQL_CLIENT]['host']
 
 

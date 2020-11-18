@@ -147,9 +147,6 @@ DB_NODE_ADDRESS_HELP_MSG = (
 DB_NODE_FORCE_HELP_MSG = (
     "Force removal of cluster node even if it is the master."
 )
-DB_HOSTNAME_HELP_MSG = (
-    "Hostname of target DB cluster node."
-)
 DB_SHELL_DBNAME_HELP_MSG = (
     "Which DB to connect to using DB shell"
 )
@@ -389,15 +386,16 @@ def db_node_list(**kwargs):
                      default=False)
 @argh.decorators.arg('-a', '--address', help=DB_NODE_ADDRESS_HELP_MSG,
                      required=True)
-@argh.decorators.arg('-n', '--hostname', help=DB_HOSTNAME_HELP_MSG)
 def db_node_add(**kwargs):
     """Add a DB cluster node."""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
     _validate_components_prepared('db_node_add')
     db = components.PostgresqlServer()
+    stage = components.Stage()
+    composer = components.Composer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'], kwargs.get('hostname'))
+        db.add_cluster_node(kwargs['address'], stage, composer)
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -414,8 +412,12 @@ def db_node_remove(**kwargs):
     config.load_config(kwargs.get('config_file'))
     _validate_components_prepared('db_node_remove')
     db = components.PostgresqlServer()
+    stage = components.Stage()
+    composer = components.Composer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.remove_cluster_node(kwargs['address'])
+        db.remove_cluster_node(kwargs['address'],
+                               stage,
+                               composer)
     else:
         logger.info('There is no database cluster associated with this node.')
 

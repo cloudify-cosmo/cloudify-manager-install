@@ -132,7 +132,7 @@ class Stage(BaseComponent):
         logger.info(
             'Replacing {0} on stage component'.format(certs_type))
 
-    def _set_db_url(self):
+    def set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
         # We need to use sudo to read this or we break on configure
         stage_config = json.loads(files.sudo_read(config_path))
@@ -192,7 +192,7 @@ class Stage(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Stage...')
-        self._set_db_url()
+        self.set_db_url()
         self._set_internal_manager_ip()
         self._set_community_mode()
         external_configure_params = {}

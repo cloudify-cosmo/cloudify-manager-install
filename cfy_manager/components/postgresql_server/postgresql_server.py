@@ -1387,10 +1387,10 @@ class PostgresqlServer(BaseComponent):
         # with the expected name
         return int(result) == 1
 
-    def _add_node_to_db(self, name, host):
+    def _add_node_to_db(self, host):
         db.run_psql_command(
-            "INSERT INTO db_nodes (name, host) VALUES ('{0}', '{1}');".format(
-                name, host
+            "INSERT INTO db_nodes (host, host) VALUES ('{0}', '{1}');".format(
+                host, host
             ),
             'cloudify_db_name',
             logger,
@@ -1403,7 +1403,7 @@ class PostgresqlServer(BaseComponent):
             logger,
         )
 
-    def add_cluster_node(self, address, hostname=None):
+    def add_cluster_node(self, address, stage, composer):
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             raise DBManagementError(
                 'Database cluster nodes should be added to the cluster '
@@ -1429,12 +1429,27 @@ class PostgresqlServer(BaseComponent):
                 'add the node.'.format(address=address)
             )
 
+        logger.info('Updating rest service configuration')
+        manager_conf = files.read_yaml_file('/opt/manager/cloudify-rest.conf')
+        manager_conf['postgresql_host'].append(address)
+        files.update_yaml_file('/opt/manager/cloudify-rest.conf',
+                               manager_conf)
+        logger.info('Restarting rest service')
+        service.restart('restservice')
+
+        logger.info('Setting UI DB configuration')
+        stage.set_db_url()
+        composer.update_composer_config()
+        logger.info('Restarting UI services')
+        service.restart('stage')
+        service.restart('composer')
+
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
         if not self._node_is_in_db(address):
-            self._add_node_to_db((hostname or address), address)
+            self._add_node_to_db(address)
 
-    def remove_cluster_node(self, address):
+    def remove_cluster_node(self, address, stage, composer):
         master, replicas = self._get_cluster_addresses()
 
         if len(replicas) < 2:
@@ -1450,14 +1465,17 @@ class PostgresqlServer(BaseComponent):
                 'this command.'
             )
 
+        if address not in replicas:
+            raise DBManagementError(
+                'Cannot find node with address{addr} for removal. '
+                'The following nodes can be removed: {valid}'.format(
+                    addr=address,
+                    valid=', '.join(replicas),
+                )
+            )
+
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             member_id = self._get_etcd_members().get(address)
-
-            if not member_id:
-                raise DBManagementError(
-                    'Cannot find node with address {addr} for '
-                    'removal.'.format(addr=address)
-                )
 
             logger.info(
                 'Removing etcd node {name}'.format(name=address)
@@ -1480,6 +1498,22 @@ class PostgresqlServer(BaseComponent):
             ]
             self._set_patroni_dcs_conf(patroni_config)
             logger.info('Node {addr} removed.'.format(addr=address))
+        elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            manager_conf = files.read_yaml_file(
+                '/opt/manager/cloudify-rest.conf')
+            logger.info('Updating rest service configuration')
+            manager_conf['postgresql_host'].remove(address)
+            files.update_yaml_file('/opt/manager/cloudify-rest.conf',
+                                   manager_conf)
+            logger.info('Restarting rest service')
+            service.restart('restservice')
+
+            logger.info('Setting UI DB configuration')
+            stage.set_db_url()
+            composer.update_composer_config()
+            logger.info('Restarting UI services')
+            service.restart('stage')
+            service.restart('composer')
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()

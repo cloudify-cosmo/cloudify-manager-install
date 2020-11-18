@@ -118,7 +118,7 @@ class Composer(BaseComponent):
     def log_replacing_certs(self, certs_type):
         logger.info('Replacing %s on composer component', certs_type)
 
-    def _update_composer_config(self):
+    def update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
         # We need to use sudo to read this or we break on configure
         composer_config = json.loads(files.sudo_read(config_path))
@@ -166,7 +166,7 @@ class Composer(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
-        self._update_composer_config()
+        self.update_composer_config()
         external_configure_params = {}
         if service._get_service_type() == 'supervisord':
             external_configure_params['service_user'] = COMPOSER_USER
