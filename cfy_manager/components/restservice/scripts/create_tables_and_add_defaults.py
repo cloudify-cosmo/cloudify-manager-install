@@ -20,7 +20,6 @@ import os
 from os.path import isfile
 import sys
 import json
-import yaml
 import atexit
 import logging
 import tempfile

@@ -222,7 +222,6 @@ def _create_process_env(rest_config=None, authorization_config=None,
     for value, envvar in [
             (rest_config, 'MANAGER_REST_CONFIG_PATH'),
             (security_config, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-            (authorization_config, 'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
     ]:
         if value is not None:
             env[envvar] = value
