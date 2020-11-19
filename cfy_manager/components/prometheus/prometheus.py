@@ -306,6 +306,10 @@ def _installing_manager():
     return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
 
+def _installing_rabbit():
+    return QUEUE_SERVICE in config[SERVICES_TO_INSTALL]
+
+
 def _create_prometheus_directories():
     logger.notice('Creating Prometheus directories')
     common.mkdir(PROMETHEUS_DATA_DIR)
@@ -520,11 +524,10 @@ def _update_manager_targets(private_ip, uninstalling):
         # Monitor remote rabbit nodes
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
         for host, rabbit in config[RABBITMQ]['cluster_members'].items():
-            target = (
-                host if use_rabbit_host else rabbit['networks']['default']
-            )
-            rabbit_targets.append(
-                target + ':' + monitoring_port)
+            target = host if use_rabbit_host else rabbit['networks']['default']
+            if not (_installing_rabbit() and target == private_ip):
+                rabbit_targets.append(
+                    target + ':' + monitoring_port)
 
         # Monitor remote postgres nodes
         for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
