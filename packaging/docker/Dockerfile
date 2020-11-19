@@ -30,9 +30,6 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && yum autoremove -y \
     && yum clean all
 
-COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
-RUN systemctl enable cloudify-starter.service
-
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
 RUN mkdir -p /etc/supervisord.d
