@@ -54,13 +54,32 @@ def _init_db_tables(db_migrate_dir):
     upgrade(directory=db_migrate_dir)
 
 
+def _populate_roles(data):
+    for role in data['roles']:
+        db.session.add(models.Role(
+            name=role['name'],
+            type=role['type'],
+            description=role['description']
+        ))
+    roles = {r.name: r.id for r in
+             db.session.query(models.Role.name, models.Role.id)}
+    for permission, permission_roles in data['permissions'].items():
+        for role_name in permission_roles:
+            if role_name not in roles:
+                continue
+            db.session.add(models.Permission(
+                role_id=roles[role_name],
+                name=permission
+            ))
+    db.session.commit()
+
+
 def _add_default_user_and_tenant(amqp_manager, script_config):
     logger.info('Creating bootstrap admin, default tenant and security roles')
     storage_utils.create_default_user_tenant_and_roles(
         admin_username=script_config['admin_username'],
         admin_password=script_config['admin_password'],
-        amqp_manager=amqp_manager,
-        authorization_file_path=script_config['authorization_file_path']
+        amqp_manager=amqp_manager
     )
 
 
@@ -267,6 +286,7 @@ if __name__ == '__main__':
 
     if script_config.get('db_migrate_dir'):
         _init_db_tables(script_config['db_migrate_dir'])
+        _populate_roles(script_config['permissions'])
     if (script_config.get('admin_username')
             and script_config.get('admin_password')):
         amqp_manager = _get_amqp_manager(script_config)
