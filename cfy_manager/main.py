@@ -1211,22 +1211,17 @@ def image_starter(verbose=False, config_file=None):
         logger.info('Components already configured - nothing to do')
         return
     config.load_config(config_file)
-    command = [sys.executable, '-m', 'cfy_manager.main']
-    args = []
+    command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()
-        args += ['--private-ip', private_ip]
+        command += ['--private-ip', private_ip]
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
-        args += ['--public-ip', private_ip]
+        command += ['--public-ip', private_ip]
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD):
-        args += ['--admin-password', 'admin']
-    try:
-        subprocess.check_call(command + ['configure'] + args)
-        subprocess.check_call(command + ['start'])
-    except subprocess.CalledProcessError:
-        sys.exit(1)
+        command += ['--admin-password', 'admin']
+    os.execv(sys.executable, command)
 
 
 @argh.decorators.named('run-init')
