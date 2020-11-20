@@ -1663,7 +1663,16 @@ class PostgresqlServer(BaseComponent):
             enable_remote_connections = \
                 config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
             self._update_configuration(enable_remote_connections)
+            service.enable(POSTGRES_SERVICE_NAME, append_prefix=False)
 
+        self.start()
+
+        if not config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
+                self._update_postgres_password()
+
+        if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._create_db_monitoring_account()
         logger.notice('PostgreSQL Server successfully configured')
 
     def remove(self):
@@ -1694,14 +1703,8 @@ class PostgresqlServer(BaseComponent):
             service.start('patroni', append_prefix=False)
             service.verify_alive('patroni', append_prefix=False)
         else:
-            service.enable(POSTGRES_SERVICE_NAME, append_prefix=False)
             service.start(POSTGRES_SERVICE_NAME, append_prefix=False)
             service.verify_alive(POSTGRES_SERVICE_NAME, append_prefix=False)
-            if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
-                # This cannot be done without the server being started
-                self._update_postgres_password()
-        if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
-            self._create_db_monitoring_account()
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):

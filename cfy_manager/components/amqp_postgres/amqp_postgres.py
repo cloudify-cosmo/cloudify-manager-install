@@ -39,6 +39,7 @@ class AmqpPostgres(BaseComponent):
         self._setup_log_dir()
         service.configure(AMQP_POSTGRES)
         logger.notice('AMQP-Postgres successfully configured')
+        self.start()
 
     def start(self):
         logger.notice('Starting AMQP-Postgres...')

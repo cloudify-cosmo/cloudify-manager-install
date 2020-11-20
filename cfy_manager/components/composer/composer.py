@@ -178,7 +178,9 @@ class Composer(BaseComponent):
             external_configure_params=external_configure_params
         )
         self._chown_for_syncthing()
+        self._run_db_migrate()
         logger.notice('Cloudify Composer successfully configured')
+        self.start()
 
     def remove(self):
         logger.notice('Removing Cloudify Composer...')
@@ -189,7 +191,6 @@ class Composer(BaseComponent):
 
     def start(self):
         logger.notice('Starting Cloudify Composer...')
-        self._run_db_migrate()
         service.restart(COMPOSER)
         self._verify_composer_alive()
         logger.notice('Cloudify Composer successfully started')

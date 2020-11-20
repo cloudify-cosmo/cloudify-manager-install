@@ -118,7 +118,9 @@ class MgmtWorker(BaseComponent):
         self._deploy_mgmtworker_config()
         service.configure(MGMTWORKER)
         self._prepare_snapshot_permissions()
+        self._deploy_admin_token()
         logger.notice('Management Worker successfully configured')
+        self.start()
 
     def remove(self):
         service.remove(MGMTWORKER, service_file=False)
@@ -127,7 +129,6 @@ class MgmtWorker(BaseComponent):
 
     def start(self):
         logger.notice('Starting Management Worker...')
-        self._deploy_admin_token()
         service.start(MGMTWORKER)
         service.verify_alive(MGMTWORKER)
         logger.notice('Management Worker successfully started')

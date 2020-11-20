@@ -58,13 +58,6 @@ logger = get_logger(NGINX)
 
 
 class Nginx(BaseComponent):
-    def _install(self):
-        common.mkdir(LOG_DIR)
-        copy_notice(NGINX)
-        if config.get('service_management') != 'supervisord':
-            self._deploy_unit_override()
-        set_logrotate(NGINX)
-
     def _deploy_unit_override(self):
         logger.debug('Creating systemd unit override...')
         unit_override_path = '/etc/systemd/system/nginx.service.d'
@@ -412,22 +405,28 @@ class Nginx(BaseComponent):
         # updating the ssl state as it required to restart nginx
         service.enable('wait_on_restart', append_prefix=False)
 
-    def _configure(self):
-        if self.service_type == 'supervisord':
-            self._configure_wait_on_restart_wrapper_service()
-        self._deploy_nginx_config_files()
-
     def install(self):
         logger.notice('Installing NGINX...')
-        self._install()
+        common.mkdir(LOG_DIR)
+        copy_notice(NGINX)
+        if config.get('service_management') != 'supervisord':
+            self._deploy_unit_override()
+        set_logrotate(NGINX)
         logger.notice('NGINX successfully installed')
 
     def configure(self):
         logger.notice('Configuring NGINX...')
-        self._configure()
+        if self.service_type == 'supervisord':
+            self._configure_wait_on_restart_wrapper_service()
+        self._deploy_nginx_config_files()
         if self.service_type != 'supervisord':
             service.enable(NGINX, append_prefix=False)
+        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._handle_certs()
+        if self.service_type == 'supervisord':
+            service.configure(NGINX, append_prefix=False)
         logger.notice('NGINX successfully configured')
+        self.start()
 
     def remove(self):
         remove_notice(NGINX)
@@ -441,10 +440,6 @@ class Nginx(BaseComponent):
 
     def start(self):
         logger.notice('Starting NGINX...')
-        if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-            self._handle_certs()
-        if self.service_type == 'supervisord':
-            service.configure(NGINX, append_prefix=False)
         service.restart(NGINX, append_prefix=False)
         service.verify_alive(NGINX, append_prefix=False)
         logger.notice('NGINX successfully started')

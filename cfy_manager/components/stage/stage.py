@@ -206,7 +206,9 @@ class Stage(BaseComponent):
             external_configure_params=external_configure_params
         )
         self._chown_for_syncthing()
+        self._run_db_migrate()
         logger.notice('Stage successfully configured!')
+        self.start()
 
     def remove(self):
         logger.notice('Removing Stage...')
@@ -217,7 +219,6 @@ class Stage(BaseComponent):
 
     def start(self):
         logger.notice('Starting Stage...')
-        self._run_db_migrate()
         service.restart(STAGE)
         self._verify_stage_alive()
         logger.notice('Stage successfully started')

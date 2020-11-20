@@ -107,28 +107,6 @@ def _prometheus_exporters():
 class Prometheus(BaseComponent):
     component_name = 'prometheus'
 
-    def configure(self):
-        logger.notice('Configuring Prometheus Service...')
-        _set_selinux_permissive()
-        _handle_certs()
-        _create_prometheus_directories()
-        _chown_resources_dir()
-        _deploy_configuration()
-        service.configure(PROMETHEUS, append_prefix=False)
-        service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
-        for exporter in _prometheus_exporters():
-            service.configure(
-                exporter['name'],
-                src_dir='prometheus',
-                append_prefix=False
-            )
-            service.reload(
-                exporter['name'],
-                append_prefix=False,
-                ignore_failure=True
-            )
-        logger.notice('Prometheus successfully configured')
-
     def replace_certificates(self):
         if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
                 exists(constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH)):
@@ -189,12 +167,35 @@ class Prometheus(BaseComponent):
             logger.notice(
                 'Successfully removed Prometheus and exporters files')
 
-    def start(self):
+    def configure(self):
+        logger.notice('Configuring Prometheus Service...')
+        _set_selinux_permissive()
+        _handle_certs()
+        _create_prometheus_directories()
+        _chown_resources_dir()
+        _deploy_configuration()
+        service.configure(PROMETHEUS, append_prefix=False)
+        service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
+        for exporter in _prometheus_exporters():
+            service.configure(
+                exporter['name'],
+                src_dir='prometheus',
+                append_prefix=False
+            )
+            service.reload(
+                exporter['name'],
+                append_prefix=False,
+                ignore_failure=True
+            )
         if files.is_file(CLUSTER_DETAILS_PATH):
             logger.notice(
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
             _deploy_configuration()
+        logger.notice('Prometheus successfully configured')
+        self.start()
+
+    def start(self):
         logger.notice('Starting Prometheus and exporters...')
         service.restart(PROMETHEUS, append_prefix=False,
                         ignore_failure=True)

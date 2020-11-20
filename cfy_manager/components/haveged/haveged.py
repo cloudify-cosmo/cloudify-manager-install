@@ -14,6 +14,7 @@ class Haveged(BaseComponent):
         logger.info('Configuring haveged for entropy generation.')
         service.enable(HAVEGED, append_prefix=False)
         logger.info('Successfully configured haveged.')
+        self.start()
 
     def remove(self):
         pass

@@ -43,6 +43,7 @@ class ManagerIpSetter(BaseComponent):
         else:
             logger.info('Set manager ip on boot is disabled.')
         logger.notice('Manager IP Setter successfully configured')
+        self.start()
 
     def remove(self):
         service.SystemD().remove(MANAGER_IP_SETTER, service_file=False)

@@ -490,17 +490,6 @@ class RestService(BaseComponent):
                     CLUSTER_DETAILS_PATH)
         files.remove(cluster_cfg_filename, ignore_failure=True)
 
-    def configure(self):
-        logger.notice('Configuring Rest Service...')
-
-        logger.info('Checking for ldaps CA cert to deploy.')
-        self.handle_ldap_certificate()
-
-        self._make_paths()
-        self._configure_restservice()
-        service.configure(RESTSERVICE)
-        logger.notice('Rest Service successfully configured')
-
     def _join_cluster_setup(self):
         if not common.is_manager_service_only_installed():
             return
@@ -514,6 +503,23 @@ class RestService(BaseComponent):
                     config[MANAGER][HOSTNAME]))
         self._run_cluster_configuration_script(not to_join)
 
+    def configure(self):
+        logger.notice('Configuring Rest Service...')
+
+        logger.info('Checking for ldaps CA cert to deploy.')
+        self.handle_ldap_certificate()
+
+        self._make_paths()
+        self._configure_restservice()
+        service.configure(RESTSERVICE)
+        self._configure_db()
+        if is_premium_installed():
+            self._join_cluster_setup()
+        self.start()
+        if not config[CLUSTER_JOIN]:
+            self._upload_cloudify_license()
+        logger.notice('Rest Service successfully configured')
+
     def remove(self):
         service.remove(RESTSERVICE, service_file=False)
         remove_logrotate(RESTSERVICE)
@@ -522,17 +528,12 @@ class RestService(BaseComponent):
 
     def start(self):
         logger.notice('Starting Restservice...')
-        self._make_paths()
-        self._configure_db()
-        if is_premium_installed():
-            self._join_cluster_setup()
         service.restart(RESTSERVICE)
         if config[CLUSTER_JOIN]:
             logger.info('Extra node in cluster, will verify rest-service '
                         'after clustering configured')
         else:
             self._verify_restservice_alive()
-            self._upload_cloudify_license()
         logger.notice('Restservice successfully started')
 
     def stop(self):

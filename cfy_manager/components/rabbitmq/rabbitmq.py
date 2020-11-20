@@ -556,29 +556,6 @@ class RabbitMQ(BaseComponent):
         wait_for_port(SECURE_PORT)
         self._validate_rabbitmq_running()
 
-    def configure(self):
-        logger.notice('Configuring RabbitMQ...')
-        self._set_erlang_cookie()
-        self._set_config()
-        if self.service_type == 'supervisord':
-            self._configure_rabbitmq_wrapper_script()
-        if not common.is_all_in_one_manager():
-            self._possibly_add_hosts_entries()
-        service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
-        self._generate_rabbitmq_certs()
-        if self._installing_manager():
-            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
-        self._init_service()
-        logger.notice('RabbitMQ successfully configured')
-
-    def remove(self):
-        logger.info('Stopping the Erlang Port Mapper Daemon...')
-        sudo(['epmd', '-kill'], ignore_failures=True)
-        service.remove(RABBITMQ, service_file=False)
-        logger.info('Removing rabbit data...')
-        sudo(['rm', '-rf', '/var/lib/rabbitmq'])
-        sudo(['rm', '-rf', '/etc/rabbitmq'])
-
     def _rabbitmq_hash(self, password):
         salt = os.urandom(4)
         hashed = hashlib.sha256(salt + password.encode('utf-8')).digest()
@@ -614,16 +591,36 @@ class RabbitMQ(BaseComponent):
         common.chown(
             'rabbitmq', 'rabbitmq', '/etc/cloudify/rabbitmq/definitions.json')
 
-    def start(self):
-        logger.notice('Starting RabbitMQ...')
+    def configure(self):
+        logger.notice('Configuring RabbitMQ...')
+        self._set_erlang_cookie()
         self._set_config()
+        if self.service_type == 'supervisord':
+            self._configure_rabbitmq_wrapper_script()
+        if not common.is_all_in_one_manager():
+            self._possibly_add_hosts_entries()
+        service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
+        self._generate_rabbitmq_certs()
         if self._installing_manager():
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
-
+        self._init_service()
+        if self._installing_manager():
+            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         if not config[RABBITMQ]['join_cluster']:
             self._write_definitions_file()
-        # rabbitmq start exits with 143 status code that is valid
-        # in this case.
+        logger.notice('RabbitMQ successfully configured')
+        self.start()
+
+    def remove(self):
+        logger.info('Stopping the Erlang Port Mapper Daemon...')
+        sudo(['epmd', '-kill'], ignore_failures=True)
+        service.remove(RABBITMQ, service_file=False)
+        logger.info('Removing rabbit data...')
+        sudo(['rm', '-rf', '/var/lib/rabbitmq'])
+        sudo(['rm', '-rf', '/etc/rabbitmq'])
+
+    def start(self):
+        logger.notice('Starting RabbitMQ...')
         self._restart_rabbitmq()
         self._possibly_join_cluster()
         logger.notice('RabbitMQ successfully started')

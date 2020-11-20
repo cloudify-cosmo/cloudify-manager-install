@@ -46,9 +46,28 @@ class UsageCollector(BaseComponent):
         logger.notice('Usage Collector successfully installed')
 
     def configure(self):
-        logger.notice('Configuring Usage Collector...')
-        if self._configure():
+        if self._validate_cronie_installed():
+            logger.notice('Configuring Usage Collector...')
+            common.mkdir(LOG_DIR)
+            common.chown(constants.CLOUDIFY_USER,
+                         constants.CLOUDIFY_GROUP,
+                         LOG_DIR)
+            set_logrotate(USAGE_COLLECTOR)
             logger.notice('Usage Collector successfully configured')
+            self.start()
+
+    def start(self):
+        if self._validate_cronie_installed():
+            logger.notice('Enabling usage collector')
+            self._remove_cron_jobs()
+            self._create_cron_jobs()
+            logger.notice('Usage collector enabled')
+
+    def stop(self):
+        if self._validate_cronie_installed():
+            logger.notice('Disabling usage collector')
+            self._remove_cron_jobs()
+            logger.notice('Usage collector disabled')
 
     def remove(self):
         logger.notice('Removing Usage Collector...')
@@ -59,22 +78,10 @@ class UsageCollector(BaseComponent):
         common.remove(MANAGER_ID_PATH)
         logger.notice('Usage Collector successfully removed')
 
-    def _configure(self):
-        if not self._validate_cronie_installed():
-            return False
-        common.mkdir(LOG_DIR)
-        common.chown(constants.CLOUDIFY_USER,
-                     constants.CLOUDIFY_GROUP,
-                     LOG_DIR)
-        set_logrotate(USAGE_COLLECTOR)
-        self._remove_cron_jobs()
-        self._create_cron_jobs()
-        return True
-
     def _validate_cronie_installed(self):
         if not is_package_installed('cronie'):
             logger.warning('Package cronie is not installed,'
-                           'unable to install Usage Collector')
+                           'Usage Collector cannot be used')
             return False
         return True
 
