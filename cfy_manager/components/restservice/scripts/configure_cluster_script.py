@@ -68,7 +68,8 @@ if __name__ == '__main__':
     with open(args.input, 'r') as f:
         args_dict = json.load(f)
 
-    config.instance.load_configuration()
+    with setup_flask_app().app_context():
+        config.instance.load_configuration()
     setup_flask_app(manager_ip=config.instance.postgresql_host)
 
     run_syncthing_configuration(

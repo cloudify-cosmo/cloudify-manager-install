@@ -22,7 +22,7 @@ manager = [
 manager_premium = [
     'cloudify-premium', 'cloudify-composer'
 ]
-manager_cluster = ['haproxy']
+manager_cluster = []
 db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
 db_cluster = [
     'libestr', 'libfastjson', 'rsyslog', 'etcd', 'patroni'

@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import re
 import time
@@ -39,6 +24,8 @@ from cfy_manager.exceptions import (
 from ..components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
+    ETCD_CA_PATH,
+    PATRONI_DB_CA_PATH,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
     PUBLIC_IP,
@@ -96,12 +83,10 @@ PG_SERVER_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.key')
 # Cluster CA cert locations
 ETCD_SERVER_CERT_PATH = '/etc/etcd/etcd.crt'
 ETCD_SERVER_KEY_PATH = '/etc/etcd/etcd.key'
-ETCD_CA_PATH = '/etc/etcd/ca.crt'
 PATRONI_REST_CERT_PATH = '/var/lib/patroni/rest.crt'
 PATRONI_REST_KEY_PATH = '/var/lib/patroni/rest.key'
 PATRONI_DB_CERT_PATH = '/var/lib/patroni/db.crt'
 PATRONI_DB_KEY_PATH = '/var/lib/patroni/db.key'
-PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'
 PATRONI_PGPASS_PATH = '/var/lib/patroni/pgpass'
 
 # Cluster file locations
@@ -113,11 +98,6 @@ PATRONI_CONFIG_PATH = '/etc/patroni.conf'
 PATRONI_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/patroni')
 POSTGRES_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/postgres')
 POSTGRES_PATRONI_CONFIG_PATH = '/var/lib/pgsql/9.5/data/pg_patroni_base.conf'
-
-HAPROXY_NODE_ENTRY = (
-    '    server postgresql_{addr}_5432 {addr}:5432 '
-    'maxconn 100 check check-ssl port 8008 ca-file /etc/haproxy/ca.crt'
-)
 
 # Postgres bin files needing symlinking for patroni
 PG_BIN_DIR = '/usr/pgsql-9.5/bin'
@@ -351,53 +331,27 @@ class PostgresqlServer(BaseComponent):
 
     def _update_postgres_password(self):
         logger.notice('Updating postgres password...')
-        postgres_password = \
-            config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
+        postgres_password = config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]
         delimiter = self._delimiter_for(postgres_password)
-
-        # As this is only run using peer authentication for non-clustered DBs,
-        # we don't need to get the DB SSL settings (it only runs on local
-        # connections)
-        common.sudo(
-            [
-                '-u', 'postgres',
-                '/usr/bin/psql', '-n',  # -n disables history
-            ],
-            # Piped to avoid password appearing in sudoers log
-            stdin='ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim}'
-            .format(
+        db.run_psql_command(
+            "ALTER ROLE postgres WITH PASSWORD {delim}{pwd}{delim};".format(
                 delim=delimiter,
                 pwd=postgres_password,
             ),
+            'server_db_name',
+            logger,
         )
         logger.notice('postgres password successfully updated')
 
     def _create_db_monitoring_account(self):
+        logger.notice('Creating db_monitoring account...')
 
-        def create_user_sql(credentials):
-            delimiter = self._delimiter_for(credentials.get('password'))
-            return 'CREATE USER {username} WITH PASSWORD '\
-                   '{delim}{password}{delim}'.format(
-                       username=credentials.get('username'),
-                       delim=delimiter,
-                       password=credentials.get('password'))
-
-        def create_in_standalone_db(credentials):
-            common.sudo(
-                [
-                    '-u', 'postgres',
-                    '/usr/bin/psql', '-n',  # -n disables history
-                ],
-                # Piped to avoid password appearing in sudoers log
-                stdin=create_user_sql(credentials),
-            )
-            return True
-
-        def create_in_clustered_db(credentials):
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             try:
                 self._etcd_command(['member', 'list'], )
             except Exception as ex:
-                logger.notice('Database cluster not yet ready (will '
+                logger.notice('db_monitoring account not yet created. '
+                              'Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
                 return False
             pgpass = None
@@ -407,8 +361,8 @@ class PostgresqlServer(BaseComponent):
                     if pgpass:
                         break
                     else:
-                        # Don't accept an empty pgpass file, it'll break
-                        # the next steps
+                        # Don't accept an empty pgpass file, it means the
+                        # cluster is not yet fully ready
                         pgpass = None
                 except Exception as err:
                     logger.info(
@@ -417,47 +371,24 @@ class PostgresqlServer(BaseComponent):
                 logger.info('Waiting for pgpass to be populated...')
                 time.sleep(1)
             if pgpass is None:
-                logger.notice('Patroni pgpass file (%s) unreadable (will '
+                logger.notice('db_monitoring account not yet created. '
+                              'Patroni pgpass file (%s) unreadable (will '
                               'try on the next database node).',
                               PATRONI_PGPASS_PATH)
                 return False
-            hostname = pgpass.split(':')[0]
-            pgpass_file = files.write_to_tempfile(
-                '{host}:5432:postgres:postgres:{password}'.format(
-                    host=hostname,
-                    password=config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]))
-            try:
-                common.chown('postgres', 'postgres', pgpass_file)
-                common.chmod('600', pgpass_file)
-                common.sudo(
-                    [
-                        '-u', 'postgres',
-                        '/usr/bin/psql', '-n',  # -n disables history
-                        '-h', hostname,
-                        '-U', 'postgres',
-                        '-w',  # -w do not wait for password (use PGPASSFILE)
-                        'postgres'
-                    ],
-                    # Piped to avoid password appearing in sudoers log
-                    stdin=create_user_sql(credentials),
-                    env={'PGPASSFILE': pgpass_file}
-                )
-                return True
-            finally:
-                files.remove(pgpass_file)
 
-        logger.notice('Creating db_monitoring account...')
-        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            created = create_in_clustered_db(
-                config[POSTGRESQL_SERVER]['db_monitoring'])
-        else:
-            created = create_in_standalone_db(
-                config[POSTGRESQL_SERVER]['db_monitoring'])
-        if created:
-            logger.notice('db_monitoring account successfully created')
-        else:
-            logger.notice('db_monitoring account not yet created. '
-                          'An attempt will be made on the next node(s).')
+        credentials = config[POSTGRESQL_SERVER]['db_monitoring']
+        delimiter = self._delimiter_for(credentials.get('password'))
+        db.run_psql_command(
+            "CREATE USER {user} WITH PASSWORD {delim}{pwd}{delim};".format(
+                user=credentials.get('username'),
+                delim=delimiter,
+                pwd=credentials.get('password'),
+            ),
+            'server_db_name',
+            logger,
+        )
+        logger.notice('db_monitoring account successfully created')
 
     def _delimiter_for(self, text):
         delim = '$password$'
@@ -561,8 +492,8 @@ class PostgresqlServer(BaseComponent):
     def _get_etcd_id(self, ip):
         return 'etcd' + ip.replace('.', '_')
 
-    def _get_patroni_id(self, ip):
-        return 'pg' + ip.replace('.', '_')
+    def _get_patroni_id(self, address):
+        return 'pg' + address.replace('.', '_')
 
     def _etcd_requires_auth(self):
         logger.info('Checking whether etcd requires auth.')
@@ -1211,14 +1142,11 @@ class PostgresqlServer(BaseComponent):
 
             replicas = [node for node in nodes if node != master]
         elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
-            backends = common.get_haproxy_servers(logger)
-            for backend in backends:
-                # svname will be in the form postgresql_192.0.2.48_5432
-                server_name = backend['svname'].split('_')[1]
-                if backend['status'] == 'UP':
-                    master = server_name
-                else:
-                    replicas.append(server_name)
+            manager_conf = files.read_yaml_file(
+                '/opt/manager/cloudify-rest.conf')
+            db_nodes = manager_conf['postgresql_host']
+            master = db.select_db_host(logger)
+            replicas = [node for node in db_nodes if node != master]
         else:
             raise DBNodeListError(
                 'Can only list DB nodes from a manager or DB node.'
@@ -1307,13 +1235,13 @@ class PostgresqlServer(BaseComponent):
         return node
 
     def _get_sync_replicas(self, master_status):
-        sync_ips = []
+        sync_nodes = []
         master_replication = master_status.get('replication', [])
         if master_replication:
             for replica in master_replication:
                 if replica['sync_state'] == 'sync':
-                    sync_ips.append(replica['client_addr'])
-        return sync_ips
+                    sync_nodes.append(replica['application_name'])
+        return sync_nodes
 
     def _determine_cluster_status(self, db_nodes):
         status = self.HEALTHY
@@ -1327,7 +1255,7 @@ class PostgresqlServer(BaseComponent):
             'xlog', {}
         ).get('location')
         master_timeline = master['raw_status'].get('timeline')
-        sync_ips = self._get_sync_replicas(master['raw_status'])
+        sync_nodes = self._get_sync_replicas(master['raw_status'])
 
         if master['node_ip'] is None:
             logger.error('No master found.')
@@ -1337,7 +1265,7 @@ class PostgresqlServer(BaseComponent):
         # Master checks
         if not master['alive']:
             status = max(status, self.DOWN)
-        if not sync_ips:
+        if not sync_nodes:
             logger.error('No synchronous replicas found.')
             # The cluster is down if there are no sync replicas, because
             # writes will not be allowed
@@ -1431,10 +1359,11 @@ class PostgresqlServer(BaseComponent):
         master = self._get_node_status(master_address, master=True)
         replicas = []
         for address in replica_addresses:
+            patroni_id = self._get_patroni_id(address)
             replicas.append(
                 self._get_node_status(
                     address,
-                    sync_replica=address in self._get_sync_replicas(
+                    sync_replica=patroni_id in self._get_sync_replicas(
                         master['raw_status'],
                     ),
                 )
@@ -1445,50 +1374,36 @@ class PostgresqlServer(BaseComponent):
 
         return status, db_nodes
 
-    def _restart_manager_db_dependent_services(self):
-        logger.info('Restarting DB proxy service.')
-        service.restart('haproxy', append_prefix=False)
-        logger.info('Restarting DB-dependent services.')
-        service.restart('amqp-postgres')
-        service.restart('restservice')
-
     def _node_is_in_db(self, host):
         result = db.run_psql_command(
-            command=[
-                '-c',
-                "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
-                    host,
-                ),
-            ],
-            db_key='cloudify_db_name',
+            "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
+                host,
+            ),
+            'cloudify_db_name',
+            logger,
         )
 
         # As the name is a primary key, there can only ever be at most 1 entry
         # with the expected name
         return int(result) == 1
 
-    def _add_node_to_db(self, name, host):
+    def _add_node_to_db(self, host):
         db.run_psql_command(
-            command=[
-                '-c',
-                "INSERT INTO db_nodes (name, host)"
-                "VALUES ('{0}', '{1}');".format(
-                    name, host
-                ),
-            ],
-            db_key='cloudify_db_name',
+            "INSERT INTO db_nodes (host, host) VALUES ('{0}', '{1}');".format(
+                host, host
+            ),
+            'cloudify_db_name',
+            logger,
         )
 
     def _remove_node_from_db(self, host):
         db.run_psql_command(
-            command=[
-                '-c',
-                "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
-            ],
-            db_key='cloudify_db_name',
+            "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
+            'cloudify_db_name',
+            logger,
         )
 
-    def add_cluster_node(self, address, hostname=None):
+    def add_cluster_node(self, address, stage, composer):
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             raise DBManagementError(
                 'Database cluster nodes should be added to the cluster '
@@ -1514,19 +1429,27 @@ class PostgresqlServer(BaseComponent):
                 'add the node.'.format(address=address)
             )
 
-        logger.info('Updating DB proxy configuration.')
-        common.sudo(
-            ['tee', '-a', '/etc/haproxy/haproxy.cfg'],
-            stdin=HAPROXY_NODE_ENTRY.format(addr=address) + '\n',
-        )
+        logger.info('Updating rest service configuration')
+        manager_conf = files.read_yaml_file('/opt/manager/cloudify-rest.conf')
+        manager_conf['postgresql_host'].append(address)
+        files.update_yaml_file('/opt/manager/cloudify-rest.conf',
+                               manager_conf)
+        logger.info('Restarting rest service')
+        service.restart('restservice')
+
+        logger.info('Setting UI DB configuration')
+        stage.set_db_url()
+        composer.update_composer_config()
+        logger.info('Restarting UI services')
+        service.restart('stage')
+        service.restart('composer')
+
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
         if not self._node_is_in_db(address):
-            self._add_node_to_db((hostname or address), address)
+            self._add_node_to_db(address)
 
-        self._restart_manager_db_dependent_services()
-
-    def remove_cluster_node(self, address):
+    def remove_cluster_node(self, address, stage, composer):
         master, replicas = self._get_cluster_addresses()
 
         if len(replicas) < 2:
@@ -1542,14 +1465,17 @@ class PostgresqlServer(BaseComponent):
                 'this command.'
             )
 
+        if address not in replicas:
+            raise DBManagementError(
+                'Cannot find node with address{addr} for removal. '
+                'The following nodes can be removed: {valid}'.format(
+                    addr=address,
+                    valid=', '.join(replicas),
+                )
+            )
+
         if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
             member_id = self._get_etcd_members().get(address)
-
-            if not member_id:
-                raise DBManagementError(
-                    'Cannot find node with address {addr} for '
-                    'removal.'.format(addr=address)
-                )
 
             logger.info(
                 'Removing etcd node {name}'.format(name=address)
@@ -1572,23 +1498,22 @@ class PostgresqlServer(BaseComponent):
             ]
             self._set_patroni_dcs_conf(patroni_config)
             logger.info('Node {addr} removed.'.format(addr=address))
-        else:
-            logger.info('Updating DB proxy configuration.')
-            entry = HAPROXY_NODE_ENTRY.format(addr=address).replace(
-                '/', '\\/',
-            )
-            common.sudo(
-                [
-                    'sed', '-i',
-                    '/{entry}/d'.format(entry=entry),
-                    '/etc/haproxy/haproxy.cfg',
-                ]
-            )
+        elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+            manager_conf = files.read_yaml_file(
+                '/opt/manager/cloudify-rest.conf')
+            logger.info('Updating rest service configuration')
+            manager_conf['postgresql_host'].remove(address)
+            files.update_yaml_file('/opt/manager/cloudify-rest.conf',
+                                   manager_conf)
+            logger.info('Restarting rest service')
+            service.restart('restservice')
 
-            if self._node_is_in_db(address):
-                self._remove_node_from_db(address)
-
-            self._restart_manager_db_dependent_services()
+            logger.info('Setting UI DB configuration')
+            stage.set_db_url()
+            composer.update_composer_config()
+            logger.info('Restarting UI services')
+            service.restart('stage')
+            service.restart('composer')
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
@@ -1617,9 +1542,9 @@ class PostgresqlServer(BaseComponent):
             )
 
     def _become_synchronous(self, candidate, master_address,
-                            sync_ips):
+                            sync_nodes):
         for i in range(30):
-            if sync_ips and i % 5 == 0:
+            if sync_nodes and i % 5 == 0:
                 # Retry this every 5 attempts. If there are more than 3 nodes
                 # this gives a chance to have the target node become sync.
                 logger.info(
@@ -1628,14 +1553,14 @@ class PostgresqlServer(BaseComponent):
                     )
                 )
                 self._patronictl_command(['restart', '--force', 'postgres',
-                                          self._get_patroni_id(sync_ips[0])])
+                                          sync_nodes[0]])
             master_status = self._get_node_status(master_address,
                                                   master=True)
-            sync_ips = self._get_sync_replicas(
+            sync_nodes = self._get_sync_replicas(
                 master_status['raw_status']
             )
-            if sync_ips:
-                if candidate in sync_ips:
+            if sync_nodes:
+                if self._get_patroni_id(candidate) in sync_nodes:
                     logger.info(
                         '{addr} has become synchronous replica.'.format(
                             addr=candidate,
@@ -1678,8 +1603,8 @@ class PostgresqlServer(BaseComponent):
             )
 
         master_status = self._get_node_status(master_address, master=True)
-        sync_ips = self._get_sync_replicas(master_status['raw_status'])
-        if address not in sync_ips:
+        sync_nodes = self._get_sync_replicas(master_status['raw_status'])
+        if self._get_patroni_id(address) not in sync_nodes:
             # Patroni will only fail over to a synchronous replica, so we will
             # restart the current synchronous replica which will force the
             # current async replica to become synchronous
@@ -1690,7 +1615,7 @@ class PostgresqlServer(BaseComponent):
                 )
             )
             self._become_synchronous(address, master_address,
-                                     sync_ips)
+                                     sync_nodes)
 
         for i in range(30):
             if i in [0, 10, 20]:

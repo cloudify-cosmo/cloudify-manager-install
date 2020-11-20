@@ -1,18 +1,4 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
+from contextlib import contextmanager
 import json
 import time
 import uuid
@@ -20,15 +6,14 @@ from os.path import join
 
 from .manager_config import make_manager_config
 from ..components_constants import (
+    ADMIN_PASSWORD,
+    ADMIN_USERNAME,
     AGENT,
     CONFIG,
-    SCRIPTS,
     HOSTNAME,
-    SECURITY,
-    ADMIN_USERNAME,
-    ADMIN_PASSWORD,
     PROVIDER_CONTEXT,
-    SERVICES_TO_INSTALL,
+    SCRIPTS,
+    SECURITY,
 )
 
 from ..service_names import (
@@ -38,7 +23,6 @@ from ..service_names import (
     PROMETHEUS,
     RABBITMQ,
     RESTSERVICE,
-    DATABASE_SERVICE
 )
 
 from ... import constants
@@ -46,9 +30,10 @@ from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError
 
-from ...utils import common, db as utils_db
+from ...utils import common
+from ...utils.db import run_psql_command
 from ...utils.install import is_premium_installed
-from ...utils.files import temp_copy, read_yaml_file
+from ...utils.files import read_yaml_file
 from ...utils.scripts import run_script_on_manager_venv
 
 logger = get_logger('DB')
@@ -67,40 +52,64 @@ def drop_db():
         'You have 10 seconds to press Ctrl+C if this was a mistake.'
     )
     time.sleep(10)
-    _execute_db_script('drop_db.sh')
+    db_name = config[POSTGRESQL_CLIENT]['cloudify_db_name']
+    db_user = config[POSTGRESQL_CLIENT]['cloudify_username'].split('@')[0]
+    run_psql_command('DROP DATABASE IF EXISTS {}'.format(db_name),
+                     'server_db_name', logger)
+    run_psql_command('DROP DATABASE IF EXISTS stage',
+                     'server_db_name', logger)
+    run_psql_command('DROP DATABASE IF EXISTS composer',
+                     'server_db_name', logger)
+    run_psql_command('DROP USER IF EXISTS {}'.format(db_user),
+                     'server_db_name', logger)
     logger.info('Cloudify database successfully dropped.')
 
 
 def prepare_db():
     logger.notice('Configuring SQL DB...')
-    _execute_db_script('create_default_db.sh')
+    db_user = config[POSTGRESQL_CLIENT]['cloudify_username']
+    db_pass = config[POSTGRESQL_CLIENT]['cloudify_password']
+    _create_user(db_user, db_pass)
+    with _azure_compatibility(db_user):
+        _create_databases()
     logger.notice('SQL DB successfully configured')
 
 
-def _execute_db_script(script_name):
-    pg_config = config[POSTGRESQL_CLIENT]
+@contextmanager
+def _azure_compatibility(user):
+    superuser = config[POSTGRESQL_CLIENT]['server_username']
+    run_psql_command("GRANT {} TO {}".format(user, superuser),
+                     'server_db_name', logger)
+    yield
+    run_psql_command("REVOKE {} FROM {}".format(user, superuser),
+                     'server_db_name', logger)
 
-    script_path = join(SCRIPTS_PATH, script_name)
-    tmp_script_path = temp_copy(script_path)
-    common.chmod('o+rx', tmp_script_path)
-    username = pg_config['cloudify_username'].split('@')[0]
-    db_script_command = \
-        '{cmd} {db} {user} {password}'.format(
-            cmd=tmp_script_path,
-            db=pg_config['cloudify_db_name'],
-            user=username,
-            password=pg_config['cloudify_password']
-        )
 
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-        # In case the default user is postgres and we're in AIO installation,
-        # "peer" authentication is used
-        if config[POSTGRESQL_CLIENT]['server_username'] == 'postgres':
-            db_script_command = '-u postgres ' + db_script_command
+def _create_user(db_user, db_pass):
+    run_psql_command(
+        "CREATE USER {} WITH PASSWORD '{}'".format(db_user, db_pass),
+        'server_db_name', logger)
+    run_psql_command('ALTER USER {} CREATEDB'.format(db_user),
+                     'server_db_name', logger)
 
-    db_env = utils_db.generate_db_env(database=pg_config['server_db_name'])
 
-    common.sudo(db_script_command, env=db_env)
+def _create_databases():
+    user = config[POSTGRESQL_CLIENT]['cloudify_username']
+    cloudify_db = config[POSTGRESQL_CLIENT]['cloudify_db_name']
+    _create_database(cloudify_db, user)
+    _create_database('stage', user)
+    _create_database('composer', user)
+
+
+def _create_database(db_name, user):
+    run_psql_command('CREATE DATABASE {}'.format(db_name),
+                     'server_db_name', logger)
+    run_psql_command(
+        'ALTER DATABASE {} OWNER TO {}'.format(db_name, user),
+        'server_db_name', logger)
+    run_psql_command(
+         'GRANT ALL PRIVILEGES ON DATABASE {} to {}'.format(db_name, user),
+         'server_db_name', logger)
 
 
 def _get_provider_context():
@@ -289,9 +298,10 @@ def create_amqp_resources(configs=None):
 
 def check_db_exists():
     # Get the list of databases
-    result = utils_db.run_psql_command(
-        command=['-l'],
-        db_key='server_db_name',
+    result = run_psql_command(
+        '\\l',
+        'server_db_name',
+        logger,
     )
 
     # Example of expected output:
@@ -316,13 +326,12 @@ def check_db_exists():
 
 
 def manager_is_in_db():
-    result = utils_db.run_psql_command(
-        command=[
-            '-c', "SELECT COUNT(*) FROM managers where hostname='{0}'".format(
-                config[MANAGER][HOSTNAME],
-            ),
-        ],
-        db_key='cloudify_db_name',
+    result = run_psql_command(
+        "SELECT COUNT(*) FROM managers where hostname='{0}'".format(
+            config[MANAGER][HOSTNAME],
+        ),
+        'cloudify_db_name',
+        logger,
     )
 
     # As the name is unique, there can only ever be at most 1 entry with the
@@ -331,11 +340,10 @@ def manager_is_in_db():
 
 
 def get_manager_count():
-    result = utils_db.run_psql_command(
-        command=[
-            '-c', "SELECT COUNT(*) FROM managers",
-        ],
-        db_key='cloudify_db_name',
+    result = run_psql_command(
+        "SELECT COUNT(*) FROM managers",
+        'cloudify_db_name',
+        logger,
     )
     return int(result)
 
@@ -345,9 +353,10 @@ def validate_schema_version(configs):
     manager's migrations version.
     """
     migrations_version = run_script('get_db_version.py', configs=configs)
-    db_version = utils_db.run_psql_command(
-        command=['-c', 'SELECT version_num FROM alembic_version'],
-        db_key='cloudify_db_name'
+    db_version = run_psql_command(
+        'SELECT version_num FROM alembic_version',
+        'cloudify_db_name',
+        logger,
     )
     migrations_version = migrations_version.strip()
     db_version = db_version.strip()

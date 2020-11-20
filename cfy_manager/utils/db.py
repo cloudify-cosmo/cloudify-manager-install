@@ -1,79 +1,96 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
+import itertools
+import time
 
-from .common import sudo
+import requests
+
+from .common import sudo, is_all_in_one_manager, is_installed
 from ..config import config
-from ..constants import POSTGRESQL_CLIENT_CERT_PATH, POSTGRESQL_CLIENT_KEY_PATH
+from cfy_manager.constants import (
+    POSTGRESQL_CA_CERT_PATH,
+    POSTGRESQL_CLIENT_CERT_PATH,
+    POSTGRESQL_CLIENT_KEY_PATH,
+)
 
 from cfy_manager.components.service_names import (
+    DATABASE_SERVICE,
     POSTGRESQL_CLIENT,
-    DATABASE_SERVICE
+    POSTGRESQL_SERVER,
 )
 from cfy_manager.components.components_constants import (
+    ETCD_CA_PATH,
+    PATRONI_DB_CA_PATH,
+    SSL_CLIENT_VERIFICATION,
     SSL_ENABLED,
-    SERVICES_TO_INSTALL,
-    SSL_CLIENT_VERIFICATION
 )
+from cfy_manager.exceptions import BootstrapError
+from cfy_manager.utils import files
 
 
-def run_psql_command(command, db_key):
+def run_psql_command(command, db_key, logger):
+    db_env, base_command = get_psql_env_and_base_command(logger, db_key)
+
+    # Run psql with just the results output without headers (-t),
+    # no psqlrc (-X), and not storing history (-n)
+    base_command.extend(['-t', '-X', '-n'])
+
+    result = sudo(base_command, env=db_env, stdin=command)
+    return result.aggr_stdout.strip()
+
+
+def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
+                                  db_override=None):
     base_command = []
     pg_config = config[POSTGRESQL_CLIENT]
     peer_authentication = False
 
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+    if is_all_in_one_manager():
         # In case the default user is postgres and we're in AIO installation,
         # "peer" authentication is used
         if pg_config['server_username'] == 'postgres':
             base_command.extend(['-u', 'postgres'])
             peer_authentication = True
 
-    # Run psql with just the results output without headers (-t),
-    # and no psqlrc (-X)
-    base_command.extend(['/usr/bin/psql', '-t', '-X'])
-    command = base_command + command
+    base_command.append('/usr/bin/psql')
+
     db_kwargs = {}
     if db_key == 'cloudify_db_name' and not peer_authentication:
         db_kwargs['username'] = pg_config['cloudify_username']
         db_kwargs['password'] = pg_config['cloudify_password']
 
-    db_env = generate_db_env(database=pg_config[db_key], **db_kwargs)
-    result = sudo(command, env=db_env)
-    return result.aggr_stdout.strip()
+    db_name = db_override or pg_config[db_key]
+
+    db_env = generate_db_env(db_name, logger, **db_kwargs)
+
+    return db_env, base_command
 
 
-def generate_db_env(database, username=None, password=None):
+def generate_db_env(database, logger, username=None, password=None):
     pg_config = config[POSTGRESQL_CLIENT]
-
-    if DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
-        # If we're connecting to the actual local db we don't need to supply a
-        # host
-        host = ""
-    else:
-        host = pg_config['host']
+    host = select_db_host(logger)
 
     db_env = {
         'PGHOST': host,
         'PGUSER': username or pg_config['server_username'],
-        'PGPASSWORD': password or pg_config['server_password'],
+        'PGPASSWORD': (
+            password
+            or pg_config['server_password']
+            or config[POSTGRESQL_SERVER]['postgres_password']
+        ),
         'PGDATABASE': database,
     }
 
     if pg_config[SSL_ENABLED]:
         db_env['PGSSLMODE'] = 'verify-full'
-        db_env['PGSSLROOTCERT'] = '/etc/cloudify/ssl/postgresql_ca.crt'
+
+        if (
+            is_installed(DATABASE_SERVICE)
+            and config[POSTGRESQL_SERVER]['cluster']['nodes']
+        ):
+            ca_path = PATRONI_DB_CA_PATH
+        else:
+            ca_path = POSTGRESQL_CA_CERT_PATH
+
+        db_env['PGSSLROOTCERT'] = ca_path
 
         # This only makes sense if SSL is used
         if pg_config[SSL_CLIENT_VERIFICATION]:
@@ -85,3 +102,139 @@ def generate_db_env(database, username=None, password=None):
         # connection
         db_env['PGSSLMODE'] = 'disable'
     return db_env
+
+
+def select_db_host(logger):
+
+    if is_all_in_one_manager():
+        # If we're connecting to the actual local db we don't need to supply a
+        # host
+        return ''
+
+    client_config = config[POSTGRESQL_CLIENT]
+    server_config = config[POSTGRESQL_SERVER]
+
+    if server_config['cluster']['nodes']:
+        cluster_nodes = [
+            node['ip'] for node in server_config['cluster']['nodes'].values()]
+        max_attempts = 10
+        delay = 2
+        attempt = 1
+        for i, candidate in enumerate(itertools.cycle(cluster_nodes)):
+            result = None
+            if is_installed(DATABASE_SERVICE):
+                # Use the etcd CA if this is a DB node as it'll be readable
+                ca_path = ETCD_CA_PATH
+            else:
+                # Otherwise, use the postgrs client cert
+                ca_path = POSTGRESQL_CA_CERT_PATH
+            try:
+                result = requests.get(
+                    'https://{}:8008'.format(candidate),
+                    verify=ca_path,
+                )
+            except Exception as err:
+                logger.error(
+                    'Error trying to get state of DB %s: %s', candidate, err)
+
+            if result:
+                logger.debug(
+                    'Checking DB for leader selection. %s has status %s',
+                    candidate,
+                    result.status_code,
+                )
+                if result.status_code == 200:
+                    logger.debug('Selected %s as DB leader', candidate)
+                    return candidate
+
+            if i and i % len(cluster_nodes) == 0:
+                # No DB found after trying all once, wait before trying again
+                time.sleep(delay)
+                if attempt == max_attempts:
+                    raise BootstrapError(
+                        'No DB leader found in {} attempts.'.format(
+                            max_attempts,
+                        )
+                    )
+                logger.info('No active DB found yet. Attempt %s/%s',
+                            attempt, max_attempts)
+                attempt += 1
+    else:
+        return client_config['host']
+
+
+def get_postgres_host():
+    rest_config = files.read_yaml_file('/opt/manager/cloudify-rest.conf')
+    if rest_config:
+        cluster_nodes = rest_config['postgresql_host']
+    else:
+        cluster_nodes = [
+            db['ip'] for db in
+            config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+        ]
+
+    if cluster_nodes:
+        return cluster_nodes
+    return config[POSTGRESQL_CLIENT]['host']
+
+
+def get_ui_db_dialect_options_and_url(database, certs):
+    conn_string = 'postgres://{username}:{password}@{host}:{port}/{db}{params}'
+    postgres_host = get_postgres_host()
+
+    # For building URL string
+    params = {}
+
+    dialect_options = {}
+    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+        params.update({
+            'sslmode': 'verify-full',
+            'sslrootcert': certs['ca'],
+        })
+
+        dialect_options['ssl'] = {
+            'ca': certs['ca'],
+            'rejectUnauthorized': True,
+        }
+
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            params.update({
+                'sslcert': certs['cert'],
+                'sslkey': certs['key'],
+            })
+
+            dialect_options['ssl']['cert'] = certs['cert']
+            dialect_options['ssl']['key'] = certs['key']
+    else:
+        dialect_options['ssl'] = False
+
+    if any(params.values()):
+        params = '?' + '&'.join('{0}={1}'.format(key, value)
+                                for key, value in params.items()
+                                if value)
+    else:
+        params = ''
+
+    if isinstance(postgres_host, list):
+        return dialect_options, [
+            conn_string.format(
+                username=config[POSTGRESQL_CLIENT]['cloudify_username'],
+                password=config[POSTGRESQL_CLIENT]['cloudify_password'],
+                host=host,
+                port=5432,
+                db=database,
+                params=params,
+            )
+            for host in postgres_host
+        ]
+    host_details = postgres_host.split(':')
+    host = host_details[0]
+    port = host_details[1] if 1 < len(host_details) else '5432'
+    return dialect_options, conn_string.format(
+        username=config[POSTGRESQL_CLIENT]['cloudify_username'],
+        password=config[POSTGRESQL_CLIENT]['cloudify_password'],
+        host=host,
+        port=port,
+        db=database,
+        params=params,
+    )

@@ -141,7 +141,7 @@ jobs:
   install_manager:
     machine: true
     environment:
-      CONTAINER_NAME: cfy_manager
+      CONTAINER_NAME: cfy_aio
       IMAGE_NAME: cfy_manager_image
     steps:
       - checkout
@@ -180,7 +180,7 @@ jobs:
   install_cluster:
     machine: true
     environment:
-      CONTAINER_NAME: cfy_manager
+      CONTAINER_NAME: cfy
       IMAGE_NAME: cfy_manager_image
       CLUSTER_IMAGE: cfy_manager_image_preinstalled
     steps:
@@ -203,8 +203,8 @@ jobs:
       - run:
           name: Prepare name envvars
           command: |
-            echo "export MANAGER1_NAME=${CONTAINER_NAME}_1" >> $BASH_ENV
-            echo "export MANAGER2_NAME=${CONTAINER_NAME}_2" >> $BASH_ENV
+            echo "export MANAGER1_NAME=${CONTAINER_NAME}_manager1" >> $BASH_ENV
+            echo "export MANAGER2_NAME=${CONTAINER_NAME}_manager2" >> $BASH_ENV
             echo "export DB1_NAME=${CONTAINER_NAME}_db1" >> $BASH_ENV
             echo "export DB2_NAME=${CONTAINER_NAME}_db2" >> $BASH_ENV
             echo "export DB3_NAME=${CONTAINER_NAME}_db3" >> $BASH_ENV
