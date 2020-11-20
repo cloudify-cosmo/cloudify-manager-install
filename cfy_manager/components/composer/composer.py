@@ -58,6 +58,8 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Composer(BaseComponent):
+    services = ['cloudify-composer']
+
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the composer db')
@@ -112,8 +114,8 @@ class Composer(BaseComponent):
                 self.log_replacing_certs('cert and key')
                 self._handle_cert_and_key()
 
-            service.restart(COMPOSER)
-            self._verify_composer_alive()
+            self.stop()
+            self.start()
 
     def log_replacing_certs(self, certs_type):
         logger.info('Replacing %s on composer component', certs_type)
@@ -150,8 +152,7 @@ class Composer(BaseComponent):
         common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
 
-    def _verify_composer_alive(self):
-        service.verify_alive(COMPOSER)
+    def verify_started(self):
         wait_for_port(3000)
 
     def _chown_for_syncthing(self):
@@ -172,29 +173,19 @@ class Composer(BaseComponent):
             external_configure_params['service_user'] = COMPOSER_USER
             external_configure_params['service_group'] = COMPOSER_GROUP
         service.configure(
-            COMPOSER,
+            'cloudify-composer',
             user=COMPOSER_USER,
             group=COMPOSER_GROUP,
             external_configure_params=external_configure_params
         )
         self._chown_for_syncthing()
+        self._run_db_migrate()
         logger.notice('Cloudify Composer successfully configured')
+        self.start()
 
     def remove(self):
         logger.notice('Removing Cloudify Composer...')
-        service.remove(COMPOSER, service_file=False)
+        service.remove('cloudify-composer', service_file=False)
         logger.notice('Removing Composer data....')
         common.sudo(['rm', '-rf', '/opt/cloudify-composer'])
         logger.notice('Cloudify Composer successfully removed')
-
-    def start(self):
-        logger.notice('Starting Cloudify Composer...')
-        self._run_db_migrate()
-        service.restart(COMPOSER)
-        self._verify_composer_alive()
-        logger.notice('Cloudify Composer successfully started')
-
-    def stop(self):
-        logger.notice('Stopping Cloudify Composer...')
-        service.stop(COMPOSER)
-        logger.notice('Cloudify Composer successfully stopped')

@@ -82,7 +82,9 @@ class Sanity(BaseComponent):
         self._clean_sanity()
         logger.notice('Sanity completed successfully')
 
-    def start(self):
+    def configure(self):
+        # This is start-like, but should only happen at install time, so it
+        # is using configure instead
         if get_manager_count() > 1:
             logger.notice('Not running the sanity check: part of a cluster')
             return

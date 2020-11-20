@@ -61,6 +61,8 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Stage(BaseComponent):
+    services = ['cloudify-stage']
+
     def _set_community_mode(self):
         community_mode = '' if is_premium_installed else '-mode community'
 
@@ -115,6 +117,7 @@ class Stage(BaseComponent):
             NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            self.stop()
             if replacing_ca:
                 self.log_replacing_certs('CA cert')
                 self._handle_ca_certificate()
@@ -123,9 +126,7 @@ class Stage(BaseComponent):
                     replacing_cert_and_key):
                 self.log_replacing_certs('cert and key')
                 self._handle_cert_and_key()
-
-            service.restart(STAGE)
-            service.verify_alive(STAGE)
+            self.start()
 
     @staticmethod
     def log_replacing_certs(certs_type):
@@ -175,8 +176,7 @@ class Stage(BaseComponent):
             common.chown(STAGE_USER, STAGE_GROUP, config_path)
             common.chmod('640', config_path)
 
-    def _verify_stage_alive(self):
-        service.verify_alive(STAGE)
+    def verify_started(self):
         wait_for_port(8088)
 
     def _chown_for_syncthing(self):
@@ -200,29 +200,19 @@ class Stage(BaseComponent):
             external_configure_params['service_user'] = STAGE_USER
             external_configure_params['service_group'] = STAGE_GROUP
         service.configure(
-            STAGE,
+            'cloudify-stage',
             user=STAGE_USER,
             group=STAGE_GROUP,
             external_configure_params=external_configure_params
         )
         self._chown_for_syncthing()
+        self._run_db_migrate()
         logger.notice('Stage successfully configured!')
+        self.start()
 
     def remove(self):
         logger.notice('Removing Stage...')
-        service.remove(STAGE, service_file=False)
+        service.remove('cloudify-stage', service_file=False)
         logger.notice('Removing Stage data....')
         common.sudo(['rm', '-rf', '/opt/cloudify-stage'])
         logger.notice('Stage successfully removed')
-
-    def start(self):
-        logger.notice('Starting Stage...')
-        self._run_db_migrate()
-        service.restart(STAGE)
-        self._verify_stage_alive()
-        logger.notice('Stage successfully started')
-
-    def stop(self):
-        logger.notice('Stopping Stage...')
-        service.stop(STAGE)
-        logger.notice('Stage successfully stopped')

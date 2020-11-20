@@ -44,6 +44,8 @@ logger = get_logger(MGMTWORKER)
 
 
 class MgmtWorker(BaseComponent):
+    services = ['cloudify-mgmtworker']
+
     def _add_snapshot_restore_sudo_commands(self):
         scripts = [
             (
@@ -116,23 +118,13 @@ class MgmtWorker(BaseComponent):
     def configure(self):
         logger.notice('Configuring Management Worker...')
         self._deploy_mgmtworker_config()
-        service.configure(MGMTWORKER)
+        service.configure('cloudify-mgmtworker')
         self._prepare_snapshot_permissions()
+        self._deploy_admin_token()
         logger.notice('Management Worker successfully configured')
+        self.start()
 
     def remove(self):
-        service.remove(MGMTWORKER, service_file=False)
+        service.remove('cloudify-mgmtworker', service_file=False)
         common.remove('/opt/mgmtworker')
         common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
-
-    def start(self):
-        logger.notice('Starting Management Worker...')
-        self._deploy_admin_token()
-        service.start(MGMTWORKER)
-        service.verify_alive(MGMTWORKER)
-        logger.notice('Management Worker successfully started')
-
-    def stop(self):
-        logger.notice('Stopping Management Worker...')
-        service.stop(MGMTWORKER)
-        logger.notice('Management Worker successfully stopped')

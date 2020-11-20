@@ -154,7 +154,6 @@ class PostgresqlServer(BaseComponent):
         if self.service_type == 'supervisord':
             service.configure(
                 POSTGRES_SERVICE_NAME,
-                append_prefix=False,
                 src_dir='postgresql_server',
                 config_path='config/supervisord'
             )
@@ -398,7 +397,7 @@ class PostgresqlServer(BaseComponent):
         return delim
 
     def _etcd_is_running(self):
-        status = service.is_active('etcd', append_prefix=False)
+        status = service.is_active('etcd')
         # Add new status 'running' for supervisord
         return status in ('running', 'active', 'activating')
 
@@ -411,13 +410,13 @@ class PostgresqlServer(BaseComponent):
         if self.service_type == 'supervisord':
             options = []
 
-        service.start('etcd', append_prefix=False, options=options)
+        service.start('etcd', options=options)
         self._wait_for_etcd()
         logger.info('etcd has started')
 
     def _restart_etcd(self):
         logger.info('Restarting etcd')
-        service.restart('etcd', append_prefix=False, ignore_failure=True)
+        service.restart('etcd', ignore_failure=True)
         self._wait_for_etcd()
         logger.info('etcd has restarted')
 
@@ -535,14 +534,12 @@ class PostgresqlServer(BaseComponent):
             service.configure(
                 'patroni',
                 src_dir='postgresql_server',
-                append_prefix=False,
                 render=False
             )
         else:
             service.configure(
                 'patroni',
                 src_dir='postgresql_server',
-                append_prefix=False,
                 render=False,
             )
 
@@ -617,8 +614,8 @@ class PostgresqlServer(BaseComponent):
             else:
                 self.handle_cluster_certificates()
                 self._restart_etcd()
-                service.restart('patroni', append_prefix=False)
-                service.verify_alive('patroni', append_prefix=False)
+                service.restart('patroni')
+                service.verify_alive('patroni')
 
     @staticmethod
     def _write_certs_to_config():
@@ -654,8 +651,8 @@ class PostgresqlServer(BaseComponent):
 
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
-        service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
-        service.disable(POSTGRES_SERVICE_NAME, append_prefix=False)
+        service.stop(POSTGRES_SERVICE_NAME)
+        service.disable(POSTGRES_SERVICE_NAME)
 
         logger.info('Deploying cluster certificates')
         # We need access to the certs, which by default we don't have
@@ -742,9 +739,8 @@ class PostgresqlServer(BaseComponent):
                 'rsyslog',
                 src_dir='postgresql_server',
                 config_path='config/supervisord',
-                append_prefix=False,
             )
-        service.restart('rsyslog', append_prefix=False)
+        service.restart('rsyslog')
 
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()
@@ -762,7 +758,6 @@ class PostgresqlServer(BaseComponent):
         if self.service_type == 'supervisord':
             service.configure(
                 'etcd',
-                append_prefix=False,
                 user='etcd',
                 group='etcd',
                 src_dir='postgresql_server',
@@ -772,7 +767,7 @@ class PostgresqlServer(BaseComponent):
                 }
             )
         else:
-            service.enable('etcd', append_prefix=False)
+            service.enable('etcd')
         self._start_etcd()
 
         try:
@@ -833,7 +828,7 @@ class PostgresqlServer(BaseComponent):
                     common.remove(ETCD_DATA_DIR)
                     common.mkdir(ETCD_DATA_DIR)
                     common.chown('etcd', 'etcd', ETCD_DATA_DIR)
-                    service.restart('etcd', append_prefix=False)
+                    service.restart('etcd')
             else:
                 # In case multiple nodes are being installed at the same time,
                 # check whether we should be setting up auth
@@ -905,8 +900,8 @@ class PostgresqlServer(BaseComponent):
 
         logger.info('Starting patroni')
         self._configure_patroni()
-        service.enable('patroni', append_prefix=False)
-        service.start('patroni', append_prefix=False)
+        service.enable('patroni')
+        service.start('patroni')
         logger.info('Activating patroni initial startup monitor.')
         self._activate_patroni_startup_check()
         logger.info('Patroni started.')
@@ -964,11 +959,10 @@ class PostgresqlServer(BaseComponent):
         if self.service_type == 'supervisord':
             service.configure(
                 'patroni_startup_check',
-                append_prefix=False,
                 src_dir='postgresql_server',
                 config_path='config/supervisord'
             )
-            service.start('patroni_startup_check', append_prefix=False)
+            service.start('patroni_startup_check')
         else:
             common.sudo(
                 [
@@ -1663,7 +1657,16 @@ class PostgresqlServer(BaseComponent):
             enable_remote_connections = \
                 config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
             self._update_configuration(enable_remote_connections)
+            service.enable(POSTGRES_SERVICE_NAME)
 
+        self.start()
+
+        if not config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
+                self._update_postgres_password()
+
+        if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
+            self._create_db_monitoring_account()
         logger.notice('PostgreSQL Server successfully configured')
 
     def remove(self):
@@ -1674,14 +1677,14 @@ class PostgresqlServer(BaseComponent):
                 '/etc/patroni.conf',
                 '/etc/etcd',
             ])
-        service.remove('patroni_startup_check', append_prefix=False)
+        service.remove('patroni_startup_check')
         logger.notice('Removing PostgreSQL...')
         files.remove_files([
             '/var/lib/pgsql/9.5/data',
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
-        service.remove(POSTGRES_SERVICE_NAME, append_prefix=False)
+        service.remove(POSTGRES_SERVICE_NAME)
         logger.info('Removing postgres bin links')
         files.remove_files(
             [os.path.join('/usr/sbin', pg_bin) for pg_bin in PG_BINS],
@@ -1691,26 +1694,20 @@ class PostgresqlServer(BaseComponent):
         logger.notice('Starting PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._start_etcd()
-            service.start('patroni', append_prefix=False)
-            service.verify_alive('patroni', append_prefix=False)
+            service.start('patroni')
+            service.verify_alive('patroni')
         else:
-            service.enable(POSTGRES_SERVICE_NAME, append_prefix=False)
-            service.start(POSTGRES_SERVICE_NAME, append_prefix=False)
-            service.verify_alive(POSTGRES_SERVICE_NAME, append_prefix=False)
-            if config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
-                # This cannot be done without the server being started
-                self._update_postgres_password()
-        if MONITORING_SERVICE in config[SERVICES_TO_INSTALL]:
-            self._create_db_monitoring_account()
+            service.start(POSTGRES_SERVICE_NAME)
+            service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
     def stop(self):
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            service.stop('etcd', append_prefix=False)
-            service.stop('patroni', append_prefix=False)
+            service.stop('etcd')
+            service.stop('patroni')
         else:
-            service.stop(POSTGRES_SERVICE_NAME, append_prefix=False)
+            service.stop(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):

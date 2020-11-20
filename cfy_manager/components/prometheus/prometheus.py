@@ -107,27 +107,12 @@ def _prometheus_exporters():
 class Prometheus(BaseComponent):
     component_name = 'prometheus'
 
-    def configure(self):
-        logger.notice('Configuring Prometheus Service...')
-        _set_selinux_permissive()
-        _handle_certs()
-        _create_prometheus_directories()
-        _chown_resources_dir()
-        _deploy_configuration()
-        service.configure(PROMETHEUS, append_prefix=False)
-        service.reload(PROMETHEUS, append_prefix=False, ignore_failure=True)
+    @property
+    def services(self):
+        services = ['prometheus']
         for exporter in _prometheus_exporters():
-            service.configure(
-                exporter['name'],
-                src_dir='prometheus',
-                append_prefix=False
-            )
-            service.reload(
-                exporter['name'],
-                append_prefix=False,
-                ignore_failure=True
-            )
-        logger.notice('Prometheus successfully configured')
+            services.append(exporter['name'])
+        return services
 
     def replace_certificates(self):
         if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
@@ -135,15 +120,13 @@ class Prometheus(BaseComponent):
             self.validate_new_certs()
             logger.info('Replacing certificates on prometheus component')
             self.write_new_certs_to_config()
-            _handle_certs()
-            service.reload(PROMETHEUS, append_prefix=False,
-                           ignore_failure=True)
+            handle_certs()
+            service.reload(PROMETHEUS, ignore_failure=True)
         if exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
-            service.restart(BLACKBOX_EXPORTER, append_prefix=False,
-                            ignore_failure=True)
-            service.verify_alive(BLACKBOX_EXPORTER, append_prefix=False)
-            service.restart(NGINX, append_prefix=False)
-            service.verify_alive(NGINX, append_prefix=False)
+            service.restart(BLACKBOX_EXPORTER, ignore_failure=True)
+            service.verify_alive(BLACKBOX_EXPORTER)
+            service.restart(NGINX)
+            service.verify_alive(NGINX)
 
     def validate_new_certs(self):
         if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
@@ -184,32 +167,36 @@ class Prometheus(BaseComponent):
             remove_files_list = [PROMETHEUS_DATA_DIR, PROMETHEUS_CONFIG_DIR]
             files.remove_files(remove_files_list)
             for exporter in _prometheus_exporters():
-                service.remove(exporter['name'], append_prefix=False)
-            service.remove(PROMETHEUS, append_prefix=False)
+                service.remove(exporter['name'])
+            service.remove(PROMETHEUS)
             logger.notice(
                 'Successfully removed Prometheus and exporters files')
 
-    def start(self):
+    def configure(self):
+        logger.notice('Configuring Prometheus Service...')
+        _set_selinux_permissive()
+        handle_certs()
+        _create_prometheus_directories()
+        _chown_resources_dir()
+        _deploy_configuration()
+        service.configure(PROMETHEUS)
+        service.reload(PROMETHEUS, ignore_failure=True)
+        for exporter in _prometheus_exporters():
+            service.configure(
+                exporter['name'],
+                src_dir='prometheus',
+            )
+            service.reload(
+                exporter['name'],
+                ignore_failure=True
+            )
         if files.is_file(CLUSTER_DETAILS_PATH):
             logger.notice(
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
             _deploy_configuration()
-        logger.notice('Starting Prometheus and exporters...')
-        service.restart(PROMETHEUS, append_prefix=False,
-                        ignore_failure=True)
-        for exporter in _prometheus_exporters():
-            service.restart(exporter['name'], append_prefix=False,
-                            ignore_failure=True)
-        _validate_prometheus_running()
-        logger.notice('Prometheus and exporters successfully started')
-
-    def stop(self):
-        logger.notice('Stopping Prometheus and exporters...')
-        service.stop(PROMETHEUS, append_prefix=False)
-        for exporter in _prometheus_exporters():
-            service.stop(exporter['name'], append_prefix=False)
-        logger.notice('Prometheus and exporters successfully stopped')
+        logger.notice('Prometheus successfully configured')
+        self.start()
 
     def join_cluster(self):  # , restore_users_on_fail=False):
         logger.info('Would be joining cluster.')
@@ -241,7 +228,7 @@ def _get_selinux_state():
         return None
 
 
-def _handle_certs():
+def handle_certs():
     logger.info('Setting up TLS certificates.')
     supplied = certificates.use_supplied_certificates(
         PROMETHEUS,
@@ -668,11 +655,6 @@ def _deploy_exporters_configuration():
         for file_name, dest_file_name in exporter['deploy_config'].items():
             files.deploy(join(CONFIG_DIR, file_name), dest_file_name)
             common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
-
-
-def _validate_prometheus_running():
-    logger.info('Making sure Prometheus is live...')
-    service.verify_alive(PROMETHEUS, append_prefix=False)
 
 
 def _get_managers_list():

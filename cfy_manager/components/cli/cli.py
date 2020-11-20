@@ -47,7 +47,7 @@ class Cli(BaseComponent):
         cmd = "sudo {0}".format(cmd) if is_root else cmd
         common.run([cmd], shell=True)
 
-    def start(self):
+    def configure(self):
         logger.notice('Configuring Cloudify CLI...')
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']
@@ -85,6 +85,7 @@ class Cli(BaseComponent):
             self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
         logger.notice('Cloudify CLI successfully configured')
+        self.start()
 
     def remove(self):
         profile_name = config[MANAGER]['cli_local_profile_host_name']

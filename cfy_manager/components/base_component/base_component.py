@@ -22,6 +22,8 @@ from ...logger import get_logger
 
 
 class BaseComponent(object):
+    services = []
+
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
         self.service_type = service._get_service_type()
@@ -33,12 +35,23 @@ class BaseComponent(object):
         pass
 
     def start(self):
-        pass
+        self.logger.info('Starting component')
+        for service_name in self.services:
+            service.restart(service_name)
+            service.verify_alive(service_name)
+        self.verify_started()
+        self.logger.info('Component started')
 
     def stop(self):
-        pass
+        self.logger.info('Stopping component')
+        for service_name in self.services:
+            service.stop(service_name)
+        self.logger.info('Component stopped')
 
     def remove(self):
+        pass
+
+    def verify_started(self):
         pass
 
     def _get_dependencies(self):

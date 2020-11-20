@@ -852,8 +852,6 @@ def install(verbose=False,
     if not only_install:
         for component in components:
             component.configure()
-        for component in components:
-            component.start()
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')

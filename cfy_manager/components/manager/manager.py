@@ -39,14 +39,6 @@ logger = get_logger(MANAGER)
 
 
 class Manager(BaseComponent):
-    def _install(self):
-        self._create_sudoers_file_and_disable_sudo_requiretty()
-        if self.service_type == 'supervisord':
-            self._allow_run_supervisorctl_command()
-        self._set_selinux_permissive()
-        setup_logrotate()
-        self._create_manager_resources_dirs()
-
     def _allow_run_supervisorctl_command(self):
         command = '/usr/bin/supervisorctl'
         description = 'Allow running {0} for {1}'.format(
@@ -129,18 +121,21 @@ class Manager(BaseComponent):
             validate_certificates(
                 ca_filename=constants.NEW_BROKER_CA_CERT_FILE_PATH)
 
-    def _configure(self):
-        self._prepare_certificates()
-
     def install(self):
         logger.notice('Installing Cloudify Manager resources...')
-        self._install()
+        self._create_sudoers_file_and_disable_sudo_requiretty()
+        if self.service_type == 'supervisord':
+            self._allow_run_supervisorctl_command()
+        self._set_selinux_permissive()
+        setup_logrotate()
+        self._create_manager_resources_dirs()
         logger.notice('Cloudify Manager resources successfully installed!')
 
     def configure(self):
         logger.notice('Configuring Cloudify Manager resources...')
-        self._configure()
+        self._prepare_certificates()
         logger.notice('Cloudify Manager resources successfully configured!')
+        self.start()
 
     def remove(self):
         logger.notice('Removing Cloudify Manager resources...')

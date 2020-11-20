@@ -28,6 +28,8 @@ logger = get_logger(AMQP_POSTGRES)
 
 
 class AmqpPostgres(BaseComponent):
+    services = ['cloudify-amqp-postgres']
+
     def _setup_log_dir(self):
         # Can't use AMQP_POSTGRES here because Jinja doesn't play nice
         # with `-`s
@@ -37,21 +39,11 @@ class AmqpPostgres(BaseComponent):
     def configure(self):
         logger.notice('Configuring AMQP-Postgres...')
         self._setup_log_dir()
-        service.configure(AMQP_POSTGRES)
+        service.configure('cloudify-amqp-postgres')
         logger.notice('AMQP-Postgres successfully configured')
-
-    def start(self):
-        logger.notice('Starting AMQP-Postgres...')
-        service.start(AMQP_POSTGRES)
-        service.verify_alive(AMQP_POSTGRES)
-        logger.notice('AMQP-Postgres successfully started')
-
-    def stop(self):
-        logger.notice('Stopping AMQP-Postgres...')
-        service.stop(AMQP_POSTGRES)
-        logger.notice('AMQP-Postgres successfully stopped')
+        self.start()
 
     def remove(self):
         logger.notice('Removing AMQP-Postgres...')
-        service.remove(AMQP_POSTGRES, service_file=False)
+        service.remove('cloudify-amqp-postgres', service_file=False)
         logger.notice('AMQP-Postgres successfully removed')
