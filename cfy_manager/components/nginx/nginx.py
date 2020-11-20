@@ -17,6 +17,7 @@ from collections import namedtuple
 from os.path import join, exists
 from tempfile import NamedTemporaryFile
 
+from cfy_manager.components.prometheus import prometheus
 from ..base_component import BaseComponent
 from ..components_constants import (
     CONFIG,
@@ -58,6 +59,8 @@ logger = get_logger(NGINX)
 
 
 class Nginx(BaseComponent):
+    services = ['nginx']
+
     def _deploy_unit_override(self):
         logger.debug('Creating systemd unit override...')
         unit_override_path = '/etc/systemd/system/nginx.service.d'
@@ -135,8 +138,8 @@ class Nginx(BaseComponent):
         if (self._needs_to_replace_internal_certs() or
                 self._needs_to_replace_external_certs() or
                 MONITORING_SERVICE in config[SERVICES_TO_INSTALL]):
-            service.restart(NGINX, append_prefix=False)
-            service.verify_alive(NGINX, append_prefix=False)
+            self.stop()
+            self.start()
 
     @staticmethod
     def _needs_to_replace_internal_certs():
@@ -260,6 +263,7 @@ class Nginx(BaseComponent):
         if config[CLEAN_DB] or not self._internal_certs_exist():
             certs_handled = True
             self._handle_internal_cert()
+            prometheus.handle_certs()
         if config[CLEAN_DB] or not self._external_certs_exist():
             certs_handled = True
             self._handle_external_cert()
@@ -398,12 +402,11 @@ class Nginx(BaseComponent):
         service.configure(
             'wait_on_restart',
             src_dir='nginx',
-            append_prefix=False,
             render=False,
         )
         # Enable wait_on_restart service so that it can be called when
         # updating the ssl state as it required to restart nginx
-        service.enable('wait_on_restart', append_prefix=False)
+        service.enable('wait_on_restart')
 
     def install(self):
         logger.notice('Installing NGINX...')
@@ -420,11 +423,11 @@ class Nginx(BaseComponent):
             self._configure_wait_on_restart_wrapper_service()
         self._deploy_nginx_config_files()
         if self.service_type != 'supervisord':
-            service.enable(NGINX, append_prefix=False)
+            service.enable(NGINX)
         if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
             self._handle_certs()
         if self.service_type == 'supervisord':
-            service.configure(NGINX, append_prefix=False)
+            service.configure(NGINX)
         logger.notice('NGINX successfully configured')
         self.start()
 
@@ -437,14 +440,3 @@ class Nginx(BaseComponent):
             UNIT_OVERRIDE_PATH,
             HTPASSWD_FILE,
         ] + [resource.dst for resource in self._config_files()])
-
-    def start(self):
-        logger.notice('Starting NGINX...')
-        service.restart(NGINX, append_prefix=False)
-        service.verify_alive(NGINX, append_prefix=False)
-        logger.notice('NGINX successfully started')
-
-    def stop(self):
-        logger.notice('Stopping NGINX...')
-        service.stop(NGINX, append_prefix=False)
-        logger.notice('NGINX successfully stopped')

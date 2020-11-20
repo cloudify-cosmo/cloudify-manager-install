@@ -91,6 +91,8 @@ RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 
 class RestService(BaseComponent):
+    services = ['cloudify-restservice']
+
     def _make_paths(self):
         # Used in the service templates
         config[RESTSERVICE][HOME_DIR_KEY] = REST_HOME_DIR
@@ -239,9 +241,11 @@ class RestService(BaseComponent):
         self._deploy_security_configuration()
         self._configure_restservice_wrapper_script()
 
-    def _verify_restservice_alive(self):
+    def verify_started(self):
+        if config.get(CLUSTER_JOIN):
+            logger.info('Extra node in cluster, will verify rest-service '
+                        'after clustering configured')
         logger.info('Verifying Rest service is up...')
-        service.verify_alive(RESTSERVICE)
         wait_for_port(config[RESTSERVICE]['port'])
 
     def _configure_db(self):
@@ -359,10 +363,10 @@ class RestService(BaseComponent):
         )
 
     def replace_certificates(self):
+        self.stop()
         self._replace_ldap_cert()
         self._replace_ca_certs_on_db()
-        service.restart(RESTSERVICE)
-        self._verify_restservice_alive()
+        self.start()
 
     def validate_new_certs(self):
         # All other certs are validated in other components
@@ -511,7 +515,7 @@ class RestService(BaseComponent):
 
         self._make_paths()
         self._configure_restservice()
-        service.configure(RESTSERVICE)
+        service.configure('cloudify-restservice')
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
@@ -521,22 +525,6 @@ class RestService(BaseComponent):
         logger.notice('Rest Service successfully configured')
 
     def remove(self):
-        service.remove(RESTSERVICE, service_file=False)
+        service.remove('cloudify-restservice', service_file=False)
         remove_logrotate(RESTSERVICE)
-
         common.remove('/opt/manager')
-
-    def start(self):
-        logger.notice('Starting Restservice...')
-        service.restart(RESTSERVICE)
-        if config[CLUSTER_JOIN]:
-            logger.info('Extra node in cluster, will verify rest-service '
-                        'after clustering configured')
-        else:
-            self._verify_restservice_alive()
-        logger.notice('Restservice successfully started')
-
-    def stop(self):
-        logger.notice('Stopping Restservice...')
-        service.stop(RESTSERVICE)
-        logger.notice('Restservice successfully stopped')

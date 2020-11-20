@@ -57,6 +57,7 @@ logger = get_logger(RABBITMQ)
 
 class RabbitMQ(BaseComponent):
     component_name = 'rabbitmq'
+    services = ['cloudify-rabbitmq']
 
     def _installing_manager(self):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
@@ -88,7 +89,7 @@ class RabbitMQ(BaseComponent):
         remove_file(rabbit_config_path)
         self._deploy_configuration()
         self._deploy_env()
-        service.reload(RABBITMQ, ignore_failure=True)
+        service.reload('cloudify-rabbitmq', ignore_failure=True)
 
     def _rabbitmqctl(self, command, **kwargs):
         base_command = [RABBITMQ_CTL]
@@ -474,10 +475,10 @@ class RabbitMQ(BaseComponent):
                 os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH)):
             logger.info(
                 'Replacing certificates on the rabbitmq component')
+            self.stop()
             self._write_certs_to_config()
             self.handle_certificates()
-            service.restart(RABBITMQ, ignore_failure=True)
-            service.verify_alive(RABBITMQ)
+            self.start()
 
     @staticmethod
     def _write_certs_to_config():
@@ -514,9 +515,12 @@ class RabbitMQ(BaseComponent):
 
     # Give rabbit time to finish starting
     @retry(stop_max_attempt_number=20, wait_fixed=3000)
-    def _validate_rabbitmq_running(self):
+    def verify_started(self):
         logger.info('Making sure RabbitMQ is live...')
-        service.verify_alive(RABBITMQ)
+        # If we don't trigger a restart here then supervisord sometimes gets
+        # upset and leaves the service in a failed state
+        service.restart('cloudify-rabbitmq')
+        wait_for_port(SECURE_PORT)
 
         result = self._rabbitmqctl(['status'])
         if result.returncode != 0:
@@ -550,11 +554,6 @@ class RabbitMQ(BaseComponent):
         )
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_SERVER_SCRIPT)
         common.chmod('755', RABBITMQ_SERVER_SCRIPT)
-
-    def _restart_rabbitmq(self):
-        service.restart(RABBITMQ, ignore_failure=True)
-        wait_for_port(SECURE_PORT)
-        self._validate_rabbitmq_running()
 
     def _rabbitmq_hash(self, password):
         salt = os.urandom(4)
@@ -599,7 +598,8 @@ class RabbitMQ(BaseComponent):
             self._configure_rabbitmq_wrapper_script()
         if not common.is_all_in_one_manager():
             self._possibly_add_hosts_entries()
-        service.configure(RABBITMQ, user='rabbitmq', group='rabbitmq')
+        service.configure('cloudify-rabbitmq',
+                          user='rabbitmq', group='rabbitmq')
         self._generate_rabbitmq_certs()
         if self._installing_manager():
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
@@ -608,24 +608,14 @@ class RabbitMQ(BaseComponent):
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         if not config[RABBITMQ]['join_cluster']:
             self._write_definitions_file()
-        logger.notice('RabbitMQ successfully configured')
         self.start()
+        self._possibly_join_cluster()
+        logger.notice('RabbitMQ successfully configured')
 
     def remove(self):
         logger.info('Stopping the Erlang Port Mapper Daemon...')
         sudo(['epmd', '-kill'], ignore_failures=True)
-        service.remove(RABBITMQ, service_file=False)
+        service.remove('cloudify-rabbitmq', service_file=False)
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
         sudo(['rm', '-rf', '/etc/rabbitmq'])
-
-    def start(self):
-        logger.notice('Starting RabbitMQ...')
-        self._restart_rabbitmq()
-        self._possibly_join_cluster()
-        logger.notice('RabbitMQ successfully started')
-
-    def stop(self):
-        logger.notice('Stopping RabbitMQ...')
-        service.stop(RABBITMQ)
-        logger.notice('RabbitMQ successfully stopped')

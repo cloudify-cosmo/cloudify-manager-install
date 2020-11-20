@@ -79,7 +79,6 @@ class SystemD(object):
                   external_configure_params=None,
                   config_path='config',
                   src_dir=None,
-                  append_prefix=True,
                   render=True,
                   ignore_failure=False):
         """This configures systemd for a specific service.
@@ -88,17 +87,16 @@ class SystemD(object):
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
         """
-        sid = _get_full_service_name(service_name, append_prefix=append_prefix)
-        env_dst = "/etc/sysconfig/{0}".format(sid)
-        srv_dst = "/usr/lib/systemd/system/{0}.service".format(sid)
+        env_dst = "/etc/sysconfig/{0}".format(service_name)
+        srv_dst = "/usr/lib/systemd/system/{0}.service".format(service_name)
 
         if src_dir is None:
-            src_dir = service_name
+            src_dir = _strip_prefix(service_name)
 
         service_dir_name = src_dir.replace('-', '_')
         src_dir = join(COMPONENTS_DIR, service_dir_name, config_path)
-        env_src = join(src_dir, sid)
-        srv_src = join(src_dir, '{0}.service'.format(sid))
+        env_src = join(src_dir, service_name)
+        srv_src = join(src_dir, '{0}.service'.format(service_name))
 
         if exists(env_src):
             logger.debug('Deploying systemd EnvironmentFile...')
@@ -114,7 +112,8 @@ class SystemD(object):
                    additional_render_context=external_configure_params)
 
         logger.debug('Enabling systemd .service...')
-        self.enable('{0}.service'.format(sid), ignore_failure=ignore_failure)
+        self.enable('{0}.service'.format(service_name),
+                    ignore_failure=ignore_failure)
 
     def remove(self, service_name, service_file=True):
         """Stop and disable the service, and then delete its data
@@ -181,12 +180,6 @@ class SystemD(object):
             service_name,
             ignore_failure=True
         ).aggr_stdout.strip()
-
-
-def _get_full_service_name(service_name, append_prefix):
-    if append_prefix:
-        return 'cloudify-{0}'.format(service_name)
-    return service_name
 
 
 class Supervisord(object):
@@ -285,7 +278,6 @@ class Supervisord(object):
                   external_configure_params=None,
                   config_path='config/supervisord',
                   src_dir=None,
-                  append_prefix=True,
                   render=True):
         """This configures supervisord for a specific service.
         It requires that two files are present for each service one containing
@@ -293,14 +285,13 @@ class Supervisord(object):
         All env files will be named "cloudify-SERVICENAME".
         All supervisord config files will be named "SERVICENAME.cloudify.conf".
         """
-        sid = _get_full_service_name(service_name, append_prefix=append_prefix)
         dst = '/etc/supervisord.d/{0}.cloudify.conf'.format(service_name)
 
         if src_dir is None:
-            src_dir = service_name
+            src_dir = _strip_prefix(service_name)
         src_dir = src_dir.replace('-', '_')
         srv_src = join(COMPONENTS_DIR, src_dir, config_path)
-        srv_src = join(srv_src, '{0}.conf'.format(sid))
+        srv_src = join(srv_src, '{0}.conf'.format(service_name))
         logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
@@ -334,78 +325,61 @@ def _get_backend():
         return SystemD()
 
 
-def enable(service_name, append_prefix=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Enabling service {0}...'.format(full_service_name))
-    return _get_backend().enable(full_service_name)
+def enable(service_name):
+    logger.debug('Enabling service {0}...'.format(service_name))
+    return _get_backend().enable(service_name)
 
 
-def disable(service_name, append_prefix=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Disabling service {0}...'.format(full_service_name))
-    return _get_backend().disable(full_service_name)
+def disable(service_name):
+    logger.debug('Disabling service {0}...'.format(service_name))
+    return _get_backend().disable(service_name)
 
 
-def start(service_name, append_prefix=True, options=None):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Starting service {0}...'.format(full_service_name))
-    return _get_backend().start(full_service_name, options=options)
+def start(service_name, options=None):
+    logger.debug('Starting service {0}...'.format(service_name))
+    return _get_backend().start(service_name, options=options)
 
 
-def stop(service_name, append_prefix=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Stopping service {0}...'.format(full_service_name))
-    return _get_backend().stop(full_service_name)
+def stop(service_name):
+    logger.debug('Stopping service {0}...'.format(service_name))
+    return _get_backend().stop(service_name)
 
 
-def restart(service_name, append_prefix=True, ignore_failure=False):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Restarting service {0}...'.format(full_service_name))
-    return _get_backend().restart(
-        full_service_name,
-        ignore_failure=ignore_failure
-    )
+def restart(service_name, ignore_failure=False):
+    logger.debug('Restarting service {0}...'.format(service_name))
+    return _get_backend().restart(service_name, ignore_failure=ignore_failure)
 
 
-def remove(service_name, append_prefix=True, service_file=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Removing service {0}...'.format(full_service_name))
-    return _get_backend().remove(full_service_name, service_file)
+def remove(service_name, service_file=True):
+    logger.debug('Removing service {0}...'.format(service_name))
+    return _get_backend().remove(service_name, service_file)
 
 
-def reload(service_name, append_prefix=True, ignore_failure=False):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    logger.debug('Reloading service {0}...'.format(full_service_name))
-    return _get_backend().reload(
-        full_service_name,
-        ignore_failure=ignore_failure
-    )
+def reload(service_name, ignore_failure=False):
+    logger.debug('Reloading service {0}...'.format(service_name))
+    return _get_backend().reload(service_name, ignore_failure=ignore_failure)
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1000)
-def verify_alive(service_name, append_prefix=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    if _get_backend().is_alive(full_service_name):
-        logger.debug('{0} is running'.format(full_service_name))
+def verify_alive(service_name):
+    if _get_backend().is_alive(service_name):
+        logger.debug('{0} is running'.format(service_name))
     else:
-        raise ValidationError('{0} is not running'.format(full_service_name))
+        raise ValidationError('{0} is not running'.format(service_name))
 
 
-def is_alive(service_name, append_prefix=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    return _get_backend().is_alive(full_service_name)
+def is_alive(service_name):
+    return _get_backend().is_alive(service_name)
 
 
-def is_active(service_name, append_prefix=True):
-    full_service_name = _get_full_service_name(service_name, append_prefix)
-    return _get_backend().is_active(full_service_name)
+def is_active(service_name):
+    return _get_backend().is_active(service_name)
 
 
 def configure(service_name,
               user=CLOUDIFY_USER,
               group=CLOUDIFY_GROUP,
               external_configure_params=None,
-              append_prefix=True,
               config_path=None,
               render=True,
               src_dir=None):
@@ -416,7 +390,6 @@ def configure(service_name,
             user=user,
             group=group,
             external_configure_params=external_configure_params,
-            append_prefix=append_prefix,
             render=render,
             src_dir=src_dir
         )
@@ -424,3 +397,10 @@ def configure(service_name,
         return _configure(config_path=config_path)
     else:
         return _configure()
+
+
+def _strip_prefix(service_name):
+    legacy_prefix = 'cloudify-'
+    if service_name.startswith(legacy_prefix):
+        return service_name[len(legacy_prefix):]
+    return service_name
