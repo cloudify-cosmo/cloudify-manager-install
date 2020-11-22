@@ -1,0 +1,82 @@
+def waitForContainer(String container) {
+  echo "Waiting for ${container} to start"
+  sh "docker exec ${container} cfy_manager wait-for-starter"
+}
+
+@Library('pipeline-shared-library') _
+
+pipeline {
+  agent {
+    kubernetes {
+      label "manager-install-mb-${env.BUILD_NUMBER}"
+      defaultContainer 'jnlp'
+      yamlFile 'jenkins/build-pod.yaml'
+    }
+  }
+
+  options {
+    checkoutToSubdirectory('cloudify-manager-install')
+    buildDiscarder(logRotator(numToKeepStr:'10'))
+    timeout(time: 60, unit: 'MINUTES')
+    timestamps()
+  }
+
+  environment{
+    PROJECT = "cloudify-manager-install"
+    PATH = "/root/.local/bin:$PATH"
+    VERSION = getVersion("master").trim()
+    PRERELEASE = getPreRelease("master").trim()
+  }
+  stages{
+    stage ('compatability and flake8') {
+      parallel{
+        stage ('py3_compat'){
+          steps{
+            sh script: "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat", label: "copying repo to seperate workspace"
+            container('py27'){
+              dir("${env.WORKSPACE}/py3_compat"){
+                py3Compat()
+              }
+            }
+          }
+        }
+        stage('flake8') {
+          steps{
+            sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
+            container('py36'){
+              dir("${env.WORKSPACE}/flake8") {
+                echo 'install flake 8'
+                sh 'pip install flake8 --user'
+                echo 'run flake8'
+                sh 'flake8 cloudify_agent'
+              }
+            }
+          }
+        }
+        stage('fetch_rpms') {
+          steps {
+            container('python') {
+              dir("${env.WORKSPACE}") {
+                echo 'Install requests'
+                sh 'pip install requests'
+                echo 'Fetch RPM built on Jenkins located on S3'
+                sh '''
+                  mkdir rpms
+                  cd rpms
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rest-service-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rest-service.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o patroni.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-premium-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-premium.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-cli-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-cli.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-agents.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-management-worker-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-management-worker.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-manager-ip-setter-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-manager-ip-setter.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rabbitmq.rpm
+                  '''
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
