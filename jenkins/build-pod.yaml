@@ -29,5 +29,13 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
+    - name: rpmbuild
+      image: rpmbuild/centos7
+      command:
+      - cat
+      tty: true
+      securityContext:
+        runAsUser: 0
+        privileged: true
   nodeSelector:
     instance-type: spot

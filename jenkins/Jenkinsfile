@@ -26,6 +26,8 @@ pipeline {
     PATH = "/root/.local/bin:$PATH"
     VERSION = getVersion("master").trim()
     PRERELEASE = getPreRelease("master").trim()
+    CLOUDIFY_VERSION = "${env.VERSION}"
+    CLOUDIFY_PACKAGE_RELEASE = "${env.PRERELEASE}"
   }
   stages{
     stage ('compatability and flake8') {
@@ -36,25 +38,6 @@ pipeline {
             container('py27'){
               dir("${env.WORKSPACE}/py3_compat"){
                 py3Compat()
-                // sh 'pip install future --user'
-                // echo 'find py3-incompatible code'
-                // sh '''#!/bin/bash
-                //   FUTURIZE="futurize ."
-                //   while read line; do
-                //     [[ "$line" =~ ^#.* ]] && continue
-                //     FUTURIZE="${FUTURIZE} -f ${line}"
-                //   done<.circleci/py3fixers
-                //   echo "Running: $FUTURIZE"
-                //   $FUTURIZE>futurize_diffs
-                //   '''
-                // echo 'check'
-                // sh '''
-                //   if [[ -s futurize_diffs ]]; then
-                //     echo "Python-3-incompatible code found"
-                //     cat futurize_diffs
-                //     exit 1
-                //   fi
-                //   '''
               }
             }
           }
@@ -89,6 +72,21 @@ pipeline {
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-manager-ip-setter-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-manager-ip-setter.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rabbitmq.rpm
                   """, label: 'Fetch RPM built on Jenkins located on S3'
+              }
+            }
+          }
+        }
+        stage('build_prometheus_rpms') {
+          steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
+            container('rpmbuild') {
+              dir("${env.WORKSPACE}/prometheus") {
+                echo 'Link items from workspace under rpm sources dir'
+                sh '''
+                  rm ~/rpm -fr
+                  ln -s ${env.WORKSPACE}/rpms ./rpms
+                  ln -s . ~/rpm
+                  '''
               }
             }
           }
