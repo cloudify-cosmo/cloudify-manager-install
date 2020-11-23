@@ -48,21 +48,19 @@ pipeline {
                 echo 'install flake 8'
                 sh 'pip install flake8 --user'
                 echo 'run flake8'
-                sh 'flake8 cloudify_agent'
+                sh 'python -m flake8'
               }
             }
           }
         }
         stage('fetch_rpms') {
           steps {
+            sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
             container('python') {
-              dir("${env.WORKSPACE}") {
+              dir("${env.WORKSPACE}/rpms") {
                 echo 'Install requests'
                 sh 'pip install requests'
-                echo 'Fetch RPM built on Jenkins located on S3'
-                sh '''
-                  mkdir rpms
-                  cd rpms
+                sh script:"""
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rest-service-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rest-service.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o patroni.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-premium-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-premium.rpm
@@ -71,7 +69,7 @@ pipeline {
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-management-worker-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-management-worker.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-manager-ip-setter-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-manager-ip-setter.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rabbitmq.rpm
-                  '''
+                  """, label: 'Fetch RPM built on Jenkins located on S3'
               }
             }
           }
