@@ -409,30 +409,42 @@ class Nginx(BaseComponent):
         service.enable('wait_on_restart')
 
     def _set_selinux_policies(self):
+        if not exists('/usr/sbin/semanage'):
+            logger.info('SELinux binaries not found; '
+                        'SELinux policies will not be deployed')
+            return
+
         # Setup Cloudify SELinux policies for nginx
-        logger.info('Deploying SELinux policy for nginx...')
-
         if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL):
-            # Enable nginx proxying for ports  3030, 8088, 8100
-            with TemporaryDirectory() as tmpdirname:
-                deploy(join(CONFIG_PATH, 'cloudify_manager.te'),
-                       join(tmpdirname, 'cloudify_manager.te'))
-                script_path = join(SCRIPTS_PATH, 'sepolicy_deploy.sh')
-                common.sudo(
-                    [script_path, tmpdirname,
-                     'cloudify_manager', '3000 8088 8100'])
-
+            self._set_selinux_policy(
+                'cloudify_manager', ['3000', '8088', '8100'])
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
-            # Enable nginx proxying for ports 9090-9094
-            with TemporaryDirectory() as tmpdirname:
-                deploy(join(CONFIG_PATH, 'cloudify_monitoring.te'),
-                       join(tmpdirname, 'cloudify_monitoring.te'))
-                script_path = join(SCRIPTS_PATH, 'sepolicy_deploy.sh')
-                common.sudo(
-                    [script_path, tmpdirname,
-                     'cloudify_monitoring', '9090-9094'])
-
+            self._set_selinux_policy(
+                'cloudify_monitoring', ['9090-9094'])
         logger.info('SELinux policy for nginx.')
+
+    def _set_selinux_policy(self, policy_module, ports):
+        logger.info('Deploying {0} SELinux policy'.format(policy_module))
+        with TemporaryDirectory() as tmp_dir_name:
+            base_file_name = join(tmp_dir_name, policy_module)
+            deploy(join(CONFIG_PATH, '{0}.te'.format(policy_module)),
+                   '{0}.te'.format(base_file_name))
+            common.sudo(['/usr/sbin/semodule',
+                         '-r', policy_module],
+                        ignore_failures=True)
+            common.sudo(['/bin/checkmodule',
+                         '-M', '-m',
+                         '-o', '{0}.mod'.format(base_file_name),
+                         '{0}.te'.format(base_file_name)])
+            common.sudo(['/bin/semodule_package',
+                         '-o', '{0}.pp'.format(base_file_name),
+                         '-m', '{0}.mod'.format(base_file_name)])
+            common.sudo(['/usr/sbin/semodule',
+                         '-i', '{0}.pp'.format(base_file_name)])
+        for port in ports:
+            common.sudo(['/usr/sbin/semanage', 'port', '-a',
+                         '-t', '{0}_port_t'.format(policy_module),
+                         '-p', 'tcp', port])
 
     def install(self):
         logger.notice('Installing NGINX...')
