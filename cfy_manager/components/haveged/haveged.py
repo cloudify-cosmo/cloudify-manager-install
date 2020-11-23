@@ -11,8 +11,13 @@ class Haveged(BaseComponent):
     component_name = HAVEGED
     services = ['haveged']
 
+    def configure_supervisord_config(self):
+        if self.service_type == 'supervisord':
+            service.configure(HAVEGED)
+
     def configure(self):
         logger.info('Configuring haveged for entropy generation.')
+        self.configure_supervisord_config()
         service.enable(HAVEGED)
         logger.info('Successfully configured haveged.')
         self.start()
