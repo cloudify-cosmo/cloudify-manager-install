@@ -5,6 +5,8 @@ PORTS=${3}
 
 cd "${1}" || exit 1
 
+[ -x /usr/sbin/semanage ] || exit 2
+
 /usr/sbin/semodule -d "${POLICY}"
 /bin/checkmodule -M -m -o "${POLICY}.mod" "${POLICY}.te"
 /bin/semodule_package -o "${POLICY}.pp" -m "${POLICY}.mod"
