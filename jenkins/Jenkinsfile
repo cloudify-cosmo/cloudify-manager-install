@@ -120,12 +120,16 @@ pipeline {
     }
     stage('build_rpm') {
       steps {
-        sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: 'copying repo to seperate workspace'
+        //sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: 'copying repo to seperate workspace'
         container('rpmbuild') {
+          sh """
+            cd && mkdir rpmbuild && cd rpmbuild
+            git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
+            """
           echo 'Setup Github SSH key'
           setupGithubSSHKey()
-          dir ("${env.WORKSPACE}/buildrpm") {
-            withVault([configuration: configuration, vaultSecrets: secrets]) {
+          //dir ("${env.WORKSPACE}/buildrpm") {
+            //withVault([configuration: configuration, vaultSecrets: secrets]) {
               echo 'Link items from workspace under rpm sources dir'
               sh """
                 rm ~/rpm -fr
@@ -136,7 +140,7 @@ pipeline {
                 """
               sh script: """
                 pushd rpms
-                  ${env.WORKSPACE}/buildrpm/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
+                  ${env.WORKSPACE}/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
                   cat ~/fetch_requirements.log
                 popd
                 """, label: 'fetching requirements'
@@ -155,8 +159,8 @@ pipeline {
                 -bb packaging/install_rpm.spec
                 """
               sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
-            }
-          }
+            //}
+          //}
         }
       }
       post {
