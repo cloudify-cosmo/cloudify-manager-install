@@ -1,16 +1,16 @@
-def secrets = [
-  [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
-    [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
-]
+// def secrets = [
+//   [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
+//     [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
+// ]
 
-def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
+// def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
 
 // def waitForContainer(String container) {
 //   echo "Waiting for ${container} to start"
 //   sh "docker exec ${container} cfy_manager wait-for-starter"
 // }
 
-@Library('pipeline-shared-library@polish-py3Compat') _
+@Library('pipeline-shared-library') _
 
 pipeline {
   agent {
@@ -122,6 +122,8 @@ pipeline {
       steps {
         sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: 'copying repo to seperate workspace'
         container('rpmbuild') {
+          echo 'Setup Github SSH key'
+          setupGithubSSHKey()
           dir ("${env.WORKSPACE}/buildrpm") {
             withVault([configuration: configuration, vaultSecrets: secrets]) {
               echo 'Link items from workspace under rpm sources dir'
@@ -132,11 +134,6 @@ pipeline {
                 cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
                 ln -s . ~/rpm
                 """
-              echo 'Set up cloudify-premium deploy key'
-              sh '''
-                mkdir -p ~/.ssh
-                echo "${CLOUDIFY_PREMIUM_DEPLOY_KEY}" > ~/.ssh/id_rsa
-                '''
               sh script: """
                 pushd rpms
                   ${env.WORKSPACE}/buildrpm/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
@@ -150,8 +147,21 @@ pipeline {
                 '''
               echo 'Installing build dependencies'
               sh 'yum-builddep -y packaging/install_rpm.spec'
+              echo 'set premium_edition in the packaged config.yaml'
+              sh 'sed -i "s/set_by_installer_builder/premium/" config.yaml'
+              echo 'Build RPM'
+              sh """rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+                -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+                -bb packaging/install_rpm.spec
+                """
+              sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
             }
           }
+        }
+      }
+      post {
+        success {
+          archiveArtifacts '**/manager-rpm/*.rpm'
         }
       }
     }
