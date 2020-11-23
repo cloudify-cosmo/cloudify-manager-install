@@ -99,7 +99,7 @@ pipeline {
                   rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
                   rpmbuild -bb packaging/prometheus_postgres_exporter.spec
                   '''
-                sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf ${env.WORKSPACE}/prometheus/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
+                sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf /root/rpmbuild/RPMS/x86_64/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
               }
             }
           }
@@ -107,6 +107,23 @@ pipeline {
             success {
               archiveArtifacts '**/prometheus-rpms/*.rpm'
             }
+          }
+        }
+      }
+    }
+    stage('build_rpm') {
+      steps {
+        sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: "copying repo to seperate workspace"
+        container('rpmbuild') {
+          dir ("${env.WORKSPACE}/buildrpm") {
+            echo 'Link items from workspace under rpm sources dir'
+            sh """
+              rm ~/rpm -fr
+              ln -s ${env.WORKSPACE}/rpms ./rpms
+              cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms
+              cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
+              ln -s . ~/rpm
+              """
           }
         }
       }
