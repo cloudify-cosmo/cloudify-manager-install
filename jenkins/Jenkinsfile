@@ -1,7 +1,14 @@
-def waitForContainer(String container) {
-  echo "Waiting for ${container} to start"
-  sh "docker exec ${container} cfy_manager wait-for-starter"
-}
+def secrets = [
+  [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
+    [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
+]
+
+def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
+
+// def waitForContainer(String container) {
+//   echo "Waiting for ${container} to start"
+//   sh "docker exec ${container} cfy_manager wait-for-starter"
+// }
 
 @Library('pipeline-shared-library@polish-py3Compat') _
 
@@ -113,17 +120,37 @@ pipeline {
     }
     stage('build_rpm') {
       steps {
-        sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: "copying repo to seperate workspace"
+        sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: 'copying repo to seperate workspace'
         container('rpmbuild') {
           dir ("${env.WORKSPACE}/buildrpm") {
-            echo 'Link items from workspace under rpm sources dir'
-            sh """
-              rm ~/rpm -fr
-              ln -s ${env.WORKSPACE}/rpms ./rpms
-              cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms
-              cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
-              ln -s . ~/rpm
-              """
+            withVault([configuration: configuration, vaultSecrets: secrets]) {
+              echo 'Link items from workspace under rpm sources dir'
+              sh """
+                rm ~/rpm -fr
+                ln -s ${env.WORKSPACE}/rpms ./rpms
+                cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms
+                cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
+                ln -s . ~/rpm
+                """
+              echo 'Set up cloudify-premium deploy key'
+              sh '''
+                mkdir -p ~/.ssh
+                echo "${CLOUDIFY_PREMIUM_DEPLOY_KEY}" > ~/.ssh/id_rsa
+                '''
+              sh script: """
+                pushd rpms
+                  ${env.WORKSPACE}/buildrpm/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
+                  cat ~/fetch_requirements.log
+                popd
+                """, label: 'fetching requirements'
+              echo 'prepare to build rpm'
+              sh '''
+                yum install rpmdevtools -y
+                chmod a+wx /opt
+                '''
+              echo 'Installing build dependencies'
+              sh 'yum-builddep -y packaging/install_rpm.spec'
+            }
           }
         }
       }
