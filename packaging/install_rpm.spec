@@ -63,8 +63,6 @@ groupadd -fr rabbitmq
 usermod -aG rabbitmq cfyuser
 
 %post
-sudo systemctl enable /usr/lib/systemd/system/cloudify-starter.service
-
 echo "
 ###########################################################################
 Cloudify installer is ready!

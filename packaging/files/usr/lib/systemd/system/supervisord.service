@@ -2,7 +2,6 @@
 Description=Supervisor daemon
 Documentation=http://supervisord.org
 After=network.target
-Before=cloudify-starter.service
 
 [Service]
 ExecStart=/usr/bin/supervisord -n -c /etc/supervisord.conf
