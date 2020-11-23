@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import re
 from collections import namedtuple
 from os.path import join, exists
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -413,25 +414,25 @@ class Nginx(BaseComponent):
             logger.info('SELinux binaries not found; '
                         'SELinux policies will not be deployed')
             return
-
-        # Setup Cloudify SELinux policies for nginx
         if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._set_selinux_policy(
                 'cloudify_manager', ['3000', '8088', '8100'])
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._set_selinux_policy(
                 'cloudify_monitoring', ['9090-9094'])
-        logger.info('SELinux policy for nginx.')
 
     def _set_selinux_policy(self, policy_module, ports):
-        logger.info('Deploying {0} SELinux policy'.format(policy_module))
+        output = common.sudo(['/usr/sbin/semodule', '-l'])
+        if re.search(r'^' + re.escape(policy_module) + r'\s+',
+                     output.aggr_stdout, flags=re.MULTILINE):
+            logger.info('SELinux policy already installed: %s',
+                        policy_module)
+            return
         with TemporaryDirectory() as tmp_dir_name:
             base_file_name = join(tmp_dir_name, policy_module)
+            logger.info('Deploying SELinux policy %s', policy_module)
             deploy(join(CONFIG_PATH, '{0}.te'.format(policy_module)),
                    '{0}.te'.format(base_file_name))
-            common.sudo(['/usr/sbin/semodule',
-                         '-r', policy_module],
-                        ignore_failures=True)
             common.sudo(['/bin/checkmodule',
                          '-M', '-m',
                          '-o', '{0}.mod'.format(base_file_name),
@@ -445,6 +446,7 @@ class Nginx(BaseComponent):
             common.sudo(['/usr/sbin/semanage', 'port', '-a',
                          '-t', '{0}_port_t'.format(policy_module),
                          '-p', 'tcp', port])
+        logger.info('SELinux policies in place: %s', policy_module)
 
     def install(self):
         logger.notice('Installing NGINX...')
