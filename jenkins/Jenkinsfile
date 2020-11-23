@@ -82,12 +82,30 @@ pipeline {
             container('rpmbuild') {
               dir("${env.WORKSPACE}/prometheus") {
                 echo 'Link items from workspace under rpm sources dir'
-                sh '''
+                sh """
                   rm ~/rpm -fr
                   ln -s ${env.WORKSPACE}/rpms ./rpms
                   ln -s . ~/rpm
+                  """
+                echo 'Install rpmdevtools and build dependencies'
+                sh '''
+                  yum install rpmdevtools -y
+                  yum-builddep -y packaging/install_rpm.spec
                   '''
+                echo 'build rpms'
+                sh '''
+                  rpmbuild -bb packaging/prometheus.spec
+                  rpmbuild -bb packaging/prometheus_node_exporter.spec
+                  rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
+                  rpmbuild -bb packaging/prometheus_postgres_exporter.spec
+                  '''
+                sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf ${env.WORKSPACE}/prometheus/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
               }
+            }
+          }
+          post {
+            success {
+              archiveArtifacts '**/prometheus-rpms/*.rpm'
             }
           }
         }
