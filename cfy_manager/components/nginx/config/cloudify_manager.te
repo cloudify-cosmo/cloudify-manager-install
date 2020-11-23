@@ -1,0 +1,16 @@
+module cloudify_manager 1.0;
+
+require {
+        attribute port_type;
+        attribute defined_port_type;
+        type httpd_t;
+        class tcp_socket name_connect;
+}
+
+# Define cloudify_manager_port_t for node on :3000 and :8088 and gunicorn on :8100.
+# Port numbers must be added with semanage in sepolicy_deploy.sh because it
+# is not possible to do so within Policy Module definition.
+# https://selinuxproject.org/page/PolicyLanguage
+
+type cloudify_manager_port_t, port_type, defined_port_type;
+allow httpd_t cloudify_manager_port_t:tcp_socket name_connect;

@@ -411,14 +411,27 @@ class Nginx(BaseComponent):
     def _set_selinux_policies(self):
         # Setup Cloudify SELinux policies for nginx
         logger.info('Deploying SELinux policy for nginx...')
-        ports_to_allow = (('3000', '8088', '8100',)
-                          if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL)
-                          else ())
-        with TemporaryDirectory() as tmpdirname:
-            deploy(join(CONFIG_PATH, 'cloudify.te'),
-                   join(tmpdirname, 'cloudify.te'))
-            script_path = join(SCRIPTS_PATH, 'sepolicy_deploy.sh')
-            common.sudo([script_path, tmpdirname, " ".join(ports_to_allow)])
+
+        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL):
+            # Enable nginx proxying for ports  3030, 8088, 8100
+            with TemporaryDirectory() as tmpdirname:
+                deploy(join(CONFIG_PATH, 'cloudify_manager.te'),
+                       join(tmpdirname, 'cloudify_manager.te'))
+                script_path = join(SCRIPTS_PATH, 'sepolicy_deploy.sh')
+                common.sudo(
+                    [script_path, tmpdirname,
+                     'cloudify_manager', '3000 8088 8100'])
+
+        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
+            # Enable nginx proxying for ports 9090-9094
+            with TemporaryDirectory() as tmpdirname:
+                deploy(join(CONFIG_PATH, 'cloudify_monitoring.te'),
+                       join(tmpdirname, 'cloudify_monitoring.te'))
+                script_path = join(SCRIPTS_PATH, 'sepolicy_deploy.sh')
+                common.sudo(
+                    [script_path, tmpdirname,
+                     'cloudify_monitoring', '9090-9094'])
+
         logger.info('SELinux policy for nginx.')
 
     def install(self):
