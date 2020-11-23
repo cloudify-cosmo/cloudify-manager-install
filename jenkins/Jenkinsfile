@@ -3,7 +3,7 @@ def waitForContainer(String container) {
   sh "docker exec ${container} cfy_manager wait-for-starter"
 }
 
-@Library('pipeline-shared-library') _
+@Library('pipeline-shared-library@polish-py3Compat') _
 
 pipeline {
   agent {
@@ -35,26 +35,26 @@ pipeline {
             sh script: "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat", label: "copying repo to seperate workspace"
             container('py27'){
               dir("${env.WORKSPACE}/py3_compat"){
-                //py3Compat()
-                sh 'pip install future --user'
-                echo 'find py3-incompatible code'
-                sh '''#!/bin/bash
-                  FUTURIZE="futurize ."
-                  while read line; do
-                    [[ "$line" =~ ^#.* ]] && continue
-                    FUTURIZE="${FUTURIZE} -f ${line}"
-                  done<.circleci/py3fixers
-                  echo "Running: $FUTURIZE"
-                  $FUTURIZE>futurize_diffs
-                  '''
-                echo 'check'
-                sh '''
-                  if [[ -s futurize_diffs ]]; then
-                    echo "Python-3-incompatible code found"
-                    cat futurize_diffs
-                    exit 1
-                  fi
-                  '''
+                py3Compat()
+                // sh 'pip install future --user'
+                // echo 'find py3-incompatible code'
+                // sh '''#!/bin/bash
+                //   FUTURIZE="futurize ."
+                //   while read line; do
+                //     [[ "$line" =~ ^#.* ]] && continue
+                //     FUTURIZE="${FUTURIZE} -f ${line}"
+                //   done<.circleci/py3fixers
+                //   echo "Running: $FUTURIZE"
+                //   $FUTURIZE>futurize_diffs
+                //   '''
+                // echo 'check'
+                // sh '''
+                //   if [[ -s futurize_diffs ]]; then
+                //     echo "Python-3-incompatible code found"
+                //     cat futurize_diffs
+                //     exit 1
+                //   fi
+                //   '''
               }
             }
           }
