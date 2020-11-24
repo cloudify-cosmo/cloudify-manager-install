@@ -84,6 +84,7 @@ cfy_manager install
 %attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
 /etc/yum.repos.d/Cloudify-Local.repo
 /usr/lib/systemd/system/supervisord.service
+/usr/lib/systemd/system/cloudify-starter.service
 /etc/supervisord.conf
 /usr/bin/supervisorctl
 /usr/bin/supervisord
