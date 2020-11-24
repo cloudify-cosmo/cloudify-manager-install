@@ -223,14 +223,21 @@ pipeline {
                 dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                   withVault([configuration: configuration, vaultSecrets: secrets]){
                     sh script: """#!/bin/bash
+                      echo 'Serve the manager-install rpm on http'
+                      scp ${env.WORKSPACE}/manager-rpm/cloudify-manager-install*.rpm -i ~/.ssh/ec2_ssh_key centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):~
                       ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
-cp ${env.WORKSPACE}/manager-rpm/*-manager-*.x86_64.rpm cloudify-manager-install.rpm
+echo 'Serve the manager-install rpm on http'
 docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
+echo 'Build manager container'
 set -eux
 ls -la .
 pushd packaging/docker
   docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${env.IMAGE_NAME} .
 popd
+echo 'Run manager container'
+set -eux
+docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
+
 """, label: 'install manager'
                   }
                 }
