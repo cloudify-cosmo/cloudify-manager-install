@@ -1,10 +1,3 @@
-// def secrets = [
-//   [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
-//     [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
-// ]
-
-// def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
-
 // def waitForContainer(String container) {
 //   echo "Waiting for ${container} to start"
 //   sh "docker exec ${container} cfy_manager wait-for-starter"
@@ -120,7 +113,6 @@ pipeline {
     }
     stage('build_rpm') {
       steps {
-        //sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: 'copying repo to seperate workspace'
         container('rpmbuild') {
           sh """
             cd && cd rpmbuild
@@ -165,6 +157,28 @@ pipeline {
       post {
         success {
           archiveArtifacts '**/manager-rpm/*.rpm'
+        }
+      }
+    }
+    stage('Installations') {
+      parallel {
+        stage('install_manager') {
+          environment {
+            CONTAINER_NAME = "cfy_aio"
+            IMAGE_NAME = "cfy_manager_image"
+            steps {
+              sh script: "mkdir -p ${env.WORKSPACE}/manager && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/manager", label: "copying repo to seperate workspace"
+              container('ubuntu') {
+                dir("${env.WORKSPACE}/manager") {
+                  echo 'serve the manager-install rpm on http'
+                  sh '''
+                    cp /root/rpmbuild/RPMS/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
+                    docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
+                    '''
+                }
+              }
+            }
+          }
         }
       }
     }
