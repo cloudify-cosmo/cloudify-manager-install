@@ -166,16 +166,16 @@ pipeline {
           environment {
             CONTAINER_NAME = "cfy_aio"
             IMAGE_NAME = "cfy_manager_image"
-            steps {
-              sh script: "mkdir -p ${env.WORKSPACE}/manager && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/manager", label: "copying repo to seperate workspace"
-              container('ubuntu') {
-                dir("${env.WORKSPACE}/manager") {
-                  echo 'serve the manager-install rpm on http'
-                  sh '''
-                    cp /root/rpmbuild/RPMS/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
-                    docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
-                    '''
-                }
+          }
+          steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/manager && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/manager", label: "copying repo to seperate workspace"
+            container('ubuntu') {
+              dir("${env.WORKSPACE}/manager") {
+                echo 'serve the manager-install rpm on http'
+                sh '''
+                  cp /root/rpmbuild/RPMS/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
+                  docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
+                  '''
               }
             }
           }
