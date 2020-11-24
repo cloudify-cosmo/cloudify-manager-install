@@ -17,7 +17,6 @@ import json
 from os import sep
 from os.path import join, exists
 import re
-import subprocess
 
 from ..base_component import BaseComponent
 from ..components_constants import (
@@ -174,7 +173,6 @@ class Prometheus(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Prometheus Service...')
-        _set_selinux_permissive()
         handle_certs()
         _create_prometheus_directories()
         _chown_resources_dir()
@@ -200,32 +198,6 @@ class Prometheus(BaseComponent):
 
     def join_cluster(self):  # , restore_users_on_fail=False):
         logger.info('Would be joining cluster.')
-
-
-def _set_selinux_permissive():
-    """This sets SELinux to permissive mode both for the current session
-    and systemwide.
-    """
-    selinux_state = _get_selinux_state()
-    logger.debug('Checking whether SELinux in enforced...')
-    if selinux_state == 'Enforcing':
-        logger.info('SELinux is enforcing, setting permissive state...')
-        common.sudo(['setenforce', 'permissive'])
-        files.replace_in_file(
-            'SELINUX=enforcing',
-            'SELINUX=permissive',
-            '/etc/selinux/config')
-    else:
-        logger.debug('SELinux is not enforced.')
-
-
-def _get_selinux_state():
-    try:
-        return subprocess.check_output(['/usr/sbin/getenforce'])\
-            .decode('utf-8').rstrip('\n\r')
-    except OSError as e:
-        logger.warning('SELinux is not installed ({0})'.format(e))
-        return None
 
 
 def handle_certs():

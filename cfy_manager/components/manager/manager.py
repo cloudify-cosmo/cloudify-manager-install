@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import os
-import subprocess
 from os.path import join
 from tempfile import gettempdir
 
@@ -27,8 +26,7 @@ from ...config import config
 from ...logger import get_logger
 from ...utils import common, service
 from ...utils.certificates import use_supplied_certificates
-from ...utils.files import (replace_in_file,
-                            remove_files,
+from ...utils.files import (remove_files,
                             touch)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers, allow_user_to_sudo_command
@@ -60,30 +58,6 @@ class Manager(BaseComponent):
             constants.CLOUDIFY_USER
         )
         add_entry_to_sudoers(entry, description)
-
-    def _get_selinux_state(self):
-        try:
-            return subprocess.check_output(['/usr/sbin/getenforce'])\
-                .decode('utf-8').rstrip('\n\r')
-        except OSError as e:
-            logger.warning('SELinux is not installed ({0})'.format(e))
-            return None
-
-    def _set_selinux_permissive(self):
-        """This sets SELinux to permissive mode both for the current session
-        and systemwide.
-        """
-        selinux_state = self._get_selinux_state()
-        logger.debug('Checking whether SELinux in enforced...')
-        if selinux_state == 'Enforcing':
-            logger.info('SELinux is enforcing, setting permissive state...')
-            common.sudo(['setenforce', 'permissive'])
-            replace_in_file(
-                'SELINUX=enforcing',
-                'SELINUX=permissive',
-                '/etc/selinux/config')
-        else:
-            logger.debug('SELinux is not enforced.')
 
     def _create_manager_resources_dirs(self):
         resources_root = constants.MANAGER_RESOURCES_HOME
@@ -126,7 +100,6 @@ class Manager(BaseComponent):
         self._create_sudoers_file_and_disable_sudo_requiretty()
         if self.service_type == 'supervisord':
             self._allow_run_supervisorctl_command()
-        self._set_selinux_permissive()
         setup_logrotate()
         self._create_manager_resources_dirs()
         logger.notice('Cloudify Manager resources successfully installed!')

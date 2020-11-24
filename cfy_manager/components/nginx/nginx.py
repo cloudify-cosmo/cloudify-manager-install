@@ -13,9 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import re
 from collections import namedtuple
 from os.path import join, exists
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from cfy_manager.components.prometheus import prometheus
 from ..base_component import BaseComponent
@@ -408,12 +409,52 @@ class Nginx(BaseComponent):
         # updating the ssl state as it required to restart nginx
         service.enable('wait_on_restart')
 
+    def _set_selinux_policies(self):
+        if not exists('/usr/sbin/semanage'):
+            logger.info('SELinux binaries not found; '
+                        'SELinux policies will not be deployed')
+            return
+        if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL):
+            self._set_selinux_policy(
+                'cloudify_manager', ['3000', '8088', '8100'])
+        if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
+            self._set_selinux_policy(
+                'cloudify_monitoring', ['9090-9094'])
+
+    def _set_selinux_policy(self, policy_module, ports):
+        output = common.sudo(['/usr/sbin/semodule', '-l'])
+        if re.search(r'^' + re.escape(policy_module) + r'\s+',
+                     output.aggr_stdout, flags=re.MULTILINE):
+            logger.info('SELinux policy already installed: %s',
+                        policy_module)
+            return
+        with TemporaryDirectory() as tmp_dir_name:
+            base_file_name = join(tmp_dir_name, policy_module)
+            logger.info('Deploying SELinux policy %s', policy_module)
+            deploy(join(CONFIG_PATH, '{0}.te'.format(policy_module)),
+                   '{0}.te'.format(base_file_name))
+            common.sudo(['/bin/checkmodule',
+                         '-M', '-m',
+                         '-o', '{0}.mod'.format(base_file_name),
+                         '{0}.te'.format(base_file_name)])
+            common.sudo(['/bin/semodule_package',
+                         '-o', '{0}.pp'.format(base_file_name),
+                         '-m', '{0}.mod'.format(base_file_name)])
+            common.sudo(['/usr/sbin/semodule',
+                         '-i', '{0}.pp'.format(base_file_name)])
+        for port in ports:
+            common.sudo(['/usr/sbin/semanage', 'port', '-a',
+                         '-t', '{0}_port_t'.format(policy_module),
+                         '-p', 'tcp', port])
+        logger.info('SELinux policies in place: %s', policy_module)
+
     def install(self):
         logger.notice('Installing NGINX...')
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
         if config.get('service_management') != 'supervisord':
             self._deploy_unit_override()
+        self._set_selinux_policies()
         set_logrotate(NGINX)
         logger.notice('NGINX successfully installed')
 
