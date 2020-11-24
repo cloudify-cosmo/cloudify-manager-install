@@ -224,7 +224,7 @@ pipeline {
                   withVault([configuration: configuration, vaultSecrets: secrets]){
                     sh script: """#!/bin/bash
                       echo 'Serve the manager-install rpm on http'
-                      scp "${env.WORKSPACE}/manager-rpm/cloudify-manager-install*.rpm" -i ~/.ssh/ec2_ssh_key centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):~
+                      scp /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm -i ~/.ssh/ec2_ssh_key centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):~
                       ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 echo 'Serve the manager-install rpm on http'
 docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
