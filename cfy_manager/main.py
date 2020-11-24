@@ -1205,9 +1205,6 @@ def image_starter(verbose=False, config_file=None):
         config_write_required=False,
         config_file=config_file,
     )
-    if _are_components_configured():
-        logger.info('Components already configured - nothing to do')
-        return
     config.load_config(config_file)
     command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
     private_ip = config[MANAGER].get(PRIVATE_IP)
