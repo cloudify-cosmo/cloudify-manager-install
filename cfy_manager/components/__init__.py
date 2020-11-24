@@ -20,7 +20,6 @@ from .cli import Cli  # NOQA
 from .composer import Composer  # NOQA
 from .haveged import Haveged  # NOQA
 from .manager import Manager  # NOQA
-from .manager_ip_setter import ManagerIpSetter  # NOQA
 from .mgmtworker import MgmtWorker  # NOQA
 from .nginx import Nginx  # NOQA
 from .postgresql_server import PostgresqlServer  # NOQA
