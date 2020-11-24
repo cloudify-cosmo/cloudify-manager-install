@@ -2,6 +2,15 @@
 //   echo "Waiting for ${container} to start"
 //   sh "docker exec ${container} cfy_manager wait-for-starter"
 // }
+def configuration = [vaultUrl: "${VAULT_URL}",  vaultCredentialId: "vault-app-role", engineVersion: 2]
+
+def secrets = [
+  [path: 'secret/jenkins/cloudify', engineVersion: 2, secretValues: [
+    [envVar: 'OS_USERNAME', vaultKey: 'username'],
+    [envVar: 'OS_TENANT', vaultKey: 'tenant'],
+    [envVar: 'OS_IP', vaultKey: 'ip'],
+    [envVar: 'OS_PASSWORD', vaultKey: 'password']]],
+]
 
 @Library('pipeline-shared-library') _
 
@@ -111,52 +120,93 @@ pipeline {
         }
       }
     }
-    stage('build_rpm') {
-      steps {
-        container('rpmbuild') {
-          sh """
-            cd && cd rpmbuild
-            git clone --single-branch --branch ${env.BRANCH_NAME} https://github.com/cloudify-cosmo/cloudify-manager-install.git SOURCES && cd SOURCES
-            """
-          echo 'Setup Github SSH key'
-          setupGithubSSHKey()
-          echo 'Link items from workspace under rpm sources dir'
-          sh """
-            cd /root/rpmbuild/SOURCES
-            rm ~/rpm -fr
-            ln -s ${env.WORKSPACE}/rpms ./rpms
-            cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms/
-            cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms/
-            ln -s . ~/rpm
-            """
-          sh script: """
-            pushd rpms
-              /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
-              cat ~/fetch_requirements.log
-            popd
-            """, label: 'fetching requirements'
-          echo 'prepare to build rpm'
-          sh '''
-            yum install rpmdevtools -y
-            chmod a+wx /opt
-            '''
-          echo 'Installing build dependencies'
-          sh 'yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
-          echo 'set premium_edition in the packaged config.yaml'
-          sh 'sed -i "s/set_by_installer_builder/premium/" /root/rpmbuild/SOURCES/config.yaml'
-          echo 'Build RPM'
-          sh """
-            cd /root/rpmbuild/SOURCES/
-            rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
-            -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
-            -bb packaging/install_rpm.spec
-            """
-          sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
+    stage('build_rpm & deploy ec2 instance') {
+      parallel {
+        stage('build_rpm') {
+          steps {
+            container('rpmbuild') {
+              sh """
+                cd && cd rpmbuild
+                git clone --single-branch --branch ${env.BRANCH_NAME} https://github.com/cloudify-cosmo/cloudify-manager-install.git SOURCES && cd SOURCES
+                """
+              echo 'Setup Github SSH key'
+              setupGithubSSHKey()
+              echo 'Link items from workspace under rpm sources dir'
+              sh """
+                cd /root/rpmbuild/SOURCES
+                rm ~/rpm -fr
+                ln -s ${env.WORKSPACE}/rpms ./rpms
+                cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms/
+                cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms/
+                ln -s . ~/rpm
+                """
+              sh script: """
+                pushd rpms
+                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
+                  cat ~/fetch_requirements.log
+                popd
+                """, label: 'fetching requirements'
+              echo 'prepare to build rpm'
+              sh '''
+                yum install rpmdevtools -y
+                chmod a+wx /opt
+                '''
+              echo 'Installing build dependencies'
+              sh 'yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
+              echo 'set premium_edition in the packaged config.yaml'
+              sh 'sed -i "s/set_by_installer_builder/premium/" /root/rpmbuild/SOURCES/config.yaml'
+              echo 'Build RPM'
+              sh """
+                cd /root/rpmbuild/SOURCES/
+                rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+                -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+                -bb packaging/install_rpm.spec
+                """
+              sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
+            }
+          }
+          post {
+            success {
+              archiveArtifacts '**/manager-rpm/*.rpm'
+            }
+          }
         }
-      }
-      post {
-        success {
-          archiveArtifacts '**/manager-rpm/*.rpm'
+        stage('Deploy ec2 instance'){
+          steps {
+            script {
+              buildState = 'FAILURE'
+              catchError(message: 'Failure on: manager-install EC2 Creation', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                container('py27') {
+                  echo 'Setup Github SSH key'
+                  setupGithubSSHKey()
+                  dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
+                    withVault([configuration: configuration, vaultSecrets: secrets]){
+                      sh script:"""#!/bin/bash
+                      apt-get update
+                      python -m ensurepip --upgrade
+                      python -m pip install --upgrade pip
+                      python -m pip install --upgrade virtualenv
+
+                      virtualenv .venv
+                      source .venv/bin/activate
+
+                      pip install cloudify==5.1.0
+                      cfy profile use ${env.OS_IP} -u ${env.OS_USERNAME} -p ${env.OS_PASSWORD} -t ${env.OS_TENANT}
+                      pushd 'bp'
+                        cfy install -b ec2-manager-install-blueprint-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
+                      popd
+                      cfy deployments capabilities ec2-manager-install-blueprint-${env.BUILD_NUMBER} --json > capabilities.json
+                      echo -e \$(cat capabilities.json | jq '.key_content.value' | tr -d '"') > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
+                      sleep 160
+                      ssh-keyscan -H \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') >> ~/.ssh/known_hosts
+                      echo 'ClientAliveInterval 50' | sudo tee --append /etc/ssh/sshd_config
+                      """, label:'Configure and install blueprint on manager'
+                    }
+                  }
+                }
+              }
+            }
+          }             
         }
       }
     }
@@ -168,14 +218,22 @@ pipeline {
             IMAGE_NAME = "cfy_manager_image"
           }
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/manager && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/manager", label: "copying repo to seperate workspace"
-            container('ubuntu') {
-              dir("${env.WORKSPACE}/manager") {
-                echo 'serve the manager-install rpm on http'
-                sh '''
-                  cp /root/rpmbuild/RPMS/x86_64/cloudify-manager-install*.rpm cloudify-manager-install.rpm
-                  docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
-                  '''
+            catchError(message: 'Failure on: manager-install EC2 operation', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+              container('py27') {
+                dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
+                  withVault([configuration: configuration, vaultSecrets: secrets]){
+                    sh script: """#!/bin/bash
+                      ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
+cp ${env.WORKSPACE}/manager-rpm/*-manager-*.x86_64.rpm cloudify-manager-install.rpm
+docker run --net host -dt -v $(pwd):/mount python python -m http.server -d /mount
+set -eux
+ls -la .
+pushd packaging/docker
+  docker build --network host --build-arg rpm_file=http://localhost:8000/cloudify-manager-install.rpm --tag ${env.IMAGE_NAME} .
+popd
+""", label: 'install manager'
+                  }
+                }
               }
             }
           }

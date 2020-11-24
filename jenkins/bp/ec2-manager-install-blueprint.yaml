@@ -1,0 +1,196 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+description: >
+  This blueprint deploy EC2 for cloudify-manager-install
+imports:
+  - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-aws-plugin
+  - plugin:cloudify-utilities-plugin?version= >=1.22.1
+
+inputs:
+
+  aws_region_name:
+    type: string
+    default: 'eu-west-1'
+
+  availability_zone:
+    type: string
+    default: 'eu-west-1b'
+
+  instance_type:
+    type: string
+    default: t3.medium
+
+  aws_linux_ami:
+    type: string
+    default: 'ami-082ed116ae2c6d2cc'
+
+  aws_subnet_id:
+    type: string
+    default: 'subnet-05de767ce22d776df'
+
+  aws_vpc_id:
+    type: string
+    default: 'vpc-058abc57fcc8fb171'
+
+  aws_security_group_id:
+    type: string
+    default: 'sg-0ecb54c91e140324c'
+
+  agent_user:
+    description: >
+      The username of the agent running on the instance created from the image.
+    default: 'centos'
+
+  ssh_key_name:
+    type: string
+    default: 'cfy-manager-install-key'
+
+  agent_key_name:
+    type: string
+    default: manager-install
+
+
+dsl_definitions:
+
+   client_config: &client_config
+    aws_access_key_id: { get_secret:  aws_access_key_id }
+    aws_secret_access_key: { get_secret:  aws_secret_access_key }
+    region_name: { get_input: aws_region_name }
+
+node_templates:
+
+  vm:
+    type: cloudify.nodes.aws.ec2.Instances
+    properties:
+      client_config: *client_config
+      agent_config:
+        install_method: none
+        user: { get_input: agent_user }
+        key: { get_attribute: [agent_key, private_key_export] }
+      resource_config:
+        ImageId: { get_input:  aws_linux_ami }
+        InstanceType: { get_input: instance_type }
+        kwargs:
+          Placement:
+            AvailabilityZone: { get_input:  availability_zone }
+          UserData: { get_attribute: [ cloud_init, cloud_config ] }
+          BlockDeviceMappings:
+          - DeviceName: '/dev/xvda'
+            Ebs:
+              VolumeSize: 20
+              VolumeType: standard
+              DeleteOnTermination: True
+      Tags:
+      - Key: Name  
+        Value: cfy-manager-install      
+      use_public_ip: true
+    relationships:
+    - type: cloudify.relationships.depends_on
+      target: nic
+    - type: cloudify.relationships.depends_on
+      target: floating_ip
+    - type: cloudify.relationships.depends_on
+      target: cloud_init
+
+
+  floating_ip:
+    type: cloudify.nodes.aws.ec2.ElasticIP
+    properties:
+      client_config: *client_config
+    relationships:
+    - type: cloudify.relationships.depends_on
+      target: nic
+
+  nic:
+    type: cloudify.nodes.aws.ec2.Interface
+    properties:
+      client_config: *client_config
+      resource_config:
+        kwargs:
+          Description: Created by cloudify-getting-started-example.
+          SubnetId: { get_attribute: [ subnet, aws_resource_id ] }
+          Groups:
+          - { get_attribute: [ security_group, aws_resource_id ] }
+    relationships:
+    - type: cloudify.relationships.depends_on
+      target: security_group
+    - type: cloudify.relationships.depends_on
+      target: subnet
+
+  subnet:
+    type: cloudify.nodes.aws.ec2.Subnet
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      resource_id: { get_input: aws_subnet_id }
+      resource_config:
+        CidrBlock:  10.20.0.0/24
+    relationships:
+    - type: cloudify.relationships.depends_on
+      target: vpc
+
+  security_group:
+    type: cloudify.nodes.aws.ec2.SecurityGroup
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      resource_id: { get_input: aws_security_group_id }
+      resource_config:
+        GroupName: cfy-manager-install
+        Description: cfy-manager-install
+    relationships:
+    - type: cloudify.relationships.depends_on
+      target: vpc
+
+  vpc:
+    type: cloudify.nodes.aws.ec2.Vpc
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      resource_id: { get_input: aws_vpc_id }
+      resource_config:
+        CidrBlock: 10.20.0.0/24
+
+  cloud_init:
+    type: cloudify.nodes.CloudInit.CloudConfig
+    properties:
+      resource_config:
+        users:
+        - name: { get_input: agent_user }
+          shell: /bin/bash
+          sudo: ['ALL=(ALL) NOPASSWD:ALL']
+          ssh-authorized-keys:
+          - { get_attribute: [agent_key, public_key_export] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: agent_key
+
+  agent_key:
+    type: cloudify.keys.nodes.RSAKey
+    properties:
+      resource_config:
+        key_name: { get_input: agent_key_name }
+        openssh_format: true
+      use_secret_store: true
+      use_secrets_if_exist: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: keys.cloudify_ssh_key.operations.create
+          inputs:
+            store_private_key_material: true
+
+capabilities:
+
+  endpoint:
+    description: The external endpoint of the application.
+    value: { get_attribute: [ floating_ip, aws_resource_id ] }
+
+  user:
+    description: user ID.
+    value: { get_input: agent_user }
+
+  key_content:
+    description: Private agent key
+    value: { get_attribute: [agent_key, private_key_export] } 

@@ -37,13 +37,5 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
-    - name: ubuntu
-      image: ubuntu:xenial
-      command:
-      - cat
-      tty: true
-      securityContext:
-        runAsUser: 0
-        privileged: true
   nodeSelector:
     instance-type: spot
