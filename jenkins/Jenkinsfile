@@ -70,14 +70,14 @@ pipeline {
                 echo 'Install requests'
                 sh 'pip install requests'
                 sh script:"""
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rest-service-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rest-service.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o patroni.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-premium-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-premium.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-cli-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-cli.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-agents.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-management-worker-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-management-worker.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-manager-ip-setter-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-manager-ip-setter.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o cloudify-rabbitmq.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rest-service-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-premium-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-cli-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-management-worker-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-manager-ip-setter-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
                   """, label: 'Fetch RPM built on Jenkins located on S3'
               }
             }
@@ -133,8 +133,8 @@ pipeline {
             cd /root/rpmbuild/SOURCES
             rm ~/rpm -fr
             ln -s ${env.WORKSPACE}/rpms ./rpms
-            cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms
-            cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
+            cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms/
+            cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms/
             ln -s . ~/rpm
             """
           sh script: """
