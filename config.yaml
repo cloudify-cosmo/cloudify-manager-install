@@ -520,7 +520,6 @@ ssl_inputs:
   external_ca_cert_path: ''
   external_ca_key_path: ''
   external_ca_key_password: ''
-  internal_manager_host: ''
 
 usage_collector:
   collect_cloudify_uptime:
