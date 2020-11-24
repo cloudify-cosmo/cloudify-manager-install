@@ -123,44 +123,42 @@ pipeline {
         //sh script: "mkdir -p ${env.WORKSPACE}/buildrpm && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/buildrpm", label: 'copying repo to seperate workspace'
         container('rpmbuild') {
           sh """
-            cd && mkdir rpmbuild && cd rpmbuild
+            cd && cd rpmbuild
             git clone --single-branch --branch ${env.BRANCH_NAME} https://github.com/cloudify-cosmo/cloudify-manager-install.git SOURCES && cd SOURCES
             """
           echo 'Setup Github SSH key'
           setupGithubSSHKey()
-          //dir ("${env.WORKSPACE}/buildrpm") {
-            //withVault([configuration: configuration, vaultSecrets: secrets]) {
-              echo 'Link items from workspace under rpm sources dir'
-              sh """
-                rm ~/rpm -fr
-                ln -s ${env.WORKSPACE}/rpms ./rpms
-                cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms
-                cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
-                ln -s . ~/rpm
-                """
-              sh script: """
-                pushd rpms
-                  ${env.WORKSPACE}/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
-                  cat ~/fetch_requirements.log
-                popd
-                """, label: 'fetching requirements'
-              echo 'prepare to build rpm'
-              sh '''
-                yum install rpmdevtools -y
-                chmod a+wx /opt
-                '''
-              echo 'Installing build dependencies'
-              sh 'yum-builddep -y packaging/install_rpm.spec'
-              echo 'set premium_edition in the packaged config.yaml'
-              sh 'sed -i "s/set_by_installer_builder/premium/" config.yaml'
-              echo 'Build RPM'
-              sh """rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
-                -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
-                -bb packaging/install_rpm.spec
-                """
-              sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
-            //}
-          //}
+          dir ("/root/rpmbuild/SOURCES") {
+            echo 'Link items from workspace under rpm sources dir'
+            sh """
+              rm ~/rpm -fr
+              ln -s ${env.WORKSPACE}/rpms ./rpms
+              cp -a ${env.WORKSPACE}/prometheus-rpms/prometheus-*.rpm ./rpms
+              cp -a ${env.WORKSPACE}/prometheus-rpms/*_exporter-*.rpm ./rpms
+              ln -s . ~/rpm
+              """
+            sh script: """
+              pushd rpms
+                /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
+                cat ~/fetch_requirements.log
+              popd
+              """, label: 'fetching requirements'
+            echo 'prepare to build rpm'
+            sh '''
+              yum install rpmdevtools -y
+              chmod a+wx /opt
+              '''
+            echo 'Installing build dependencies'
+            sh 'yum-builddep -y packaging/install_rpm.spec'
+            echo 'set premium_edition in the packaged config.yaml'
+            sh 'sed -i "s/set_by_installer_builder/premium/" config.yaml'
+            echo 'Build RPM'
+            sh """rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+              -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+              -bb packaging/install_rpm.spec
+              """
+            sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
+          }
         }
       }
       post {
