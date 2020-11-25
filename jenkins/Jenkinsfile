@@ -224,7 +224,7 @@ pipeline {
                   withVault([configuration: configuration, vaultSecrets: secrets]){
                     echo 'Serve the manager-install rpm on http'
                     sh '''
-                      scp /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm -i ~/.ssh/ec2_ssh_key centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):~
+                      scp -i ~/.ssh/ec2_ssh_key /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):~
                       '''
                     sh script: """#!/bin/bash
                     ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
