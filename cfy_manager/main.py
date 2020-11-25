@@ -643,6 +643,9 @@ def _get_components(include_components=None):
     """
     _components = []
 
+    if is_installed(ENTROPY_SERVICE):
+        _components += [components.Haveged()]
+
     if is_installed(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
 
@@ -678,9 +681,6 @@ def _get_components(include_components=None):
         _components += [components.Prometheus()]
         if not is_installed(MANAGER_SERVICE):
             _components += [components.Nginx()]
-
-    if is_installed(ENTROPY_SERVICE):
-        _components += [components.Haveged()]
 
     if include_components:
         _components = _filter_components(_components, include_components)
