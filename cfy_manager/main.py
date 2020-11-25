@@ -681,7 +681,7 @@ def _get_components(include_components=None):
             _components += [components.Nginx()]
 
     if is_installed(MANAGER_SERVICE) and not config[SANITY]['skip_sanity']:
-            _components += [components.Sanity()]
+        _components += [components.Sanity()]
 
     if include_components:
         _components = _filter_components(_components, include_components)
