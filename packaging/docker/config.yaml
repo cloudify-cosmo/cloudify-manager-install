@@ -4,7 +4,6 @@ manager:
   hostname: 'localhost'
   cli_local_profile_host_name: 'localhost'
   premium_edition: premium
-  set_manager_ip_on_boot: false
   security:
     admin_password: 'admin'
 

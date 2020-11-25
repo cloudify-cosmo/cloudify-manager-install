@@ -34,6 +34,7 @@ mkdir %{buildroot}/opt
 mkdir -p %{buildroot}/usr/bin
 mkdir -p %{buildroot}/etc/cloudify
 mkdir -p %{buildroot}/opt/cloudify
+mkdir -p %{buildroot}/etc/supervisord.d
 cp ${RPM_SOURCE_DIR}/config.yaml %{buildroot}/etc/cloudify/config.yaml
 cp ${RPM_SOURCE_DIR}/rpms %{buildroot}/opt/cloudify/sources -Lfr
 cp -R ${RPM_SOURCE_DIR}/packaging/files/* %{buildroot}
@@ -78,6 +79,7 @@ cfy_manager install
 %files
 /usr/bin/cfy_manager
 /opt/cloudify
+/etc/supervisord.d
 %attr(755,cfyuser,cfyuser) /etc/cloudify
 %attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
 /etc/yum.repos.d/Cloudify-Local.repo

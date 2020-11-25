@@ -71,7 +71,6 @@ from .utils.certificates import (
 from .utils.common import (
     run,
     sudo,
-    mkdir,
     copy,
     can_lookup_hostname,
     is_installed,
@@ -657,7 +656,6 @@ def _get_components(include_components=None):
             components.Manager(),
             components.PostgresqlClient(),
             components.RestService(),
-            components.ManagerIpSetter(),
             components.Nginx(),
             components.Cli(),
             components.AmqpPostgres(),
@@ -789,7 +787,6 @@ def _get_packages():
 
 
 def _configure_supervisord():
-    mkdir(SUPERVISORD_CONFIG_DIR)
     # These services will be relevant for using supervisord on VM not on
     # containers
     sudo('systemctl enable supervisord.service', ignore_failures=True)
