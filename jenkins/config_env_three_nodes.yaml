@@ -14,7 +14,7 @@ ldap:
   # This should include the protocol and port,
   # e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636
   server: ''
-
+  
   # The domain, e.g. example.local
   domain: ''
 
