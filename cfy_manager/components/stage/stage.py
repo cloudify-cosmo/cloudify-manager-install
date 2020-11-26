@@ -166,8 +166,8 @@ class Stage(BaseComponent):
 
     def _set_internal_manager_ip(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
-        with open(config_path) as f:
-            stage_config = json.load(f)
+        # We need to use sudo to read this or we break on configure
+        stage_config = json.loads(files.sudo_read(config_path))
 
         stage_config['ip'] = config[MANAGER][PRIVATE_IP]
         content = json.dumps(stage_config, indent=4, sort_keys=True)
