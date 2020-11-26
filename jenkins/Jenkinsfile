@@ -59,6 +59,7 @@ pipeline {
               dir("${env.WORKSPACE}/flake8") {
                 echo 'install flake 8'
                 sh 'pip install flake8 --user'
+                sh 'sleep 9000'
                 echo 'run flake8'
                 sh 'python -m flake8'
               }
