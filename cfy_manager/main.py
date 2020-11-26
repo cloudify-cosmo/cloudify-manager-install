@@ -1269,6 +1269,7 @@ def _replace_certificates():
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         # restart services that might not have been restarted
         for service_name in MGMTWORKER, AMQP_POSTGRES, STAGE, COMPOSER:
+            service_name = 'cloudify-{0}'.format(service_name)
             service.restart(service_name)
             service.verify_alive(service_name)
 
