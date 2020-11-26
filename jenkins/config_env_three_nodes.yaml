@@ -14,10 +14,10 @@ ldap:
   # This should include the protocol and port,
   # e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636
   server: ''
-  ​
+
   # The domain, e.g. example.local
   domain: ''
-  
+
   # True if Active Directory will be used as the LDAP authenticator
   is_active_directory: true
 
