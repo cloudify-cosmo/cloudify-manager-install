@@ -37,7 +37,7 @@ ca_cert_path: ''
 
 # If using a load-balancer, please provide its IP
 load_balancer_ip: ''
-​
+
 # In case you are using a 3 nodes cluster, just fill in the `manager` items
 # Otherwise, fill in all items
 existing_vms:
