@@ -30,7 +30,7 @@ ldap:
   password: ''
 
   # Any extra LDAP information (separated by the `;` sign. e.g. a=1;b=2)
-  dn_extra: ''​
+  dn_extra: ''
 
 # If specified, all the VMs certificates will need to be specified as well
 ca_cert_path: ''
