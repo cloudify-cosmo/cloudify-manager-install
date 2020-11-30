@@ -9,6 +9,12 @@ from manager_rest.amqp_manager import AMQPManager
 from manager_rest.constants import DEFAULT_TENANT_ID
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import models, get_storage_manager
+try:
+    from cloudify_premium.ha import agents
+    from cloudify_premium.ha import controller
+except ImportError:
+    agents = None
+    controller = None
 
 
 def _get_amqp_manager():
@@ -53,6 +59,10 @@ def main(new_manager):
         _update_manager_cert(sm, manager, new_manager['ca_cert'])
 
     sm.update(manager)
+    if controller:
+        controller.add_manager(sm.list(models.Manager))
+    if agents:
+        agents.update_agents(sm)
 
 
 if __name__ == '__main__':
