@@ -277,7 +277,7 @@ sudo docker network create --subnet=172.12.0.0/16 cluster_net
 pushd jenkins
   sudo docker build --tag sshcentos .
 popd
-sudo docker run -d -it --name cluster1 --net cluster_net --ip 172.12.0.3 -t sshcentos /sbin/init
+sudo docker run -d -it --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 -t sshcentos /sbin/init
 sudo docker run -d -it --name cluster2 --net cluster_net --ip 172.12.0.4 sshcentos
 sudo docker run -d -it --name cluster3 --net cluster_net --ip 172.12.0.5 sshcentos
 ssh-keygen -f ~/pkey.pem -P ""
