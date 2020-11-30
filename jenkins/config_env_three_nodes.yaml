@@ -1,8 +1,8 @@
 # Your private key local path to connect to all hosts
-ssh_key_path: '/home/centos/jump_key.pem'
+ssh_key_path: '~/pkey.pem'
 
 # The hosts' username, e.g. centos
-ssh_user: 'centos'
+ssh_user: 'root'
 
 # Local path to a valid Cloudify license
 cloudify_license_path: '/home/centos/Dev-PS_cloudify_license.yaml'
@@ -42,8 +42,8 @@ load_balancer_ip: ''
 # Otherwise, fill in all items
 existing_vms:
     node-1:
-      private_ip: '172.12.0.16'
-      public_ip: '10.239.3.148'  # If not specified, will default to the private-ip
+      private_ip: '172.12.0.3'
+      public_ip: ''  # If not specified, will default to the private-ip
       hostname: ''   # As specified in the certificate (if specified). Optional
       cert_path: ''  # Need to be supplied if ca_cert_path was supplied
       key_path: ''  # Need to be supplied if ca_cert_path was supplied
@@ -53,8 +53,8 @@ existing_vms:
         rabbitmq_config_path: ''
 
     node-2:
-      private_ip: '172.12.0.17'
-      public_ip: '10.239.3.149'  # If not specified, will default to the private-ip
+      private_ip: '172.12.0.4'
+      public_ip: ''  # If not specified, will default to the private-ip
       hostname: ''   # As specified in the certificate (if specified). Optional
       cert_path: ''  # Need to be supplied if ca_cert_path was supplied
       key_path: ''  # Need to be supplied if ca_cert_path was supplied
@@ -64,8 +64,8 @@ existing_vms:
         rabbitmq_config_path: ''
 
     node-3:
-      private_ip: '172.12.0.18'
-      public_ip: '10.239.3.154'  # If not specified, will default to the private-ip
+      private_ip: '172.12.0.5'
+      public_ip: ''  # If not specified, will default to the private-ip
       hostname: ''   # As specified in the certificate (if specified). Optional
       cert_path: ''  # Need to be supplied if ca_cert_path was supplied
       key_path: ''  # Need to be supplied if ca_cert_path was supplied
