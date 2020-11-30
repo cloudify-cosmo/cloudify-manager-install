@@ -262,26 +262,28 @@ def populate_db(configs):
     logger.notice('DB populated and AMQP resources successfully created')
 
 
-def insert_manager(configs):
-    logger.notice('Registering manager in the DB...')
+def _get_manager():
     monitoring_credentials = _get_monitoring_credentials()
-    args = {
-        'manager': {
-            'public_ip': config['manager']['public_ip'],
-            'hostname': config[MANAGER][HOSTNAME],
-            'private_ip': config['manager']['private_ip'],
-            'networks': config[NETWORKS],
-            'last_seen': common.get_formatted_timestamp(),
-            'monitoring_username': monitoring_credentials['username'],
-            'monitoring_password': monitoring_credentials['password'],
-        }
-    }
-
     try:
         with open(constants.CA_CERT_PATH) as f:
-            args['manager']['ca_cert'] = f.read()
+            ca_cert = f.read()
     except IOError:
-        args['manager']['ca_cert'] = None
+        ca_cert = None
+    return {
+        'public_ip': config['manager']['public_ip'],
+        'hostname': config[MANAGER][HOSTNAME],
+        'private_ip': config['manager']['private_ip'],
+        'networks': config[NETWORKS],
+        'last_seen': common.get_formatted_timestamp(),
+        'monitoring_username': monitoring_credentials['username'],
+        'monitoring_password': monitoring_credentials['password'],
+        'ca_cert': ca_cert
+    }
+
+
+def insert_manager(configs):
+    logger.notice('Registering manager in the DB...')
+    args = {'manager': _get_manager()}
     out = run_script('create_tables_and_add_defaults.py', args, configs)
     if out:
         out_dict = json.loads(out)
@@ -290,9 +292,11 @@ def insert_manager(configs):
                     out_dict.get('rabbitmq_ca_cert_path'),)
 
 
-def create_amqp_resources(configs=None):
+def update_stored_manager(configs=None):
     logger.notice('Creating AMQP resources...')
-    run_script('create_amqp_resources.py', configs=configs)
+    args = {'manager': _get_manager()}
+
+    run_script('update_stored_manager.py', args, configs=configs)
     logger.notice('AMQP resources successfully created')
 
 
