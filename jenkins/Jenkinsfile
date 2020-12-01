@@ -215,39 +215,39 @@ pipeline {
     }
     // stage('Installations') {
       // parallel {
-//         stage('install_manager') {
-//           environment {
-//             CONTAINER_NAME = "cfy_aio"
-//             IMAGE_NAME = "cfy_manager_image"
-//           }
-//           steps {
-//             catchError(message: 'Failure on: manager-install install_manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-//               container('py27') {
-//                 dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
-//                   withVault([configuration: configuration, vaultSecrets: secrets]){
-//                     sh script: """#!/bin/bash
-//                     ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
-// sudo yum -y update
-// sudo service docker start
-// git clone https://github.com/cloudify-cosmo/cloudify-manager-install.git && cd cloudify-manager-install && git checkout ${env.BRANCH_NAME}
-// docker run --net host -dt -v ${pwd}:/mount python python -m http.server -d /mount
-// echo 'Build manager container'
-// set -eux
-// ls -la .
-// pushd packaging/docker
-//   docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} .
-// popd
-// echo 'Run manager container'
-// set -eux
-// docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
+        stage('install_manager') {
+          environment {
+            CONTAINER_NAME = "cfy_aio"
+            IMAGE_NAME = "cfy_manager_image"
+          }
+          steps {
+            catchError(message: 'Failure on: manager-install install_manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+              container('py27') {
+                dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
+                  withVault([configuration: configuration, vaultSecrets: secrets]){
+                    sh script: """#!/bin/bash
+                    ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
+sudo yum -y update
+sudo service docker start
+git clone https://github.com/cloudify-cosmo/cloudify-manager-install.git && cd cloudify-manager-install && git checkout ${env.BRANCH_NAME}
+docker run --net host -dt -v ${pwd}:/mount python python -m http.server -d /mount
+echo 'Build manager container'
+set -eux
+ls -la .
+pushd packaging/docker
+  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} .
+popd
+echo 'Run manager container'
+set -eux
+docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
 
-// """, label: 'install manager'
-//                   }
-//                 }
-//               }
-//             }
-//           }
-//         }
+""", label: 'install manager'
+                  }
+                }
+              }
+            }
+          }
+        }
         stage('install_cluster'){
           environment {
             CONTAINER_NAME = "cfy"
@@ -264,34 +264,34 @@ pipeline {
                       def data = readYaml file: filename
 
                       data.manager_rpm_download_link = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
-//                      data.cloudify_license_path = "~/Dev-PS_cloudify_license.yaml"
                       sh "rm $filename"
                       writeYaml file: filename, data: data
                     }
                     sh script: """#!/bin/bash
                      ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
-git clone https://github.com/cloudify-cosmo/cloudify-manager-install.git && cd cloudify-manager-install && git checkout ${env.BRANCH_NAME}
-sudo yum -y update
-sudo service docker start
+cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
 sudo docker network create --subnet=172.12.0.0/16 cluster_net
-pushd jenkins/Dockerfiles
+ssh-keygen -f ~/pkey.pem -P ""
+pushd jenkins
   sudo docker build --tag sshcentos .
 popd
-ssh-keygen -f ~/pkey.pem -P ""
 sudo docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshcentos
 sudo docker run -d --name cluster2 --net cluster_net --privileged --ip 172.12.0.4 sshcentos
 sudo docker run -d --name cluster3 --net cluster_net --privileged --ip 172.12.0.5 sshcentos
 sudo docker cp ~/pkey.pem cluster1:/root/pkey.pem
-sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.2/ga-release/cloudify-cluster-manager-1.0.2-ga.el7.x86_64.rpm
+sudo docker cp ~/pkey.pem.pub cluster1:/root/.ssh/authorized_keys
+sudo docker cp ~/pkey.pem.pub cluster2:/root/.ssh/authorized_keys
+sudo docker cp ~/pkey.pem.pub cluster3:/root/.ssh/authorized_keys
+sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.3/ga-release/cloudify-cluster-manager-1.0.3-ga.el7.x86_64.rpm
 sudo docker exec cluster1 yum install -y epel-release
 sudo docker exec cluster1 yum install -y haveged
 sudo docker exec cluster1 systemctl start haveged
-sudo docker exec cluster1 yum install -y openssl
 sudo docker cp ${env.WORKSPACE}/${env.PROJECT}/jenkins/config_env_three_nodes.yaml cluster1:/cfy_cluster_config.yaml
 sudo docker cp ${env.WORKSPACE}/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/root/Dev-PS_cloudify_license.yaml
+sudo docker exec -d cluster1 /usr/sbin/sshd -D
 sudo docker exec -d cluster2 /usr/sbin/sshd -D
 sudo docker exec -d cluster3 /usr/sbin/sshd -D
-sudo docker exec cluster1 cfy_cluster_manager install -v
+sudo docker exec -i cluster1 cfy_cluster_manager install -v
 """
                   }
                 }
