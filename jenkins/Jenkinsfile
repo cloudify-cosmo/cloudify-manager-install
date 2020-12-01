@@ -264,7 +264,7 @@ pipeline {
                       def data = readYaml file: filename
 
                       data.manager_rpm_download_link = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
-                      data.cloudify_license_path = "${env.WORKSPACE}/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml"
+//                      data.cloudify_license_path = "~/Dev-PS_cloudify_license.yaml"
                       sh "rm $filename"
                       writeYaml file: filename, data: data
                     }
@@ -274,22 +274,24 @@ git clone https://github.com/cloudify-cosmo/cloudify-manager-install.git && cd c
 sudo yum -y update
 sudo service docker start
 sudo docker network create --subnet=172.12.0.0/16 cluster_net
-pushd jenkins
+pushd jenkins/Dockerfiles
   sudo docker build --tag sshcentos .
 popd
-sudo docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 -t sshcentos /sbin/init
-sudo docker run -d --name cluster2 --net cluster_net --ip 172.12.0.4 sshcentos
-sudo docker run -d --name cluster3 --net cluster_net --ip 172.12.0.5 sshcentos
 ssh-keygen -f ~/pkey.pem -P ""
+sudo docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshcentos
+sudo docker run -d --name cluster2 --net cluster_net --privileged --ip 172.12.0.4 sshcentos
+sudo docker run -d --name cluster3 --net cluster_net --privileged --ip 172.12.0.5 sshcentos
 sudo docker cp ~/pkey.pem cluster1:/root/pkey.pem
-sudo docker cp ~/pkey.pem.pub cluster2:/root/.ssh/authorized_keys
-sudo docker cp ~/pkey.pem.pub cluster3:/root/.ssh/authorized_keys
-sudo docker exec -i cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.2/ga-release/cloudify-cluster-manager-1.0.2-ga.el7.x86_64.rpm
-sudo docker exec -i cluster1 yum install -y epel-release
-sudo docker exec -i cluster1 yum install -y haveged
-sudo docker exec -i cluster1 systemctl start haveged
+sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.2/ga-release/cloudify-cluster-manager-1.0.2-ga.el7.x86_64.rpm
+sudo docker exec cluster1 yum install -y epel-release
+sudo docker exec cluster1 yum install -y haveged
+sudo docker exec cluster1 systemctl start haveged
+sudo docker exec cluster1 yum install -y openssl
 sudo docker cp ${env.WORKSPACE}/${env.PROJECT}/jenkins/config_env_three_nodes.yaml cluster1:/cfy_cluster_config.yaml
-sudo docker exec -i cluster1 cfy_cluster_manager install
+sudo docker cp ${env.WORKSPACE}/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/root/Dev-PS_cloudify_license.yaml
+sudo docker exec -d cluster2 /usr/sbin/sshd -D
+sudo docker exec -d cluster3 /usr/sbin/sshd -D
+sudo docker exec cluster1 cfy_cluster_manager install -v
 """
                   }
                 }
