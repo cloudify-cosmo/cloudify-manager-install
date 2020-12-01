@@ -32,7 +32,6 @@ pipeline {
 
   environment {
     PROJECT = "cloudify-manager-install"
-    WORKSPACE = "${env.WORKSPACE}"
     PATH = "/root/.local/bin:$PATH"
     VERSION = getVersion("master").trim()
     PRERELEASE = getPreRelease("master").trim()
@@ -287,9 +286,9 @@ sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cl
 sudo docker exec cluster1 yum install -y epel-release
 sudo docker exec cluster1 yum install -y haveged
 sudo docker exec cluster1 systemctl start haveged
-sudo docker cp ${env.WORKSPACE}/${env.PROJECT}/jenkins/config_env_three_nodes.yaml cluster1:/cfy_cluster_config.yaml
-sudo docker cp ${env.WORKSPACE}/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/root/Dev-PS_cloudify_license.yaml
-ls ${env.WORKSPACE}/${env.PROJECT}/jenkins
+sudo docker cp ~/${env.PROJECT}/jenkins/config_env_three_nodes.yaml cluster1:/cfy_cluster_config.yaml
+sudo docker cp ~/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/root/Dev-PS_cloudify_license.yaml
+ls ~/${env.PROJECT}/jenkins
 sudo docker exec cluster1 ls /
 sudo docker exec cluster1 ls /root/
 sudo docker exec -d cluster1 /usr/sbin/sshd -D
