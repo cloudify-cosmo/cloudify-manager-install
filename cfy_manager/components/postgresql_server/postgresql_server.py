@@ -1429,14 +1429,14 @@ class PostgresqlServer(BaseComponent):
         files.update_yaml_file('/opt/manager/cloudify-rest.conf',
                                manager_conf)
         logger.info('Restarting rest service')
-        service.restart('restservice')
+        service.restart('cloudify-restservice')
 
         logger.info('Setting UI DB configuration')
         stage.set_db_url()
         composer.update_composer_config()
         logger.info('Restarting UI services')
-        service.restart('stage')
-        service.restart('composer')
+        service.restart('cloudify-stage')
+        service.restart('cloudify-composer')
 
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
@@ -1500,14 +1500,14 @@ class PostgresqlServer(BaseComponent):
             files.update_yaml_file('/opt/manager/cloudify-rest.conf',
                                    manager_conf)
             logger.info('Restarting rest service')
-            service.restart('restservice')
+            service.restart('cloudify-restservice')
 
             logger.info('Setting UI DB configuration')
             stage.set_db_url()
             composer.update_composer_config()
             logger.info('Restarting UI services')
-            service.restart('stage')
-            service.restart('composer')
+            service.restart('cloudify-stage')
+            service.restart('cloudify-composer')
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
