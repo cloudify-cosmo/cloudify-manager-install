@@ -1,5 +1,4 @@
 #!/bin/bash
 set -e
 echo Restarting nginx
-sleep 1
-/usr/bin/supervisorctl -c /etc/supervisord.conf restart nginx
+/bin/bash -c "sleep 1 && supervisorctl -c /etc/supervisord.conf restart nginx > /dev/null 2>&1 &"
