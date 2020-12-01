@@ -78,10 +78,11 @@ if __name__ == '__main__':
     with open(args.input) as f:
         inputs = json.load(f)
 
-    config.instance.load_configuration()
+    config.instance.load_configuration(from_db=False)
     with setup_flask_app(
         manager_ip=config.instance.postgresql_host,
         hash_salt=config.instance.security_hash_salt,
         secret_key=config.instance.security_secret_key
     ).app_context():
+        config.instance.load_configuration()
         main(inputs['manager'])
