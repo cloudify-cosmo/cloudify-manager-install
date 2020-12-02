@@ -291,7 +291,7 @@ sudo docker cp ~/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/r
 sudo docker exec -d cluster1 /usr/sbin/sshd -D
 sudo docker exec -d cluster2 /usr/sbin/sshd -D
 sudo docker exec -d cluster3 /usr/sbin/sshd -D
-sudo docker exec -i --privileged cluster1 cfy_cluster_manager install -v --override
+sudo docker exec -i -d --privileged cluster1 cfy_cluster_manager install -v --override
 """
                   }
                 }
