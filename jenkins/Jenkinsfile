@@ -209,8 +209,8 @@ pipeline {
         }
       }
     }
-    stage('Installations') {
-      parallel {
+    // stage('Installations') {
+    //   parallel {
         stage('install_manager') {
           environment {
             CONTAINER_NAME = "cfy_aio"
