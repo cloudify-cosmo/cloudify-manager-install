@@ -271,7 +271,7 @@ docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -
                      ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
 sudo docker network create --subnet=172.12.0.0/16 cluster_net
-ssh-keygen -f ~/pkey.pem -P ""
+sudo ssh-keygen -f ~/pkey.pem -P ""
 pushd jenkins
   sudo docker build --tag sshcentos .
 popd
@@ -288,13 +288,10 @@ sudo docker exec cluster1 yum install -y haveged
 sudo docker exec cluster1 systemctl start haveged
 sudo docker cp ~/${env.PROJECT}/jenkins/config_env_three_nodes.yaml cluster1:/cfy_cluster_config.yaml
 sudo docker cp ~/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/root/Dev-PS_cloudify_license.yaml
-ls ~/${env.PROJECT}/jenkins
-sudo docker exec cluster1 ls /
-sudo docker exec cluster1 ls /root/
 sudo docker exec -d cluster1 /usr/sbin/sshd -D
 sudo docker exec -d cluster2 /usr/sbin/sshd -D
 sudo docker exec -d cluster3 /usr/sbin/sshd -D
-sudo docker exec -i cluster1 cfy_cluster_manager install -v
+sudo docker exec -i --privileged cluster1 cfy_cluster_manager install -v --override
 """
                   }
                 }
