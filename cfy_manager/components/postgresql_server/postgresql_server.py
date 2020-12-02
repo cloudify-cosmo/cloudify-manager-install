@@ -1407,7 +1407,7 @@ class PostgresqlServer(BaseComponent):
 
     def _add_node_to_db(self, host):
         db.run_psql_command(
-            "INSERT INTO db_nodes (host, host) VALUES ('{0}', '{1}');".format(
+            "INSERT INTO db_nodes (name, host) VALUES ('{0}', '{1}');".format(
                 host, host
             ),
             'cloudify_db_name',
