@@ -19,7 +19,7 @@ ldap:
   domain: ''
 
   # True if Active Directory will be used as the LDAP authenticator
-  is_active_directory: true
+  is_active_directory:
 
   # This must be provided if the server is using ldaps://
   ca_cert: ''
