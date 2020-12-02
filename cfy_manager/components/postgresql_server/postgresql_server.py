@@ -375,8 +375,19 @@ class PostgresqlServer(BaseComponent):
                               'try on the next database node).',
                               PATRONI_PGPASS_PATH)
                 return False
+        self._run_create_db_monitoring_user_query()
 
+    # This could end up in a race if two db nodes are installed at the same
+    # time. However, once the race is complete it should be safe so we only
+    # need to retry once
+    @retry(stop_max_attempt_number=2, wait_fixed=1000)
+    def _run_create_db_monitoring_user_query(self):
         credentials = config[POSTGRESQL_SERVER]['db_monitoring']
+
+        if self._db_user_exists(credentials.get('username')):
+            logger.info('db_monitoring account already exists, skipping.')
+            return
+
         delimiter = self._delimiter_for(credentials.get('password'))
         db.run_psql_command(
             "CREATE USER {user} WITH PASSWORD {delim}{pwd}{delim};".format(
@@ -1367,6 +1378,19 @@ class PostgresqlServer(BaseComponent):
         status, db_nodes = self._determine_cluster_status(db_nodes)
 
         return status, db_nodes
+
+    def _db_user_exists(self, user):
+        result = db.run_psql_command(
+            "SELECT COUNT(*) FROM pg_catalog.pg_roles "
+            "WHERE rolname = '{user}';".format(
+                user=user,
+            ),
+            'server_db_name',
+            logger,
+        )
+
+        # There can only be 0 or 1 of a particular named user
+        return int(result) == 1
 
     def _node_is_in_db(self, host):
         result = db.run_psql_command(

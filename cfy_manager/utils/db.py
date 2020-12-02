@@ -30,8 +30,9 @@ def run_psql_command(command, db_key, logger):
     db_env, base_command = get_psql_env_and_base_command(logger, db_key)
 
     # Run psql with just the results output without headers (-t),
-    # no psqlrc (-X), and not storing history (-n)
-    base_command.extend(['-t', '-X', '-n'])
+    # no psqlrc (-X), and not storing history (-n),
+    # and exit with non-zero status if a provided query/command fails
+    base_command.extend(['-t', '-X', '-n', '-v', 'ON_ERROR_STOP=1'])
 
     result = sudo(base_command, env=db_env, stdin=command)
     return result.aggr_stdout.strip()
