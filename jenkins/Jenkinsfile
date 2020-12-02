@@ -285,7 +285,7 @@ sudo docker cp ~/pkey.pem cluster1:/root/pkey.pem
 sudo docker cp ~/pkey.pem.pub cluster1:/root/.ssh/authorized_keys
 sudo docker cp ~/pkey.pem.pub cluster2:/root/.ssh/authorized_keys
 sudo docker cp ~/pkey.pem.pub cluster3:/root/.ssh/authorized_keys
-sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.3/ga-release/cloudify-cluster-manager-1.0.3-ga.el7.x86_64.rpm
+sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.2/ga-release/cloudify-cluster-manager-1.0.2-ga.el7.x86_64.rpm
 sudo docker exec cluster1 yum install -y epel-release
 sudo docker exec cluster1 yum install -y haveged
 sudo docker exec cluster1 systemctl start haveged

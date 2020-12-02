@@ -8,7 +8,7 @@ ssh_user: 'root'
 cloudify_license_path: '~/Dev-PS_cloudify_license.yaml'
 
 # Manager RPM to install on the cluster instances
-manager_rpm_path: 'http://repository.cloudifysource.org/cloudify/5.1.0/ga-release/cloudify-manager-install-5.1.0ga.rpm'
+manager_rpm_download_link: 'http://repository.cloudifysource.org/cloudify/5.1.0/ga-release/cloudify-manager-install-5.1.0ga.rpm'
 
 ldap:
   # This should include the protocol and port,
