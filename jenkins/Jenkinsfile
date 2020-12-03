@@ -271,7 +271,9 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                     sh script: """#!/bin/bash
                      ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
-sudo cp -a jenkins/{cfy_cluster_config.yaml, Dev-PS_cloudify_license} /root/
+pushd jenkins
+  sudo cp -a cfy_cluster_config.yaml, Dev-PS_cloudify_license /root/
+popd
 sudo -i
 docker network create --subnet=172.12.0.0/16 cluster_net
 ssh-keygen -f ~/pkey.pem -P ""
