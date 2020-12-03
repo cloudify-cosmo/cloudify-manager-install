@@ -236,7 +236,7 @@ set -eux
 docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
 echo 'Check Manager status'
 sleep 20
-jenkins/validate_status.sh ${env.CONTAINER_NAME}
+sudo jenkins/validate_status.sh ${env.CONTAINER_NAME}
 echo 'Run the Sanity check
 sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
 """, label: 'install manager'
@@ -268,28 +268,27 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                     sh script: """#!/bin/bash
                      ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
-sudo docker network create --subnet=172.12.0.0/16 cluster_net
-sudo ssh-keygen -f ~/pkey.pem -P ""
+sudo -i
+docker network create --subnet=172.12.0.0/16 cluster_net
+ssh-keygen -f ~/pkey.pem -P ""
 echo 'Build Docker images'
-pushd jenkins/Dockerfiles/host
-  sudo docker build --tag sshhost .
-popd
-pushd jenkins/Dockerfiles/client
-  sudo docker build --tag sshclient .
+pushd /root
+  docker build --tag sshhost . -f ${env.PROJECT}jenkins/Dockerfiles/host/Dockerfile
+  docker build --tag sshclient . -f ${env.PROJECT}jenkins/Dockerfiles/client/Dockerfile
 popd
 echo 'Create and prepare containers'
-sudo docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshhost
-sudo docker run -d --name cluster2 --net cluster_net --privileged --ip 172.12.0.4 sshclient
-sudo docker run -d --name cluster3 --net cluster_net --privileged --ip 172.12.0.5 sshclient
-sudo docker exec cluster1 systemctl start haveged
-sudo docker exec -d cluster1 /usr/sbin/sshd -D
-sudo docker exec -d cluster2 /usr/sbin/sshd -D
-sudo docker exec -d cluster3 /usr/sbin/sshd -D
+docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshhost
+docker run -d --name cluster2 --net cluster_net --privileged --ip 172.12.0.4 sshclient
+docker run -d --name cluster3 --net cluster_net --privileged --ip 172.12.0.5 sshclient
+docker exec cluster1 systemctl start haveged
+docker exec -d cluster1 /usr/sbin/sshd -D
+docker exec -d cluster2 /usr/sbin/sshd -D
+docker exec -d cluster3 /usr/sbin/sshd -D
 echo 'Run Cluster installation'
-sudo docker exec --tty cluster1 cfy_cluster_manager install -v
+docker exec --tty cluster1 cfy_cluster_manager install -v
 sleep 20
 echo 'Check cluster status'
-sudo docker exec cluster1 cfy cluster status --json
+docker exec cluster1 cfy cluster status --json
 """
                   }
                 }

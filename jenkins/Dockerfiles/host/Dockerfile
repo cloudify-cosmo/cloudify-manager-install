@@ -18,10 +18,10 @@ RUN yum install -y openssl-1.0.2k libselinux-utils \
 RUN yum -y install http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.3/ga-release/cloudify-cluster-manager-1.0.3-ga.el7.x86_64.rpm
 RUN yum -y install epel-release
 RUN yum -y install haveged
-ADD /root/pkey.pem.pub /root/.ssh/authorized_keys
-ADD /root/pkey.pem /root/
-ADD /root/cloudify-manager-install/jenkins/config_env_three_nodes.yaml /cfy_cluster_config
-ADD /root/cloudify-manager-install/jenkins/Dev-PS_cloudify_license.yaml /root/
+ADD pkey.pem.pub /root/.ssh/authorized_keys
+ADD pkey.pem /root/
+ADD cloudify-manager-install/jenkins/config_env_three_nodes.yaml /cfy_cluster_config
+ADD cloudify-manager-install/jenkins/Dev-PS_cloudify_license.yaml /root/
 EXPOSE 22 80 443 5672 53333
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]
