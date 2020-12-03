@@ -278,7 +278,6 @@ class RestService(BaseComponent):
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
         self._generate_passwords()
-        certificates.handle_ca_cert(logger)
         db.prepare_db()
         db.populate_db(configs)
 
@@ -515,6 +514,7 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         service.configure('cloudify-restservice')
+        certificates.handle_ca_cert(logger)
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
