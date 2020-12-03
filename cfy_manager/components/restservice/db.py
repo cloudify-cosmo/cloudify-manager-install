@@ -108,8 +108,8 @@ def _create_database(db_name, user):
         'ALTER DATABASE {} OWNER TO {}'.format(db_name, user),
         'server_db_name', logger)
     run_psql_command(
-         'GRANT ALL PRIVILEGES ON DATABASE {} to {}'.format(db_name, user),
-         'server_db_name', logger)
+        'GRANT ALL PRIVILEGES ON DATABASE {} to {}'.format(db_name, user),
+        'server_db_name', logger)
 
 
 def _get_provider_context():
@@ -329,27 +329,13 @@ def check_db_exists():
     return config[POSTGRESQL_CLIENT]['cloudify_db_name'] in dbs
 
 
-def manager_is_in_db():
+def get_managers():
     result = run_psql_command(
-        "SELECT COUNT(*) FROM managers where hostname='{0}'".format(
-            config[MANAGER][HOSTNAME],
-        ),
+        'SELECT hostname FROM managers',
         'cloudify_db_name',
-        logger,
+        logger
     )
-
-    # As the name is unique, there can only ever be at most 1 entry with the
-    # expected name, and if there is then the manager is in the db.
-    return int(result) == 1
-
-
-def get_manager_count():
-    result = run_psql_command(
-        "SELECT COUNT(*) FROM managers",
-        'cloudify_db_name',
-        logger,
-    )
-    return int(result)
+    return [line.strip() for line in result.split('\n') if line.strip()]
 
 
 def validate_schema_version(configs):

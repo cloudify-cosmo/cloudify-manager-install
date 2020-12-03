@@ -259,13 +259,17 @@ class RestService(BaseComponent):
         if config[CLEAN_DB]:
             db.drop_db()
 
-        if not db.check_db_exists():
-            self._initialize_db(configs)
+        if db.check_db_exists():
+            db.validate_schema_version(configs)
         else:
-            if db.manager_is_in_db():
-                db.update_stored_manager(configs)
-            else:
-                db.validate_schema_version(configs)
+            self._initialize_db(configs)
+
+        managers = db.get_managers()
+        if config[MANAGER][HOSTNAME] in managers:
+            db.update_stored_manager(configs)
+        else:
+            db.insert_manager(configs)
+            if len(managers) > 0:
                 cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
                 if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
                     self._prepare_cluster_config_update(cluster_cfg_fn,
@@ -277,7 +281,6 @@ class RestService(BaseComponent):
         certificates.handle_ca_cert(logger)
         db.prepare_db()
         db.populate_db(configs)
-        db.insert_manager(configs)
 
     def _validate_cluster_join(self):
         issues = []
