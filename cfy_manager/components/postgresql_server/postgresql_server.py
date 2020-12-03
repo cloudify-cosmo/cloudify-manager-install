@@ -1532,6 +1532,8 @@ class PostgresqlServer(BaseComponent):
             logger.info('Restarting UI services')
             service.restart('cloudify-stage')
             service.restart('cloudify-composer')
+            if self._node_is_in_db(address):
+                self._remove_node_from_db(address)
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
