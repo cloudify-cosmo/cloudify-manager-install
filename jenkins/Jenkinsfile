@@ -240,7 +240,7 @@ echo 'Check Manager status'
 sleep 20
 sudo chmod +x jenkins/validate_status.sh
 ./jenkins/validate_status.sh ${env.CONTAINER_NAME}
-echo 'Run the Sanity check
+echo 'Run the Sanity check'
 sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
 """, label: 'install manager'
                   }
