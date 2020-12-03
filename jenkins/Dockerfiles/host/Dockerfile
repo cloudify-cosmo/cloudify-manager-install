@@ -20,8 +20,8 @@ RUN yum -y install epel-release
 RUN yum -y install haveged
 ADD pkey.pem.pub /root/.ssh/authorized_keys
 ADD pkey.pem /root/
-ADD cloudify-manager-install/jenkins/cfy_cluster_config.yaml /
-ADD cloudify-manager-install/jenkins/Dev-PS_cloudify_license.yaml /root/
+ADD cfy_cluster_config.yaml /
+ADD Dev-PS_cloudify_license.yaml /root/
 EXPOSE 22 80 443 5672 53333
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]
