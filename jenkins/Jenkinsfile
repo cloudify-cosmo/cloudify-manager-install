@@ -236,7 +236,7 @@ set -eux
 docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
 echo 'Check Manager status'
 sleep 20
-sudo jenkins/validate_status.sh ${env.CONTAINER_NAME}
+sudo ./jenkins/validate_status.sh ${env.CONTAINER_NAME}
 echo 'Run the Sanity check
 sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
 """, label: 'install manager'
@@ -273,8 +273,8 @@ docker network create --subnet=172.12.0.0/16 cluster_net
 ssh-keygen -f ~/pkey.pem -P ""
 echo 'Build Docker images'
 pushd /root
-  docker build --tag sshhost . -f ${env.PROJECT}jenkins/Dockerfiles/host/Dockerfile
-  docker build --tag sshclient . -f ${env.PROJECT}jenkins/Dockerfiles/client/Dockerfile
+  docker build --tag sshhost . -f ${env.PROJECT}/jenkins/Dockerfiles/host/Dockerfile
+  docker build --tag sshclient . -f ${env.PROJECT}/jenkins/Dockerfiles/client/Dockerfile
 popd
 echo 'Create and prepare containers'
 docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshhost
