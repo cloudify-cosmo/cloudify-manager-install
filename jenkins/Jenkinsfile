@@ -261,7 +261,7 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                 dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                   withVault([configuration: configuration, vaultSecrets: secrets]) {
                     script {
-                      def filename = 'config_env_three_nodes.yaml'
+                      def filename = 'cfy_cluster_config.yaml'
                       def data = readYaml file: filename
 
                       data.manager_rpm_download_link = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
