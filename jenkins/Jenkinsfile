@@ -234,6 +234,8 @@ popd
 echo 'Run manager container'
 set -eux
 docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
+echo "Waiting for ${env.CONTAINER_NAME} to start"
+docker exec ${env.CONTAINER_NAME} cfy_manager wait-for-starter
 echo 'Check Manager status'
 sleep 20
 sudo chmod +x jenkins/validate_status.sh
@@ -269,6 +271,7 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                     sh script: """#!/bin/bash
                      ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
+sudo cp -a jenkins/{cfy_cluster_config.yaml, Dev-PS_cloudify_license} /root/
 sudo -i
 docker network create --subnet=172.12.0.0/16 cluster_net
 ssh-keygen -f ~/pkey.pem -P ""
