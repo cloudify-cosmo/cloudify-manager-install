@@ -268,9 +268,9 @@ class RestService(BaseComponent):
         if config[MANAGER][HOSTNAME] in managers:
             db.update_stored_manager(configs)
         else:
-            db.insert_manager(configs)
+            cluster_cfg_fn, rabbitmq_ca_fn = db.insert_manager(configs)
             if len(managers) > 0:
-                cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
+                self._join_cluster(configs)
                 if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
                     self._prepare_cluster_config_update(cluster_cfg_fn,
                                                         rabbitmq_ca_fn)
@@ -322,7 +322,6 @@ class RestService(BaseComponent):
         self._validate_cluster_join()
         config[CLUSTER_JOIN] = True
         certificates.handle_ca_cert(logger, generate_if_missing=False)
-        return db.insert_manager(configs)
 
     def _generate_password(self, length=12):
         chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
