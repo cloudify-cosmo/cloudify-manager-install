@@ -209,8 +209,6 @@ pipeline {
         }
       }
     }
-    // stage('Installations') {
-    //   parallel {
         stage('install_manager') {
           environment {
             CONTAINER_NAME = "cfy_aio"
@@ -236,7 +234,11 @@ popd
 echo 'Run manager container'
 set -eux
 docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock ${env.IMAGE_NAME}
-
+echo 'Check Manager status'
+sleep 20
+jenkins/validate_status.sh ${env.CONTAINER_NAME}
+echo 'Run the Sanity check
+sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
 """, label: 'install manager'
                   }
                 }
@@ -268,26 +270,25 @@ docker run --name ${env.CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
 sudo docker network create --subnet=172.12.0.0/16 cluster_net
 sudo ssh-keygen -f ~/pkey.pem -P ""
-pushd jenkins
-  sudo docker build --tag sshcentos .
+echo 'Build Docker images'
+pushd jenkins/Dockerfiles/host
+  sudo docker build --tag sshhost .
 popd
-sudo docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshcentos
-sudo docker run -d --name cluster2 --net cluster_net --privileged --ip 172.12.0.4 sshcentos
-sudo docker run -d --name cluster3 --net cluster_net --privileged --ip 172.12.0.5 sshcentos
-sudo docker cp ~/pkey.pem cluster1:/root/pkey.pem
-sudo docker cp ~/pkey.pem.pub cluster1:/root/.ssh/authorized_keys
-sudo docker cp ~/pkey.pem.pub cluster2:/root/.ssh/authorized_keys
-sudo docker cp ~/pkey.pem.pub cluster3:/root/.ssh/authorized_keys
-sudo docker exec cluster1 yum install -y http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.3/ga-release/cloudify-cluster-manager-1.0.3-ga.el7.x86_64.rpm
-sudo docker exec cluster1 yum install -y epel-release
-sudo docker exec cluster1 yum install -y haveged
+pushd jenkins/Dockerfiles/client
+  sudo docker build --tag sshclient .
+popd
+echo 'Create and prepare containers'
+sudo docker run -d --name cluster1 --net cluster_net --privileged --ip 172.12.0.3 sshhost
+sudo docker run -d --name cluster2 --net cluster_net --privileged --ip 172.12.0.4 sshclient
+sudo docker run -d --name cluster3 --net cluster_net --privileged --ip 172.12.0.5 sshclient
 sudo docker exec cluster1 systemctl start haveged
-sudo docker cp ~/${env.PROJECT}/jenkins/config_env_three_nodes.yaml cluster1:/cfy_cluster_config.yaml
-sudo docker cp ~/${env.PROJECT}/jenkins/Dev-PS_cloudify_license.yaml cluster1:/root/Dev-PS_cloudify_license.yaml
 sudo docker exec -d cluster1 /usr/sbin/sshd -D
 sudo docker exec -d cluster2 /usr/sbin/sshd -D
 sudo docker exec -d cluster3 /usr/sbin/sshd -D
+echo 'Run Cluster installation'
 sudo docker exec --tty cluster1 cfy_cluster_manager install -v
+sleep 20
+echo 'Check cluster status'
 sudo docker exec cluster1 cfy cluster status --json
 """
                   }
@@ -296,8 +297,6 @@ sudo docker exec cluster1 cfy cluster status --json
             }
           }
         }
-      // }
-    // }
     stage('Terminate py27 instnace'){
       steps{
         container('py27'){
