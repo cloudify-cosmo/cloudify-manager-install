@@ -352,30 +352,23 @@ class PostgresqlServer(BaseComponent):
                 logger.notice('db_monitoring account not yet created. '
                               'Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
-                return False
-            pgpass = None
+                return
+            created = False
             for attempt in range(30):
                 try:
-                    pgpass = files.sudo_read(PATRONI_PGPASS_PATH)
-                    if pgpass:
-                        break
-                    else:
-                        # Don't accept an empty pgpass file, it means the
-                        # cluster is not yet fully ready
-                        pgpass = None
+                    self._run_create_db_monitoring_user_query()
+                    created = True
                 except Exception as err:
                     logger.info(
-                        'Failed reading pgpass: {err}'.format(err=err))
-                    pass
+                        'Failed creating monitoring user: %s', err,
+                    )
                 logger.info('Waiting for pgpass to be populated...')
                 time.sleep(1)
-            if pgpass is None:
-                logger.notice('db_monitoring account not yet created. '
-                              'Patroni pgpass file (%s) unreadable (will '
-                              'try on the next database node).',
-                              PATRONI_PGPASS_PATH)
-                return False
-        self._run_create_db_monitoring_user_query()
+            if not created:
+                logger.notice('db_monitoring account not yet created '
+                              '(will try on the next database node).')
+        else:
+            self._run_create_db_monitoring_user_query()
 
     # This could end up in a race if two db nodes are installed at the same
     # time. However, once the race is complete it should be safe so we only
