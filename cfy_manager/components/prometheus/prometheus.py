@@ -458,30 +458,11 @@ def _update_manager_targets(private_ip, uninstalling):
             is_premium_installed()
             and not config[COMPOSER]['skip_installation']
         )
-        nginx_port = config[NGINX].get('port')
-        if not nginx_port:
-            nginx_port = 80\
-                if config[MANAGER]['external_rest_protocol'].lower() == 'http'\
-                else 443
         if composer_installed:
             # Monitor composer directly and via nginx
             http_200_targets.append('http://127.0.0.1:3000/')
-            http_200_targets.append(
-                '{proto}://{private_ip}:{port}/composer'.format(
-                    proto=config[MANAGER]['external_rest_protocol'],
-                    private_ip=private_ip,
-                    port=nginx_port,
-                )
-            )
         # Monitor stage directly and via nginx
         http_200_targets.append('http://127.0.0.1:8088')
-        http_200_targets.append(
-            '{proto}://{public_ip}:{port}/'.format(
-                proto=config[MANAGER]['external_rest_protocol'],
-                public_ip=config[MANAGER][PUBLIC_IP],
-                port=nginx_port,
-            )
-        )
         # Monitor cloudify's internal port
         http_200_targets.append('https://{}:53333/'.format(private_ip))
 
