@@ -16,6 +16,6 @@ RUN yum install -y openssl-1.0.2k libselinux-utils \
     python-backports-ssl_match_hostname which cronie \
     systemd-sysv initscripts tcp_wrappers-libs sudo
 ADD pkey.pem.pub /root/.ssh/authorized_keys
-EXPOSE 22 80 443 5672 53333 8088 3000
+EXPOSE 22 80 443 5672 53333 8088 3000 2379
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]

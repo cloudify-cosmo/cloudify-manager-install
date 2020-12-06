@@ -22,6 +22,6 @@ ADD pkey.pem.pub /root/.ssh/authorized_keys
 ADD pkey.pem /root/
 ADD cfy_cluster_config.yaml /
 ADD Dev-PS_cloudify_license.yaml /root/
-EXPOSE 22 80 443 5672 53333 8088 3000
+EXPOSE 22 80 443 5672 53333 8088 3000 2379
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]
