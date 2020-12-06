@@ -19,7 +19,7 @@ inputs:
 
   instance_type:
     type: string
-    default: t3.medium
+    default: t3.xlarge
 
   aws_linux_ami:
     type: string
