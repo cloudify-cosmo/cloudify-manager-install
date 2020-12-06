@@ -15,6 +15,9 @@ spec:
         privileged: true
     - name: py27
       image: circleci/python:2.7
+      resources:
+        requests:
+          cpu: 0.6
       command:
       - cat
       tty: true
