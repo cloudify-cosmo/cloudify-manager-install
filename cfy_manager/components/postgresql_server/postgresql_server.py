@@ -352,31 +352,35 @@ class PostgresqlServer(BaseComponent):
                 logger.notice('db_monitoring account not yet created. '
                               'Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
-                return False
-            pgpass = None
+                return
+            created = False
             for attempt in range(30):
                 try:
-                    pgpass = files.sudo_read(PATRONI_PGPASS_PATH)
-                    if pgpass:
-                        break
-                    else:
-                        # Don't accept an empty pgpass file, it means the
-                        # cluster is not yet fully ready
-                        pgpass = None
+                    self._run_create_db_monitoring_user_query()
+                    created = True
                 except Exception as err:
                     logger.info(
-                        'Failed reading pgpass: {err}'.format(err=err))
-                    pass
+                        'Failed creating monitoring user: %s', err,
+                    )
                 logger.info('Waiting for pgpass to be populated...')
                 time.sleep(1)
-            if pgpass is None:
-                logger.notice('db_monitoring account not yet created. '
-                              'Patroni pgpass file (%s) unreadable (will '
-                              'try on the next database node).',
-                              PATRONI_PGPASS_PATH)
-                return False
+            if not created:
+                logger.notice('db_monitoring account not yet created '
+                              '(will try on the next database node).')
+        else:
+            self._run_create_db_monitoring_user_query()
 
+    # This could end up in a race if two db nodes are installed at the same
+    # time. However, once the race is complete it should be safe so we only
+    # need to retry once
+    @retry(stop_max_attempt_number=2, wait_fixed=1000)
+    def _run_create_db_monitoring_user_query(self):
         credentials = config[POSTGRESQL_SERVER]['db_monitoring']
+
+        if self._db_user_exists(credentials.get('username')):
+            logger.info('db_monitoring account already exists, skipping.')
+            return
+
         delimiter = self._delimiter_for(credentials.get('password'))
         db.run_psql_command(
             "CREATE USER {user} WITH PASSWORD {delim}{pwd}{delim};".format(
@@ -1368,6 +1372,19 @@ class PostgresqlServer(BaseComponent):
 
         return status, db_nodes
 
+    def _db_user_exists(self, user):
+        result = db.run_psql_command(
+            "SELECT COUNT(*) FROM pg_catalog.pg_roles "
+            "WHERE rolname = '{user}';".format(
+                user=user,
+            ),
+            'server_db_name',
+            logger,
+        )
+
+        # There can only be 0 or 1 of a particular named user
+        return int(result) == 1
+
     def _node_is_in_db(self, host):
         result = db.run_psql_command(
             "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
@@ -1383,7 +1400,7 @@ class PostgresqlServer(BaseComponent):
 
     def _add_node_to_db(self, host):
         db.run_psql_command(
-            "INSERT INTO db_nodes (host, host) VALUES ('{0}', '{1}');".format(
+            "INSERT INTO db_nodes (name, host) VALUES ('{0}', '{1}');".format(
                 host, host
             ),
             'cloudify_db_name',
@@ -1429,14 +1446,14 @@ class PostgresqlServer(BaseComponent):
         files.update_yaml_file('/opt/manager/cloudify-rest.conf',
                                manager_conf)
         logger.info('Restarting rest service')
-        service.restart('restservice')
+        service.restart('cloudify-restservice')
 
         logger.info('Setting UI DB configuration')
         stage.set_db_url()
         composer.update_composer_config()
         logger.info('Restarting UI services')
-        service.restart('stage')
-        service.restart('composer')
+        service.restart('cloudify-stage')
+        service.restart('cloudify-composer')
 
         # The new db node maybe exists in db_nodes table, because `dbs add`
         # command should run on each manager in a cluster
@@ -1500,14 +1517,16 @@ class PostgresqlServer(BaseComponent):
             files.update_yaml_file('/opt/manager/cloudify-rest.conf',
                                    manager_conf)
             logger.info('Restarting rest service')
-            service.restart('restservice')
+            service.restart('cloudify-restservice')
 
             logger.info('Setting UI DB configuration')
             stage.set_db_url()
             composer.update_composer_config()
             logger.info('Restarting UI services')
-            service.restart('stage')
-            service.restart('composer')
+            service.restart('cloudify-stage')
+            service.restart('cloudify-composer')
+            if self._node_is_in_db(address):
+                self._remove_node_from_db(address)
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()

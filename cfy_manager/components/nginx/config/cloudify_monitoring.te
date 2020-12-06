@@ -1,0 +1,19 @@
+module cloudify_monitoring 1.0;
+
+require {
+        attribute port_type;
+        attribute defined_port_type;
+        type httpd_t;
+        class tcp_socket name_connect;
+}
+
+# Define cloudify_monitoring_port_t for Prometheus on ports 9090-9094
+# https://github.com/prometheus/prometheus/wiki/Default-port-allocations.
+# Port range is required because a single tcp :9090 port cannot be added as
+# it is alread defined as part of websm_port_t.  Port numbers must be added
+# with semanage in sepolicy_deploy.sh because it is not possible to do so
+# within Policy Module definition.
+# https://selinuxproject.org/page/PolicyLanguage
+
+type cloudify_monitoring_port_t, port_type, defined_port_type;
+allow httpd_t cloudify_monitoring_port_t:tcp_socket name_connect;

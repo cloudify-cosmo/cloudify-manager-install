@@ -18,13 +18,15 @@ import json
 from os.path import join
 
 from ..components_constants import (
-    SSL_INPUTS,
-    SSL_ENABLED,
+    CLUSTER_JOIN,
+    PRIVATE_IP,
     SSL_CLIENT_VERIFICATION,
-    CLUSTER_JOIN
+    SSL_ENABLED,
+    SSL_INPUTS,
 )
 from ..base_component import BaseComponent
 from ..service_names import (
+    MANAGER,
     POSTGRESQL_CLIENT,
     STAGE,
 )
@@ -164,17 +166,16 @@ class Stage(BaseComponent):
 
     def _set_internal_manager_ip(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
-        with open(config_path) as f:
-            stage_config = json.load(f)
+        # We need to use sudo to read this or we break on configure
+        stage_config = json.loads(files.sudo_read(config_path))
 
-        if config[SSL_INPUTS]['internal_manager_host']:
-            stage_config['ip'] = config[SSL_INPUTS]['internal_manager_host']
-            content = json.dumps(stage_config, indent=4, sort_keys=True)
-            # Using `write_to_file` because the path belongs to the stage user,
-            # so we need to move with sudo
-            files.write_to_file(contents=content, destination=config_path)
-            common.chown(STAGE_USER, STAGE_GROUP, config_path)
-            common.chmod('640', config_path)
+        stage_config['ip'] = config[MANAGER][PRIVATE_IP]
+        content = json.dumps(stage_config, indent=4, sort_keys=True)
+        # Using `write_to_file` because the path belongs to the stage user,
+        # so we need to move with sudo
+        files.write_to_file(contents=content, destination=config_path)
+        common.chown(STAGE_USER, STAGE_GROUP, config_path)
+        common.chmod('640', config_path)
 
     def verify_started(self):
         wait_for_port(8088)

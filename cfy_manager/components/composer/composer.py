@@ -19,13 +19,14 @@ import json
 from os.path import join
 
 from ..components_constants import (
-    SSL_INPUTS,
-    SSL_ENABLED,
+    CLUSTER_JOIN,
+    PRIVATE_IP,
     SSL_CLIENT_VERIFICATION,
-    CLUSTER_JOIN
+    SSL_ENABLED,
+    SSL_INPUTS,
 )
 from ..base_component import BaseComponent
-from ..service_names import COMPOSER, POSTGRESQL_CLIENT
+from ..service_names import COMPOSER, MANAGER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...utils import (
@@ -125,9 +126,7 @@ class Composer(BaseComponent):
         # We need to use sudo to read this or we break on configure
         composer_config = json.loads(files.sudo_read(config_path))
 
-        if config[SSL_INPUTS]['internal_manager_host']:
-            composer_config['managerConfig']['ip'] = \
-                config[SSL_INPUTS]['internal_manager_host']
+        composer_config['managerConfig']['ip'] = config[MANAGER][PRIVATE_IP]
 
         certs = {
             'cert': DB_CLIENT_CERT_PATH,

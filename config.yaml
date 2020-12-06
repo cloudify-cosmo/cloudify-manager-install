@@ -22,10 +22,6 @@ manager:
   # The rest of the configuration is only required if you need to change the defaults.
   #
   ######################################################################################
-
-  # Sets whether the first time the manager's VM is booted from a Cloudify manager image
-  # its private IP will be propagated to all relevant configuration files.
-  set_manager_ip_on_boot: false
   security:
     # When enabled, the external REST communication will be performed over HTTPS
     ssl_enabled: false
@@ -520,7 +516,6 @@ ssl_inputs:
   external_ca_cert_path: ''
   external_ca_key_path: ''
   external_ca_key_password: ''
-  internal_manager_host: ''
 
 usage_collector:
   collect_cloudify_uptime:

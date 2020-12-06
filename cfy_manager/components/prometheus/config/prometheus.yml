@@ -5,15 +5,8 @@ global:
   external_labels:
     monitor: cloudify
 
-{% if 'manager_service' in services_to_install -%}
 rule_files:
-  - alerts/manager.yml
-  - alerts/postgres.yml
-  - alerts/rabbitmq.yml
-  - alerts/manager_missing.yml
-  - alerts/postgres_missing.yml
-  - alerts/rabbitmq_missing.yml
-{%- endif %}
+  - alerts/*.yml
 
 scrape_configs:
   - job_name: 'prometheus'

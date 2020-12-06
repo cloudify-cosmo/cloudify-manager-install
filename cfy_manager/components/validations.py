@@ -310,7 +310,12 @@ def _check_ssl_file(filename, kind='Key', password=None):
 
 def _check_signed_by(ca_filename, cert_filename):
     ca_check_command = [
-        'openssl', 'verify', '-CAfile', ca_filename, cert_filename
+        'openssl', 'verify',
+        '-CAfile', ca_filename,
+        # also give openssl the cert itself so that it can look up
+        # intermediaries, if any
+        '-untrusted', cert_filename,
+        cert_filename
     ]
     try:
         sudo(ca_check_command)

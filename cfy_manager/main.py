@@ -71,7 +71,6 @@ from .utils.certificates import (
 from .utils.common import (
     run,
     sudo,
-    mkdir,
     copy,
     can_lookup_hostname,
     is_installed,
@@ -643,6 +642,9 @@ def _get_components(include_components=None):
     """
     _components = []
 
+    if is_installed(ENTROPY_SERVICE):
+        _components += [components.Haveged()]
+
     if is_installed(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
 
@@ -654,7 +656,6 @@ def _get_components(include_components=None):
             components.Manager(),
             components.PostgresqlClient(),
             components.RestService(),
-            components.ManagerIpSetter(),
             components.Nginx(),
             components.Cli(),
             components.AmqpPostgres(),
@@ -671,16 +672,14 @@ def _get_components(include_components=None):
         _components += [
             components.UsageCollector(),
         ]
-        if not config[SANITY]['skip_sanity']:
-            _components += [components.Sanity()]
 
     if is_installed(MONITORING_SERVICE):
         _components += [components.Prometheus()]
         if not is_installed(MANAGER_SERVICE):
             _components += [components.Nginx()]
 
-    if is_installed(ENTROPY_SERVICE):
-        _components += [components.Haveged()]
+    if is_installed(MANAGER_SERVICE) and not config[SANITY]['skip_sanity']:
+        _components += [components.Sanity()]
 
     if include_components:
         _components = _filter_components(_components, include_components)
@@ -788,7 +787,6 @@ def _get_packages():
 
 
 def _configure_supervisord():
-    mkdir(SUPERVISORD_CONFIG_DIR)
     # These services will be relevant for using supervisord on VM not on
     # containers
     sudo('systemctl enable supervisord.service', ignore_failures=True)
@@ -1207,9 +1205,6 @@ def image_starter(verbose=False, config_file=None):
         config_write_required=False,
         config_file=config_file,
     )
-    if _are_components_configured():
-        logger.info('Components already configured - nothing to do')
-        return
     config.load_config(config_file)
     command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
     private_ip = config[MANAGER].get(PRIVATE_IP)
@@ -1271,6 +1266,7 @@ def _replace_certificates():
     if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
         # restart services that might not have been restarted
         for service_name in MGMTWORKER, AMQP_POSTGRES, STAGE, COMPOSER:
+            service_name = 'cloudify-{0}'.format(service_name)
             service.restart(service_name)
             service.verify_alive(service_name)
 

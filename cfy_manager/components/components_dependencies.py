@@ -34,7 +34,6 @@ COMPONENTS_DEPENDENCIES = {
     'Composer': ['systemd-sysv'],
     'AmqpPostgres': ['systemd-sysv'],
     'Manager': [],
-    'ManagerIpSetter': ['systemd-sysv'],
     'MgmtWorker': ['systemd-sysv'],
     'Nginx': ['systemd-sysv', 'openssl-1.0.2k'],
     'PostgresqlServer': ['systemd-sysv'],

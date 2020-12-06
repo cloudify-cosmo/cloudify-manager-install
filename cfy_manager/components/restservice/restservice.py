@@ -263,10 +263,7 @@ class RestService(BaseComponent):
             self._initialize_db(configs)
         else:
             if db.manager_is_in_db():
-                logger.warn(
-                    'Manager found in DB. Skipping DB configuration.'
-                )
-                db.create_amqp_resources(configs)
+                db.update_stored_manager(configs)
             else:
                 db.validate_schema_version(configs)
                 cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
