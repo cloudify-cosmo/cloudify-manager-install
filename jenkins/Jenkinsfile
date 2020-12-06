@@ -294,8 +294,11 @@ echo 'Run Cluster installation'
 docker exec --tty cluster1 cfy_cluster_manager install -v
 sleep 20
 echo 'Check cluster status'
-docker exec cluster1 cfy cluster status --json
-"""
+docker exec cluster1 cfy_manager wait-for-starter
+docker exec cluster2 cfy_manager wait-for-starter
+docker exec cluster3 cfy_manager wait-for-starter
+/home/centos/${env.PROJECT}/jenkins/validate_status.sh cluster1 cluster2 cluster3
+""", label: 'Prepare and run Cloudify cluster installation'
                   }
                 }
               }
