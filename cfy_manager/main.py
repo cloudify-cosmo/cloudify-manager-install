@@ -1019,6 +1019,7 @@ def start(include_components,
     _validate_components_prepared('start')
     set_globals()
     logger.notice('Starting Cloudify Manager services...')
+    service.reread()
     for component in _get_components(include_components):
         component.start()
     logger.notice('Cloudify Manager services successfully started!')
@@ -1052,6 +1053,7 @@ def restart(include_components, verbose=False, force=False, config_file=None):
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
+    service.reread()
     components = _get_components(include_components)
     for component in components:
         component.stop()

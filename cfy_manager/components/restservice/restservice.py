@@ -259,25 +259,24 @@ class RestService(BaseComponent):
         if config[CLEAN_DB]:
             db.drop_db()
 
-        if not db.check_db_exists():
-            self._initialize_db(configs)
+        if db.check_db_exists():
+            db.validate_schema_version(configs)
         else:
-            if db.manager_is_in_db():
-                db.update_stored_manager(configs)
-            else:
-                db.validate_schema_version(configs)
-                cluster_cfg_fn, rabbitmq_ca_fn = self._join_cluster(configs)
-                if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
-                    self._prepare_cluster_config_update(cluster_cfg_fn,
-                                                        rabbitmq_ca_fn)
+            self._initialize_db(configs)
+
+        managers = db.get_managers()
+        if config[MANAGER][HOSTNAME] in managers:
+            db.update_stored_manager(configs)
+        else:
+            db.insert_manager(configs)
+            if len(managers) > 0:
+                self._join_cluster(configs)
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
         self._generate_passwords()
-        certificates.handle_ca_cert(logger)
         db.prepare_db()
         db.populate_db(configs)
-        db.insert_manager(configs)
 
     def _validate_cluster_join(self):
         issues = []
@@ -319,7 +318,6 @@ class RestService(BaseComponent):
         self._validate_cluster_join()
         config[CLUSTER_JOIN] = True
         certificates.handle_ca_cert(logger, generate_if_missing=False)
-        return db.insert_manager(configs)
 
     def _generate_password(self, length=12):
         chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
@@ -513,6 +511,7 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         service.configure('cloudify-restservice')
+        certificates.handle_ca_cert(logger)
         self._configure_db()
         if is_premium_installed():
             self._join_cluster_setup()
