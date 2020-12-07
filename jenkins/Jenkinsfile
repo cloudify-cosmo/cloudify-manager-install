@@ -164,7 +164,6 @@ pipeline {
           }
           post {
             success {
-              archiveArtifacts '**/manager-rpm/*.rpm'
               echo 'Upload artifacts to S3'
               uploadToReleaseS3("${env.WORKSPACE}/manager-rpm/","${env.S3_BUILD_PATH}")
             }
