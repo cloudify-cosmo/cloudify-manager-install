@@ -85,9 +85,9 @@ pipeline {
               dir("${env.WORKSPACE}/rpms") {
                 echo 'Install requests'
                 sh 'pip install requests'
-                sh "REPOS = ['cloudify-rest-service' 'patroni' 'cloudify-premium' 'cloudify-cli' 'cloudify-agents' 'cloudify-management-worker' 'cloudify-manager-ip-setter' 'cloudify-rabbitmq']"
+                sh "$REPOS = ['cloudify-rest-service' 'patroni' 'cloudify-premium' 'cloudify-cli' 'cloudify-agents' 'cloudify-management-worker' 'cloudify-manager-ip-setter' 'cloudify-rabbitmq']"
                 echo 'Fetch RPM built on Jenkins located on S3'
-                fetchRpms('REPOS')
+                fetchRpms("${REPOS}")
               }
             }
           }
@@ -109,7 +109,8 @@ pipeline {
                   yum-builddep -y packaging/install_rpm.spec
                   '''
                 echo 'build rpms'
-                sh "FILES = ['prometheus' 'prometheus_node_exporter' 'prometheus_postgres_exporter' 'prometheus_blackbox_exporter']"
+                sh "$FILES = ['prometheus' 'prometheus_node_exporter' 'prometheus_postgres_exporter' 'prometheus_blackbox_exporter']"
+                buildPromRpms("${FILES}")
                 sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf /root/rpmbuild/RPMS/x86_64/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
               }
             }
