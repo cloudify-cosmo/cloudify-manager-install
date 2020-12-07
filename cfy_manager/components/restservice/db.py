@@ -300,6 +300,13 @@ def update_stored_manager(configs=None):
     logger.notice('AMQP resources successfully created')
 
 
+def get_monitoring_config():
+    output = run_script('get_monitoring_config.py', configs={
+        'rest_config': constants.REST_CONFIG_PATH,
+    })
+    return json.loads(output)
+
+
 def check_db_exists():
     # Get the list of databases
     result = run_psql_command(

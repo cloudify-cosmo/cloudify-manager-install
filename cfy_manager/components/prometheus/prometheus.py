@@ -51,6 +51,7 @@ from ...constants import (
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
 )
+from ..restservice.db import get_monitoring_config
 from ...logger import get_logger
 from ...exceptions import ValidationError
 from ...utils import common, db, files, service, certificates
@@ -312,25 +313,6 @@ def _update_config():
             return config[CONSTANTS]['postgresql_ca_cert_path']
         return ''
 
-    def update_cluster_details(file_name):
-        with open(file_name, 'r') as fp:
-            cluster_cfg = json.load(fp)
-        if (cluster_cfg.get(POSTGRESQL_SERVER, {}).get('cluster',
-                                                       {}).get('nodes') and
-                not config.get(POSTGRESQL_SERVER, {}).get('cluster',
-                                                          {}).get('nodes')):
-            config[POSTGRESQL_SERVER]['cluster'].update({
-                'nodes': cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
-            })
-        if (cluster_cfg.get(RABBITMQ, {}).get('ca_path') and
-                not config.get(RABBITMQ, {}).get('ca_path')):
-            config[RABBITMQ]['ca_path'] = cluster_cfg[RABBITMQ]['ca_path']
-        if (cluster_cfg.get(RABBITMQ, {}).get('cluster_members') and
-                not config.get(RABBITMQ, {}).get('cluster_members')):
-            config[RABBITMQ].update({
-                'cluster_members': cluster_cfg[RABBITMQ]['cluster_members']
-            })
-
     logger.notice('Updating Prometheus configuration...')
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('ip_address' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
@@ -357,9 +339,23 @@ def _update_config():
         config[PROMETHEUS][BLACKBOX_EXPORTER].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
-    if files.is_file(CLUSTER_DETAILS_PATH):
-        update_cluster_details(CLUSTER_DETAILS_PATH)
-        files.remove(CLUSTER_DETAILS_PATH, ignore_failure=True)
+    if _installing_manager():
+        cluster_cfg = get_monitoring_config()
+        if (cluster_cfg.get(POSTGRESQL_SERVER, {}).get('cluster',
+                                                       {}).get('nodes') and
+                not config.get(POSTGRESQL_SERVER, {}).get('cluster',
+                                                          {}).get('nodes')):
+            config[POSTGRESQL_SERVER]['cluster'].update({
+                'nodes': cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
+            })
+        if (cluster_cfg.get('RABBITMQ', {}).get('ca_path') and
+                not config.get(RABBITMQ, {}).get('ca_path')):
+            config[RABBITMQ]['ca_path'] = cluster_cfg[RABBITMQ]['ca_path']
+        if (cluster_cfg.get(RABBITMQ, {}).get('cluster_members') and
+                not config.get(RABBITMQ, {}).get('cluster_members')):
+            config[RABBITMQ].update({
+                'cluster_members': cluster_cfg[RABBITMQ]['cluster_members']
+            })
 
 
 def _update_prometheus_configuration(uninstalling=False):
