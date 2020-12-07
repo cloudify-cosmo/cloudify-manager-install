@@ -69,7 +69,7 @@ pipeline {
                 echo 'Install requests'
                 sh 'pip install requests'
                 sh script:"""
-                  for repo in "cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq"; do
+                  for repo in cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq; do
                     echo "fetching \$repo RPM"
                     curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
                   done
@@ -96,7 +96,7 @@ pipeline {
                   '''
                 echo 'build rpms'
                 sh """
-                  for file in "prometheus prometheus_node_exporter prometheus_postgres_exporter prometheus_blackbox_exporter"; do
+                  for file in prometheus prometheus_node_exporter prometheus_postgres_exporter prometheus_blackbox_exporter; do
                     echo "build \$file rpm"
                     rpmbuild -bb packaging/\$file.spec
                   done
