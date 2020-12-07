@@ -1,3 +1,20 @@
+def fetchRpms(List repos) {
+  for (repo in repos) {
+    sh """
+      echo "fetching ${repo} RPM"
+      curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/${repo}-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+      """
+  }
+}
+def buildPromRpms(List files) {
+  for (file in files) {
+    sh """
+      echo "build ${file} rpm"
+      rpmbuild -bb packaging/${file}.spec
+      """
+  }
+}
+
 def configuration = [vaultUrl: "${VAULT_URL}",  vaultCredentialId: "vault-app-role", engineVersion: 2]
 
 def secrets = [
@@ -68,14 +85,9 @@ pipeline {
               dir("${env.WORKSPACE}/rpms") {
                 echo 'Install requests'
                 sh 'pip install requests'
-                sh script:"""
-                  REPOS = "cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq"
-                  for repo in $REPOS
-                  do
-                    echo "fetching $repo RPM"
-                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  done
-                  """, label: 'Fetch RPM built on Jenkins located on S3'
+                sh "REPOS = ['cloudify-rest-service' 'patroni' 'cloudify-premium' 'cloudify-cli' 'cloudify-agents' 'cloudify-management-worker' 'cloudify-manager-ip-setter' 'cloudify-rabbitmq']"
+                echo 'Fetch RPM built on Jenkins located on S3'
+                fetchRpms('REPOS')
               }
             }
           }
@@ -97,14 +109,7 @@ pipeline {
                   yum-builddep -y packaging/install_rpm.spec
                   '''
                 echo 'build rpms'
-                sh """
-                  $FILES = "prometheus prometheus_node_exporter prometheus_postgres_exporter prometheus_blackbox_exporter"
-                  for file in $FILES
-                  do
-                    echo "build $file rpm"
-                    rpmbuild -bb packaging/$file.spec
-                  done
-                  """
+                sh "FILES = ['prometheus' 'prometheus_node_exporter' 'prometheus_postgres_exporter' 'prometheus_blackbox_exporter']"
                 sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf /root/rpmbuild/RPMS/x86_64/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
               }
             }
