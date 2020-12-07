@@ -40,8 +40,6 @@ logger = \
     logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper()))
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
-RETURN_DICT = {}
-
 
 def _init_db_tables(db_migrate_dir):
     logger.info('Setting up a Flask app')
@@ -189,42 +187,6 @@ def _add_provider_context(context):
     sm.put(provider_context)
 
 
-def _add_manager_status_reporter_user():
-    logger.info('Creating the Manager Status Reporter user, default tenant '
-                'and security roles')
-    user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['manager_status_reporter_username'],
-        script_config['manager_status_reporter_password'],
-        script_config['manager_status_reporter_role'],
-        script_config['manager_status_reporter_user_id']
-    )
-    RETURN_DICT['manager_status_reporter_token'] = user.api_token
-
-
-def _add_broker_status_reporter_user():
-    logger.info('Creating the Queue Status Reporter user, default tenant and '
-                'security roles')
-    user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['broker_status_reporter_username'],
-        script_config['broker_status_reporter_password'],
-        script_config['broker_status_reporter_role'],
-        script_config['broker_status_reporter_user_id']
-    )
-    RETURN_DICT['broker_status_reporter_token'] = user.api_token
-
-
-def _add_db_status_reporter_user():
-    logger.info('Creating the DB Status Reporter user, default tenant and '
-                'security roles')
-    user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['db_status_reporter_username'],
-        script_config['db_status_reporter_password'],
-        script_config['db_status_reporter_role'],
-        script_config['db_status_reporter_user_id']
-    )
-    RETURN_DICT['db_status_reporter_token'] = user.api_token
-
-
 def file_path(path):
     if os.path.exists(path):
         return path
@@ -261,15 +223,6 @@ if __name__ == '__main__':
             and script_config.get('admin_password')):
         amqp_manager = _get_amqp_manager(script_config)
         _add_default_user_and_tenant(amqp_manager, script_config)
-    if (script_config.get('manager_status_reporter_username')
-            and script_config.get('manager_status_reporter_password')):
-        _add_manager_status_reporter_user()
-    if (script_config.get('broker_status_reporter_username')
-            and script_config.get('broker_status_reporter_password')):
-        _add_broker_status_reporter_user()
-    if (script_config.get('db_status_reporter_username')
-            and script_config.get('db_status_reporter_password')):
-        _add_db_status_reporter_user()
     if script_config.get('config'):
         _insert_config(script_config['config'])
     if script_config.get('rabbitmq_brokers'):
@@ -285,5 +238,3 @@ if __name__ == '__main__':
         _insert_db_nodes(script_config['db_nodes'])
     if script_config.get('usage_collector'):
         _insert_usage_collector(script_config['usage_collector'])
-
-    print(json.dumps(RETURN_DICT))

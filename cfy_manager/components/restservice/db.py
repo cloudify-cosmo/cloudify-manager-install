@@ -284,12 +284,7 @@ def _get_manager():
 def insert_manager(configs):
     logger.notice('Registering manager in the DB...')
     args = {'manager': _get_manager()}
-    out = run_script('create_tables_and_add_defaults.py', args, configs)
-    if out:
-        out_dict = json.loads(out)
-        if 'cluster_nodes_config' in out_dict:
-            return (out_dict.get('cluster_nodes_config'),
-                    out_dict.get('rabbitmq_ca_cert_path'),)
+    run_script('create_tables_and_add_defaults.py', args, configs)
 
 
 def update_stored_manager(configs=None):
