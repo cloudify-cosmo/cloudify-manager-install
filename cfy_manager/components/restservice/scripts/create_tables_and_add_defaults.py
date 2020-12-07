@@ -17,7 +17,6 @@
 from __future__ import print_function
 
 import os
-from os.path import isfile
 import sys
 import json
 import atexit
@@ -40,8 +39,6 @@ logging.basicConfig(
 logger = \
     logging.getLogger('[{0}]'.format('create_tables_and_add_defaults'.upper()))
 CA_CERT_PATH = '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
-
-RETURN_DICT = {}
 
 
 def _init_db_tables(db_migrate_dir):
@@ -168,35 +165,6 @@ def _insert_manager(config):
     sm.put(inst)
 
 
-def _prepare_config_for_monitoring():
-    sm = get_storage_manager()
-    cfg = {}
-    rabbitmq_nodes = sm.list(models.RabbitMQBroker)
-    if len(rabbitmq_nodes) > 0:
-        tmp_ca_cert_path = rabbitmq_nodes[0].write_ca_cert()
-        if isfile(tmp_ca_cert_path):
-            RETURN_DICT['rabbitmq_ca_cert_path'] = tmp_ca_cert_path
-        cfg['rabbitmq'] = {
-            'cluster_members': {}
-        }
-        for node in rabbitmq_nodes:
-            cfg['rabbitmq']['cluster_members'][node.name] = {
-                'networks': {'default': node.private_ip}
-            }
-    postgresql_server_nodes = sm.list(models.DBNodes)
-    if len(postgresql_server_nodes) > 0:
-        cfg['postgresql_server'] = {'cluster': {'nodes': {}}}
-        for node in postgresql_server_nodes:
-            cfg['postgresql_server']['cluster']['nodes'][node.name] = {
-                'ip': node.private_ip
-            }
-    if not cfg:
-        return
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as fp:
-        json.dump(cfg, fp)
-        RETURN_DICT['cluster_nodes_config'] = fp.name
-
-
 def _insert_cert(cert, name):
     sm = get_storage_manager()
     inst = models.Certificate(
@@ -217,42 +185,6 @@ def _add_provider_context(context):
         context=context
     )
     sm.put(provider_context)
-
-
-def _add_manager_status_reporter_user():
-    logger.info('Creating the Manager Status Reporter user, default tenant '
-                'and security roles')
-    user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['manager_status_reporter_username'],
-        script_config['manager_status_reporter_password'],
-        script_config['manager_status_reporter_role'],
-        script_config['manager_status_reporter_user_id']
-    )
-    RETURN_DICT['manager_status_reporter_token'] = user.api_token
-
-
-def _add_broker_status_reporter_user():
-    logger.info('Creating the Queue Status Reporter user, default tenant and '
-                'security roles')
-    user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['broker_status_reporter_username'],
-        script_config['broker_status_reporter_password'],
-        script_config['broker_status_reporter_role'],
-        script_config['broker_status_reporter_user_id']
-    )
-    RETURN_DICT['broker_status_reporter_token'] = user.api_token
-
-
-def _add_db_status_reporter_user():
-    logger.info('Creating the DB Status Reporter user, default tenant and '
-                'security roles')
-    user = storage_utils.create_status_reporter_user_and_assign_role(
-        script_config['db_status_reporter_username'],
-        script_config['db_status_reporter_password'],
-        script_config['db_status_reporter_role'],
-        script_config['db_status_reporter_user_id']
-    )
-    RETURN_DICT['db_status_reporter_token'] = user.api_token
 
 
 def file_path(path):
@@ -291,15 +223,6 @@ if __name__ == '__main__':
             and script_config.get('admin_password')):
         amqp_manager = _get_amqp_manager(script_config)
         _add_default_user_and_tenant(amqp_manager, script_config)
-    if (script_config.get('manager_status_reporter_username')
-            and script_config.get('manager_status_reporter_password')):
-        _add_manager_status_reporter_user()
-    if (script_config.get('broker_status_reporter_username')
-            and script_config.get('broker_status_reporter_password')):
-        _add_broker_status_reporter_user()
-    if (script_config.get('db_status_reporter_username')
-            and script_config.get('db_status_reporter_password')):
-        _add_db_status_reporter_user()
     if script_config.get('config'):
         _insert_config(script_config['config'])
     if script_config.get('rabbitmq_brokers'):
@@ -315,7 +238,3 @@ if __name__ == '__main__':
         _insert_db_nodes(script_config['db_nodes'])
     if script_config.get('usage_collector'):
         _insert_usage_collector(script_config['usage_collector'])
-    if script_config.get('manager'):
-        _prepare_config_for_monitoring()
-
-    print(json.dumps(RETURN_DICT))

@@ -19,7 +19,7 @@ import uuid
 import pkg_resources
 from contextlib import contextmanager
 
-from ..restservice.db import get_manager_count
+from ..restservice.db import get_managers
 from ..base_component import BaseComponent
 from ..service_names import SANITY
 from ...logger import get_logger
@@ -85,7 +85,7 @@ class Sanity(BaseComponent):
     def configure(self):
         # This is start-like, but should only happen at install time, so it
         # is using configure instead
-        if get_manager_count() > 1:
+        if len(get_managers()) > 1:
             logger.notice('Not running the sanity check: part of a cluster')
             return
         with self.sanity_check_mode():

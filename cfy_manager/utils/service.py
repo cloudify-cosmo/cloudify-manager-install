@@ -181,6 +181,9 @@ class SystemD(object):
             ignore_failure=True
         ).aggr_stdout.strip()
 
+    def reread(self):
+        return self.systemctl('daemon-reload')
+
 
 class Supervisord(object):
     def supervisorctl(
@@ -310,6 +313,9 @@ class Supervisord(object):
         if service_file:
             remove_file(self.get_service_config_file_path(service_name))
 
+    def reread(self):
+        return self.supervisorctl('reread')
+
 
 def _get_service_type():
     service_type = config.get('service_management')
@@ -358,6 +364,11 @@ def remove(service_name, service_file=True):
 def reload(service_name, ignore_failure=False):
     logger.debug('Reloading service {0}...'.format(service_name))
     return _get_backend().reload(service_name, ignore_failure=ignore_failure)
+
+
+def reread():
+    logger.debug('Reloading service files...')
+    return _get_backend().reread()
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1000)
