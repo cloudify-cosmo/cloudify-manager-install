@@ -69,14 +69,12 @@ pipeline {
                 echo 'Install requests'
                 sh 'pip install requests'
                 sh script:"""
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rest-service-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-premium-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-cli-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-management-worker-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-manager-ip-setter-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  REPOS = "cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq"
+                  for repo in $REPOS
+                  do
+                    echo "fetching $repo RPM"
+                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                  done
                   """, label: 'Fetch RPM built on Jenkins located on S3'
               }
             }
@@ -99,12 +97,14 @@ pipeline {
                   yum-builddep -y packaging/install_rpm.spec
                   '''
                 echo 'build rpms'
-                sh '''
-                  rpmbuild -bb packaging/prometheus.spec
-                  rpmbuild -bb packaging/prometheus_node_exporter.spec
-                  rpmbuild -bb packaging/prometheus_blackbox_exporter.spec
-                  rpmbuild -bb packaging/prometheus_postgres_exporter.spec
-                  '''
+                sh """
+                  $FILES = "prometheus prometheus_node_exporter prometheus_postgres_exporter prometheus_blackbox_exporter"
+                  for file in $FILES
+                  do
+                    echo "build $file rpm"
+                    rpmbuild -bb packaging/$file.spec
+                  done
+                  """
                 sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf /root/rpmbuild/RPMS/x86_64/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
               }
             }
