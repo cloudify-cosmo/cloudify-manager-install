@@ -1,0 +1,105 @@
+# Your private key local path to connect to all hosts
+ssh_key_path: '~/pkey.pem'
+
+# The hosts' username, e.g. centos
+ssh_user: 'root'
+
+# Local path to a valid Cloudify license
+cloudify_license_path: '~/Dev-PS_cloudify_license.yaml'
+
+# Manager RPM to install on the cluster instances
+manager_rpm_path: 'http://repository.cloudifysource.org/cloudify/5.1.0/ga-release/cloudify-manager-install-5.1.0ga.rpm'
+
+ldap:
+  # This should include the protocol and port,
+  # e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636
+  server: ''
+  
+  # The domain, e.g. example.local
+  domain: ''
+
+  # True if Active Directory will be used as the LDAP authenticator
+  is_active_directory:
+
+  # This must be provided if the server is using ldaps://
+  ca_cert: ''
+
+  # Username and password should only be entered if absolutely required
+  # by the ldap service.
+  username: ''
+  password: ''
+
+  # Any extra LDAP information (separated by the `;` sign. e.g. a=1;b=2)
+  dn_extra: ''
+
+# If specified, all the VMs certificates will need to be specified as well
+ca_cert_path: ''
+
+# If using a load-balancer, please provide its IP
+load_balancer_ip: ''
+
+# In case you are using a 3 nodes cluster, just fill in the `manager` items
+# Otherwise, fill in all items
+existing_vms:
+    node-1:
+      private_ip: '172.12.0.3'
+      public_ip: ''  # If not specified, will default to the private-ip
+      hostname: ''   # As specified in the certificate (if specified). Optional
+      cert_path: ''  # Need to be supplied if ca_cert_path was supplied
+      key_path: ''  # Need to be supplied if ca_cert_path was supplied
+      config_path:
+        manager_config_path: ''
+        postgresql_config_path: ''
+        rabbitmq_config_path: ''
+
+    node-2:
+      private_ip: '172.12.0.4'
+      public_ip: ''  # If not specified, will default to the private-ip
+      hostname: ''   # As specified in the certificate (if specified). Optional
+      cert_path: ''  # Need to be supplied if ca_cert_path was supplied
+      key_path: ''  # Need to be supplied if ca_cert_path was supplied
+      config_path:
+        manager_config_path: ''
+        postgresql_config_path: ''
+        rabbitmq_config_path: ''
+
+    node-3:
+      private_ip: '172.12.0.5'
+      public_ip: ''  # If not specified, will default to the private-ip
+      hostname: ''   # As specified in the certificate (if specified). Optional
+      cert_path: ''  # Need to be supplied if ca_cert_path was supplied
+      key_path: ''  # Need to be supplied if ca_cert_path was supplied
+      config_path:
+        manager_config_path: ''
+        postgresql_config_path: ''
+        rabbitmq_config_path: ''
+
+# If the credentials are not specified, random ones will be used and written to a dedicated file
+credentials:
+  manager:
+    admin_username: 'admin'
+    admin_password: 'admin'
+
+  postgresql:
+    postgres_password: ''
+    cluster:
+      etcd:
+        cluster_token: ''
+        root_password: ''
+        patroni_password: ''
+      patroni:
+        rest_password: ''
+      postgres:
+        replicator_password: ''
+    db_monitoring:
+      username: ''
+      password: ''
+
+  rabbitmq:
+    username: ''
+    password: ''
+    erlang_cookie: ''
+
+  prometheus:
+    username: ''
+    password: ''
