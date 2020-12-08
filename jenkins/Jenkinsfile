@@ -187,9 +187,9 @@ pipeline {
                       pip install cloudify==5.1.0
                       cfy profile use ${env.OS_IP} -u ${env.OS_USERNAME} -p ${env.OS_PASSWORD} -t ${env.OS_TENANT}
                       pushd 'bp'
-                        cfy install -b ec2-manager-install-blueprint-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
+                        cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
                       popd
-                      cfy deployments capabilities ec2-manager-install-blueprint-${env.BUILD_NUMBER} --json > capabilities.json
+                      cfy deployments capabilities ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --json > capabilities.json
                       echo -e \$(cat capabilities.json | jq '.key_content.value' | tr -d '"') > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
                       sleep 160
                       ssh-keyscan -H \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') >> ~/.ssh/known_hosts
@@ -305,7 +305,7 @@ echo 'Check cluster status'
               echo 'Uninstall and delete blueprint from manager'
               sh """#!/bin/bash
                 source .venv/bin/activate
-                cfy uninstall ec2-manager-install-blueprint-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
+                cfy uninstall ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
               """
             }
           }

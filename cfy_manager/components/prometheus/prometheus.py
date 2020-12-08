@@ -339,7 +339,7 @@ def _update_config():
         config[PROMETHEUS][BLACKBOX_EXPORTER].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
-    if _installing_manager():
+    if common.is_manager_service_only_installed():
         cluster_cfg = get_monitoring_config()
         if (cluster_cfg.get(POSTGRESQL_SERVER, {}).get('cluster',
                                                        {}).get('nodes') and
