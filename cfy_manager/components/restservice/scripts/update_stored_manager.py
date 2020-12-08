@@ -26,7 +26,7 @@ def _get_amqp_manager():
     )
 
 
-def _update_manager_cert(sm, manager, new_cert_value):
+def _update_cert(sm, manager, broker, new_cert_value):
     old_cert = manager.ca_cert
     if old_cert.value == new_cert_value:
         return
@@ -38,6 +38,8 @@ def _update_manager_cert(sm, manager, new_cert_value):
         _updater_id=0
     )
     manager.ca_cert = new_cert
+    if broker:
+        broker.ca_cert = new_cert
     if not old_cert.managers and not old_cert.rabbitmq_brokers:
         sm.delete(old_cert)
 
@@ -51,14 +53,36 @@ def main(new_manager):
 
     hostname = new_manager['hostname']
     manager = sm.get(models.Manager, None, filters={'hostname': hostname})
+    broker = sm.get(models.RabbitMQBroker, None, filters={
+        'name': hostname,
+        'host': manager.private_ip
+    })
+    db_node = sm.get(models.DBNodes, None, filters={
+        'name': hostname,
+        'host': manager.private_ip
+    })
     for attr in ['private_ip', 'public_ip', 'networks',
                  'monitoring_username', 'monitoring_password']:
         setattr(manager, attr, new_manager[attr])
 
-    if new_manager.get('ca_cert'):
-        _update_manager_cert(sm, manager, new_manager['ca_cert'])
-
     sm.update(manager)
+    if broker:
+        broker.host = manager.private_ip
+        broker.networks = manager.networks
+        broker.monitoring_username = manager.monitoring_username
+        broker.monitoring_password = manager.monitoring_password
+        sm.update(broker)
+
+    if db_node:
+        db_node.host = manager.private_ip
+        db_node.monitoring_username = manager.monitoring_username
+        db_node.monitoring_password = manager.monitoring_password
+        sm.update(db_node)
+
+    if new_manager.get('ca_cert'):
+        _update_cert(sm, manager, broker, new_manager['ca_cert'])
+
+    config.instance.load_configuration()
     if controller:
         controller.add_manager(sm.list(models.Manager))
     if agents:
