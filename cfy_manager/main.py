@@ -597,8 +597,9 @@ def _create_initial_configure_files():
             touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
 
-def _finish_configuration(only_install):
-    config.dump_config()
+def _finish_configuration(only_install, save_config=True):
+    if save_config and config.get('save_config', True):
+        config.dump_config()
     remove_temp_files()
     _create_initial_install_files()
     if not only_install:
@@ -864,6 +865,7 @@ def configure(verbose=False,
               public_ip=None,
               admin_password=None,
               config_file=None,
+              skip_config_save=False,
               clean_db=False):
     """ Configure Cloudify Manager """
 
@@ -894,7 +896,7 @@ def configure(verbose=False,
 
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
-    _finish_configuration(only_install=False)
+    _finish_configuration(only_install=False, save_config=not skip_config_save)
 
 
 def _all_main_services_removed():
@@ -1208,7 +1210,8 @@ def image_starter(verbose=False, config_file=None):
         config_file=config_file,
     )
     config.load_config(config_file)
-    command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
+    command = [sys.executable, '-m', 'cfy_manager.main', 'configure',
+               '--skip-config-save']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()

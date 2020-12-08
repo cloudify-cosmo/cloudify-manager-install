@@ -288,7 +288,7 @@ def insert_manager(configs):
 
 
 def update_stored_manager(configs=None):
-    logger.notice('Creating AMQP resources...')
+    logger.notice('Updating stored manager...')
     args = {'manager': _get_manager()}
 
     run_script('update_stored_manager.py', args, configs=configs)
