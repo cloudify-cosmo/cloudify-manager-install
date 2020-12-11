@@ -42,10 +42,12 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
                                   db_override=None):
     base_command = []
     pg_config = config[POSTGRESQL_CLIENT]
+    pg_cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
     peer_authentication = False
 
-    if is_all_in_one_manager():
+    if is_installed(DATABASE_SERVICE) and not pg_cluster_nodes:
         # In case the default user is postgres and we're in AIO installation,
+        # or if we're installing a single database node,
         # "peer" authentication is used
         if pg_config['server_username'] == 'postgres':
             base_command.extend(['-u', 'postgres'])
