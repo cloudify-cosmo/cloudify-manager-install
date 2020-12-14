@@ -116,7 +116,7 @@ class Manager(BaseComponent):
             join(self._get_exec_tempdir(), 'cloudify-ctx'),
         ])
         # Remove syncthing so a reinstall of a cluster node can work
-        service.remove('syncthing')
+        service.remove('cloudify-syncthing')
         remove_files([
             '/opt/syncthing',
         ])

@@ -15,6 +15,7 @@ SECURITY_CONFIG_PATH = "/opt/manager/rest-security.conf"
 def _update_admin_password(new_password):
     """Update the admin user's password."""
     with setup_flask_app().app_context():
+        config.instance.load_configuration()
         user = user_datastore.get_user('admin')
         user.password = hash_password(new_password)
         # Unlock account
@@ -34,5 +35,4 @@ if __name__ == '__main__':
 
     config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
     config.instance.load_from_file(SECURITY_CONFIG_PATH, namespace='security')
-    config.instance.load_configuration()
     _update_admin_password(args.new_password)
