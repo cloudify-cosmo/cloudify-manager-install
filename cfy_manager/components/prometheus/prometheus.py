@@ -178,7 +178,8 @@ class Prometheus(BaseComponent):
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration()
-        service.configure(PROMETHEUS)
+        extra_conf = _prometheus_additional_configuration()
+        service.configure(PROMETHEUS, external_configure_params=extra_conf)
         service.reload(PROMETHEUS, ignore_failure=True)
         for exporter in _prometheus_exporters():
             service.configure(
@@ -615,6 +616,24 @@ def _deploy_exporters_configuration():
         for file_name, dest_file_name in exporter['deploy_config'].items():
             files.deploy(join(CONFIG_DIR, file_name), dest_file_name)
             common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, dest_file_name)
+
+
+def _prometheus_additional_configuration():
+    return {
+        'prometheus_query_lookback_delta':
+            _calculate_lookback_delta_for(config['prometheus']
+                                          .get('scrape_interval', ))
+    }
+
+
+def _calculate_lookback_delta_for(scrape_interval):
+    scrape_interval = '{0}'.format(scrape_interval).lower() if scrape_interval\
+        else ''
+    m = re.match(r'^((\d+)s)?((\d+)ms)?', scrape_interval)
+    if not m or not m.lastindex or m.lastindex < 1:
+        return '40s'
+    scrape_seconds = int(m[2] or 0) + 0.001 * int(m[4] or 0)
+    return '{0:d}s'.format(round(2.7 * scrape_seconds))
 
 
 def _get_managers_list():
