@@ -37,6 +37,7 @@ def _update_manager_networks(hostname, networks, with_broker=False):
     :param networks: a dict containing the new networks
     """
     with setup_flask_app().app_context():
+        config.instance.load_configuration()
         sm = get_storage_manager()
 
         filters = {}
@@ -80,6 +81,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
-    config.instance.load_configuration()
     _update_manager_networks(
         args.hostname, json.loads(args.networks), with_broker=args.broker)

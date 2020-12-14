@@ -45,7 +45,7 @@ def update_cert(cert_path, name):
 
 
 def init_flask_app():
-    config.instance.load_configuration()
+    config.instance.load_configuration(from_db=False)
     setup_flask_app(
         manager_ip=config.instance.postgresql_host,
         hash_salt=config.instance.security_hash_salt,
