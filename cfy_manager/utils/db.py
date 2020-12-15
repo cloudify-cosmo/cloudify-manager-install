@@ -64,6 +64,9 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
 
     db_env = generate_db_env(db_name, logger, **db_kwargs)
 
+    if peer_authentication:
+        db_env.pop('PGHOST')
+
     return db_env, base_command
 
 
