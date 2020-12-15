@@ -12,6 +12,7 @@ Group=cfyuser
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/prometheus \
   --config.file=/etc/prometheus/prometheus.yml \
+  --query.lookback-delta={{ prometheus_query_lookback_delta }} \
   --storage.tsdb.path=/var/lib/prometheus \
   --web.console.templates=/etc/prometheus/consoles \
   --web.console.libraries=/etc/prometheus/console_libraries \
