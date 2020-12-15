@@ -619,6 +619,12 @@ def _deploy_exporters_configuration():
 
 
 def _prometheus_additional_configuration():
+    # The prometheus_query_lookback_delta is used to render Prometheus'
+    # `query.lookback-delta` flag.  The flag defines the maximum lookback
+    # duration for retrieving metrics during expression evaluations and
+    # federation.  The default value (5 minutes) might be too long to find out
+    # about a missing cluster node.  The code here causes the cluster to become
+    # accurate more quickly when a node is lost.
     return {
         'prometheus_query_lookback_delta':
             _calculate_lookback_delta_for(config['prometheus']
@@ -629,6 +635,7 @@ def _prometheus_additional_configuration():
 def _calculate_lookback_delta_for(scrape_interval):
     scrape_interval = '{0}'.format(scrape_interval).lower() if scrape_interval\
         else ''
+    # The scrape interval is expected to be in the form of 5s, 900ms or 2s500ms
     m = re.match(r'^((\d+)s)?((\d+)ms)?', scrape_interval)
     if not m or not m.lastindex or m.lastindex < 1:
         return '40s'
