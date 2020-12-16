@@ -8,24 +8,16 @@ from manager_rest.flask_utils import setup_flask_app
 
 def _prepare_config_for_monitoring():
     sm = get_storage_manager()
-    cfg = {}
-    rabbitmq_nodes = sm.list(models.RabbitMQBroker)
-    if len(rabbitmq_nodes) > 0:
-        cfg['rabbitmq'] = {
-            'cluster_members': {}
-        }
-        for node in rabbitmq_nodes:
-            cfg['rabbitmq']['cluster_members'][node.name] = {
-                'networks': {'default': node.private_ip}
-            }
-    postgresql_server_nodes = sm.list(models.DBNodes)
-    if len(postgresql_server_nodes) > 0:
-        cfg['postgresql_server'] = {'cluster': {'nodes': {}}}
-        for node in postgresql_server_nodes:
-            cfg['postgresql_server']['cluster']['nodes'][node.name] = {
-                'ip': node.private_ip
-            }
-    return cfg
+    rabbitmq_nodes = {
+        node.name: node.private_ip for node in sm.list(models.RabbitMQBroker)
+    }
+    db_nodes = {
+        node.name: node.private_ip for node in sm.list(models.DBNodes)
+    }
+    return {
+        'rabbitmq_nodes': rabbitmq_nodes,
+        'db_nodes': db_nodes
+    }
 
 
 if __name__ == '__main__':

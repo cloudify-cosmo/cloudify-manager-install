@@ -348,20 +348,26 @@ def _get_cluster_config():
     in the db (on manager-only nodes).
     """
     try:
-        db_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
+        db_nodes = {
+            name: node['ip'] for name, node in
+            config[POSTGRESQL_SERVER]['cluster']['nodes'].items()
+        }
     except KeyError:
         db_nodes = []
     try:
-        rabbitmq_nodes = config[RABBITMQ]['cluster_members']
+        rabbitmq_nodes = {
+            name: node['networks']['default'] for name, node in
+            config[RABBITMQ]['cluster_members'].items()
+        }
     except KeyError:
         rabbitmq_nodes = []
 
     if common.is_manager_service_only_installed():
         cluster_cfg = get_monitoring_config()
         if not db_nodes:
-            db_nodes = cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
+            db_nodes = cluster_cfg['db_nodes']
         if not rabbitmq_nodes:
-            rabbitmq_nodes = cluster_cfg[RABBITMQ]['cluster_members']
+            rabbitmq_nodes = cluster_cfg['rabbitmq_nodes']
 
     return {
         'db_nodes': db_nodes,
@@ -484,14 +490,14 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
 
         # Monitor remote rabbit nodes
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, rabbit in cluster_config['rabbitmq_nodes'].items():
-            target = host if use_rabbit_host else rabbit['networks']['default']
+        for host, rabbit_ip in cluster_config['rabbitmq_nodes'].items():
+            target = host if use_rabbit_host else rabbit_ip
             if not (_installing_rabbit() and target == private_ip):
                 rabbit_targets.append(target + ':' + monitoring_port)
 
         # Monitor remote postgres nodes
-        for node in cluster_config['db_nodes'].values():
-            postgres_targets.append(node['ip'] + ':' + monitoring_port)
+        for db_ip in cluster_config['db_nodes'].values():
+            postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
         if config.get(CLUSTER_JOIN):
@@ -570,15 +576,14 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
             manager_hosts.append(config[MANAGER][PRIVATE_IP])
 
         if cluster_config['db_nodes']:
-            for node in cluster_config['db_nodes'].values():
-                postgres_hosts.append(node['ip'])
+            for db_ip in cluster_config['db_nodes'].values():
+                postgres_hosts.append(db_ip)
         else:
             postgres_hosts.append(config[MANAGER][PRIVATE_IP])
 
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, rabbit in cluster_config['rabbitmq_nodes'].items():
-            rabbitmq_hosts.append(host if use_rabbit_host
-                                  else rabbit['networks']['default'])
+        for host, rabbit_ip in cluster_config['rabbitmq_nodes'].items():
+            rabbitmq_hosts.append(host if use_rabbit_host else rabbit_ip)
 
     for alert_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} alerts...'.format(alert_group))
