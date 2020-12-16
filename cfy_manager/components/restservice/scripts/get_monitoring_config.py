@@ -11,9 +11,7 @@ def _prepare_config_for_monitoring():
     cfg = {}
     rabbitmq_nodes = sm.list(models.RabbitMQBroker)
     if len(rabbitmq_nodes) > 0:
-        tmp_ca_cert_path = rabbitmq_nodes[0].write_ca_cert()
         cfg['rabbitmq'] = {
-            'ca_path': tmp_ca_cert_path,
             'cluster_members': {}
         }
         for node in rabbitmq_nodes:

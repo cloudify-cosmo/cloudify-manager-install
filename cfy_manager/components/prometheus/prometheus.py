@@ -352,10 +352,6 @@ def _get_cluster_config():
     except KeyError:
         db_nodes = []
     try:
-        rabbitmq_ca = config[RABBITMQ]['ca_path']
-    except KeyError:
-        rabbitmq_ca = None
-    try:
         rabbitmq_nodes = config[RABBITMQ]['cluster_members']
     except KeyError:
         rabbitmq_nodes = []
@@ -364,19 +360,11 @@ def _get_cluster_config():
         cluster_cfg = get_monitoring_config()
         if not db_nodes:
             db_nodes = cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
-        if not rabbitmq_ca:
-            rabbitmq_ca = join(PROMETHEUS_CONFIG_DIR, 'rabbitmq_ca.pem')
-            common.move(
-                cluster_cfg[RABBITMQ]['ca_path'],
-                rabbitmq_ca
-            )
-            common.chown('cfyuser', 'cfyuser', rabbitmq_ca)
         if not rabbitmq_nodes:
             rabbitmq_nodes = cluster_cfg[RABBITMQ]['cluster_members']
 
     return {
         'db_nodes': db_nodes,
-        'rabbitmq_ca': rabbitmq_ca,
         'rabbitmq_nodes': rabbitmq_nodes
     }
 
