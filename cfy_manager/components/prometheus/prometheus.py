@@ -340,23 +340,39 @@ def _update_config():
         config[PROMETHEUS][BLACKBOX_EXPORTER].update(
             {'ca_cert_path': config.get(CONSTANTS, {}).get('ca_cert_path')})
 
+
+def _get_cluster_config():
+    """Cluster setup for setting up monitoring targets.
+
+    Based on config.yaml, but with fallback to reading nodes stored
+    in the db (on manager-only nodes).
+    """
+    try:
+        db_nodes = {
+            name: node['ip'] for name, node in
+            config[POSTGRESQL_SERVER]['cluster']['nodes'].items()
+        }
+    except KeyError:
+        db_nodes = []
+    try:
+        rabbitmq_nodes = {
+            name: node['networks']['default'] for name, node in
+            config[RABBITMQ]['cluster_members'].items()
+        }
+    except KeyError:
+        rabbitmq_nodes = []
+
     if common.is_manager_service_only_installed():
         cluster_cfg = get_monitoring_config()
-        if (cluster_cfg.get(POSTGRESQL_SERVER, {}).get('cluster',
-                                                       {}).get('nodes') and
-                not config.get(POSTGRESQL_SERVER, {}).get('cluster',
-                                                          {}).get('nodes')):
-            config[POSTGRESQL_SERVER]['cluster'].update({
-                'nodes': cluster_cfg[POSTGRESQL_SERVER]['cluster']['nodes']
-            })
-        if (cluster_cfg.get('RABBITMQ', {}).get('ca_path') and
-                not config.get(RABBITMQ, {}).get('ca_path')):
-            config[RABBITMQ]['ca_path'] = cluster_cfg[RABBITMQ]['ca_path']
-        if (cluster_cfg.get(RABBITMQ, {}).get('cluster_members') and
-                not config.get(RABBITMQ, {}).get('cluster_members')):
-            config[RABBITMQ].update({
-                'cluster_members': cluster_cfg[RABBITMQ]['cluster_members']
-            })
+        if not db_nodes:
+            db_nodes = cluster_cfg['db_nodes']
+        if not rabbitmq_nodes:
+            rabbitmq_nodes = cluster_cfg['rabbitmq_nodes']
+
+    return {
+        'db_nodes': db_nodes,
+        'rabbitmq_nodes': rabbitmq_nodes
+    }
 
 
 def _update_prometheus_configuration(uninstalling=False):
@@ -372,8 +388,11 @@ def _update_prometheus_configuration(uninstalling=False):
     _update_base_targets(private_ip, uninstalling)
 
     if common.is_installed(MANAGER_SERVICE):
-        http_probes_count = _update_manager_targets(private_ip, uninstalling)
-        _deploy_alerts_configuration(http_probes_count, uninstalling)
+        cluster_config = _get_cluster_config()
+        http_probes_count = _update_manager_targets(
+            private_ip, cluster_config, uninstalling)
+        _deploy_alerts_configuration(
+            http_probes_count, cluster_config, uninstalling)
 
     if common.is_installed(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
@@ -435,7 +454,7 @@ def _update_local_postgres_targets(private_ip, uninstalling):
                     local_postgres_targets, local_postgres_labels)
 
 
-def _update_manager_targets(private_ip, uninstalling):
+def _update_manager_targets(private_ip, cluster_config, uninstalling):
     http_200_targets = []
     http_200_labels = {}
     http_401_targets = []
@@ -471,16 +490,14 @@ def _update_manager_targets(private_ip, uninstalling):
 
         # Monitor remote rabbit nodes
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, rabbit in config[RABBITMQ]['cluster_members'].items():
-            target = host if use_rabbit_host else rabbit['networks']['default']
+        for host, rabbit_ip in cluster_config['rabbitmq_nodes'].items():
+            target = host if use_rabbit_host else rabbit_ip
             if not (_installing_rabbit() and target == private_ip):
-                rabbit_targets.append(
-                    target + ':' + monitoring_port)
+                rabbit_targets.append(target + ':' + monitoring_port)
 
         # Monitor remote postgres nodes
-        for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
-            postgres_targets.append(
-                node['ip'] + ':' + monitoring_port)
+        for db_ip in cluster_config['db_nodes'].values():
+            postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
         if config.get(CLUSTER_JOIN):
@@ -537,7 +554,8 @@ def _deploy_targets(destination, targets, labels):
     )
 
 
-def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
+def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
+                                 uninstalling):
     render_context = {
         'number_of_http_probes': number_of_http_probes,
         'all_in_one': common.is_all_in_one_manager(),
@@ -557,16 +575,15 @@ def _deploy_alerts_configuration(number_of_http_probes, uninstalling):
         else:
             manager_hosts.append(config[MANAGER][PRIVATE_IP])
 
-        if config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
-            for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
-                postgres_hosts.append(node['ip'])
+        if cluster_config['db_nodes']:
+            for db_ip in cluster_config['db_nodes'].values():
+                postgres_hosts.append(db_ip)
         else:
             postgres_hosts.append(config[MANAGER][PRIVATE_IP])
 
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, rabbit in config[RABBITMQ]['cluster_members'].items():
-            rabbitmq_hosts.append(host if use_rabbit_host
-                                  else rabbit['networks']['default'])
+        for host, rabbit_ip in cluster_config['rabbitmq_nodes'].items():
+            rabbitmq_hosts.append(host if use_rabbit_host else rabbit_ip)
 
     for alert_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} alerts...'.format(alert_group))
