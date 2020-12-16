@@ -990,7 +990,7 @@ def remove(verbose=False, force=False, config_file=None):
 
     _remove_installation_files()
 
-    if is_supervisord_service():
+    if is_supervisord_service() and _all_main_services_removed():
         _remove(SUPERVISORD_CONFIG_DIR)
 
     logger.notice('Cloudify %s successfully removed!', (
