@@ -1,6 +1,8 @@
 from __future__ import print_function
 import json
 
+import sqlalchemy.exc
+
 from manager_rest import config
 from manager_rest.storage import db, models, get_storage_manager  # NOQA
 from manager_rest.flask_utils import setup_flask_app
@@ -8,12 +10,18 @@ from manager_rest.flask_utils import setup_flask_app
 
 def _prepare_config_for_monitoring():
     sm = get_storage_manager()
-    rabbitmq_nodes = {
-        node.name: node.private_ip for node in sm.list(models.RabbitMQBroker)
-    }
-    db_nodes = {
-        node.name: node.private_ip for node in sm.list(models.DBNodes)
-    }
+    try:
+        rabbitmq_nodes = {
+            node.name: node.private_ip
+            for node in sm.list(models.RabbitMQBroker)
+        }
+        db_nodes = {
+            node.name: node.private_ip
+            for node in sm.list(models.DBNodes)
+        }
+    except sqlalchemy.exc.OperationalError:
+        rabbitmq_nodes = {}
+        db_nodes = {}
     return {
         'rabbitmq_nodes': rabbitmq_nodes,
         'db_nodes': db_nodes
