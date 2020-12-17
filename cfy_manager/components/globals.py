@@ -22,11 +22,10 @@ from ..logger import get_logger
 from .service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    RABBITMQ,
     POSTGRESQL_SERVER
 )
 
-from . import QUEUE_SERVICE, DATABASE_SERVICE, MANAGER_SERVICE
+from . import DATABASE_SERVICE, MANAGER_SERVICE
 from .components_constants import (
     PRIVATE_IP,
     SECURITY,
@@ -70,13 +69,6 @@ def _set_ip_config():
 
     config.setdefault('networks', {})
     config['networks'].setdefault('default', private_ip)
-
-
-def _possibly_override_rabbit_local_management():
-    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
-        # If we're installing an external rabbit node, management plugin
-        # must listen externally
-        config[RABBITMQ]['management_only_local'] = False
 
 
 def _set_constant_config():
@@ -132,4 +124,3 @@ def set_globals(only_install=False):
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_hostname()
-    _possibly_override_rabbit_local_management()
