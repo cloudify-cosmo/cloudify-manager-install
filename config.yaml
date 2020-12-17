@@ -162,11 +162,6 @@ rabbitmq:
   # Sets the File Descriptor limit for the rabbitmq user.
   fd_limit: 102400
 
-  # Make the management plugin only listen on the local interface
-  # The plugin will automatically be made to listen externally on external
-  # brokers.
-  management_only_local: true
-
   # NOTE: The policy settings are only set up by the first broker in a cluster
   # of brokers, and they're not configured at all by a manager using an external
   # broker.

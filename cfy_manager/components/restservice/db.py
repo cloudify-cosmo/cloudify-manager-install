@@ -162,8 +162,7 @@ def _create_rabbitmq_info():
             'name': name,
             'host': name if use_hostnames else broker[NETWORKS]['default'],
             'management_host': (
-                '127.0.0.1' if config[RABBITMQ]['management_only_local']
-                else name if use_hostnames else broker[NETWORKS]['default']
+                name if use_hostnames else broker[NETWORKS]['default']
             ),
             'username': config[RABBITMQ]['username'],
             'password': config[RABBITMQ]['password'],

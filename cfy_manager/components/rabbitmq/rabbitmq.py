@@ -79,11 +79,6 @@ class RabbitMQ(BaseComponent):
         logger.info('Initializing RabbitMQ...')
         rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
 
-        if not self._installing_manager():
-            # If we're installing an external rabbit node, management plugin
-            # must listen externally
-            config[RABBITMQ]['management_only_local'] = False
-
         # Delete old mnesia node
         remove_file('/var/lib/rabbitmq/mnesia')
         remove_file(rabbit_config_path)
@@ -427,8 +422,6 @@ class RabbitMQ(BaseComponent):
 
         cert_addresses = list(networks.values())
         cert_addresses.append(config[RABBITMQ]['nodename'].split('@')[-1])
-        if config[RABBITMQ]['management_only_local']:
-            cert_addresses.append('127.0.0.1')
 
         certificates.store_cert_metadata(
             rabbit_host,
