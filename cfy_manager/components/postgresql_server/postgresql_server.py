@@ -653,6 +653,26 @@ class PostgresqlServer(BaseComponent):
                 new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
             )
 
+    @staticmethod
+    def _configure_syslog():
+        files.deploy(
+            join(
+                SCRIPTS_PATH,
+                'syslog_wrapper_script.sh'
+            ),
+            '/opt/cloudify',
+            render=False
+        )
+        common.chmod(
+            '755',
+            '/opt/cloudify/syslog_wrapper_script.sh'
+        )
+        service.configure(
+            'rsyslog',
+            src_dir='postgresql_server',
+            config_path='config/supervisord',
+        )
+
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(POSTGRES_SERVICE_NAME)
@@ -739,11 +759,7 @@ class PostgresqlServer(BaseComponent):
                 ))
         common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
         if self.service_type == 'supervisord':
-            service.configure(
-                'rsyslog',
-                src_dir='postgresql_server',
-                config_path='config/supervisord',
-            )
+            self._configure_syslog()
         service.restart('rsyslog')
 
         # create custom postgresql conf file with log settings

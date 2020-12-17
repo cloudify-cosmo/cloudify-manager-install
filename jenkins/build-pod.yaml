@@ -51,4 +51,4 @@ spec:
       - cat
       tty: true
   nodeSelector:
-    instance-type: spot
+    instance-type: spot-xlarge
