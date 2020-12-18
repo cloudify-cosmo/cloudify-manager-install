@@ -1064,7 +1064,7 @@ def restart(include_components, verbose=False, force=False, config_file=None):
     _print_time()
 
 
-@argh.arg('--rpm', help="If provided, nstall this RPM first. Point this "
+@argh.arg('--rpm', help="If provided, install this RPM first. Point this "
                         "to a new Cloudify RPM")
 @config_arg
 def upgrade(rpm=None, verbose=False, config_file=None):
