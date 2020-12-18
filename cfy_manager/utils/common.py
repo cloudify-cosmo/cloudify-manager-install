@@ -47,11 +47,11 @@ logger = get_logger('utils')
 
 
 def run(command, retries=0, stdin=u'', ignore_failures=False,
-        globx=False, shell=False, env=None, stdout=None):
+        globx=False, shell=False, env=None, stdout=None, stderr=None):
     # TODO: add ability to *log* output, instead of just printing to stdout
     if isinstance(command, str) and not shell:
         command = shlex.split(command)
-    stderr = subprocess.PIPE
+    stderr = stderr or subprocess.PIPE
     stdout = stdout or subprocess.PIPE
     if isinstance(stdin, text_type):
         stdin = stdin.encode('utf-8')

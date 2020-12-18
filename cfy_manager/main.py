@@ -1064,6 +1064,31 @@ def restart(include_components, verbose=False, force=False, config_file=None):
     _print_time()
 
 
+@argh.arg('--rpm', help="If provided, install this RPM first. Point this "
+                        "to a new Cloudify RPM")
+@config_arg
+def upgrade(rpm=None, verbose=False, config_file=None):
+    """Update the current manager using the available yum repos."""
+
+    _prepare_execution(verbose, config_file=config_file)
+    _validate_components_prepared('restart')
+    components = _get_components()
+    if rpm:
+        sudo(['yum', 'install', '-y', rpm],
+             stdout=sys.stdout, stderr=sys.stderr)
+    packages_to_update = _get_packages()
+    sudo(['yum', 'clean', 'all'],
+         stdout=sys.stdout, stderr=sys.stderr)
+    sudo([
+        'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
+    ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
+    for component in components:
+        component.stop()
+    service.reread()
+    for component in components:
+        component.start()
+
+
 def _is_unit_finished(unit_name='cloudify-starter.service'):
     try:
         unit_details = subprocess.check_output(
@@ -1322,7 +1347,8 @@ def main():
         image_starter,
         wait_for_starter,
         run_init,
-        version
+        version,
+        upgrade
     ])
 
     parser.add_commands([
