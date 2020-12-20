@@ -1072,7 +1072,7 @@ def upgrade(rpm=None, verbose=False, config_file=None):
 
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart')
-    components = _get_components()
+    upgrade_components = _get_components()
     if rpm:
         sudo(['yum', 'install', '-y', rpm],
              stdout=sys.stdout, stderr=sys.stderr)
@@ -1082,10 +1082,11 @@ def upgrade(rpm=None, verbose=False, config_file=None):
     sudo([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
-    for component in components:
+    for component in upgrade_components:
         component.stop()
+    components.Prometheus().configure()
     service.reread()
-    for component in components:
+    for component in upgrade_components:
         component.start()
 
 
