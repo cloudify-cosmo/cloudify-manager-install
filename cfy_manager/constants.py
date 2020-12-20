@@ -145,3 +145,10 @@ NEW_PROMETHEUS_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                 'new_prometheus_key.pem')
 NEW_PROMETHEUS_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                     'new_prometheus_ca_cert.pem')
+
+CONFIG_FILE_HELP_MSG = (
+    'Specify a configuration file to be used. File path is relative to the '
+    '{0} (meaning only files in this location are considered valid). If '
+    'more than one file is provided, these are merged in order from left '
+    'to right.'.format(CLOUDIFY_HOME_DIR)
+)
