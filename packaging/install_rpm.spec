@@ -45,6 +45,7 @@ ln -s %_venv/bin/supervisorctl %{buildroot}/usr/bin/supervisorctl
 ln -s %_venv/bin/supervisord %{buildroot}/usr/bin/supervisord
 
 pwd
+ls %{buildroot}/opt/cloudify/sources
 
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
