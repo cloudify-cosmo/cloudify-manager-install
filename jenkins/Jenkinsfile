@@ -71,7 +71,7 @@ pipeline {
                 sh script:"""
                   for repo in cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq; do
                     echo "fetching \$repo RPM"
-                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                    curl -o https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm $repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
                   done
                   """, label: 'Fetch RPM built on Jenkins located on S3'
               }
@@ -259,7 +259,7 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                       def filename = 'cfy_cluster_config.yaml'
                       def data = readYaml file: filename
 
-                      data.manager_rpm_download_link = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
+                      data.manager_rpm_path = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
                       sh "rm $filename"
                       writeYaml file: filename, data: data
                     }
