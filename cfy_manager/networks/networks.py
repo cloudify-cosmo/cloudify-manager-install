@@ -14,22 +14,30 @@
 #  * limitations under the License.
 
 import json
-import argh
+import socket
 from os.path import join
+
+import argh
 
 from ..logger import get_logger, setup_console_logger
 from ..constants import (
     NETWORKS_DIR,
+    CONFIG_FILE_HELP_MSG,
+    VERBOSE_HELP_MSG,
 )
 from ..utils.certificates import (
     create_internal_certs,
     load_cert_metadata,
     store_cert_metadata
 )
+from ..config import config
+from ..components.service_names import MANAGER
+from ..components.components_constants import HOSTNAME
 from ..utils.scripts import run_script_on_manager_venv
 
 SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')
 REST_HOME_DIR = '/opt/manager'
+
 
 logger = get_logger('networks')
 
@@ -49,7 +57,7 @@ def _update_metadata_file(metadata, networks):
     :param networks: a dict containing the new networks
     """
 
-    old_networks = metadata['network_names']
+    old_networks = metadata.get('network_names', [])
     new_networks = list(networks.keys())
     _validate_duplicate_network(old_networks, new_networks)
     if metadata.get('broker_addresses'):
@@ -68,6 +76,10 @@ def _update_metadata_file(metadata, networks):
     )
 
 
+def _get_hostname():
+    return config[MANAGER].get(HOSTNAME) or socket.gethostname()
+
+
 @argh.arg('--networks',
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: \'{"<network-name>": "<ip>"}\'',
@@ -76,13 +88,19 @@ def _update_metadata_file(metadata, networks):
           help='Specify whether we skip generating certificates, so the user '
                'can provide their own, e.g. signed by a public CA',
           default=False)
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG,
+                     default=False)
+@argh.arg('-c', '--config-file', action='append', default=None,
+          help=CONFIG_FILE_HELP_MSG)
 def add_networks(networks=None,
                  skip_generating_certificates=False,
-                 verbose=False):
+                 verbose=False,
+                 config_file=None):
     """
     Add new networks to a running Cloudify Manager
     """
     setup_console_logger(verbose)
+    config.load_config(config_file)
     logger.info('Trying to add new networks to Manager...')
 
     networks = json.loads(networks)
@@ -93,8 +111,9 @@ def add_networks(networks=None,
         create_internal_certs()
 
     script_path = join(SCRIPT_DIR, 'update-manager-networks.py')
+    hostname = metadata.get('hostname') or _get_hostname()
     args = [
-        '--hostname', metadata['hostname'],
+        '--hostname', hostname,
         '--networks', json.dumps(networks),
     ]
     if bool(metadata.get('broker_addresses')):

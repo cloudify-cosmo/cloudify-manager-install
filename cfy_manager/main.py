@@ -47,7 +47,7 @@ from .constants import (
     VERBOSE_HELP_MSG,
     SUPERVISORD_CONFIG_DIR,
     NEW_CERTS_TMP_DIR_PATH,
-    CLOUDIFY_HOME_DIR,
+    CONFIG_FILE_HELP_MSG,
     INITIAL_INSTALL_DIR,
     INITIAL_CONFIGURE_DIR,
     INSTALLED_COMPONENTS,
@@ -159,12 +159,6 @@ VALIDATE_HELP_MSG = (
 )
 INPUT_PATH_MSG = (
     "The replace-certificates yaml configuration file path."
-)
-CONFIG_FILE_HELP_MSG = (
-    'Specify a configuration file to be used. File path is relative to the '
-    '{0} (meaning only files in this location are considered valid). If '
-    'more than one file is provided, these are merged in order from left '
-    'to right.'.format(CLOUDIFY_HOME_DIR)
 )
 
 config_arg = argh.arg('-c', '--config-file', action='append', default=None,
