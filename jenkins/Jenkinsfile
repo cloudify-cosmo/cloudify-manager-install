@@ -272,9 +272,10 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                       writeYaml file: filename, data: data
                     }
                     sh script: """#!/bin/bash
-                    scp -i ~/.ssh/ec2_ssh_key ./cfy_cluster_config.yaml centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):/root/
+                    scp -i ~/.ssh/ec2_ssh_key ${env.WORKSPACE}/${env.PROJECT}/jenkins/cfy_cluster_config.yaml centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):/tmp/
                     ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
+sudo cp -a /tmp/cfy_cluster_config.yaml /root/
 pushd jenkins
   sudo cp -a Dev-PS_cloudify_license.yaml /root/
 popd
