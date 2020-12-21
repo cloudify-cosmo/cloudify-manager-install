@@ -71,7 +71,7 @@ pipeline {
                 sh script:"""
                   for repo in cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq; do
                     echo "fetching \$repo RPM"
-                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-*.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
                   done
                   """, label: 'Fetch RPM built on Jenkins located on S3'
               }
