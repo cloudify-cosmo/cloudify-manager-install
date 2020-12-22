@@ -297,7 +297,7 @@ docker exec -d cluster2 /usr/sbin/sshd -D
 docker exec -d cluster3 /usr/sbin/sshd -D
 echo 'Run Cluster installation'
 docker exec --tty cluster1 cfy_cluster_manager install -v
-sleep 20
+sleep 40
 echo 'Check cluster status'
 /home/centos/${env.PROJECT}/jenkins/validate_status.sh cluster1 cluster2 cluster3
 """, label: 'Prepare and run Cloudify cluster installation'
