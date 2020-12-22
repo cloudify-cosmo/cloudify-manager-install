@@ -124,8 +124,9 @@ class PostgresqlClient(BaseComponent):
             return
         pg_config = config[POSTGRESQL_CLIENT]
         if not hosts:
-            if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-                hosts = config[POSTGRESQL_SERVER]['cluster']['nodes']
+            cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
+            if cluster_nodes:
+                hosts = [node['ip'] for node in cluster_nodes.values()]
             else:
                 hosts = [pg_config['host']]
         port = PG_PORT
