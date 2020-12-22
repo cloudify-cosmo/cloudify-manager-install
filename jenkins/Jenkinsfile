@@ -69,10 +69,16 @@ pipeline {
                 echo 'Install requests'
                 sh 'pip install requests'
                 sh script:"""
-                  for repo in cloudify-rest-service patroni cloudify-premium cloudify-cli cloudify-agents cloudify-management-worker cloudify-manager-ip-setter cloudify-rabbitmq; do
+                  for repo in cloudify-rest-service cloudify-premium cloudify-cli cloudify-management-worker; do
                     echo "fetching \$repo RPM"
-                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
+                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
                   done
+                  for repo in cloudify-manager-ip-setter cloudify-rabbitmq; do
+                    echo "fetching \$repo RPM"
+                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm
+                  done
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.centos.noarch.rpm -o cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.centos.noarch.rpm
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-1.6.3-1.el7.x86_64.rpm -o patroni-1.6.3-1.el7.x86_64.rpm
                   """, label: 'Fetch RPM built on Jenkins located on S3'
               }
             }
@@ -259,15 +265,17 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                       def filename = 'cfy_cluster_config.yaml'
                       def data = readYaml file: filename
 
-                      data.manager_rpm_download_link = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
+                      data.manager_rpm_path = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
                       sh "rm $filename"
                       writeYaml file: filename, data: data
                     }
                     sh script: """#!/bin/bash
-                     ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
+                    scp -i ~/.ssh/ec2_ssh_key ${env.WORKSPACE}/${env.PROJECT}/jenkins/cfy_cluster_config.yaml centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):/tmp/
+                    ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
+sudo cp -a /tmp/cfy_cluster_config.yaml /root/
 pushd jenkins
-  sudo cp -a cfy_cluster_config.yaml Dev-PS_cloudify_license.yaml /root/
+  sudo cp -a Dev-PS_cloudify_license.yaml /root/
 popd
 sudo -i
 docker network create --subnet=172.12.0.0/16 cluster_net
@@ -287,7 +295,7 @@ docker exec -d cluster2 /usr/sbin/sshd -D
 docker exec -d cluster3 /usr/sbin/sshd -D
 echo 'Run Cluster installation'
 docker exec --tty cluster1 cfy_cluster_manager install -v
-sleep 20
+sleep 40
 echo 'Check cluster status'
 /home/centos/${env.PROJECT}/jenkins/validate_status.sh cluster1 cluster2 cluster3
 """, label: 'Prepare and run Cloudify cluster installation'
