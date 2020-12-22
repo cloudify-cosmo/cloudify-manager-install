@@ -44,9 +44,6 @@ ln -s %_venv/bin/cfy_manager %{buildroot}/usr/bin/cfy_manager
 ln -s %_venv/bin/supervisorctl %{buildroot}/usr/bin/supervisorctl
 ln -s %_venv/bin/supervisord %{buildroot}/usr/bin/supervisord
 
-pwd
-ls %{buildroot}/opt/cloudify/sources
-
 /bin/createrepo %{buildroot}/opt/cloudify/sources
 mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
