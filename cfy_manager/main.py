@@ -385,10 +385,14 @@ def db_node_add(**kwargs):
     config.load_config(kwargs.get('config_file'))
     _validate_components_prepared('db_node_add')
     db = components.PostgresqlServer()
+    client = components.PostgresqlClient()
     stage = components.Stage()
     composer = components.Composer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.add_cluster_node(kwargs['address'], stage, composer)
+        hosts = db.add_cluster_node(kwargs['address'], stage, composer)
+        client.create_postgres_pgpass_files(
+            hosts=hosts,
+        )
     else:
         logger.info('There is no database cluster associated with this node.')
 
@@ -405,12 +409,16 @@ def db_node_remove(**kwargs):
     config.load_config(kwargs.get('config_file'))
     _validate_components_prepared('db_node_remove')
     db = components.PostgresqlServer()
+    client = components.PostgresqlClient()
     stage = components.Stage()
     composer = components.Composer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-        db.remove_cluster_node(kwargs['address'],
-                               stage,
-                               composer)
+        hosts = db.remove_cluster_node(kwargs['address'],
+                                       stage,
+                                       composer)
+        client.create_postgres_pgpass_files(
+            hosts=hosts,
+        )
     else:
         logger.info('There is no database cluster associated with this node.')
 

@@ -19,12 +19,17 @@ from ...exceptions import ProcessExecutionError
 
 from ..validations import validate_certificates
 from ..components_constants import (
+    SERVICES_TO_INSTALL,
+    SSL_CLIENT_VERIFICATION,
     SSL_ENABLED,
     SSL_INPUTS,
-    SSL_CLIENT_VERIFICATION,
 )
 from ..base_component import BaseComponent
-from ..service_names import POSTGRESQL_CLIENT
+from ..service_names import (
+    MANAGER_SERVICE,
+    POSTGRESQL_CLIENT,
+    POSTGRESQL_SERVER,
+)
 from ...constants import (
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
@@ -92,26 +97,37 @@ class PostgresqlClient(BaseComponent):
             else:
                 logger.info('User postgres already exists')
 
-    def _create_pgpass(self, host, port, db_name, user, password, pgpass_path,
+    def _create_pgpass(self, hosts, port, db_name, user, password, pgpass_path,
                        owning_user, owning_group):
         logger.debug('Creating postgresql pgpass file: {0}'
                      .format(pgpass_path))
-        pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
-            host=host,
-            port=port,
-            db_name=db_name,
-            user=user,
-            password=password
-        )
+        line_template = '{host}:{port}:{db_name}:{user}:{password}\n'
+
+        pgpass_content = ''
+        for host in hosts:
+            pgpass_content += line_template.format(
+                host=host,
+                port=port,
+                db_name=db_name,
+                user=user,
+                password=password
+            )
         files.write_to_file(pgpass_content, pgpass_path)
         common.chmod('400', pgpass_path)
         common.chown(owning_user, owning_group, pgpass_path)
 
         logger.debug('Postgresql pass file {0} created'.format(pgpass_path))
 
-    def _create_postgres_pgpass_files(self):
+    def create_postgres_pgpass_files(self, hosts=None):
+        if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
+            logger.info('Skipping pgpass creation on non-manager node.')
+            return
         pg_config = config[POSTGRESQL_CLIENT]
-        host = pg_config['host']
+        if not hosts:
+            if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+                hosts = config[POSTGRESQL_SERVER]['cluster']['nodes']
+            else:
+                hosts = [pg_config['host']]
         port = PG_PORT
 
         # Creating Cloudify .pgpass file
@@ -119,7 +135,7 @@ class PostgresqlClient(BaseComponent):
         user = pg_config['cloudify_username']
         password = pg_config['cloudify_password']
         self._create_pgpass(
-            host=host,
+            hosts=hosts,
             port=port,
             db_name=db_name,
             user=user,
@@ -205,7 +221,7 @@ class PostgresqlClient(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring PostgreSQL Client...')
-        self._create_postgres_pgpass_files()
+        self.create_postgres_pgpass_files()
         self._configure_ssl()
         logger.notice('PostgreSQL successfully configured')
         self.start()

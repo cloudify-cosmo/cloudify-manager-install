@@ -1475,6 +1475,7 @@ class PostgresqlServer(BaseComponent):
         # command should run on each manager in a cluster
         if not self._node_is_in_db(address):
             self._add_node_to_db(address)
+        return [master, address] + replicas
 
     def remove_cluster_node(self, address, stage, composer):
         master, replicas = self._get_cluster_addresses()
@@ -1543,6 +1544,9 @@ class PostgresqlServer(BaseComponent):
             service.restart('cloudify-composer')
             if self._node_is_in_db(address):
                 self._remove_node_from_db(address)
+        remaining = [master] + replicas
+        remaining.remove(address)
+        return remaining
 
     def reinit_cluster_node(self, address):
         master, replicas = self._get_cluster_addresses()
