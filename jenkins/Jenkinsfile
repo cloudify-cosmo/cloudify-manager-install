@@ -144,8 +144,6 @@ pipeline {
                   /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
                   cat ~/fetch_requirements.log
                 popd
-                pwd
-                ls
                 """, label: 'fetching requirements'
               echo 'prepare to build rpm'
               sh '''
