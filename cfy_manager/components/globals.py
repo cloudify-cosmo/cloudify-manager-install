@@ -116,11 +116,12 @@ def _apply_forced_settings():
         config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
 
 
-def set_globals(only_install=False):
+def set_globals(only_install=False, only_constants=False):
     if only_install:
         return
-    _apply_forced_settings()
-    _set_ip_config()
-    _set_external_port_and_protocol()
+    if not only_constants:
+        _apply_forced_settings()
+        _set_ip_config()
+        _set_external_port_and_protocol()
+        _set_hostname()
     _set_constant_config()
-    _set_hostname()
