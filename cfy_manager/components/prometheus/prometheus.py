@@ -50,7 +50,7 @@ from ...constants import (
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
 )
-from ..restservice.db import get_monitoring_config
+from ..restservice.db import get_monitoring_config, get_managers
 from ...logger import get_logger
 from ...exceptions import ValidationError
 from ...utils import common, db, files, service, certificates
@@ -370,7 +370,7 @@ def _get_cluster_config():
 
     return {
         'db_nodes': db_nodes,
-        'rabbitmq_nodes': rabbitmq_nodes,
+        'rabbitmq_nodes': rabbitmq_nodes
     }
 
 
@@ -499,7 +499,7 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
             postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
-        if common.is_manager_service_only_installed():
+        if _should_join_cluster():
             for manager in _get_managers_list():
                 manager_targets.append(
                     manager[PRIVATE_IP] + ':' + monitoring_port)
@@ -568,7 +568,7 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
     if uninstalling:
         logger.info('Uninstall: Prometheus "missing" alerts will be cleared.')
     else:
-        if common.is_manager_service_only_installed():
+        if _should_join_cluster():
             for manager in _get_managers_list():
                 manager_hosts.append(manager[PRIVATE_IP])
         else:
@@ -675,3 +675,14 @@ def _get_managers_list():
         for field in (record.split('|') for record in records.split('\n'))
         if len(field) >= 2
     ]
+
+
+def _should_join_cluster():
+    if common.is_all_in_one_manager():
+        return False
+
+    managers = get_managers()
+    if common.is_installed(MANAGER_SERVICE) and \
+        config[MANAGER][HOSTNAME] not in managers and \
+            len(managers) > 0:
+        return True
