@@ -346,6 +346,7 @@ def _get_cluster_config():
     Based on config.yaml, but with fallback to reading nodes stored
     in the db (on manager-only nodes).
     """
+    manager_nodes = []
     try:
         db_nodes = {
             name: node['ip'] for name, node in
@@ -367,10 +368,12 @@ def _get_cluster_config():
             db_nodes = cluster_cfg['db_nodes']
         if not rabbitmq_nodes:
             rabbitmq_nodes = cluster_cfg['rabbitmq_nodes']
+        manager_nodes = cluster_cfg['managers']
 
     return {
         'db_nodes': db_nodes,
-        'rabbitmq_nodes': rabbitmq_nodes
+        'rabbitmq_nodes': rabbitmq_nodes,
+        'managers': manager_nodes
     }
 
 
@@ -499,9 +502,8 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
             postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
-        managers_list = _get_managers_list()
-        if len(managers_list) > 1:
-            for manager in managers_list:
+        if len(cluster_config['managers']) > 1:
+            for manager in _get_managers_list():
                 manager_targets.append(
                     manager[PRIVATE_IP] + ':' + monitoring_port)
 
@@ -569,9 +571,8 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
     if uninstalling:
         logger.info('Uninstall: Prometheus "missing" alerts will be cleared.')
     else:
-        managers_list = _get_managers_list()
-        if len(managers_list) > 1:
-            for manager in managers_list:
+        if len(cluster_config['managers']) > 1:
+            for manager in _get_managers_list():
                 manager_hosts.append(manager[PRIVATE_IP])
         else:
             manager_hosts.append(config[MANAGER][PRIVATE_IP])
