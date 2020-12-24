@@ -20,6 +20,7 @@ import re
 
 from ..base_component import BaseComponent
 from ..components_constants import (
+    CLUSTER_JOIN,
     CONFIG,
     CONSTANTS,
     ENABLE_REMOTE_CONNECTIONS,
@@ -50,7 +51,7 @@ from ...constants import (
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
 )
-from ..restservice.db import get_monitoring_config, get_managers
+from ..restservice.db import get_monitoring_config
 from ...logger import get_logger
 from ...exceptions import ValidationError
 from ...utils import common, db, files, service, certificates
@@ -171,12 +172,12 @@ class Prometheus(BaseComponent):
             logger.notice(
                 'Successfully removed Prometheus and exporters files')
 
-    def configure(self):
+    def configure(self, upgrade=False):
         logger.notice('Configuring Prometheus Service...')
         handle_certs()
         _create_prometheus_directories()
         _chown_resources_dir()
-        _deploy_configuration()
+        _deploy_configuration(upgrade)
         extra_conf = _prometheus_additional_configuration()
         service.configure(PROMETHEUS, external_configure_params=extra_conf)
         service.reload(PROMETHEUS, ignore_failure=True)
@@ -193,7 +194,7 @@ class Prometheus(BaseComponent):
             logger.notice(
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
-            _deploy_configuration()
+            _deploy_configuration(upgrade)
         logger.notice('Prometheus successfully configured')
         self.start()
 
@@ -291,9 +292,9 @@ def _chown_resources_dir():
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_DATA_DIR)
 
 
-def _deploy_configuration():
+def _deploy_configuration(upgrade):
     _update_config()
-    _update_prometheus_configuration()
+    _update_prometheus_configuration(upgrade=upgrade)
     _deploy_exporters_configuration()
 
 
@@ -374,7 +375,7 @@ def _get_cluster_config():
     }
 
 
-def _update_prometheus_configuration(uninstalling=False):
+def _update_prometheus_configuration(uninstalling=False, upgrade=False):
     logger.notice('Updating Prometheus configuration...')
 
     if not uninstalling:
@@ -389,9 +390,9 @@ def _update_prometheus_configuration(uninstalling=False):
     if common.is_installed(MANAGER_SERVICE):
         cluster_config = _get_cluster_config()
         http_probes_count = _update_manager_targets(
-            private_ip, cluster_config, uninstalling)
+            private_ip, cluster_config, uninstalling, upgrade)
         _deploy_alerts_configuration(
-            http_probes_count, cluster_config, uninstalling)
+            http_probes_count, cluster_config, uninstalling, upgrade)
 
     if common.is_installed(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
@@ -453,7 +454,7 @@ def _update_local_postgres_targets(private_ip, uninstalling):
                     local_postgres_targets, local_postgres_labels)
 
 
-def _update_manager_targets(private_ip, cluster_config, uninstalling):
+def _update_manager_targets(private_ip, cluster_config, uninstalling, upgrade):
     http_200_targets = []
     http_200_labels = {}
     http_401_targets = []
@@ -499,7 +500,8 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
             postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
-        if _should_join_cluster():
+        if (config.get(CLUSTER_JOIN) or
+                (upgrade and not common.is_all_in_one_manager())):
             for manager in _get_managers_list():
                 manager_targets.append(
                     manager[PRIVATE_IP] + ':' + monitoring_port)
@@ -554,7 +556,7 @@ def _deploy_targets(destination, targets, labels):
 
 
 def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
-                                 uninstalling):
+                                 uninstalling, upgrade):
     render_context = {
         'number_of_http_probes': number_of_http_probes,
         'all_in_one': common.is_all_in_one_manager(),
@@ -568,7 +570,8 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
     if uninstalling:
         logger.info('Uninstall: Prometheus "missing" alerts will be cleared.')
     else:
-        if _should_join_cluster():
+        if (config.get(CLUSTER_JOIN) or
+                (upgrade and not common.is_all_in_one_manager())):
             for manager in _get_managers_list():
                 manager_hosts.append(manager[PRIVATE_IP])
         else:
@@ -675,14 +678,3 @@ def _get_managers_list():
         for field in (record.split('|') for record in records.split('\n'))
         if len(field) >= 2
     ]
-
-
-def _should_join_cluster():
-    if common.is_all_in_one_manager():
-        return False
-
-    managers = get_managers()
-    if common.is_installed(MANAGER_SERVICE) and \
-        config[MANAGER][HOSTNAME] not in managers and \
-            len(managers) > 0:
-        return True
