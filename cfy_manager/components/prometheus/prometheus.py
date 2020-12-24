@@ -20,7 +20,6 @@ import re
 
 from ..base_component import BaseComponent
 from ..components_constants import (
-    CLUSTER_JOIN,
     CONFIG,
     CONSTANTS,
     ENABLE_REMOTE_CONNECTIONS,
@@ -500,8 +499,9 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
             postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
-        if config.get(CLUSTER_JOIN):
-            for manager in _get_managers_list():
+        managers_list = _get_managers_list()
+        if len(managers_list) > 1:
+            for manager in managers_list:
                 manager_targets.append(
                     manager[PRIVATE_IP] + ':' + monitoring_port)
 
@@ -569,8 +569,9 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
     if uninstalling:
         logger.info('Uninstall: Prometheus "missing" alerts will be cleared.')
     else:
-        if config.get(CLUSTER_JOIN):
-            for manager in _get_managers_list():
+        managers_list = _get_managers_list()
+        if len(managers_list) > 1:
+            for manager in managers_list:
                 manager_hosts.append(manager[PRIVATE_IP])
         else:
             manager_hosts.append(config[MANAGER][PRIVATE_IP])

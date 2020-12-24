@@ -1086,7 +1086,7 @@ def upgrade(rpm=None, verbose=False, config_file=None):
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
     for component in upgrade_components:
         component.stop()
-    set_globals(only_constants=True)
+    set_globals()
     components.Prometheus().configure()
     service.reread()
     for component in upgrade_components:
