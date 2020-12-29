@@ -73,10 +73,7 @@ pipeline {
                     echo "fetching \$repo RPM"
                     curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
                   done
-                  for repo in cloudify-manager-ip-setter cloudify-rabbitmq; do
-                    echo "fetching \$repo RPM"
-                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm
-                  done
+                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm -o cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.centos.noarch.rpm -o cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.centos.noarch.rpm
                   curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-1.6.3-1.el7.x86_64.rpm -o patroni-1.6.3-1.el7.x86_64.rpm
                   """, label: 'Fetch RPM built on Jenkins located on S3'

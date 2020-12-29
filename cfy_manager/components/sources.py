@@ -15,7 +15,7 @@
 
 manager = [
     'cloudify-management-worker', 'cloudify-rest-service',
-    'cloudify-cli', 'cloudify-manager-ip-setter', 'nginx',
+    'cloudify-cli', 'nginx',
     'python-psycopg2', 'postgresql95', 'cloudify-agents',
     'patch', 'nodejs', 'cloudify-stage'
 ]

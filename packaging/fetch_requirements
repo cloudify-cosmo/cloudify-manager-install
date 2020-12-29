@@ -43,7 +43,6 @@ MANAGER_INFO = {
         '/cloudify-premium',
         '/cloudify-rabbitmq',
         '/cloudify-management-worker',
-        '/cloudify-manager-ip-setter',
     ]
 }
 
