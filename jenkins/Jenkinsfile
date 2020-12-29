@@ -29,8 +29,8 @@ pipeline {
   environment {
     PROJECT = "cloudify-manager-install"
     PATH = "/root/.local/bin:$PATH"
-    VERSION = getVersion("master").trim()
-    PRERELEASE = getPreRelease("master").trim()
+    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
     CLOUDIFY_VERSION = "${env.VERSION}"
     CLOUDIFY_PACKAGE_RELEASE = "${env.PRERELEASE}"
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH_NAME}/${env.BUILD_NUMBER}"
