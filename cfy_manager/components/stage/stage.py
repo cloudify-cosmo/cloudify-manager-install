@@ -217,3 +217,8 @@ class Stage(BaseComponent):
         logger.notice('Removing Stage data....')
         common.sudo(['rm', '-rf', '/opt/cloudify-stage'])
         logger.notice('Stage successfully removed')
+
+    def upgrade(self):
+        logger.notice('Upgrading Cloudify Stage...')
+        self._run_db_migrate()
+        logger.notice('Cloudify Stage successfully upgraded')
