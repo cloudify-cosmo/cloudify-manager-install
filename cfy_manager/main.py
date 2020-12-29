@@ -1088,6 +1088,7 @@ def upgrade(rpm=None, verbose=False, config_file=None):
         component.stop()
     set_globals()
     components.Prometheus().configure(upgrade=True)
+    components.Stage().configure()
     service.reread()
     for component in upgrade_components:
         component.start()
