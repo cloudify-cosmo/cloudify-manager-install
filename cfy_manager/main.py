@@ -1084,7 +1084,7 @@ def upgrade(rpm=None, verbose=False, config_file=None):
     sudo([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
-    for component in upgrade_components:
+    for component in reversed(upgrade_components):
         component.stop()
     set_globals()
     service.reread()
