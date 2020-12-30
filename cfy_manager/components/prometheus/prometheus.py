@@ -198,6 +198,9 @@ class Prometheus(BaseComponent):
         logger.notice('Prometheus successfully configured')
         self.start()
 
+    def upgrade(self):
+        self.configure(upgrade=True)
+
     def join_cluster(self):  # , restore_users_on_fail=False):
         logger.info('Would be joining cluster.')
 

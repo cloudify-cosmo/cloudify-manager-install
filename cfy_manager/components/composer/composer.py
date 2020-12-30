@@ -188,3 +188,8 @@ class Composer(BaseComponent):
         logger.notice('Removing Composer data....')
         common.sudo(['rm', '-rf', '/opt/cloudify-composer'])
         logger.notice('Cloudify Composer successfully removed')
+
+    def upgrade(self):
+        logger.notice('Upgrading Cloudify Composer...')
+        self._run_db_migrate()
+        logger.notice('Cloudify Composer successfully upgraded')
