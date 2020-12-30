@@ -13,7 +13,6 @@ def secrets = [
 pipeline {
   agent {
     kubernetes {
-      label "manager-install-mb-${env.BUILD_NUMBER}"
       defaultContainer 'jnlp'
       yamlFile 'jenkins/build-pod.yaml'
     }
