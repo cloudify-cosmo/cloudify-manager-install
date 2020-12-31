@@ -524,3 +524,8 @@ class RestService(BaseComponent):
         service.remove('cloudify-restservice', service_file=False)
         remove_logrotate(RESTSERVICE)
         common.remove('/opt/manager')
+
+    def upgrade(self):
+        logger.notice('Upgrading Rest Service...')
+        run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
+        logger.notice('Rest Service successfully upgraded')
