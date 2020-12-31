@@ -1090,7 +1090,6 @@ def upgrade(rpm=None, verbose=False, config_file=None):
     service.reread()
     for component in upgrade_components:
         component.upgrade()
-        
         component.start()
 
 
