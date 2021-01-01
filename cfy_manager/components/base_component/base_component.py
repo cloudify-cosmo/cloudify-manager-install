@@ -51,6 +51,9 @@ class BaseComponent(object):
     def remove(self):
         pass
 
+    def upgrade(self):
+        pass
+
     def verify_started(self):
         pass
 
