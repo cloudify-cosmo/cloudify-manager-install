@@ -200,6 +200,8 @@ pipeline {
                     }
                   }
                 }
+                // if We reach here that means everything is ok
+                buildState = 'SUCCESS'
               }
             }
           }             
@@ -209,11 +211,16 @@ pipeline {
     stage('install manager & cluster'){
       parallel{
         stage('install_manager') {
+          when {
+            expression { buildState != 'FAILURE'}
+          }
           environment {
             CONTAINER_NAME = "cfy_aio"
             IMAGE_NAME = "cfy_manager_image"
           }
           steps {
+            buildState = 'FAILURE'
+            catchError(message: 'Failure on: manager-install install manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
               container('py27') {
                 dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                   withVault([configuration: configuration, vaultSecrets: secrets]){
@@ -240,32 +247,40 @@ sudo chmod +x jenkins/validate_status.sh
 echo 'Run the Sanity check'
 sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
 """, label: 'install manager'
+                  }
                 }
               }
+              // if We reach here that means everything is ok
+              buildState = 'SUCCESS'
             }
           }
         }
         stage('install_cluster'){
+          when {
+            expression { buildState != 'FAILURE'}
+          }
           environment {
             CONTAINER_NAME = "cfy"
             IMAGE_NAME = "cfy_manager_image"
             CLUSTER_IMAGE = "cfy_manager_image_preinstalled"
           }
           steps {
-            container('py27') {
-              dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
-                withVault([configuration: configuration, vaultSecrets: secrets]) {
-                  script {
-                    def filename = 'cfy_cluster_config.yaml'
-                    def data = readYaml file: filename
+            buildState = 'FAILURE'
+            catchError(message: 'Failure on: manager-install install cluster', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+              container('py27') {
+                dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
+                  withVault([configuration: configuration, vaultSecrets: secrets]) {
+                    script {
+                      def filename = 'cfy_cluster_config.yaml'
+                      def data = readYaml file: filename
 
-                    data.manager_rpm_path = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
-                    sh "rm $filename"
-                    writeYaml file: filename, data: data
-                  }
-                  sh script: """#!/bin/bash
-                  scp -i ~/.ssh/ec2_ssh_key ${env.WORKSPACE}/${env.PROJECT}/jenkins/cfy_cluster_config.yaml centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):/tmp/
-                  ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
+                      data.manager_rpm_path = "https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm"
+                      sh "rm $filename"
+                      writeYaml file: filename, data: data
+                    }
+                    sh script: """#!/bin/bash
+                    scp -i ~/.ssh/ec2_ssh_key ${env.WORKSPACE}/${env.PROJECT}/jenkins/cfy_cluster_config.yaml centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):/tmp/
+                    ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
 sudo yum -y update
 sudo service docker start
 git clone https://github.com/cloudify-cosmo/cloudify-manager-install.git && cd cloudify-manager-install && git checkout ${env.BRANCH_NAME}
@@ -295,7 +310,27 @@ sleep 40
 echo 'Check cluster status'
 sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh cluster1 cluster2 cluster3
 """, label: 'Prepare and run Cloudify cluster installation'
+                  }
                 }
+              }
+              // if We reach here that means everything is ok
+              buildState = 'SUCCESS'
+            }
+          }
+        }
+      }
+    }
+    stage('Terminate EC2 instance'){
+      steps{
+        catchError(message: 'Failure on: Tearing down EC2 instance of manager-install ', buildResult: 'FAILURE', stageResult: 'FAILURE') {
+          container('py27') {
+            dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
+              withVault([configuration: configuration, vaultSecrets: secrets]) {
+                echo 'Uninstall and delete blueprint from manager'
+                sh """#!/bin/bash
+                  source .venv/bin/activate
+                  cfy uninstall ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
+                """
               }
             }
           }
@@ -305,15 +340,10 @@ sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh cluster1 cluster2 cl
   }
   post {
     always {
-      container('py27'){
-        dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
-          echo 'Uninstall and delete blueprint from manager'
-          sh """#!/bin/bash
-            source .venv/bin/activate
-            cfy uninstall ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
-          """
-        }
-      }
+      findText(textFinders: [
+        textFinder(regexp: 'Failure on:*', fileSet: '', alsoCheckConsoleOutput: true, buildResult: 'FAILURE')
+        ]
+      )
     }
   }
 }
