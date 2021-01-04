@@ -304,15 +304,13 @@ echo 'Check cluster status'
     }
     post {
       always {
-        container('py27'){
-          dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
-            withVault([configuration: configuration, vaultSecrets: secrets]){
-              echo 'Uninstall and delete blueprint from manager'
-              sh """#!/bin/bash
-                source .venv/bin/activate
-                cfy uninstall ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
-              """
-            }
+        dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
+          withVault([configuration: configuration, vaultSecrets: secrets]){
+            echo 'Uninstall and delete blueprint from manager'
+            sh """#!/bin/bash
+              source .venv/bin/activate
+              cfy uninstall ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
+            """
           }
         }
       }
