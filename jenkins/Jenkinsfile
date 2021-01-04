@@ -302,8 +302,10 @@ echo 'Check cluster status'
         }
       }
     }
-    post {
-      always {
+  }
+  post {
+    always {
+      dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
         echo 'Uninstall and delete blueprint from manager'
         sh """#!/bin/bash
           source .venv/bin/activate
