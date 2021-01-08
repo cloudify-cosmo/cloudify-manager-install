@@ -11,12 +11,17 @@ def _prepare_config_for_monitoring():
     rabbitmq_nodes = {
         node.name: node.private_ip for node in sm.list(models.RabbitMQBroker)
     }
-    db_nodes = {
-        node.name: node.private_ip for node in sm.list(models.DBNodes)
-    }
+    db_nodes = [
+        node.private_ip for node in sm.list(models.DBNodes)
+    ]
+    managers = [
+        node.private_ip for node in sm.list(models.Manager)
+    ]
+
     return {
         'rabbitmq_nodes': rabbitmq_nodes,
-        'db_nodes': db_nodes
+        'db_nodes': db_nodes,
+        'manager_nodes': managers,
     }
 
 

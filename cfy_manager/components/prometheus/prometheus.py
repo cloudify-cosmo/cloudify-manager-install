@@ -26,7 +26,6 @@ from ..components_constants import (
     ENABLE_REMOTE_CONNECTIONS,
     HOSTNAME,
     PRIVATE_IP,
-    PUBLIC_IP,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
 )
@@ -54,7 +53,7 @@ from ...constants import (
 from ..restservice.db import get_monitoring_config
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common, db, files, service, certificates
+from ...utils import common, files, service, certificates
 from ...utils.install import is_premium_installed
 
 
@@ -350,32 +349,10 @@ def _get_cluster_config():
     Based on config.yaml, but with fallback to reading nodes stored
     in the db (on manager-only nodes).
     """
-    try:
-        db_nodes = {
-            name: node['ip'] for name, node in
-            config[POSTGRESQL_SERVER]['cluster']['nodes'].items()
-        }
-    except KeyError:
-        db_nodes = []
-    try:
-        rabbitmq_nodes = {
-            name: node['networks']['default'] for name, node in
-            config[RABBITMQ]['cluster_members'].items()
-        }
-    except KeyError:
-        rabbitmq_nodes = []
-
     if common.is_manager_service_only_installed():
-        cluster_cfg = get_monitoring_config()
-        if not db_nodes:
-            db_nodes = cluster_cfg['db_nodes']
-        if not rabbitmq_nodes:
-            rabbitmq_nodes = cluster_cfg['rabbitmq_nodes']
+        return get_monitoring_config()
 
-    return {
-        'db_nodes': db_nodes,
-        'rabbitmq_nodes': rabbitmq_nodes
-    }
+    return {}
 
 
 def _update_prometheus_configuration(uninstalling=False, upgrade=False):
@@ -493,21 +470,21 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling, upgrade):
 
         # Monitor remote rabbit nodes
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, rabbit_ip in cluster_config['rabbitmq_nodes'].items():
-            target = host if use_rabbit_host else rabbit_ip
+        for host, ip in cluster_config.get('rabbitmq_nodes', {}).items():
+            target = host if use_rabbit_host else ip
             if not (_installing_rabbit() and target == private_ip):
                 rabbit_targets.append(target + ':' + monitoring_port)
 
         # Monitor remote postgres nodes
-        for db_ip in cluster_config['db_nodes'].values():
+        for db_ip in cluster_config.get('db_nodes', []):
             postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
         if (config.get(CLUSTER_JOIN) or
                 (upgrade and not common.is_all_in_one_manager())):
-            for manager in _get_managers_list():
+            for manager in cluster_config.get('managers', []):
                 manager_targets.append(
-                    manager[PRIVATE_IP] + ':' + monitoring_port)
+                    manager + ':' + monitoring_port)
 
     logger.info('Updating prometheus manager target configs')
     _deploy_targets('local_http_200_manager.yml',
@@ -575,20 +552,20 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
     else:
         if (config.get(CLUSTER_JOIN) or
                 (upgrade and not common.is_all_in_one_manager())):
-            for manager in _get_managers_list():
-                manager_hosts.append(manager[PRIVATE_IP])
+            for manager in cluster_config.get('managers', []):
+                manager_hosts.append(manager)
         else:
             manager_hosts.append(config[MANAGER][PRIVATE_IP])
 
-        if cluster_config['db_nodes']:
-            for db_ip in cluster_config['db_nodes'].values():
+        if cluster_config.get('db_nodes', []):
+            for db_ip in cluster_config.get('db_nodes'):
                 postgres_hosts.append(db_ip)
         else:
             postgres_hosts.append(config[MANAGER][PRIVATE_IP])
 
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, rabbit_ip in cluster_config['rabbitmq_nodes'].items():
-            rabbitmq_hosts.append(host if use_rabbit_host else rabbit_ip)
+        for host, ip in cluster_config.get('rabbitmq_nodes', {}).items():
+            rabbitmq_hosts.append(host if use_rabbit_host else ip)
 
     for alert_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} alerts...'.format(alert_group))
@@ -663,21 +640,3 @@ def _calculate_lookback_delta_for(scrape_interval):
         return '40s'
     scrape_seconds = int(m[2] or 0) + 0.001 * int(m[4] or 0)
     return '{0:d}s'.format(round(2.7 * scrape_seconds))
-
-
-def _get_managers_list():
-    records = db.run_psql_command(
-        "SELECT private_ip, public_ip, hostname FROM managers",
-        'cloudify_db_name',
-        logger,
-    )
-
-    return [
-        {
-            PRIVATE_IP: field[0].strip(),
-            PUBLIC_IP: field[1].strip(),
-            HOSTNAME: field[2].strip(),
-        }
-        for field in (record.split('|') for record in records.split('\n'))
-        if len(field) >= 2
-    ]
