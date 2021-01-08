@@ -7,8 +7,8 @@ postgresql_server:
   ssl_enabled: true
   ssl_client_verification: false
 
-  cert_path: /etc/cloudify/cert.pem
-  key_path: /etc/cloudify/key.pem
+  cert_path: /etc/cloudify/db_cert.pem
+  key_path: /etc/cloudify/db_key.pem
   ca_path: /etc/cloudify/ca.pem
 
   postgres_password: 'somesecretvalue123!'
@@ -30,11 +30,10 @@ postgresql_server:
       replicator_password: 'somesecretvalue123!'
 
 prometheus:
-  cert_path: /etc/cloudify/cert.pem
-  key_path: /etc/cloudify/key.pem
+  cert_path: /etc/cloudify/db_cert.pem
+  key_path: /etc/cloudify/db_key.pem
   ca_path: /etc/cloudify/ca.pem
   postgres_exporter:
-    # `password` is a placeholder and will be updated during config file rendering, based on postgresql_server.postgres_password
     password: ''
     sslmode: require
   scrape_interval: 5s
@@ -42,3 +41,5 @@ prometheus:
 services_to_install:
 - database_service
 - monitoring_service
+
+service_management: supervisord

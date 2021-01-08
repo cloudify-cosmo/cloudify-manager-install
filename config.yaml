@@ -559,7 +559,7 @@ prometheus:
   request_timeout: 4
 
 # Set this to supervisord to use supervisord. Only systemd and supervisord are supported.
-service_management: systemd
+service_management: supervisord
 
 flask_security: {}
 

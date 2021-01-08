@@ -23,3 +23,5 @@ services_to_install:
   - monitoring_service
 
 save_config: false
+
+service_management: supervisord

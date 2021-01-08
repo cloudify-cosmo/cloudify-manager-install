@@ -15,6 +15,9 @@ rabbitmq:
     rabbit2:
       networks:
         default: CONTAINER_IP
+    rabbit3:
+      networks:
+        default: QUEUE3_IP
   join_cluster: rabbit1
 
 prometheus:
@@ -26,3 +29,5 @@ prometheus:
 services_to_install:
  - queue_service
  - monitoring_service
+
+service_management: supervisord
