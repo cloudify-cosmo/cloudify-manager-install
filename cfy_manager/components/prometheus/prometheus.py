@@ -482,7 +482,7 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling, upgrade):
         # Monitor remote manager nodes
         if (config.get(CLUSTER_JOIN) or
                 (upgrade and not common.is_all_in_one_manager())):
-            for manager in cluster_config.get('managers', []):
+            for manager in cluster_config.get('manager_nodes', []):
                 manager_targets.append(
                     manager + ':' + monitoring_port)
 
@@ -552,7 +552,7 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
     else:
         if (config.get(CLUSTER_JOIN) or
                 (upgrade and not common.is_all_in_one_manager())):
-            for manager in cluster_config.get('managers', []):
+            for manager in cluster_config.get('manager_nodes', []):
                 manager_hosts.append(manager)
         else:
             manager_hosts.append(config[MANAGER][PRIVATE_IP])
