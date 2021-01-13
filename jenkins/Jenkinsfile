@@ -227,7 +227,7 @@ pipeline {
                     withVault([configuration: configuration, vaultSecrets: secrets]){
                       sh script: """#!/bin/bash
                       ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
-sleep 100
+sudo yum -y update
 cd ~/cloudify-manager-install && git checkout ${env.BRANCH_NAME}
 docker run --net host -dt -v ${pwd}:/mount python python -m http.server -d /mount
 echo 'Build manager container'
@@ -284,9 +284,9 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
                       sh script: """#!/bin/bash
                       scp -i ~/.ssh/ec2_ssh_key ${env.WORKSPACE}/${env.PROJECT}/jenkins/cfy_cluster_config.yaml centos@\$(cat capabilities.json | jq '.endpoint.value' | tr -d '"'):/tmp/
                       ssh -i ~/.ssh/ec2_ssh_key -l centos \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') /bin/bash << 'EOT'
-sudo yum -y update
 sudo service docker start
 git clone https://github.com/cloudify-cosmo/cloudify-manager-install.git && cd cloudify-manager-install && git checkout ${env.BRANCH_NAME}
+sudo yum -y update
 sudo cp -a /tmp/cfy_cluster_config.yaml /root/
 pushd jenkins
   sudo cp -a Dev-PS_cloudify_license.yaml /root/

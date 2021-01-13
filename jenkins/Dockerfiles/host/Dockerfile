@@ -15,7 +15,7 @@ RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
     systemd-sysv initscripts tcp_wrappers-libs sudo
-RUN yum -y install http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.4/ga-release/cloudify-cluster-manager-1.0.4-ga.el7.x86_64.rpm
+RUN yum -y install http://repository.cloudifysource.org/cloudify/cloudify-cluster-manager/1.0.5/ga-release/cloudify-cluster-manager-1.0.5-ga.el7.x86_64.rpm
 RUN yum -y install epel-release
 RUN yum -y install haveged
 ADD pkey.pem.pub /root/.ssh/authorized_keys
