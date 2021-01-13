@@ -56,7 +56,7 @@ def collect_metadata(data):
         'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
-        'image_info': 'rpm'
+        'image_info': 'docker' if _is_inside_docker() else 'rpm'
     }
 
 
@@ -122,3 +122,9 @@ def _get_timestamp(usage_collector_info, interval_type):
 def _get_flask_app():
     config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
     return setup_flask_app()
+
+
+def _is_inside_docker():
+    """ Check whether running inside a docker container"""
+    with open('/proc/1/cgroup', 'rt') as f:
+        return 'docker' in f.read()
