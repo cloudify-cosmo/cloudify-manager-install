@@ -4,6 +4,8 @@ from platform import platform
 from os.path import expanduser
 from multiprocessing import cpu_count
 
+from cloudify.models_states import ExecutionState
+
 from manager_rest import config, server
 from manager_rest.storage import models
 from script_utils import (logger,
@@ -59,15 +61,24 @@ def _collect_cloudify_data(data):
                         for plugin in sm.list(models.Plugin,
                                               all_tenants=True,
                                               get_all_results=True)]
+        executions = _summarize_executions(sm)
+        nodes = _summarize_nodes(sm)
+
         data['cloudify_usage'] = {
             'tenants_count': sm.count(models.Tenant),
             'users_count': sm.count(models.User),
+            'users_by_role':  _summarize_users_by_role(sm),
             'usergroups_count': sm.count(models.Group),
+            'sites_count': sm.count(models.Site),
             'blueprints_count': sm.count(models.Blueprint),
             'deployments_count': sm.count(models.Deployment),
-            'executions_count': sm.count(models.Execution),
+            'executions_count': executions['total'],
+            'executions_succeeded': executions['succeeded'],
+            'executions_failed': executions['failed'],
+            'executions_by_type': executions['types'],
             'secrets_count': sm.count(models.Secret),
-            'nodes_count': sm.count(models.Node),
+            'nodes_count': nodes['total'],
+            'nodes_by_type': nodes['types'],
             'node_instances_count': sm.count(models.NodeInstance),
             'plugins_count': len(plugins_list),
             'aws_plugin': _find_substring_in_list(plugins_list, 'aws'),
@@ -81,6 +92,57 @@ def _collect_cloudify_data(data):
                                                'started'},
                                       distinct_by=models.NodeInstance.host_id)
         }
+
+
+def _summarize_users_by_role(sm):
+    users_list = sm.list(models.User)
+    roles = {}
+    for user in users_list:
+        if user.role == 'sys_admin':
+            roles.setdefault('sys_admin', 0)
+            roles['sys_admin'] += 1
+        for tenant_role in user.user_tenants.values():
+            roles.setdefault(tenant_role, 0)
+            roles[tenant_role] += 1
+    return roles
+
+
+def _summarize_nodes(sm):
+    nodes_summary = sm.summarize(
+        target_field='type',
+        sub_field=None,
+        model_class=models.Node,
+        pagination=None,
+        all_tenants=True,
+        get_all_results=True,
+        filters=None)
+    nodes = {'total': 0,  'types': {}}
+    for node_type, amount in nodes_summary:
+        nodes['total'] += amount
+        nodes['types'].setdefault(node_type, 0)
+        nodes['types'][node_type] += amount
+    return nodes
+
+
+def _summarize_executions(sm):
+    executions_summary = sm.summarize(
+        target_field='workflow_id',
+        sub_field='status',
+        model_class=models.Execution,
+        pagination=None,
+        all_tenants=True,
+        get_all_results=True,
+        filters=None)
+    executions = {'total': 0, 'succeeded': 0, 'failed': 0, 'types': {}}
+    for exec_type, status, amount in executions_summary:
+        executions['total'] += amount
+        if status == ExecutionState.TERMINATED:
+            executions['succeeded'] += amount
+        else:
+            executions['failed'] += amount
+        executions['types'].setdefault(exec_type, 0)
+        executions['types'][exec_type] += amount
+    return executions
 
 
 def _collect_cloudify_config(data):
