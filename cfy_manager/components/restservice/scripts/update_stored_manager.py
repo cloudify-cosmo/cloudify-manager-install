@@ -63,6 +63,8 @@ def main(new_manager):
 
     sm.update(manager)
     if broker:
+        if broker.management_host == broker.host:
+            broker.management_host = manager.private_ip
         broker.host = manager.private_ip
         broker.networks = manager.networks
         broker.monitoring_username = manager.monitoring_username
