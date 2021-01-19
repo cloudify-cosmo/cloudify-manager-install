@@ -1,14 +1,17 @@
 import subprocess
 import tempfile
 import shutil
-from os.path import expanduser
+from os.path import expanduser, join
 
 from cloudify.decorators import operation
 
 
 @operation
 def install_agent(ctx, **_):
-    install_agent_script = ctx.agent.init_script({'user': 'cfyuser'})
+    install_agent_script = ctx.agent.init_script({
+        'user': 'cfyuser',
+        'basedir': '/etc/cloudify'
+    })
     with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write(install_agent_script)
     subprocess.check_call(['bash', f.name])
