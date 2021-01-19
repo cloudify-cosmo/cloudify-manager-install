@@ -15,9 +15,16 @@ def install_agent(ctx, **_):
 
 
 @operation
+def store_envdir(ctx, **_):
+    envdir = ctx.instance.runtime_properties['cloudify_agent']['envdir']
+    ctx.instance.runtime_properties['envdir'] = envdir
+
+
+@operation
 def uninstall_agent(ctx, **_):
+    envdir = ctx.instance.runtime_properties['envdir']
     daemon_delete_cmd = [
-        expanduser('~cfyuser/{0}/env/bin/cfy-agent'.format(ctx.instance.id)),
+        join(envdir, 'bin', 'cfy-agent'),
         'daemons', 'delete', '--name', ctx.instance.id
     ]
     subprocess.check_call(daemon_delete_cmd,
