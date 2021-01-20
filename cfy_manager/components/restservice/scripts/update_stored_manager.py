@@ -46,10 +46,6 @@ def _update_cert(sm, manager, broker, new_cert_value):
 
 def main(new_manager):
     sm = get_storage_manager()
-    amqp_manager = _get_amqp_manager()
-    default_tenant = sm.get(models.Tenant, DEFAULT_TENANT_ID)
-    amqp_manager.create_tenant_vhost_and_user(default_tenant)
-    amqp_manager.sync_metadata()
 
     hostname = new_manager['hostname']
     manager = sm.get(models.Manager, None, filters={'hostname': hostname})
@@ -67,6 +63,8 @@ def main(new_manager):
 
     sm.update(manager)
     if broker:
+        if broker.management_host == broker.host:
+            broker.management_host = manager.private_ip
         broker.host = manager.private_ip
         broker.networks = manager.networks
         broker.monitoring_username = manager.monitoring_username
@@ -83,6 +81,10 @@ def main(new_manager):
         _update_cert(sm, manager, broker, new_manager['ca_cert'])
 
     config.instance.load_configuration()
+    amqp_manager = _get_amqp_manager()
+    default_tenant = sm.get(models.Tenant, DEFAULT_TENANT_ID)
+    amqp_manager.create_tenant_vhost_and_user(default_tenant)
+    amqp_manager.sync_metadata()
     if controller:
         controller.add_manager(sm.list(models.Manager))
     if agents:
