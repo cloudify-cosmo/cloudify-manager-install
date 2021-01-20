@@ -23,6 +23,9 @@ node_templates:
         create:
           implementation: sanitycheck.sanitycheck.install_agent
           executor: central_deployment_agent
+        prestop:
+          implementation: sanitycheck.sanitycheck.store_envdir
+          executor: central_deployment_agent
         delete:
           implementation: sanitycheck.sanitycheck.uninstall_agent
           executor: central_deployment_agent
