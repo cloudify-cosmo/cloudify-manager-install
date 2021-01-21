@@ -512,9 +512,6 @@ class RabbitMQ(BaseComponent):
     @retry(stop_max_attempt_number=20, wait_fixed=3000)
     def verify_started(self):
         logger.info('Making sure RabbitMQ is live...')
-        # If we don't trigger a restart here then supervisord sometimes gets
-        # upset and leaves the service in a failed state
-        service.restart('cloudify-rabbitmq')
         wait_for_port(SECURE_PORT)
 
         result = self._rabbitmqctl(['status'])

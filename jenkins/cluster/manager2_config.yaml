@@ -6,8 +6,22 @@ manager:
     ssl_enabled: true
     admin_password: admin
 
+rabbitmq:
+  ca_path: /etc/cloudify/ca.pem
+  cluster_members:
+    rabbit1:
+      networks:
+        default: QUEUE1_IP
+    rabbit2:
+      networks:
+        default: QUEUE2_IP
+    rabbit3:
+      networks:
+        default: QUEUE3_IP
+
 postgresql_server:
   ssl_enabled: true
+  ca_path: /etc/cloudify/ca.pem
 
   postgres_password: 'somesecretvalue123!'
   cluster:
@@ -26,19 +40,19 @@ postgresql_client:
   ca_path: /etc/cloudify/ca.pem
 
 prometheus:
-  cert_path: /etc/cloudify/prometheus_cert.pem
-  key_path: /etc/cloudify/prometheus_key.pem
+  cert_path: /etc/cloudify/manager_prometheus_cert.pem
+  key_path: /etc/cloudify/manager_prometheus_key.pem
   ca_path: /etc/cloudify/ca.pem
   scrape_interval: 5s
 
 ssl_inputs:
-  postgresql_client_cert_path: /etc/cloudify/postgres_client_cert.pem
-  postgresql_client_key_path: /etc/cloudify/postgres_client_key.pem
+  postgresql_client_cert_path: /etc/cloudify/manager_postgres_client_cert.pem
+  postgresql_client_key_path: /etc/cloudify/manager_postgres_client_key.pem
   ca_cert_path: '/etc/cloudify/ca.pem'
   ca_key_path: '/etc/cloudify/ca_key.pem'
   ca_key_password: 'secret_ca_password'
-  external_cert_path: /etc/cloudify/external_cert.pem
-  external_key_path: /etc/cloudify/external_key.pem
+  external_cert_path: /etc/cloudify/manager_external_cert.pem
+  external_key_path: /etc/cloudify/manager_external_key.pem
   external_ca_cert_path: /etc/cloudify/ca.pem
 
 services_to_install:

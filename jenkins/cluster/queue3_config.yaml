@@ -7,14 +7,18 @@ rabbitmq:
   key_path: /etc/cloudify/queue_key.pem
   ca_path: /etc/cloudify/ca.pem
   erlang_cookie: cookievalue123
-  nodename: rabbit1
+  nodename: rabbit3
   cluster_members:
     rabbit1:
       networks:
-        default: CONTAINER_IP
+        default: QUEUE1_IP
     rabbit2:
       networks:
         default: QUEUE2_IP
+    rabbit3:
+      networks:
+        default: CONTAINER_IP
+  join_cluster: rabbit1
 
 prometheus:
   cert_path: /etc/cloudify/queue_cert.pem
@@ -25,4 +29,5 @@ prometheus:
 services_to_install:
  - queue_service
  - monitoring_service
+
 service_management: supervisord

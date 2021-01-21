@@ -792,8 +792,12 @@ def _get_packages():
 def _configure_supervisord():
     # These services will be relevant for using supervisord on VM not on
     # containers
-    sudo('systemctl enable supervisord.service', ignore_failures=True)
-    sudo('systemctl restart supervisord', ignore_failures=True)
+    is_active = sudo('systemctl is-active supervisord',
+                     ignore_failures=True
+                     ).aggr_stdout.strip()
+    if is_active not in ('active', 'activating'):
+        sudo('systemctl enable supervisord.service', ignore_failures=True)
+        sudo('systemctl restart supervisord', ignore_failures=True)
 
 
 def _create_packages_installed_file(packages_to_install):
