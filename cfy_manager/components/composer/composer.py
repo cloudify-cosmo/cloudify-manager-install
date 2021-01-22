@@ -96,7 +96,8 @@ class Composer(BaseComponent):
             key_destination=DB_CLIENT_KEY_PATH,
             owner=COMPOSER_USER,
             group=COMPOSER_GROUP,
-            key_perms='400',
+            # Group access is required for snapshots
+            key_perms='440',
             update_config=False,
         )
 
