@@ -108,7 +108,8 @@ class Stage(BaseComponent):
             key_destination=DB_CLIENT_KEY_PATH,
             owner=STAGE_USER,
             group=STAGE_GROUP,
-            key_perms='400',
+            # Group access is required for snapshots
+            key_perms='440',
             update_config=False,
         )
 
