@@ -1,0 +1,4 @@
+# REST Service's config files
+MANAGER_REST_CONFIG_PATH="{{ restservice.home_dir }}/cloudify-rest.conf"
+
+LOG_PATH="{{ execution_scheduler.log_dir }}/execution_scheduler.log"
