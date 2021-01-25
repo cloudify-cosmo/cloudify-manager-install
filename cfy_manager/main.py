@@ -664,6 +664,7 @@ def _get_components(include_components=None):
             components.AmqpPostgres(),
             components.MgmtWorker(),
             components.Stage(),
+            components.ExecutionScheduler(),
         ]
         if (
             is_premium_installed()

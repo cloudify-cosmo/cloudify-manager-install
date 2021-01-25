@@ -30,6 +30,7 @@ from .restservice import RestService  # NOQA
 from .sanity import Sanity  # NOQA
 from .stage import Stage  # NOQA
 from .usage_collector import UsageCollector  # NOQA
+from .execution_scheduler import ExecutionScheduler  # NOQA
 from .service_names import (  # NOQA
     DATABASE_SERVICE,
     ENTROPY_SERVICE,

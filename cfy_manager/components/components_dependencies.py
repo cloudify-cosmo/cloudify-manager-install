@@ -47,4 +47,5 @@ COMPONENTS_DEPENDENCIES = {
     'Patch': [],
     'Prometheus': [],
     'Haveged': [],
+    'ExecutionScheduler': [],
 }
