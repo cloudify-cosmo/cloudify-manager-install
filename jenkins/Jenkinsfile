@@ -1,11 +1,11 @@
 def configuration = [vaultUrl: "${VAULT_URL}",  vaultCredentialId: "vault-app-role", engineVersion: 2]
 
 def secrets = [
-  [path: 'secret/jenkins/cloudify', engineVersion: 2, secretValues: [
-    [envVar: 'OS_USERNAME', vaultKey: 'username'],
-    [envVar: 'OS_TENANT', vaultKey: 'tenant'],
-    [envVar: 'OS_IP', vaultKey: 'ip'],
-    [envVar: 'OS_PASSWORD', vaultKey: 'password']]],
+  [path: 'secret/jenkins/cloudifyaws', engineVersion: 2, secretValues: [
+    [envVar: 'MANAGER_USERNAME', vaultKey: 'username'],
+    [envVar: 'MANAGER_TENANT', vaultKey: 'tenant'],
+    [envVar: 'MANAGER_IP', vaultKey: 'ip'],
+    [envVar: 'MANAGER_PASSWORD', vaultKey: 'password']]],
 ]
 
 @Library('pipeline-shared-library') _
@@ -188,8 +188,8 @@ pipeline {
                       virtualenv .venv
                       source .venv/bin/activate
 
-                      pip install cloudify==5.1.0
-                      cfy profile use ${env.OS_IP} -u ${env.OS_USERNAME} -p ${env.OS_PASSWORD} -t ${env.OS_TENANT}
+                      pip install cloudify==5.1.1
+                      cfy profile use ${env.MANAGER_IP} -u ${env.MANAGER_USERNAME} -p ${env.MANAGER_PASSWORD} -t ${env.MANAGER_TENANT}
                       pushd 'bp'
                         cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
                       popd
