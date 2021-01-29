@@ -19,7 +19,7 @@ import base64
 import random
 import string
 import subprocess
-from os.path import join, exists
+from os.path import join, exists, dirname
 from collections import namedtuple
 
 import requests
@@ -348,6 +348,14 @@ class RestService(BaseComponent):
         )
 
     @staticmethod
+    def _ensure_ldap_cert_path_writable():
+        """This can be set later by the restservice so it must be able to
+        write the relevant directory.
+        """
+        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                     dirname(LDAP_CA_CERT_PATH))
+
+    @staticmethod
     def handle_ldap_certificate():
         certificates.use_supplied_certificates(
             logger=logger,
@@ -507,6 +515,7 @@ class RestService(BaseComponent):
 
         logger.info('Checking for ldaps CA cert to deploy.')
         self.handle_ldap_certificate()
+        self._ensure_ldap_cert_path_writable()
 
         self._make_paths()
         self._configure_restservice()
@@ -528,4 +537,5 @@ class RestService(BaseComponent):
     def upgrade(self):
         logger.notice('Upgrading Rest Service...')
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
+        self._ensure_ldap_cert_path_writable()
         logger.notice('Rest Service successfully upgraded')
