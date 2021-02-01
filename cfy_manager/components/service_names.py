@@ -34,6 +34,7 @@ PROMETHEUS = 'prometheus'
 NODE_EXPORTER = 'node_exporter'
 BLACKBOX_EXPORTER = 'blackbox_exporter'
 POSTGRES_EXPORTER = 'postgres_exporter'
+EXECUTION_SCHEDULER = 'execution-scheduler'
 
 DATABASE_SERVICE = 'database_service'
 QUEUE_SERVICE = 'queue_service'
