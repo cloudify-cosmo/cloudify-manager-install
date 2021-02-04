@@ -52,11 +52,11 @@ def main(new_manager):
     broker = sm.get(models.RabbitMQBroker, None, filters={
         'name': hostname,
         'host': manager.private_ip
-    })
+    }, fail_silently=True)
     db_node = sm.get(models.DBNodes, None, filters={
         'name': hostname,
         'host': manager.private_ip
-    })
+    }, fail_silently=True)
     for attr in ['private_ip', 'public_ip', 'networks',
                  'monitoring_username', 'monitoring_password']:
         setattr(manager, attr, new_manager[attr])
