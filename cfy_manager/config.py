@@ -110,20 +110,29 @@ class Config(CommentedMap):
 
     def _load_yaml(self, path_to_yaml):
         try:
-            with self._own_config_file(path_to_yaml):
-                with open(path_to_yaml, 'r') as f:
-                    return yaml.load(f)
-        except YAMLError as e:
-            raise InputError(
-                'User config file {0} is not a properly formatted '
-                'YAML file:\n{1}'.format(path_to_yaml, e)
-            )
+            try:
+                with open(path_to_yaml) as f:
+                    yaml_data = f.read()
+            except PermissionError as e:
+                logger.warning('Cannot access %s, trying with sudo (%s)',
+                               path_to_yaml, e)
+                yaml_data = subprocess.check_output([
+                    'sudo', 'cat', path_to_yaml
+                ])
         except IOError as e:
             raise RuntimeError(
                 'Cannot access {config}: {error}'.format(
                     config=path_to_yaml,
                     error=e
                 )
+            )
+
+        try:
+            return yaml.load(yaml_data)
+        except YAMLError as e:
+            raise InputError(
+                'User config file {0} is not a properly formatted '
+                'YAML file:\n{1}'.format(path_to_yaml, e)
             )
 
     def dump_config(self):
