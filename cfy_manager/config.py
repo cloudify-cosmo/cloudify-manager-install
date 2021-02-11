@@ -119,7 +119,7 @@ class Config(CommentedMap):
                 yaml_data = subprocess.check_output([
                     'sudo', 'cat', path_to_yaml
                 ])
-        except IOError:
+        except IOError as e:
             raise RuntimeError(
                 'Cannot access {config}: {error}'.format(
                     config=path_to_yaml,
@@ -128,7 +128,7 @@ class Config(CommentedMap):
             )
 
         try:
-            return yaml.load(f)
+            return yaml.load(yaml_data)
         except YAMLError as e:
             raise InputError(
                 'User config file {0} is not a properly formatted '
