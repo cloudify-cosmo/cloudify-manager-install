@@ -22,7 +22,13 @@ from . import network
 from .common import sudo, remove, chown, chmod, copy
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
-from ..constants import SSL_CERTS_TARGET_DIR, CLOUDIFY_USER, CLOUDIFY_GROUP
+from ..constants import (
+    BROKER_CERT_LOCATION,
+    BROKER_KEY_LOCATION,
+    CLOUDIFY_GROUP,
+    CLOUDIFY_USER,
+    SSL_CERTS_TARGET_DIR,
+)
 from ..exceptions import ProcessExecutionError
 from .files import write_to_file, write_to_tempfile
 from ..components.validations import check_certificates, validate_certificates
@@ -390,13 +396,14 @@ def create_internal_certs(manager_hostname=None,
         _generate_ssl_certificate(
             ips=cert_ips,
             cn=hostname,
-            cert_path='/etc/cloudify/ssl/rabbitmq_cert.pem',
-            key_path='/etc/cloudify/ssl/rabbitmq_key.pem',
+            cert_path=BROKER_CERT_LOCATION,
+            key_path=BROKER_KEY_LOCATION,
             # We only support ipsetter on nodes with managers, so the fact
             # that this would break if used on a node containing only rmq
             # doesn't matter
             sign_cert=const.CA_CERT_PATH,
             sign_key=const.CA_KEY_PATH,
+            owner='rabbitmq',
         )
 
     store_cert_metadata(
