@@ -1125,7 +1125,7 @@ def _is_unit_finished(unit_name='cloudify-starter.service'):
 def _get_starter_service_response():
     server = xmlrpclib.Server(
         'http://',
-        transport=service.UnixSocketTransport("/tmp/supervisor.sock"))
+        transport=service.UnixSocketTransport("/var/run/supervisord.sock"))
     try:
         status_response = server.supervisor.getProcessInfo(STARTER_SERVICE)
     except xmlrpclib.Fault as e:
@@ -1136,7 +1136,7 @@ def _get_starter_service_response():
 
 
 def _is_supervisord_service_finished():
-    if not os.path.exists('/tmp/supervisor.sock'):
+    if not os.path.exists('/var/run/supervisord.sock'):
         # supervisord did not start yet
         return False
 
