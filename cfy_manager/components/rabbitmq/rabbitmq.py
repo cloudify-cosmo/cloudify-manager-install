@@ -457,8 +457,8 @@ class RabbitMQ(BaseComponent):
             'cert_destination': constants.BROKER_CERT_LOCATION,
             'key_destination': constants.BROKER_KEY_LOCATION,
             'ca_destination': ca_destination,
-            'owner': 'rabbitmq',
-            'group': 'rabbitmq',
+            'owner': 'cfyuser',
+            'group': 'cfyuser',
             'key_perms': '440',
             'cert_perms': '444',
         }
