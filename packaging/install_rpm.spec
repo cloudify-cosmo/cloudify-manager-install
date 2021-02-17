@@ -60,7 +60,9 @@ fi
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 groupadd -fr rabbitmq
+getent passwd rabbitmq >/dev/null || useradd -r -g rabbitmq -d /var/lib/rabbitmq -s /sbin/nologin rabbitmq
 usermod -aG rabbitmq cfyuser
+usermod -aG cfyuser rabbitmq
 
 %post
 echo "
