@@ -403,7 +403,6 @@ def create_internal_certs(manager_hostname=None,
             # doesn't matter
             sign_cert=const.CA_CERT_PATH,
             sign_key=const.CA_KEY_PATH,
-            owner='rabbitmq',
         )
 
     store_cert_metadata(
