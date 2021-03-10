@@ -78,7 +78,7 @@
               "x": 0,
               "y": 0,
               "configuration": {
-                "jsonPath": "//resources/windriver/wrcp.zip",
+                "jsonPath": "http://localhost/resources/windriver/wrcp.zip",
                 "displayStyle": "catalog"
               }
             }

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "WRCP Blueprint",
+    "name": "Wind-River-Cloud-Platform",
+    "description": "WRCP: Setup a Wind River Cloud Platform",
+    "html_url": "https://www.windriver.com/",
+    "zip_url": "http://localhost/resources/windriver/wrcp.zip",
+    "readme_url": "http://localhost/resources/windriver/README.md",
+    "main_blueprint": "blueprint.yaml",
+    "image_url": "http://localhost/resources/windriver/wrcp.png",
+    "created_at": "2021-03-10T14:52:56Z",
+    "updated_at": "2021-03-10T14:52:56Z"
+  }
+]
+

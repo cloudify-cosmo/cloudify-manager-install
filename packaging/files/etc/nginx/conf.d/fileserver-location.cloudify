@@ -1,0 +1,21 @@
+location /resources {
+    alias {{ manager.file_server_root }};
+    auth_request /resources-auth;
+
+    # A special location that doesn't require authentication for agents upgrade
+    location /resources/cloudify_agent {
+        auth_request off;
+    }
+
+    # A special location that doesn't require authentication for Wind River resources
+    location /resources/windriver {
+        auth_request off;
+    }
+
+}
+
+location /resources-auth {
+    internal;
+    proxy_pass http://cloudify-rest/api/v3.1/file-server-auth;
+    proxy_set_header X-Original-URI $request_uri;
+}
