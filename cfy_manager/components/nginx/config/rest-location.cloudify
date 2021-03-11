@@ -1,7 +1,6 @@
-location ~ ^/(blueprints|snapshots|executions|deployments|nodes|events|search|status|provider|node-instances|version|evaluate|deployment-modifications|tokens|summary)(.*)$ {
-   rewrite ^/(blueprints|snapshots|executions|deployments|nodes|events|search|status|provider|node-instances|version|evaluate|deployment-modifications|tokens|summary)(.*)$ /api/v1/$1$2;
+location ~ ^/(blueprints|executions|deployments|nodes|events|status|provider|node-instances|version|evaluate|deployment-modifications|tokens)(.*)$ {
+    rewrite ^/(.*)$ /api/v1/$1;
 }
-
 location /api/ {
     include "/etc/nginx/conf.d/rest-proxy.cloudify";
 }
