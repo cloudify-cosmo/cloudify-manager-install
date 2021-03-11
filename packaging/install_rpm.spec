@@ -90,3 +90,9 @@ cfy_manager install
 /usr/bin/supervisorctl
 /usr/bin/supervisord
 %attr(755,cfyuser,cfyuser) /var/log/cloudify
+%attr(600,root,root) /etc/nginx/conf.d/fileserver-location.cloudify
+%attr(644,cfyuser,cfyuser) /opt/cloudify-stage/dist/appData/templates/pages/catalog.json
+%attr(755,cfyuser,cfyuser) /opt/manager/resources/windriver/
+#%attr(644,cfyuser,cfyuser) /opt/manager/resources/windriver/wrcp-examples.json
+#%attr(644,cfyuser,cfyuser) /opt/manager/resources/windriver/wrcp.png
+#%attr(644,cfyuser,cfyuser) /opt/manager/resources/windriver/wrcp.zip
