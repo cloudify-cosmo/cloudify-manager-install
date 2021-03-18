@@ -57,7 +57,7 @@ class Cli(BaseComponent):
 
         manager = config[MANAGER]['cli_local_profile_host_name']
         if not manager:
-            manager = config[MANAGER]['private_ip']
+            manager = config[MANAGER]['public_ip']
 
         use_cmd = ['profiles', 'use', manager,
                    '-u', username, '-p', password,
