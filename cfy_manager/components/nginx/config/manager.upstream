@@ -46,6 +46,8 @@ server {
   ssl_certificate     {{ constants.external_cert_path }};
   ssl_certificate_key {{ constants.external_key_path }};
 
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 
   # serve the UI
@@ -96,6 +98,8 @@ server {
 
   ssl_certificate     {{ constants.internal_cert_path }};
   ssl_certificate_key {{ constants.internal_key_path }};
+
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 {% if 'manager_service' in services_to_install %}
