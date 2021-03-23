@@ -22,6 +22,7 @@ location /composer {
     add_header X-Frame-Options SAMEORIGIN always;
     add_header X-Xss-Protection "1; mode=block" always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src https: 'self' 'unsafe-inline'; font-src https: data: 'unsafe-inline' 'self'; connect-src 'self' repository.cloudifysource.org; img-src 'self' data: wp.cloudify.co cloudify.co";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
   }
 
 }
