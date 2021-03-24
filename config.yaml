@@ -24,7 +24,7 @@ manager:
   ######################################################################################
   security:
     # When enabled, the external REST communication will be performed over HTTPS
-    ssl_enabled: false
+    ssl_enabled: true
 
     # Username and password of the Cloudify Manager administrator.
     admin_username: admin
