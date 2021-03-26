@@ -1244,7 +1244,8 @@ def image_starter(verbose=False, config_file=None):
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
         command += ['--public-ip', private_ip]
-    if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD):
+    if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
+            and not _are_components_configured():
         command += ['--admin-password', 'admin']
     os.execv(sys.executable, command)
 
