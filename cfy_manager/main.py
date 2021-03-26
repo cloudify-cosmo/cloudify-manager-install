@@ -109,8 +109,6 @@ CLEAN_DB_HELP_MSG = (
 )
 ADMIN_PASSWORD_HELP_MSG = (
     'The password of the Cloudify Manager system administrator. '
-    'Can only be used on the first install of the manager, or when using '
-    'the --clean-db flag'
 )
 ONLY_INSTALL_HELP_MSG = (
     'Whether to only perform the install, and not configuration. '
@@ -515,14 +513,7 @@ def _populate_and_validate_config_values(private_ip, public_ip,
     if public_ip:
         manager_config[PUBLIC_IP] = public_ip
     if admin_password:
-        if config[CLEAN_DB] or not _are_components_configured():
-            manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
-        else:
-            raise BootstrapError(
-                'The --admin-password argument can only be used in '
-                'conjunction with the --clean-db flag or on a first '
-                'install.'
-            )
+        manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
 
 
 def _prepare_execution(verbose=False,
