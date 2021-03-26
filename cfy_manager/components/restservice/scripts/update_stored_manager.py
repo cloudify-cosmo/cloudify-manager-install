@@ -3,12 +3,13 @@ import json
 import uuid
 
 from datetime import datetime
+from flask_security.utils import hash_password, verify_password
 
 from manager_rest import config
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.constants import DEFAULT_TENANT_ID
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models, get_storage_manager, user_datastore
 try:
     from cloudify_premium.ha import agents
     from cloudify_premium.ha import controller
@@ -44,7 +45,15 @@ def _update_cert(sm, manager, broker, new_cert_value):
         sm.delete(old_cert)
 
 
-def main(new_manager):
+def _update_admin_password(new_password):
+    adm = user_datastore.get_user('admin')
+    if verify_password(new_password, adm.password):  # no change
+        return
+    adm.password = hash_password(new_password)
+    user_datastore.commit()
+
+
+def main(new_manager, admin_password):
     sm = get_storage_manager()
 
     hostname = new_manager['hostname']
@@ -89,6 +98,8 @@ def main(new_manager):
         controller.add_manager(sm.list(models.Manager))
     if agents:
         agents.update_agents(sm)
+    if admin_password:
+        _update_admin_password(admin_password)
 
 
 if __name__ == '__main__':
@@ -111,4 +122,4 @@ if __name__ == '__main__':
         secret_key=config.instance.security_secret_key
     ).app_context():
         config.instance.load_configuration()
-        main(inputs['manager'])
+        main(inputs['manager'], inputs.get('admin_password'))
