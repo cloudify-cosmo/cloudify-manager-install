@@ -59,6 +59,11 @@ class Cli(BaseComponent):
         if not manager:
             manager = config[MANAGER]['public_ip']
 
+        if self._should_recreate_profile():
+            self._remove_profile(manager)
+            if current_user != 'root':
+                self._remove_profile(manager, use_sudo=True)
+
         use_cmd = ['profiles', 'use', manager,
                    '-u', username, '-p', password,
                    '-t', 'default_tenant']
@@ -67,8 +72,7 @@ class Cli(BaseComponent):
         if config['nginx']['port']:
             use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
-        logger.info('Setting CLI for the current user ({0})...'.format(
-            current_user))
+        logger.info('Setting CLI for the current user (%s)...', current_user)
         # we don't want the commands with the password to be printed
         # to log file
         current_level = get_file_handlers_level()
@@ -87,27 +91,35 @@ class Cli(BaseComponent):
         logger.notice('Cloudify CLI successfully configured')
         self.start()
 
-    def remove(self):
+    def _should_recreate_profile(self):
+        """Should the CLI profile be recreated, ie. removed first?
+
+        If something for the `use` command changed, eg. the admin password,
+        then drop the old profile before attempting to `use` again.
+        """
+        return bool(config[MANAGER][SECURITY]['admin_password'])
+
+    def _remove_profile(self, profile, use_sudo=False, silent=False):
+        proc = common.cfy('profiles', 'delete', profile,
+                          ignore_failures=True, sudo=use_sudo)
+        if silent:
+            return
+        if proc.returncode == 0:
+            logger.notice('CLI profile removed')
+        else:
+            logger.warning('Failed removing CLI profile (rc=%s)',
+                           proc.returncode)
+
+    def remove(self, silent=False):
         profile_name = config[MANAGER]['cli_local_profile_host_name']
-
-        def _remove_profile_and_check(cli_cmd, use_sudo=False):
-            proc = common.cfy(*cli_cmd, ignore_failures=True, sudo=use_sudo)
-            if proc.returncode == 0:
-                logger.notice('CLI profile removed')
-            else:
-                logger.warning('Failed removing CLI profile (rc={})'.format(
-                    proc.returncode))
-
         try:
             logger.notice('Removing CLI profile...')
-
-            cmd = ['profiles', 'delete', profile_name]
-            _remove_profile_and_check(cmd)
+            self._remove_profile(profile_name)
 
             current_user = getuser()
             if current_user != 'root':
                 logger.notice('Removing CLI profile for root user...')
-                _remove_profile_and_check(cmd, use_sudo=True)
+                self._remove_profile(profile_name, use_sudo=True)
         except OSError as ex:
             if ex.errno == errno.ENOENT:
                 logger.warning('Could not find the `cfy` executable; it has '
