@@ -288,7 +288,10 @@ def insert_manager(configs):
 
 def update_stored_manager(configs=None):
     logger.notice('Updating stored manager...')
-    args = {'manager': _get_manager()}
+    args = {
+        'manager': _get_manager(),
+        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
+    }
 
     run_script('update_stored_manager.py', args, configs=configs)
     logger.notice('AMQP resources successfully created')
