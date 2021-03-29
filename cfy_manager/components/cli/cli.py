@@ -15,8 +15,9 @@
 
 import errno
 import logging
-from os.path import join, exists, expanduser
+from contextlib import contextmanager
 from getpass import getuser
+from os.path import join, exists, expanduser
 
 from ..components_constants import SECURITY, SSL_INPUTS
 from ..base_component import BaseComponent
@@ -30,6 +31,18 @@ from ...constants import (EXTERNAL_CERT_PATH,
                           EXTERNAL_CA_CERT_PATH)
 
 logger = get_logger(CLI)
+PROFILE_NAME = 'manager-local'
+
+
+@contextmanager
+def _hide_logs():
+    """Increase the logging level, so that the password isn't in the logfile"""
+    current_level = get_file_handlers_level()
+    set_file_handlers_level(logging.ERROR)
+    try:
+        yield
+    finally:
+        set_file_handlers_level(current_level)
 
 
 class Cli(BaseComponent):
@@ -59,45 +72,35 @@ class Cli(BaseComponent):
         if not manager:
             manager = config[MANAGER]['public_ip']
 
-        if self._should_recreate_profile():
-            self._remove_profile(manager)
-            if current_user != 'root':
-                self._remove_profile(manager, use_sudo=True)
-
-        use_cmd = ['profiles', 'use', manager,
-                   '-u', username, '-p', password,
-                   '-t', 'default_tenant']
+        use_cmd = ['profiles', 'use', PROFILE_NAME,
+                   '--skip-credentials-validation']
+        set_cmd = ['profiles', 'set', '-m', manager, '-t', 'default_tenant']
+        if username:
+            set_cmd += ['-u', username]
+        if password:
+            set_cmd += ['-p', password]
         if config[MANAGER][SECURITY]['ssl_enabled']:
-            use_cmd.extend(['-c', cert_path])
+            set_cmd += ['-c', cert_path, '--ssl', 'on']
+        else:
+            set_cmd += ['--ssl', 'off']
         if config['nginx']['port']:
-            use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
+            set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
         logger.info('Setting CLI for the current user (%s)...', current_user)
-        # we don't want the commands with the password to be printed
-        # to log file
-        current_level = get_file_handlers_level()
-        set_file_handlers_level(logging.ERROR)
-        common.cfy(*use_cmd)
-        set_file_handlers_level(current_level)
+
+        with _hide_logs():
+            common.cfy(*use_cmd)
+            common.cfy(*set_cmd)
         self._set_colors(is_root=False)
 
         if current_user != 'root':
             logger.info('Setting CLI for the root user...')
-            set_file_handlers_level(logging.ERROR)
-            common.cfy(*use_cmd, sudo=True)
-            set_file_handlers_level(current_level)
+            with _hide_logs():
+                common.cfy(*use_cmd, sudo=True)
+                common.cfy(*set_cmd, sudo=True)
             self._set_colors(is_root=True)
-        set_file_handlers_level(current_level)
+
         logger.notice('Cloudify CLI successfully configured')
-        self.start()
-
-    def _should_recreate_profile(self):
-        """Should the CLI profile be recreated, ie. removed first?
-
-        If something for the `use` command changed, eg. the admin password,
-        then drop the old profile before attempting to `use` again.
-        """
-        return bool(config[MANAGER][SECURITY]['admin_password'])
 
     def _remove_profile(self, profile, use_sudo=False, silent=False):
         proc = common.cfy('profiles', 'delete', profile,
