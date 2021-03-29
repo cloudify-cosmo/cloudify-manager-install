@@ -127,7 +127,7 @@ def _format_ips(ips, cn=None):
     return cert_metadata
 
 
-def store_cert_metadata(private_ip=None,
+def store_cert_metadata(hostname=None,
                         new_brokers=None,
                         new_managers=None,
                         new_networks=None,
@@ -135,8 +135,8 @@ def store_cert_metadata(private_ip=None,
                         owner=const.CLOUDIFY_USER,
                         group=const.CLOUDIFY_GROUP):
     metadata = load_cert_metadata()
-    if private_ip:
-        metadata['hostname'] = private_ip
+    if hostname:
+        metadata['hostname'] = hostname
     if new_brokers:
         brokers = metadata.get('broker_addresses', [])
         brokers.extend(new_brokers)
