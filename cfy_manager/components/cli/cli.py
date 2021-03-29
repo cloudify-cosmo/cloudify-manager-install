@@ -27,7 +27,7 @@ from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
 from ...utils import common, certificates
-from ...constants import (EXTERNAL_CERT_PATH,
+from ...constants import (CA_CERT_PATH,
                           EXTERNAL_CA_CERT_PATH)
 
 logger = get_logger(CLI)
@@ -65,7 +65,6 @@ class Cli(BaseComponent):
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']
 
-        cert_path = self._deploy_external_cert()
         current_user = getuser()
 
         manager = config[MANAGER]['cli_local_profile_host_name']
@@ -80,6 +79,7 @@ class Cli(BaseComponent):
         if password:
             set_cmd += ['-p', password]
         if config[MANAGER][SECURITY]['ssl_enabled']:
+            cert_path = self._deploy_external_cert()
             set_cmd += ['-c', cert_path, '--ssl', 'on']
         else:
             set_cmd += ['--ssl', 'off']
@@ -147,4 +147,4 @@ class Cli(BaseComponent):
             )
             return EXTERNAL_CA_CERT_PATH
         else:
-            return EXTERNAL_CERT_PATH
+            return CA_CERT_PATH
