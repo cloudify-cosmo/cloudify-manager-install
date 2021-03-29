@@ -1220,6 +1220,13 @@ def _guess_private_ip():
     return inets[0]
 
 
+def _get_hostname():
+    try:
+        return open('/etc/hostname').read().strip('\n')
+    except FileNotFoundError:
+        return
+
+
 @argh.decorators.named('image-starter')
 @config_arg
 def image_starter(verbose=False, config_file=None):
@@ -1239,7 +1246,8 @@ def image_starter(verbose=False, config_file=None):
                '--skip-config-save']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
-        private_ip = _guess_private_ip()
+        hostname = _get_hostname()
+        private_ip = hostname if hostname else _guess_private_ip()
         command += ['--private-ip', private_ip]
     if not config[MANAGER].get(PUBLIC_IP):
         # if public ip is not given, default it to the same as private
