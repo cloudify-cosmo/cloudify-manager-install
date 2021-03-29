@@ -80,7 +80,9 @@ class Cli(BaseComponent):
         if password:
             set_cmd += ['-p', password]
         if config[MANAGER][SECURITY]['ssl_enabled']:
-            set_cmd += ['-c', cert_path]
+            set_cmd += ['-c', cert_path, '--ssl', 'on']
+        else:
+            set_cmd += ['--ssl', 'off']
         if config['nginx']['port']:
             set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
