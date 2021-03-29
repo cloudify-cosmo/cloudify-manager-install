@@ -74,8 +74,11 @@ class Cli(BaseComponent):
 
         use_cmd = ['profiles', 'use', PROFILE_NAME,
                    '--skip-credentials-validation']
-        set_cmd = ['profiles', 'set', '-m', manager,
-                   '-u', username, '-p', password, '-t', 'default_tenant']
+        set_cmd = ['profiles', 'set', '-m', manager, '-t', 'default_tenant']
+        if username:
+            set_cmd += ['-u', username]
+        if password:
+            set_cmd += ['-p', password]
         if config[MANAGER][SECURITY]['ssl_enabled']:
             set_cmd += ['-c', cert_path]
         if config['nginx']['port']:
