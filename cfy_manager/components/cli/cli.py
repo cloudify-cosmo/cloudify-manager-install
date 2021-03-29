@@ -30,6 +30,7 @@ from ...constants import (EXTERNAL_CERT_PATH,
                           EXTERNAL_CA_CERT_PATH)
 
 logger = get_logger(CLI)
+PROFILE_NAME = 'manager-local'
 
 
 class Cli(BaseComponent):
@@ -59,32 +60,31 @@ class Cli(BaseComponent):
         if not manager:
             manager = config[MANAGER]['public_ip']
 
-        if self._should_recreate_profile():
-            self._remove_profile(manager)
-            if current_user != 'root':
-                self._remove_profile(manager, use_sudo=True)
-
-        use_cmd = ['profiles', 'use', manager,
-                   '-u', username, '-p', password,
-                   '-t', 'default_tenant']
+        set_cmd = ['profiles', 'set', '-m', manager,
+                   '-u', username, '-p', password, '-t', 'default_tenant']
         if config[MANAGER][SECURITY]['ssl_enabled']:
-            use_cmd.extend(['-c', cert_path])
+            set_cmd += ['-c', cert_path]
         if config['nginx']['port']:
-            use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
+            set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
         logger.info('Setting CLI for the current user (%s)...', current_user)
         # we don't want the commands with the password to be printed
         # to log file
         current_level = get_file_handlers_level()
         set_file_handlers_level(logging.ERROR)
-        common.cfy(*use_cmd)
+        common.cfy('profiles', 'use', PROFILE_NAME,
+                   '--skip-credentials-validation')
+        common.cfy(*set_cmd)
         set_file_handlers_level(current_level)
         self._set_colors(is_root=False)
 
         if current_user != 'root':
             logger.info('Setting CLI for the root user...')
             set_file_handlers_level(logging.ERROR)
-            common.cfy(*use_cmd, sudo=True)
+            common.cfy('profiles', 'use', PROFILE_NAME,
+                       '--skip-credentials-validation',
+                       sudo=True)
+            common.cfy(*set_cmd, sudo=True)
             set_file_handlers_level(current_level)
             self._set_colors(is_root=True)
         set_file_handlers_level(current_level)
