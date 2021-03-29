@@ -96,7 +96,6 @@ class Cli(BaseComponent):
             self._set_colors(is_root=True)
 
         logger.notice('Cloudify CLI successfully configured')
-        self.start()
 
     def _remove_profile(self, profile, use_sudo=False, silent=False):
         proc = common.cfy('profiles', 'delete', profile,
