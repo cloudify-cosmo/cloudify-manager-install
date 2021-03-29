@@ -134,7 +134,7 @@ def store_cert_metadata(hostname=None,
                         filename=const.CERT_METADATA_FILE_PATH,
                         owner=const.CLOUDIFY_USER,
                         group=const.CLOUDIFY_GROUP):
-    metadata = load_cert_metadata()
+    metadata = load_cert_metadata(filename=filename)
     if hostname:
         metadata['hostname'] = hostname
     if new_brokers:
@@ -430,6 +430,11 @@ def create_external_certs(private_ip=None,
     and private IPs
     """
     setup_console_logger(verbose)
+    store_cert_metadata(
+        private_ip,
+        new_managers=[private_ip, public_ip],
+        filename=const.EXTERNAL_CERT_METADATA_FILE_PATH,
+    )
     # Note: the function has default values for the IP arguments, but they
     # are actually required by argh, so it won't be possible to call this
     # function without them from the CLI

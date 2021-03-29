@@ -106,6 +106,11 @@ class Nginx(BaseComponent):
             sign_key=ca_key,
             sign_key_password=key_password,
         )
+        certificates.store_cert_metadata(
+            hostname,
+            new_managers=[external_rest_host, internal_rest_host],
+            filename=constants.EXTERNAL_CERT_METADATA_FILE_PATH,
+        )
 
     def _handle_internal_cert(self, replacing_ca=False):
         """
