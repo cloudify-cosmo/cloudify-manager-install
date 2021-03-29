@@ -98,14 +98,6 @@ class Cli(BaseComponent):
         logger.notice('Cloudify CLI successfully configured')
         self.start()
 
-    def _should_recreate_profile(self):
-        """Should the CLI profile be recreated, ie. removed first?
-
-        If something for the `use` command changed, eg. the admin password,
-        then drop the old profile before attempting to `use` again.
-        """
-        return bool(config[MANAGER][SECURITY]['admin_password'])
-
     def _remove_profile(self, profile, use_sudo=False, silent=False):
         proc = common.cfy('profiles', 'delete', profile,
                           ignore_failures=True, sudo=use_sudo)
