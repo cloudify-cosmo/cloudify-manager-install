@@ -88,15 +88,23 @@ class Nginx(BaseComponent):
 
     def _generate_external_certs(self):
         logger.info('Generating external certificate...')
+        hostname = config[MANAGER][HOSTNAME]
         external_rest_host = config[MANAGER][PUBLIC_IP]
         internal_rest_host = config[MANAGER][PRIVATE_IP]
 
+        ca_cert = config[SSL_INPUTS]['external_ca_cert_path']
+        ca_key = config[SSL_INPUTS]['external_ca_key_path']
+        key_password = config[SSL_INPUTS]['external_ca_key_password']
+        if not (ca_cert and ca_key):
+            ca_cert = constants.CA_CERT_PATH
+            ca_key = constants.CA_KEY_PATH
+            key_password = config[SSL_INPUTS]['ca_key_password']
         certificates.generate_external_ssl_cert(
             ips=[external_rest_host, internal_rest_host],
-            cn=config[MANAGER][HOSTNAME],
-            sign_cert=config[SSL_INPUTS]['external_ca_cert_path'],
-            sign_key=config[SSL_INPUTS]['external_ca_key_path'],
-            sign_key_password=config[SSL_INPUTS]['external_ca_key_password'],
+            cn=hostname,
+            sign_cert=ca_cert,
+            sign_key=ca_key,
+            sign_key_password=key_password,
         )
 
     def _handle_internal_cert(self, replacing_ca=False):
