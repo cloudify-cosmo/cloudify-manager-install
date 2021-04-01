@@ -11,8 +11,8 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs sudo \
-    openssh-clients
+    systemd-sysv initscripts tcp_wrappers-libs openssh-clients \
+    https://github.com/sudo-project/sudo/releases/download/SUDO_1_9_6p1/sudo-1.9.6-2.el7.x86_64.rpm
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
