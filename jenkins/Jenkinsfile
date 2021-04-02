@@ -193,10 +193,10 @@ pipeline {
                         cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
                       popd
                       cfy deployments capabilities ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --json > capabilities.json
-                      echo -e \$(cat capabilities.json | jq '.key_content.value' | tr -d '"') > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
+                      jq -r '.key_content.value' capabilities.json > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
                       sleep 160
-                      ssh-keyscan -H \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') >> ~/.ssh/known_hosts
-                      echo 'ClientAliveInterval 50' | sudo tee --append /etc/ssh/sshd_config
+                      ssh-keyscan -H \$(jq -r '.endpoint.value' capabilities.json) >> ~/.ssh/known_hosts
+                      echo 'ClientAliveInterval 50' >> /etc/ssh/sshd_config
                       """, label:'Configure and install blueprint on manager'
                     }
                   }
