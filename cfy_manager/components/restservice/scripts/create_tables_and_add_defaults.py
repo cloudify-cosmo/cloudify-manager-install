@@ -124,6 +124,12 @@ def _insert_usage_collector(usage_collector_info):
     sm.put(models.UsageCollector(**usage_collector_info))
 
 
+def _insert_system_filters(system_filters_info):
+    sm = get_storage_manager()
+    for system_filter in system_filters_info:
+        sm.put(models.DeploymentsFilter(**system_filter))
+
+
 def _insert_manager(config):
     sm = get_storage_manager()
     ca_cert = config.get('ca_cert')
@@ -238,3 +244,5 @@ if __name__ == '__main__':
         _insert_db_nodes(script_config['db_nodes'])
     if script_config.get('usage_collector'):
         _insert_usage_collector(script_config['usage_collector'])
+    if script_config.get('system_filters'):
+        _insert_system_filters(script_config['system_filters'])
