@@ -245,7 +245,7 @@ def _create_system_filters_info():
         ],
         'created_at': now,
         'updated_at': now,
-        'visibility': 'tenant',
+        'visibility': 'global',
         'is_system_filter': True
     }
     service_filter = {
@@ -260,7 +260,7 @@ def _create_system_filters_info():
         ],
         'created_at': now,
         'updated_at': now,
-        'visibility': 'tenant',
+        'visibility': 'global',
         'is_system_filter': True
     }
 

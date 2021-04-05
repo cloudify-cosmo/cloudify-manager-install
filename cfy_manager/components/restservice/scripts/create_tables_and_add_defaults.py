@@ -28,6 +28,7 @@ from datetime import datetime
 
 from flask_migrate import upgrade
 
+from manager_rest import constants
 from manager_rest import config, version
 from manager_rest.storage import storage_utils
 from manager_rest.amqp_manager import AMQPManager
@@ -126,7 +127,11 @@ def _insert_usage_collector(usage_collector_info):
 
 def _insert_system_filters(system_filters_info):
     sm = get_storage_manager()
+    creator = sm.get(models.User, constants.BOOTSTRAP_ADMIN_ID)
+    tenant = sm.get(models.Tenant, constants.DEFAULT_TENANT_ID)
     for system_filter in system_filters_info:
+        system_filter['creator'] = creator
+        system_filter['tenant'] = tenant
         sm.put(models.DeploymentsFilter(**system_filter))
 
 
