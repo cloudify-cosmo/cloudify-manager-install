@@ -39,16 +39,6 @@ pipeline {
   stages{
     stage ('compatability and flake8') {
       parallel{
-        stage ('py3_compat'){
-          steps{
-            sh script: "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat", label: "copying repo to seperate workspace"
-            container('py36'){
-              dir("${env.WORKSPACE}/py3_compat"){
-                py3Compat()
-              }
-            }
-          }
-        }
         stage('flake8') {
           steps{
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"

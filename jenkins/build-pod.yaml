@@ -3,17 +3,6 @@ kind: Pod
 spec:
   containers:
     - name: py36
-      image: circleci/python:3.6
-      resources:
-        requests:
-          cpu: 1
-      command:
-      - cat
-      tty: true
-      securityContext:
-        runAsUser: 0
-        privileged: true
-    - name: py36
       image: python:3.6
       resources:
         requests:
