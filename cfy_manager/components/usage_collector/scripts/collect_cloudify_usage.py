@@ -1,5 +1,6 @@
 import subprocess
 from os import sysconf, path
+from datetime import datetime
 from platform import platform
 from os.path import expanduser
 from multiprocessing import cpu_count
@@ -92,6 +93,7 @@ def _collect_cloudify_data(data):
                                                'started'},
                                       distinct_by=models.NodeInstance.host_id)
         }
+        data['cloudify_usage'].update(_get_first_and_last_login(sm))
 
 
 def _summarize_users_by_role(sm):
@@ -143,6 +145,20 @@ def _summarize_executions(sm):
         executions['types'].setdefault(exec_type, 0)
         executions['types'][exec_type] += amount
     return executions
+
+
+def _get_first_and_last_login(sm):
+    users_list = sm.list(models.User)
+    in_fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
+    out_fmt = '%Y-%m-%dT%H:%M:%S'
+    first_login = min(datetime.strptime(u.first_login_at, in_fmt)
+                      for u in users_list)
+    last_login = max(datetime.strptime(u.last_login_at, in_fmt)
+                     for u in users_list)
+    return {
+        'first_login': datetime.strftime(first_login, out_fmt),
+        'last_login': datetime.strftime(last_login, out_fmt)
+    }
 
 
 def _collect_cloudify_config(data):
