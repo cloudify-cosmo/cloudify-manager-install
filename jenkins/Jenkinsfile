@@ -39,16 +39,6 @@ pipeline {
   stages{
     stage ('compatability and flake8') {
       parallel{
-        stage ('py3_compat'){
-          steps{
-            sh script: "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat", label: "copying repo to seperate workspace"
-            container('py27'){
-              dir("${env.WORKSPACE}/py3_compat"){
-                py3Compat()
-              }
-            }
-          }
-        }
         stage('flake8') {
           steps{
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
@@ -174,30 +164,29 @@ pipeline {
             script {
               buildState = 'FAILURE'
               catchError(message: 'Failure on: manager-install EC2 Creation', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                container('py27') {
+                container('py36') {
                   echo 'Setup Github SSH key'
                   setupGithubSSHKey()
                   dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                     withVault([configuration: configuration, vaultSecrets: secrets]){
                       sh script:"""#!/bin/bash
-                      apt-get update
-                      python -m ensurepip --upgrade
-                      python -m pip install --upgrade pip
-                      python -m pip install --upgrade virtualenv
-
-                      virtualenv .venv
+                      python -m venv .venv
                       source .venv/bin/activate
+                      pip install --upgrade pip
+                      pip install cloudify==5.1.2
 
-                      pip install cloudify==5.1.1
+                      apt-get update
+                      apt-get install -y jq
+
                       cfy profile use ${env.MANAGER_IP} -u ${env.MANAGER_USERNAME} -p ${env.MANAGER_PASSWORD} -t ${env.MANAGER_TENANT} --ssl
                       pushd 'bp'
                         cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
                       popd
                       cfy deployments capabilities ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --json > capabilities.json
-                      echo -e \$(cat capabilities.json | jq '.key_content.value' | tr -d '"') > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
+                      jq -r '.key_content.value' capabilities.json > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
                       sleep 160
-                      ssh-keyscan -H \$(cat capabilities.json | jq '.endpoint.value' | tr -d '"') >> ~/.ssh/known_hosts
-                      echo 'ClientAliveInterval 50' | sudo tee --append /etc/ssh/sshd_config
+                      ssh-keyscan -H \$(jq -r '.endpoint.value' capabilities.json) >> ~/.ssh/known_hosts
+                      echo 'ClientAliveInterval 50' >> /etc/ssh/sshd_config
                       """, label:'Configure and install blueprint on manager'
                     }
                   }
@@ -206,7 +195,7 @@ pipeline {
                 buildState = 'SUCCESS'
               }
             }
-          }             
+          }
         }
       }
     }
@@ -218,7 +207,7 @@ pipeline {
         script {
           buildState = 'FAILURE'
           catchError(message: 'Failure on: manager-install install manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-            container('py27') {
+            container('py36') {
               dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                   sh script: """#!/bin/bash
@@ -250,7 +239,7 @@ pipeline {
             script{
               buildState = 'FAILURE'
               catchError(message: 'Failure on: manager-install install manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                container('py27') {
+                container('py36') {
                   dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                     withVault([configuration: configuration, vaultSecrets: secrets]){
                       sh script: """#!/bin/bash
@@ -296,7 +285,7 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
            script{
             buildState = 'FAILURE'
             catchError(message: 'Failure on: manager-install install_cluster', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-              container('py27') {
+              container('py36') {
                 dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                   withVault([configuration: configuration, vaultSecrets: secrets]) {
                     sh script: """#!/bin/bash
@@ -528,7 +517,7 @@ sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh \${NODE1_NAME} \${NO
       steps{
         script{
           catchError(message: 'Failure on: Tearing down EC2 instance of manager-install ', buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            container('py27') {
+            container('py36') {
               dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                   echo 'Uninstall and delete blueprint from manager'
