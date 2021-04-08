@@ -2,6 +2,6 @@ from setuptools import setup
 
 setup(
     name='cloudify-sanitycheck-plugin',
-    version='5.3.0',
+    version='6.0.0.dev1',
     py_modules=['sanitycheck']
 )
