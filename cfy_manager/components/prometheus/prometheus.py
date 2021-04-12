@@ -247,14 +247,14 @@ def _generate_certs():
 
     certificates.store_cert_metadata(
         hostname,
-        new_networks=[private_ip],
+        new_networks=[private_ip] if private_ip else [],
     )
 
     sign_cert = constants.CA_CERT_PATH if has_ca_key else None
     sign_key = constants.CA_KEY_PATH if has_ca_key else None
 
     certificates._generate_ssl_certificate(
-        ips=[private_ip],
+        ips=[private_ip] if private_ip else [],
         cn=hostname,
         cert_path=config[PROMETHEUS]['cert_path'],
         key_path=config[PROMETHEUS]['key_path'],
