@@ -27,6 +27,9 @@ class ExecutionScheduler(BaseComponent):
         logger.notice('Execution scheduler successfully configured')
         self.start()
 
+    def upgrade(self):
+        self.configure()
+
     def remove(self):
         logger.notice('Removing execution scheduler...')
         service.remove('cloudify-execution-scheduler', service_file=False)
