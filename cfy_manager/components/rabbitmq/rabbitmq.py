@@ -1,10 +1,12 @@
-import os
-import json
-import time
-import base64
-import socket
-import hashlib
 from os.path import join
+import base64
+import hashlib
+import json
+import os
+import random
+import socket
+import string
+import time
 
 from retrying import retry
 import requests
@@ -149,15 +151,22 @@ class RabbitMQ(BaseComponent):
 
     def _set_erlang_cookie(self):
         cookie = config[RABBITMQ]['erlang_cookie']
-        if len(config[RABBITMQ]['cluster_members']) > 1 and not cookie:
-            raise ValidationError(
-                'Cluster members are configured but erlang_cookie has not '
-                'been set.'
-            )
+        if not cookie:
+            if len(config[RABBITMQ]['cluster_members']) > 1:
+                raise ValidationError(
+                    'Cluster members are configured but erlang_cookie has '
+                    'not been set.'
+                )
+            else:
+                # For single node, we generate a stronger-than-default cookie
+                # in case the epmd port is left accessible to untrusted users.
+                cookie = ''.join(
+                    random.choice(string.ascii_letters + string.digits)
+                    for _ in range(64)
+                )
 
-        if cookie:
-            write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
-            sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
+        write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
+        sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
 
     def _possibly_join_cluster(self):
         join_node = config[RABBITMQ]['join_cluster']
