@@ -67,7 +67,7 @@ def drop_db():
 
 def prepare_db():
     logger.notice('Configuring SQL DB...')
-    db_user = config[POSTGRESQL_CLIENT]['cloudify_username']
+    db_user = config[POSTGRESQL_CLIENT]['cloudify_username'].split('@')[0]
     db_pass = config[POSTGRESQL_CLIENT]['cloudify_password']
     _create_user(db_user, db_pass)
     with _azure_compatibility(db_user):
@@ -77,7 +77,7 @@ def prepare_db():
 
 @contextmanager
 def _azure_compatibility(user):
-    superuser = config[POSTGRESQL_CLIENT]['server_username']
+    superuser = config[POSTGRESQL_CLIENT]['server_username'].split('@')[0]
     run_psql_command("GRANT {} TO {}".format(user, superuser),
                      'server_db_name', logger)
     yield
@@ -94,7 +94,7 @@ def _create_user(db_user, db_pass):
 
 
 def _create_databases():
-    user = config[POSTGRESQL_CLIENT]['cloudify_username']
+    user = config[POSTGRESQL_CLIENT]['cloudify_username'].split('@')[0]
     cloudify_db = config[POSTGRESQL_CLIENT]['cloudify_db_name']
     _create_database(cloudify_db, user)
     _create_database('stage', user)
