@@ -173,7 +173,8 @@ class Prometheus(BaseComponent):
 
     def configure(self, upgrade=False):
         logger.notice('Configuring Prometheus Service...')
-        handle_certs()
+        if not upgrade:
+            handle_certs()
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration(upgrade)
@@ -247,14 +248,14 @@ def _generate_certs():
 
     certificates.store_cert_metadata(
         hostname,
-        new_networks=[private_ip] if private_ip else [],
+        new_networks=[private_ip],
     )
 
     sign_cert = constants.CA_CERT_PATH if has_ca_key else None
     sign_key = constants.CA_KEY_PATH if has_ca_key else None
 
     certificates._generate_ssl_certificate(
-        ips=[private_ip] if private_ip else [],
+        ips=[private_ip],
         cn=hostname,
         cert_path=config[PROMETHEUS]['cert_path'],
         key_path=config[PROMETHEUS]['key_path'],
