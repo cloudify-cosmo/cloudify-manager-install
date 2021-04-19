@@ -1062,21 +1062,16 @@ def restart(include_components, verbose=False, force=False, config_file=None):
     _print_time()
 
 
-@argh.arg('--rpm', help="If provided, install this RPM first. Point this "
-                        "to a new Cloudify RPM")
 @config_arg
-def upgrade(rpm=None, verbose=False, config_file=None):
+def upgrade(verbose=False, config_file=None):
     """Update the current manager using the available yum repos."""
 
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart')
     upgrade_components = _get_components()
+    packages_to_update = _get_packages()
     sudo(['yum', 'clean', 'all'],
          stdout=sys.stdout, stderr=sys.stderr)
-    if rpm:
-        sudo(['yum', 'install', '-y', rpm],
-             stdout=sys.stdout, stderr=sys.stderr)
-    packages_to_update = _get_packages()
     sudo([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
