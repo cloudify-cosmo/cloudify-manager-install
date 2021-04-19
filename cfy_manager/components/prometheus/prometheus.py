@@ -173,7 +173,8 @@ class Prometheus(BaseComponent):
 
     def configure(self, upgrade=False):
         logger.notice('Configuring Prometheus Service...')
-        handle_certs()
+        if not upgrade:
+            handle_certs()
         _create_prometheus_directories()
         _chown_resources_dir()
         _deploy_configuration(upgrade)
