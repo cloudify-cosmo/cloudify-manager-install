@@ -1071,12 +1071,12 @@ def upgrade(rpm=None, verbose=False, config_file=None):
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart')
     upgrade_components = _get_components()
+    sudo(['yum', 'clean', 'all'],
+         stdout=sys.stdout, stderr=sys.stderr)
     if rpm:
         sudo(['yum', 'install', '-y', rpm],
              stdout=sys.stdout, stderr=sys.stderr)
     packages_to_update = _get_packages()
-    sudo(['yum', 'clean', 'all'],
-         stdout=sys.stdout, stderr=sys.stderr)
     sudo([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
