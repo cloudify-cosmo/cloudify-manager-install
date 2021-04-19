@@ -1091,6 +1091,7 @@ def upgrade(verbose=False, config_file=None):
     for component in upgrade_components:
         component.upgrade()
         component.start()
+    # remove me
 
 
 def _is_unit_finished(unit_name='cloudify-starter.service'):
