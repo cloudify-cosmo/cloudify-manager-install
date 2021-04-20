@@ -172,8 +172,6 @@ class Prometheus(BaseComponent):
                 'Successfully removed Prometheus and exporters files')
 
     def configure(self, upgrade=False):
-        if upgrade:
-            return
         logger.notice('Configuring Prometheus Service...')
         handle_certs()
         _create_prometheus_directories()
@@ -200,7 +198,7 @@ class Prometheus(BaseComponent):
         self.start()
 
     def upgrade(self):
-        self.configure(upgrade=True)
+        self.start()
 
     def join_cluster(self):  # , restore_users_on_fail=False):
         logger.info('Would be joining cluster.')
