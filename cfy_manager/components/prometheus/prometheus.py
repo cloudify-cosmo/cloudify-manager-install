@@ -173,13 +173,15 @@ class Prometheus(BaseComponent):
 
     def configure(self, upgrade=False):
         logger.notice('Configuring Prometheus Service...')
-        if not upgrade:
+        if upgrade:
+            _update_manager_alerts_services()
+        else:
             handle_certs()
-        _create_prometheus_directories()
-        _chown_resources_dir()
-        _deploy_configuration(upgrade)
-        extra_conf = _prometheus_additional_configuration()
-        service.configure(PROMETHEUS, external_configure_params=extra_conf)
+            _create_prometheus_directories()
+            _chown_resources_dir()
+            _deploy_configuration(upgrade)
+            extra_conf = _prometheus_additional_configuration()
+            service.configure(PROMETHEUS, external_configure_params=extra_conf)
         service.reload(PROMETHEUS, ignore_failure=True)
         for exporter in _prometheus_exporters():
             service.configure(
@@ -641,3 +643,17 @@ def _calculate_lookback_delta_for(scrape_interval):
         return '40s'
     scrape_seconds = int(m[2] or 0) + 0.001 * int(m[4] or 0)
     return '{0:d}s'.format(round(2.7 * scrape_seconds))
+
+
+def _update_manager_alerts_services():
+    src_file_name = join(CONFIG_DIR, 'alerts', 'manager.yml')
+    dest_file_name = join(PROMETHEUS_ALERTS_DIR, 'manager.yml')
+    match_pattern = r'name=~"\([a-z\|\-_]*\)'
+
+    with open(src_file_name) as f:
+        prometheus_conf = f.read()
+    new_services = re.findall(match_pattern, prometheus_conf)[0]
+    with open(dest_file_name) as f:
+        prometheus_conf = f.read()
+    with open(dest_file_name, 'wt') as f:
+        f.write(re.sub(match_pattern, new_services, prometheus_conf))
