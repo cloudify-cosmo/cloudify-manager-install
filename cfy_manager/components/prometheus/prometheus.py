@@ -175,13 +175,13 @@ class Prometheus(BaseComponent):
         logger.notice('Configuring Prometheus Service...')
         if upgrade:
             _update_manager_alerts_services()
-        else:
-            handle_certs()
-            _create_prometheus_directories()
-            _chown_resources_dir()
-            _deploy_configuration(upgrade)
-            extra_conf = _prometheus_additional_configuration()
-            service.configure(PROMETHEUS, external_configure_params=extra_conf)
+            return
+        handle_certs()
+        _create_prometheus_directories()
+        _chown_resources_dir()
+        _deploy_configuration(upgrade)
+        extra_conf = _prometheus_additional_configuration()
+        service.configure(PROMETHEUS, external_configure_params=extra_conf)
         service.reload(PROMETHEUS, ignore_failure=True)
         for exporter in _prometheus_exporters():
             service.configure(
