@@ -57,7 +57,7 @@ def replace_in_file(this, with_this, in_here):
     """
     logger.debug('Replacing {0} with {1} in {2}...'.format(
         this, with_this, in_here))
-    content = read(in_here)
+    content = sudo_read(in_here)
     new_content = re.sub(this, with_this, content)
     write_to_file(new_content, in_here)
 
