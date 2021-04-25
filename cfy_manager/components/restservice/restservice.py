@@ -536,6 +536,7 @@ class RestService(BaseComponent):
 
     def upgrade(self):
         logger.notice('Upgrading Rest Service...')
+        self._deploy_restservice_files()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         self._ensure_ldap_cert_path_writable()
         logger.notice('Rest Service successfully upgraded')

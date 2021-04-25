@@ -511,3 +511,7 @@ class Nginx(BaseComponent):
             UNIT_OVERRIDE_PATH,
             HTPASSWD_FILE,
         ] + [resource.dst for resource in self._config_files()])
+
+    def upgrade(self):
+        logger.notice('Upgrading NGINX...')
+        self._deploy_nginx_config_files()
