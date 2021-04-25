@@ -311,7 +311,7 @@ postgresql_client:
   # If your database is an Azure DBaaS instance, you must set 'server_username'
   # so it includes the database name as a suffix. For example, if your database
   # name is "mycfydb" and your username is "test", then "server_username"
-  # should be "mycfydb@test".
+  # should be "test@mycfydb".
   #
   server_db_name: postgres
   server_username: postgres
