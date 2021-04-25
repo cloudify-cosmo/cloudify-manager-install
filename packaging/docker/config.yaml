@@ -6,6 +6,7 @@ manager:
   premium_edition: premium
   security:
     admin_password: 'admin'
+    ssl_enabled: false
 
 sanity:
   skip_sanity: true
