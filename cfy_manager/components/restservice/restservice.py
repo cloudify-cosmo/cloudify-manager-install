@@ -136,6 +136,7 @@ class RestService(BaseComponent):
                 const.get('postgresql_client_key_path'),
             'postgresql_ca_cert_path': const.get('postgresql_ca_cert_path'),
             'ca_cert_path': const['ca_cert_path'],
+            'manager_hostname': config[MANAGER][HOSTNAME],
         }
         files.write_to_file(rest_conf, REST_CONFIG_PATH, json_dump=True)
         common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
