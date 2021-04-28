@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import json
+import socket
 from os import sep
 from os.path import join, exists
 import re
@@ -198,7 +199,10 @@ class Prometheus(BaseComponent):
         self.start()
 
     def upgrade(self):
-        _update_manager_alerts_services()
+        try:
+            _update_manager_alerts_services()
+        except FileNotFoundError:
+            self.configure()
 
     def join_cluster(self):  # , restore_users_on_fail=False):
         logger.info('Would be joining cluster.')
@@ -244,6 +248,8 @@ def _generate_certs():
     # if there is a different environment than all in one)
     hostname = config[MANAGER][HOSTNAME]
     private_ip = config[MANAGER][PRIVATE_IP]
+    if not private_ip:
+        private_ip = socket.gethostbyname(socket.gethostname())
 
     certificates.store_cert_metadata(
         hostname,
@@ -364,6 +370,8 @@ def _update_prometheus_configuration(uninstalling=False):
         common.sudo(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
+    if not private_ip:
+        private_ip = socket.gethostbyname(socket.gethostname())
 
     _update_base_targets(private_ip, uninstalling)
 
@@ -643,6 +651,10 @@ def _calculate_lookback_delta_for(scrape_interval):
 def _update_manager_alerts_services():
     src_file_name = join(CONFIG_DIR, 'alerts', 'manager.yml')
     dest_file_name = join(PROMETHEUS_ALERTS_DIR, 'manager.yml')
+    if not exists(dest_file_name):
+        logger.notice("No manager alerts YAML file; re-rendering prometheus "
+                      "config...")
+        raise FileNotFoundError
     match_pattern = r'name=~"\([a-z\|\-_]*\)'
 
     prometheus_conf = files.sudo_read(src_file_name)
