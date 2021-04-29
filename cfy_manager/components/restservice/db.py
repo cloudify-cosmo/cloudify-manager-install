@@ -253,8 +253,8 @@ def _create_system_filters_info():
         'value': [
             {
                 'key': 'csys-obj-type',
-                'values': ['service'],
-                'operator': 'any_of',
+                'values': ['environment'],
+                'operator': 'is_not',
                 'type': 'label'
             }
         ],
