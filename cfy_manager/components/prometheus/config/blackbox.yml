@@ -5,10 +5,3 @@ modules:
       tls_config:
         insecure_skip_verify: false
         ca_file: {{ constants.ca_cert_path }}
-  http_401:
-    prober: http
-    http:
-      valid_status_codes: [401,]
-      tls_config:
-        insecure_skip_verify: false
-        ca_file: {{ constants.ca_cert_path }}

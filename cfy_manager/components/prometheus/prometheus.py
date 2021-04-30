@@ -387,7 +387,6 @@ def _prometheus_targets_exist():
     logger.info('Checking whether any prometheus targets still exist.')
     for conf in [
         'local_http_200_manager.yml',
-        'local_http_401_manager.yml',
         'local_postgres.yml',
         'local_rabbit.yml',
         'other_managers.yml',
@@ -437,8 +436,6 @@ def _update_local_postgres_targets(private_ip, uninstalling):
 def _update_manager_targets(private_ip, cluster_config, uninstalling):
     http_200_targets = []
     http_200_labels = {}
-    http_401_targets = []
-    http_401_labels = {}
     rabbit_targets = []
     rabbit_labels = {}
     postgres_targets = []
@@ -461,10 +458,8 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
         http_200_targets.append('http://127.0.0.1:8088')
         # Monitor cloudify's internal port
         http_200_targets.append('https://{}:53333/'.format(private_ip))
-
         # Monitor cloudify restservice
-        http_401_targets.append('http://127.0.0.1:8100/api/v3.1/status')
-        http_401_labels['host'] = private_ip
+        http_200_targets.append('http://127.0.0.1:8100/api/v3.1/ok')
 
         monitoring_port = str(config[CONSTANTS]['monitoring_port'])
 
@@ -488,15 +483,13 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
     logger.info('Updating prometheus manager target configs')
     _deploy_targets('local_http_200_manager.yml',
                     http_200_targets, http_200_labels)
-    _deploy_targets('local_http_401_manager.yml',
-                    http_401_targets, http_401_labels)
     _deploy_targets('other_rabbits.yml',
                     rabbit_targets, rabbit_labels)
     _deploy_targets('other_postgres.yml',
                     postgres_targets, postgres_labels)
     _deploy_targets('other_managers.yml',
                     manager_targets, manager_labels)
-    return len(http_200_targets) + len(http_401_targets)
+    return len(http_200_targets)
 
 
 def _update_base_targets(private_ip, uninstalling):

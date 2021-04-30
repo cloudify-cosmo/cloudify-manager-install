@@ -35,21 +35,6 @@ scrape_configs:
       - files:
         - '/etc/prometheus/targets/local_http_200_manager.yml'
 
-  - job_name: 'http_401'
-    metrics_path: /probe
-    params:
-      module: [http_401]
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: localhost:{{ prometheus.blackbox_exporter.metrics_port }}  # The blackbox exporter's real hostname:port.
-    file_sd_configs:
-      - files:
-        - '/etc/prometheus/targets/local_http_401_manager.yml'
-
   - job_name: 'federate_http_200'
     honor_labels: true
     scheme: 'https'
@@ -62,22 +47,6 @@ scrape_configs:
     params:
       'match[]':
         - '{job="http_200",host!="{{ manager.private_ip }}"}'
-    file_sd_configs:
-      - files:
-        - '/etc/prometheus/targets/other_managers.yml'
-
-  - job_name: 'federate_http_401'
-    honor_labels: true
-    scheme: 'https'
-    tls_config:
-      ca_file: {{ prometheus.ca_path }}
-    basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
-    metrics_path: /monitoring/federate
-    params:
-      'match[]':
-        - '{job="http_401",host!="{{ manager.private_ip }}"}'
     file_sd_configs:
       - files:
         - '/etc/prometheus/targets/other_managers.yml'
