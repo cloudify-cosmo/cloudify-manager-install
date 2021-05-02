@@ -482,7 +482,7 @@ validations:
   minimum_required_total_physical_memory_in_mb: 1838
 
   # Minimum required disk space on Manager host in GB.
-  minimum_required_available_disk_space_in_gb: 5
+  minimum_required_available_disk_space_in_gb: 1
 
   # Python version expected to be found on the machine
   expected_python_version: '3.6'
