@@ -198,7 +198,10 @@ class Prometheus(BaseComponent):
         self.start()
 
     def upgrade(self):
-        _update_manager_alerts_services()
+        try:
+            _update_manager_alerts_services()
+        except FileNotFoundError:
+            self.configure()
 
     def join_cluster(self):  # , restore_users_on_fail=False):
         logger.info('Would be joining cluster.')
@@ -637,6 +640,16 @@ def _update_manager_alerts_services():
     logger.notice("Updating Prometheus' manager services alerts ...")
     src_file_name = join(CONFIG_DIR, 'alerts', 'manager.yml')
     dest_file_name = join(PROMETHEUS_ALERTS_DIR, 'manager.yml')
+    if not exists(PROMETHEUS_ALERTS_DIR):
+        # we're in version < 5.1.1 so there aren't prometheus alerts
+        logger.notice("No prometheus alerts; "
+                      "re-rendering prometheus config...")
+        raise FileNotFoundError
+    if not exists(dest_file_name):
+        # the alerts folder is there but there's no manager alerts file -
+        # meaning we're in a 9-nodes cluster on a rabbit/db machine
+        return
+
     match_pattern = r'name=~"\([a-z\|\-_]*\)'
 
     prometheus_conf = files.sudo_read(src_file_name)
