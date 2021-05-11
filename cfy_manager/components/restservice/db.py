@@ -139,7 +139,6 @@ def _create_populate_db_args_dict():
         'rabbitmq_brokers': _create_rabbitmq_info(),
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info(),
-        'system_filters': _create_system_filters_info()
     }
     rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
     if rabbitmq_ca_cert_path:
@@ -223,48 +222,6 @@ def _create_usage_collector_info():
         'hours_interval': cfy_uptime['interval_in_hours'],
         'days_interval': cfy_usage['interval_in_days']
     }
-
-
-def _create_system_filters_info():
-    now = common.get_formatted_timestamp()
-    environment_filter = {
-        'id': 'csys-environment-filter',
-        'value': [
-            {
-                'key': 'csys-obj-type',
-                'values': ['environment'],
-                'operator': 'any_of',
-                'type': 'label'
-            },
-            {
-                'key': 'csys-obj-parent',
-                'values': [],
-                'operator': 'is_null',
-                'type': 'label'
-            }
-        ],
-        'created_at': now,
-        'updated_at': now,
-        'visibility': 'global',
-        'is_system_filter': True
-    }
-    service_filter = {
-        'id': 'csys-service-filter',
-        'value': [
-            {
-                'key': 'csys-obj-type',
-                'values': ['environment'],
-                'operator': 'is_not',
-                'type': 'label'
-            }
-        ],
-        'created_at': now,
-        'updated_at': now,
-        'visibility': 'global',
-        'is_system_filter': True
-    }
-
-    return [environment_filter, service_filter]
 
 
 def _create_process_env(rest_config=None, authorization_config=None,
