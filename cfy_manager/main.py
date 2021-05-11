@@ -1277,6 +1277,7 @@ def replace_certificates(input_path=None,
     """ Replacing the certificates on the current instance """
     setup_console_logger(verbose)
     config.load_config(config_file)
+    set_globals()
     _handle_replace_certs_config_path(input_path)
     if only_validate:
         _only_validate()
