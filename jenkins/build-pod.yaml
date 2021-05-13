@@ -39,5 +39,7 @@ spec:
       command:
       - cat
       tty: true
+  imagePullSecrets:
+    - name: dockerhub
   nodeSelector:
     instance-type: spot-xlarge
