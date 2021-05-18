@@ -278,6 +278,8 @@ class RestService(BaseComponent):
         self._generate_passwords()
         db.prepare_db()
         db.populate_db(configs)
+        run_script_on_manager_venv(
+            '/opt/manager/scripts/create_system_filters.py')
 
     def _validate_cluster_join(self):
         issues = []
@@ -539,5 +541,7 @@ class RestService(BaseComponent):
         logger.notice('Upgrading Rest Service...')
         self._deploy_restservice_files()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
+        run_script_on_manager_venv(
+            '/opt/manager/scripts/create_system_filters.py')
         self._ensure_ldap_cert_path_writable()
         logger.notice('Rest Service successfully upgraded')
