@@ -14,6 +14,7 @@ ExecStart=/usr/local/bin/prometheus \
   --config.file=/etc/prometheus/prometheus.yml \
   --query.lookback-delta={{ prometheus_query_lookback_delta }} \
   --storage.tsdb.path=/var/lib/prometheus \
+  --log.level=info \
   --web.console.templates=/etc/prometheus/consoles \
   --web.console.libraries=/etc/prometheus/console_libraries \
   --web.listen-address=127.0.0.1:{{ prometheus.port }} \

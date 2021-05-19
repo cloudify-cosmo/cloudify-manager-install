@@ -11,6 +11,7 @@ User=postgres
 Group=postgres
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/local/bin/postgres_exporter \
+  --log.level=info \
   --web.listen-address=127.0.0.1:{{ prometheus.postgres_exporter.metrics_port }}
 SyslogIdentifier=postgres_exporter
 Restart=always
