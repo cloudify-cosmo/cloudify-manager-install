@@ -344,8 +344,8 @@ class PostgresqlServer(BaseComponent):
 
     def _create_db_monitoring_account(self):
         logger.notice('Creating db_monitoring account...')
-
-        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+        cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
+        if cluster_nodes:
             try:
                 self._etcd_command(['member', 'list'], )
             except Exception as ex:
@@ -353,27 +353,16 @@ class PostgresqlServer(BaseComponent):
                               'Database cluster not yet ready (will '
                               'try on the next database node). %s', ex)
                 return
-            created = False
-            for attempt in range(30):
-                try:
-                    self._run_create_db_monitoring_user_query()
-                    created = True
-                except Exception as err:
-                    logger.info(
-                        'Failed creating monitoring user: %s', err,
-                    )
-                logger.info('Waiting for pgpass to be populated...')
-                time.sleep(1)
-            if not created:
+        try:
+            self._run_create_db_monitoring_user_query()
+        except Exception:
+            if cluster_nodes:
                 logger.notice('db_monitoring account not yet created '
                               '(will try on the next database node).')
-        else:
-            self._run_create_db_monitoring_user_query()
+            else:
+                raise
 
-    # This could end up in a race if two db nodes are installed at the same
-    # time. However, once the race is complete it should be safe so we only
-    # need to retry once
-    @retry(stop_max_attempt_number=2, wait_fixed=1000)
+    @retry(stop_max_attempt_number=60, wait_fixed=1000)
     def _run_create_db_monitoring_user_query(self):
         credentials = config[POSTGRESQL_SERVER]['db_monitoring']
 
