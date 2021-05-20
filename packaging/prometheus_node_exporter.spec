@@ -1,7 +1,7 @@
 %define _tmpdir /tmp/node_exporter
-%define _url    https://github.com/prometheus/node_exporter/releases/download/v1.0.1/node_exporter-1.0.1.linux-amd64.tar.gz
+%define _url    https://github.com/prometheus/node_exporter/releases/download/v1.1.2/node_exporter-1.1.2.linux-amd64.tar.gz
 Name:           node_exporter
-Version:        1.0.1
+Version:        1.1.2
 Release:        1%{?dist}
 Summary:        Prometheus node_exporter
 Group:          Applications/Multimedia
