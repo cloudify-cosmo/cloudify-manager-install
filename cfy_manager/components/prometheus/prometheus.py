@@ -557,9 +557,12 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
         else:
             postgres_hosts.append(config[MANAGER][PRIVATE_IP])
 
-        use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
-        for host, ip in cluster_config.get('rabbitmq_nodes', {}).items():
-            rabbitmq_hosts.append(host if use_rabbit_host else ip)
+        if cluster_config.get('rabbitmq_nodes'):
+            use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']
+            for host, ip in cluster_config.get('rabbitmq_nodes', {}).items():
+                rabbitmq_hosts.append(host if use_rabbit_host else ip)
+        else:
+            rabbitmq_hosts.append(config[MANAGER][PRIVATE_IP])
 
     for alert_group in ['manager', 'postgres', 'rabbitmq']:
         logger.notice('Deploying {0} alerts...'.format(alert_group))
