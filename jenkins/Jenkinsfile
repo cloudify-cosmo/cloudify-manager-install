@@ -1,6 +1,9 @@
 def configuration = [vaultUrl: "${VAULT_URL}",  vaultCredentialId: "vault-app-role", engineVersion: 2]
 
 def secrets = [
+  [path: 'secret/jenkins/jenkinstoken', engineVersion: 2, secretValues: [
+    [envVar: 'JENKINS_USERNAME', vaultKey: 'username'],
+    [envVar: 'JENKINS_TOKEN', vaultKey: 'token']]],
   [path: 'secret/jenkins/cloudifyaws', engineVersion: 2, secretValues: [
     [envVar: 'MANAGER_USERNAME', vaultKey: 'username'],
     [envVar: 'MANAGER_TENANT', vaultKey: 'tenant'],
@@ -57,18 +60,15 @@ pipeline {
             sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
             container('python') {
               dir("${env.WORKSPACE}/rpms") {
-                echo 'Install requests'
-                sh 'pip install requests'
-                sh script:"""#!/bin/bash
-                  source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
-                  for repo in cloudify-rest-service cloudify-premium cloudify-cli cloudify-management-worker; do
-                    echo "fetching \$repo RPM"
-                    curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
-                  done
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm -o cloudify-rabbitmq-${env.VERSION}-${env.PRERELEASE}.el7.noarch.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.centos.noarch.rpm -o cloudify-agents-${env.VERSION}-${env.PRERELEASE}.el7.centos.noarch.rpm
-                  curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/patroni-1.6.3-1.el7.x86_64.rpm -o patroni-1.6.3-1.el7.x86_64.rpm
-                  """, label: 'Fetch RPM built on Jenkins located on S3'
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                  echo 'Install requests'
+                  sh 'pip install requests'
+                  sh script:"""#!/bin/bash
+                     source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
+                     chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
+                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
+                     """, label: 'Fetch RPM artifacts stored on Jenkins'
+                }
               }
             }
           }
@@ -175,10 +175,8 @@ pipeline {
                       source .venv/bin/activate
                       pip install --upgrade pip
                       pip install cloudify==5.1.2
-
                       apt-get update
                       apt-get install -y jq
-
                       cfy profile use ${env.MANAGER_IP} -u ${env.MANAGER_USERNAME} -p ${env.MANAGER_PASSWORD} -t ${env.MANAGER_TENANT} --ssl
                       pushd 'bp'
                         cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
@@ -298,7 +296,6 @@ ls -la .
 pushd packaging/docker
   docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.CLUSTER_IMAGE} .
 popd
-
 set -eux
 pushd jenkins/cluster
   echo "###### Prepare name envvars ######"
@@ -314,14 +311,11 @@ pushd jenkins/cluster
   export QUEUE1_IP="172.22.0.3"
   export QUEUE2_IP="172.22.0.4"
   export QUEUE3_IP="172.22.0.5"
-
   echo "###### Create a docker network ######"
   docker network create --subnet=172.22.0.0/24 net1
-
   echo "###### generate certs ######"
   chmod +x create_certs.sh
   source ./create_certs.sh
-
   set -eux
   # Prepare Queue1 on Node1
   sed -e "s/CONTAINER_IP/\${QUEUE1_IP}/g" \
@@ -337,16 +331,13 @@ pushd jenkins/cluster
     -v \$(pwd)/queue1_cert.pem:/etc/cloudify/queue_cert.pem \
     -v \$(pwd)/ca.crt:/etc/cloudify/ca.pem \
     ${env.CLUSTER_IMAGE}
-
   docker exec \${NODE1_NAME} cfy_manager wait-for-starter -c /etc/cloudify/config.yaml
   docker cp queue_1_config.yaml \${NODE1_NAME}:/etc/cloudify/queue_config.yaml
-
   # Prepare Queue2 on Node 2
   sed -e "s/CONTAINER_IP/\${QUEUE2_IP}/g" \
       -e "s/QUEUE1_IP/\${QUEUE1_IP}/" \
       -e "s/QUEUE3_IP/\${QUEUE3_IP}/" \
       queue2_config.yaml > queue_2_config.yaml
-
   cat queue_2_config.yaml
   docker run -d \
     --name \${NODE2_NAME} \
@@ -356,18 +347,14 @@ pushd jenkins/cluster
     -v \$(pwd)/queue2_cert.pem:/etc/cloudify/queue_cert.pem \
     -v \$(pwd)/ca.crt:/etc/cloudify/ca.pem \
     ${env.CLUSTER_IMAGE}
-
   docker exec \${NODE2_NAME} cfy_manager wait-for-starter -c /etc/cloudify/config.yaml
   docker cp queue_2_config.yaml \${NODE2_NAME}:/etc/cloudify/queue_config.yaml
-
   # Prepare Queue3 on Node 3
   sed -e "s/CONTAINER_IP/\${QUEUE3_IP}/g" \
       -e "s/QUEUE1_IP/\${QUEUE1_IP}/" \
       -e "s/QUEUE2_IP/\${QUEUE2_IP}/" \
       queue3_config.yaml > queue_3_config.yaml
-
   cat queue_3_config.yaml
-
   docker run -d \
      --name \${NODE3_NAME} \
      --network net1 --ip \${QUEUE3_IP} \
@@ -376,53 +363,41 @@ pushd jenkins/cluster
      -v \$(pwd)/queue3_cert.pem:/etc/cloudify/queue_cert.pem \
      -v \$(pwd)/ca.crt:/etc/cloudify/ca.pem \
     ${env.CLUSTER_IMAGE}
-
   docker exec \${NODE3_NAME} cfy_manager wait-for-starter -c /etc/cloudify/config.yaml
   docker cp queue_3_config.yaml \${NODE3_NAME}:/etc/cloudify/queue_config.yaml
-
   # Prepare DB1 on Node1
   sed -e "s/CONTAINER_IP/\${DB1_IP}/g" \
       -e "s/DB1_IP/\${DB1_IP}/g" \
       -e "s/DB2_IP/\${DB2_IP}/g" \
       -e "s/DB3_IP/\${DB3_IP}/g" \
       db_config.yaml > db1_config.yaml
-
   cat db1_config.yaml
-
   sudo docker cp db1_config.yaml \${NODE1_NAME}:/etc/cloudify/db_config.yaml
   sudo docker cp db1_key.pem \${NODE1_NAME}:/etc/cloudify/db_key.pem
   sudo docker cp db1_cert.pem \${NODE1_NAME}:/etc/cloudify/db_cert.pem
   sudo docker exec \${NODE1_NAME} cfy_manager configure -c  /etc/cloudify/db_config.yaml
-
-
   # Prepare DB2 on Node2
   sed -e "s/CONTAINER_IP/\${DB2_IP}/g" \
       -e "s/DB1_IP/\${DB1_IP}/g" \
       -e "s/DB2_IP/\${DB2_IP}/g" \
       -e "s/DB3_IP/\${DB3_IP}/g" \
       db_config.yaml > db2_config.yaml
-
   cat db2_config.yaml
-
   sudo docker cp db2_config.yaml \${NODE2_NAME}:/etc/cloudify/db_config.yaml
   sudo docker cp db2_key.pem \${NODE2_NAME}:/etc/cloudify/db_key.pem
   sudo docker cp db2_cert.pem \${NODE2_NAME}:/etc/cloudify/db_cert.pem
   sudo docker exec \${NODE2_NAME} cfy_manager configure -c /etc/cloudify/db_config.yaml -v
-
   # Prepare DB3 on Node3
   sed -e "s/CONTAINER_IP/\${DB3_IP}/g" \
       -e "s/DB1_IP/\${DB1_IP}/g" \
       -e "s/DB2_IP/\${DB2_IP}/g" \
       -e "s/DB3_IP/\${DB3_IP}/g" \
       db_config.yaml > db3_config.yaml
-
   cat db3_config.yaml
-
   sudo docker cp db3_config.yaml \${NODE3_NAME}:/etc/cloudify/db_config.yaml
   sudo docker cp db3_key.pem \${NODE3_NAME}:/etc/cloudify/db_key.pem
   sudo docker cp db3_cert.pem \${NODE3_NAME}:/etc/cloudify/db_cert.pem
   sudo docker exec \${NODE3_NAME} cfy_manager configure -c /etc/cloudify/db_config.yaml -v
-
   # Prepare Manager 1 on Node1
   sed -e "s/CONTAINER_IP/\${MANAGER1_IP}/g" \
       -e "s/QUEUE1_IP/\${QUEUE1_IP}/g" \
@@ -432,12 +407,9 @@ pushd jenkins/cluster
       -e "s/DB2_IP/\${DB2_IP}/g" \
       -e "s/DB3_IP/\${DB3_IP}/g" \
       manager1_config.yaml > manager_1_config.yaml
-
   cat manager_1_config.yaml
-
     # Generate ca encrypted key
   openssl rsa -aes256 -passout pass:secret_ca_password -in ca.key -out ca.encrypted.key
-
   sudo docker cp manager_1_config.yaml \${NODE1_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp manager_1_key.pem \${NODE1_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp manager_1_cert.pem \${NODE1_NAME}:/etc/cloudify/manager_cert.pem
@@ -447,8 +419,6 @@ pushd jenkins/cluster
   sudo docker cp external_cert_1.pem \${NODE1_NAME}:/etc/cloudify/manager_external_cert.pem
   sudo docker cp ca.encrypted.key \${NODE1_NAME}:/etc/cloudify/ca_key.pem
   sudo docker exec \${NODE1_NAME} cfy_manager configure -c /etc/cloudify/manager_config.yaml -v
-
-
   # Prepare Manager 2 on Node2
   sed -e "s/CONTAINER_IP/\${MANAGER2_IP}/g" \
       -e "s/QUEUE1_IP/\${QUEUE1_IP}/g" \
@@ -458,9 +428,7 @@ pushd jenkins/cluster
       -e "s/DB2_IP/\${DB2_IP}/g" \
       -e "s/DB3_IP/\${DB3_IP}/g" \
       manager2_config.yaml > manager_2_config.yaml
-
   cat manager_2_config.yaml
-
   sudo docker cp manager_2_config.yaml \${NODE2_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp manager_2_key.pem \${NODE2_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp manager_2_cert.pem \${NODE2_NAME}:/etc/cloudify/manager_cert.pem
@@ -472,8 +440,6 @@ pushd jenkins/cluster
   sudo docker cp prometheus_cert_2.pem \${NODE2_NAME}:/etc/cloudify/manager_prometheus_cert.pem
   sudo docker cp ca.encrypted.key \${NODE2_NAME}:/etc/cloudify/ca_key.pem
   sudo docker exec \${NODE2_NAME} cfy_manager configure -c /etc/cloudify/manager_config.yaml -v
-
-
   # Prepare Manager 3 on Node3
   sed -e "s/CONTAINER_IP/\${MANAGER3_IP}/g" \
       -e "s/QUEUE1_IP/\${QUEUE1_IP}/g" \
@@ -483,9 +449,7 @@ pushd jenkins/cluster
       -e "s/DB2_IP/\${DB2_IP}/g" \
       -e "s/DB3_IP/\${DB3_IP}/g" \
       manager3_config.yaml > manager_3_config.yaml
-
   cat manager_3_config.yaml
-
   sudo docker cp manager_3_config.yaml \${NODE3_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp manager_3_key.pem \${NODE3_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp manager_3_cert.pem \${NODE3_NAME}:/etc/cloudify/manager_cert.pem
@@ -498,7 +462,6 @@ pushd jenkins/cluster
   sudo docker cp ca.encrypted.key \${NODE3_NAME}:/etc/cloudify/ca_key.pem
   sudo docker exec \${NODE3_NAME} cfy_manager configure -c /etc/cloudify/manager_config.yaml -v
 popd
-
 echo 'Check cluster status'
 sleep 40
 sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh \${NODE1_NAME} \${NODE2_NAME} \${NODE3_NAME}
