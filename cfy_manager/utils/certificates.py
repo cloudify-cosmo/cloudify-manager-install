@@ -127,16 +127,16 @@ def _format_ips(ips, cn=None):
     return cert_metadata
 
 
-def store_cert_metadata(private_ip=None,
+def store_cert_metadata(hostname=None,
                         new_brokers=None,
                         new_managers=None,
                         new_networks=None,
                         filename=const.CERT_METADATA_FILE_PATH,
                         owner=const.CLOUDIFY_USER,
                         group=const.CLOUDIFY_GROUP):
-    metadata = load_cert_metadata()
-    if private_ip:
-        metadata['hostname'] = private_ip
+    metadata = load_cert_metadata(filename=filename)
+    if hostname:
+        metadata['hostname'] = hostname
     if new_brokers:
         brokers = metadata.get('broker_addresses', [])
         brokers.extend(new_brokers)
@@ -430,6 +430,11 @@ def create_external_certs(private_ip=None,
     and private IPs
     """
     setup_console_logger(verbose)
+    store_cert_metadata(
+        private_ip,
+        new_managers=[private_ip, public_ip],
+        filename=const.EXTERNAL_CERT_METADATA_FILE_PATH,
+    )
     # Note: the function has default values for the IP arguments, but they
     # are actually required by argh, so it won't be possible to call this
     # function without them from the CLI

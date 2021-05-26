@@ -101,7 +101,12 @@ def cfy(*command, **kwargs):
     # click on py3.6 absolutely requires some locale to be set
     env = {'LC_ALL': 'en_US.UTF-8'}
     base = ['sudo', 'cfy'] if kwargs.pop('sudo', False) else ['cfy']
-    return run(base + list(command), env=env, **kwargs)
+    try:
+        return run(base + list(command), env=env, **kwargs)
+    except ProcessExecutionError as e:
+        logger.error('CLI call failed, stdout: %s, stderr: %s',
+                     e.aggr_stdout, e.aggr_stderr)
+        raise
 
 
 def mkdir(folder, use_sudo=True):

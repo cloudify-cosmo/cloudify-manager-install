@@ -15,8 +15,9 @@
 
 import errno
 import logging
-from os.path import join, exists, expanduser
+from contextlib import contextmanager
 from getpass import getuser
+from os.path import join, exists, expanduser
 
 from ..components_constants import SECURITY, SSL_INPUTS
 from ..base_component import BaseComponent
@@ -26,10 +27,22 @@ from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
 from ...utils import common, certificates
-from ...constants import (EXTERNAL_CERT_PATH,
+from ...constants import (CA_CERT_PATH,
                           EXTERNAL_CA_CERT_PATH)
 
 logger = get_logger(CLI)
+PROFILE_NAME = 'manager-local'
+
+
+@contextmanager
+def _hide_logs():
+    """Increase the logging level, so that the password isn't in the logfile"""
+    current_level = get_file_handlers_level()
+    set_file_handlers_level(logging.ERROR)
+    try:
+        yield
+    finally:
+        set_file_handlers_level(current_level)
 
 
 class Cli(BaseComponent):
@@ -52,62 +65,64 @@ class Cli(BaseComponent):
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']
 
-        cert_path = self._deploy_external_cert()
         current_user = getuser()
 
         manager = config[MANAGER]['cli_local_profile_host_name']
         if not manager:
             manager = config[MANAGER]['private_ip']
 
-        use_cmd = ['profiles', 'use', manager,
-                   '-u', username, '-p', password,
-                   '-t', 'default_tenant']
+        use_cmd = ['profiles', 'use', PROFILE_NAME,
+                   '--skip-credentials-validation']
+        set_cmd = ['profiles', 'set', '-m', manager, '-t', 'default_tenant']
+        if username:
+            set_cmd += ['-u', username]
+        if password:
+            set_cmd += ['-p', password]
         if config[MANAGER][SECURITY]['ssl_enabled']:
-            use_cmd.extend(['-c', cert_path])
+            cert_path = self._deploy_external_cert()
+            set_cmd += ['-c', cert_path, '--ssl', 'on']
+        else:
+            set_cmd += ['--ssl', 'off']
         if config['nginx']['port']:
-            use_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
+            set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
-        logger.info('Setting CLI for the current user ({0})...'.format(
-            current_user))
-        # we don't want the commands with the password to be printed
-        # to log file
-        current_level = get_file_handlers_level()
-        set_file_handlers_level(logging.ERROR)
-        common.cfy(*use_cmd)
-        set_file_handlers_level(current_level)
+        logger.info('Setting CLI for the current user (%s)...', current_user)
+
+        with _hide_logs():
+            common.cfy(*use_cmd)
+            common.cfy(*set_cmd)
         self._set_colors(is_root=False)
 
         if current_user != 'root':
             logger.info('Setting CLI for the root user...')
-            set_file_handlers_level(logging.ERROR)
-            common.cfy(*use_cmd, sudo=True)
-            set_file_handlers_level(current_level)
+            with _hide_logs():
+                common.cfy(*use_cmd, sudo=True)
+                common.cfy(*set_cmd, sudo=True)
             self._set_colors(is_root=True)
-        set_file_handlers_level(current_level)
+
         logger.notice('Cloudify CLI successfully configured')
-        self.start()
 
-    def remove(self):
+    def _remove_profile(self, profile, use_sudo=False, silent=False):
+        proc = common.cfy('profiles', 'delete', profile,
+                          ignore_failures=True, sudo=use_sudo)
+        if silent:
+            return
+        if proc.returncode == 0:
+            logger.notice('CLI profile removed')
+        else:
+            logger.warning('Failed removing CLI profile (rc=%s)',
+                           proc.returncode)
+
+    def remove(self, silent=False):
         profile_name = config[MANAGER]['cli_local_profile_host_name']
-
-        def _remove_profile_and_check(cli_cmd, use_sudo=False):
-            proc = common.cfy(*cli_cmd, ignore_failures=True, sudo=use_sudo)
-            if proc.returncode == 0:
-                logger.notice('CLI profile removed')
-            else:
-                logger.warning('Failed removing CLI profile (rc={})'.format(
-                    proc.returncode))
-
         try:
             logger.notice('Removing CLI profile...')
-
-            cmd = ['profiles', 'delete', profile_name]
-            _remove_profile_and_check(cmd)
+            self._remove_profile(profile_name)
 
             current_user = getuser()
             if current_user != 'root':
                 logger.notice('Removing CLI profile for root user...')
-                _remove_profile_and_check(cmd, use_sudo=True)
+                self._remove_profile(profile_name, use_sudo=True)
         except OSError as ex:
             if ex.errno == errno.ENOENT:
                 logger.warning('Could not find the `cfy` executable; it has '
@@ -132,4 +147,4 @@ class Cli(BaseComponent):
             )
             return EXTERNAL_CA_CERT_PATH
         else:
-            return EXTERNAL_CERT_PATH
+            return CA_CERT_PATH
