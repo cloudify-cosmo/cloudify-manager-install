@@ -59,7 +59,8 @@ pipeline {
               dir("${env.WORKSPACE}/rpms") {
                 echo 'Install requests'
                 sh 'pip install requests'
-                sh script:"""
+                sh script:"""#!/bin/bash
+                  source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
                   for repo in cloudify-rest-service cloudify-premium cloudify-cli cloudify-management-worker; do
                     echo "fetching \$repo RPM"
                     curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.VERSION}/${env.PRERELEASE}-release/\$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm -o \$repo-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm
