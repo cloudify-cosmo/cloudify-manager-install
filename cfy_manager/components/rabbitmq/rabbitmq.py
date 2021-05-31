@@ -65,8 +65,13 @@ class RabbitMQ(BaseComponent):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
     def _deploy_configuration(self):
+        ipv6_enabled = bool(
+            socket.getaddrinfo('localhost', SECURE_PORT,
+                               family=socket.AddressFamily.AF_INET6)
+        )
         logger.info('Deploying RabbitMQ config')
-        deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH)
+        deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH,
+               additional_render_context={'ipv6_enabled': ipv6_enabled})
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
         deploy(join(CONFIG_PATH, 'enabled_plugins'), RABBITMQ_ENABLED_PLUGINS)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENABLED_PLUGINS)
