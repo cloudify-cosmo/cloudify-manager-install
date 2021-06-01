@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
 echo "###### Prepare name envvars ######"
 export NODE1_NAME="${env.CONTAINER_NAME}_node1"
 export NODE2_NAME="${env.CONTAINER_NAME}_node2"
