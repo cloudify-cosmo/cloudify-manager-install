@@ -46,11 +46,7 @@ def update_cert(cert_path, name):
 
 def init_flask_app():
     config.instance.load_configuration(from_db=False)
-    setup_flask_app(
-        manager_ip=config.instance.postgresql_host,
-        hash_salt=config.instance.security_hash_salt,
-        secret_key=config.instance.security_secret_key
-    )
+    return setup_flask_app(manager_ip=config.instance.postgresql_host)
 
 
 def main():
@@ -64,12 +60,13 @@ def main():
     )
 
     args = parser.parse_args()
-    init_flask_app()
+    app = init_flask_app()
 
     with open(args.input, 'r') as f:
         script_input = json.load(f)
 
-    update_cert(script_input.get('cert_path'), script_input.get('name'))
+    with app.app_context():
+        update_cert(script_input.get('cert_path'), script_input.get('name'))
 
 
 if __name__ == '__main__':
