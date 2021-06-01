@@ -302,7 +302,7 @@ pushd jenkins/cluster
 popd
 echo 'Check cluster status'
 sleep 40
-sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh \${NODE1_NAME} \${NODE2_NAME} \${NODE3_NAME}
+sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh "${env.CONTAINER_NAME}_node1" "${env.CONTAINER_NAME}_node2" "${env.CONTAINER_NAME}_node3"
 """, label: 'Prepare and run Cloudify cluster installation'
                     }
                   }
