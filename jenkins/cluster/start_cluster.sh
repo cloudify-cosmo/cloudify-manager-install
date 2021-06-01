@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
+IMAGE=${1:-cloudify-manager-aio}
+NAME_PREFIX=${2:-cfy}
+
 echo "###### Prepare name envvars ######"
-export NODE1_NAME="${env.CONTAINER_NAME}_node1"
-export NODE2_NAME="${env.CONTAINER_NAME}_node2"
-export NODE3_NAME="${env.CONTAINER_NAME}_node3"
+export NODE1_NAME="${NAME_PREFIX}_node1"
+export NODE2_NAME="${NAME_PREFIX}_node2"
+export NODE3_NAME="${NAME_PREFIX}_node3"
 export MANAGER1_IP="172.22.0.3"
 export MANAGER2_IP="172.22.0.4"
 export MANAGER3_IP="172.22.0.5"
@@ -33,7 +36,7 @@ docker run -d \
   -v $(pwd)/queue1_key.pem:/etc/cloudify/queue_key.pem \
   -v $(pwd)/queue1_cert.pem:/etc/cloudify/queue_cert.pem \
   -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
-  ${env.CLUSTER_IMAGE}
+  ${IMAGE}
 docker exec ${NODE1_NAME} cfy_manager wait-for-starter -c /etc/cloudify/config.yaml
 docker cp queue_1_config.yaml ${NODE1_NAME}:/etc/cloudify/queue_config.yaml
 # Prepare Queue2 on Node 2
@@ -49,7 +52,7 @@ docker run -d \
   -v $(pwd)/queue2_key.pem:/etc/cloudify/queue_key.pem \
   -v $(pwd)/queue2_cert.pem:/etc/cloudify/queue_cert.pem \
   -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
-  ${env.CLUSTER_IMAGE}
+  ${IMAGE}
 docker exec ${NODE2_NAME} cfy_manager wait-for-starter -c /etc/cloudify/config.yaml
 docker cp queue_2_config.yaml ${NODE2_NAME}:/etc/cloudify/queue_config.yaml
 # Prepare Queue3 on Node 3
@@ -65,7 +68,7 @@ docker run -d \
    -v $(pwd)/queue3_key.pem:/etc/cloudify/queue_key.pem \
    -v $(pwd)/queue3_cert.pem:/etc/cloudify/queue_cert.pem \
    -v $(pwd)/ca.crt:/etc/cloudify/ca.pem \
-  ${env.CLUSTER_IMAGE}
+  ${IMAGE}
 docker exec ${NODE3_NAME} cfy_manager wait-for-starter -c /etc/cloudify/config.yaml
 docker cp queue_3_config.yaml ${NODE3_NAME}:/etc/cloudify/queue_config.yaml
 # Prepare DB1 on Node1

@@ -298,7 +298,7 @@ pushd packaging/docker
 popd
 set -eux
 pushd jenkins/cluster
-  ./start_cluster.sh
+  ./start_cluster.sh "${env.CLUSTER_IMAGE}" "${env.CONTAINER_NAME}"
 popd
 echo 'Check cluster status'
 sleep 40
