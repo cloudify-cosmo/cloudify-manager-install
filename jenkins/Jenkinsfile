@@ -278,7 +278,6 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
           environment {
             CONTAINER_NAME = "cfy"
             IMAGE_NAME = "cfy_manager_image"
-            CLUSTER_IMAGE = "cfy_manager_image_preinstalled"
           }
           steps {
            script{
@@ -294,11 +293,11 @@ echo 'Build manager container'
 set -eux
 ls -la .
 pushd packaging/docker
-  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.CLUSTER_IMAGE} .
+  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} .
 popd
 set -eux
 pushd jenkins/cluster
-  ./start_cluster.sh "${env.CLUSTER_IMAGE}" "${env.CONTAINER_NAME}"
+  ./start_cluster.sh "${env.IMAGE_NAME}" "${env.CONTAINER_NAME}"
 popd
 echo 'Check cluster status'
 sleep 40
