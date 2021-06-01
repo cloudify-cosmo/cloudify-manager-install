@@ -55,7 +55,7 @@ setup(
         'Jinja2==2.10.1',
         'argh==0.26.2',
         'netifaces==0.10.9',
-        'ipaddress==1.0.19',
+        'ipaddress==1.0.23',
         'psutil==5.7.2',
         'requests>=2.18,<3.0.0',
         'retrying==1.3.3',
