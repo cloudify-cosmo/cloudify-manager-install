@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# this script must be sourced from start_cluster.sh
 function generate_test_cert {
     san=$1
     docker run --rm  -v $(pwd):/root/.cloudify-test-ca ${IMAGE} cfy_manager generate-test-cert -s $san

@@ -5,24 +5,22 @@ IMAGE=${1:-cloudify-manager-aio}
 NAME_PREFIX=${2:-cfy}
 
 echo "###### Prepare name envvars ######"
-export NODE1_NAME="${NAME_PREFIX}_node1"
-export NODE2_NAME="${NAME_PREFIX}_node2"
-export NODE3_NAME="${NAME_PREFIX}_node3"
-export MANAGER1_IP="172.22.0.3"
-export MANAGER2_IP="172.22.0.4"
-export MANAGER3_IP="172.22.0.5"
-export DB1_IP="172.22.0.3"
-export DB2_IP="172.22.0.4"
-export DB3_IP="172.22.0.5"
-export QUEUE1_IP="172.22.0.3"
-export QUEUE2_IP="172.22.0.4"
-export QUEUE3_IP="172.22.0.5"
+NODE1_NAME="${NAME_PREFIX}_node1"
+NODE2_NAME="${NAME_PREFIX}_node2"
+NODE3_NAME="${NAME_PREFIX}_node3"
+MANAGER1_IP="172.22.0.3"
+MANAGER2_IP="172.22.0.4"
+MANAGER3_IP="172.22.0.5"
+DB1_IP="172.22.0.3"
+DB2_IP="172.22.0.4"
+DB3_IP="172.22.0.5"
+QUEUE1_IP="172.22.0.3"
+QUEUE2_IP="172.22.0.4"
+QUEUE3_IP="172.22.0.5"
 echo "###### Create a docker network ######"
 docker network create --subnet=172.22.0.0/24 net1
 echo "###### generate certs ######"
-chmod +x create_certs.sh
 source ./create_certs.sh
-set -eux
 # Prepare Queue1 on Node1
 sed -e "s/CONTAINER_IP/${QUEUE1_IP}/g" \
     -e "s/QUEUE2_IP/${QUEUE2_IP}/" \
