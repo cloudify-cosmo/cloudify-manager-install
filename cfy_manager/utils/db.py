@@ -233,9 +233,13 @@ def get_ui_db_dialect_options_and_url(database, certs):
             )
             for host in postgres_host
         ]
-    host_details = postgres_host.split(':')
-    host = host_details[0]
-    port = host_details[1] if 1 < len(host_details) else '5432'
+    host_details = postgres_host.rsplit(':', 1)
+    if len(host_details) > 1 and host_details[1].isnumeric():
+        host = host_details[0]
+        port = host_details[1]
+    else:
+        host = postgres_host
+        port = '5432'
     return dialect_options, conn_string.format(
         username=config[POSTGRESQL_CLIENT]['cloudify_username'],
         password=config[POSTGRESQL_CLIENT]['cloudify_password'],
