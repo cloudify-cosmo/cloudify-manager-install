@@ -75,6 +75,7 @@ pipeline {
 //         }
         stage('build_prometheus_rpms') {
           steps {
+            sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
             sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
             container('rpmbuild') {
               dir("${env.WORKSPACE}/prometheus") {
