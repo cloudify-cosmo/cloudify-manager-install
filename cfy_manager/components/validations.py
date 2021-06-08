@@ -560,7 +560,7 @@ def _validate_postgres_inputs():
 
     if is_installed(MANAGER_SERVICE) and not is_installed(DATABASE_SERVICE):
         postgres_host = config[POSTGRESQL_CLIENT]['host'].rsplit(':', 1)[0]
-        if postgres_host in ('localhost', '127.0.0.1') and \
+        if postgres_host in ('localhost', '127.0.0.1', '::1') and \
                 not config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
             raise ValidationError('When using an external database, '
                                   'postgres_password must be set')
