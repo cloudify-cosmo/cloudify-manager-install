@@ -51,6 +51,7 @@ from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
 from ..utils.common import run, sudo, ProcessExecutionError
+from ..utils.network import is_ipv6
 from cfy_manager.utils.files import is_file
 
 logger = get_logger(VALIDATIONS)
@@ -141,7 +142,10 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
                     'Could not find any addresses for interface {0}'.format(
                         interface))
                 continue
-            inet_addresses = int_addresses.get(netifaces.AF_INET)
+            inet_addresses = int_addresses.get(
+                netifaces.AF_INET6 if is_ipv6(ip_to_validate)
+                else netifaces.AF_INET
+            )
             if not inet_addresses:
                 logger.debug('No AF_INET addresses found for interface {0}'
                              .format(interface))
