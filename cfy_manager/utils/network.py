@@ -129,3 +129,13 @@ def check_http_response(url, **request_kwargs):
         response = e
 
     return response
+
+
+def is_ipv6(addr):
+    """Verifies if `addr` is a valid IPv6 address."""
+    # TODO replace socket with ipaddress once we're py3-only
+    try:
+        socket.inet_pton(socket.AF_INET6, addr)
+    except socket.error:
+        return False
+    return True
