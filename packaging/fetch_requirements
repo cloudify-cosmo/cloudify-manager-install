@@ -45,6 +45,11 @@ MANAGER_INFO = {
         '/cloudify-management-worker',
     ]
 }
+STAGE_INFO = {'name': 'cloudify-stage', 'patterns': ['/cloudify-stage']}
+COMPOSER_INFO = {
+    'name': 'cloudify-blueprint-composer',
+    'patterns': ['/cloudify-composer']
+}
 
 
 def print_in_color(message, color, stream=None):
@@ -215,7 +220,10 @@ def get_package_urls_file(edition, branch, repo_destination_path):
     except subprocess.CalledProcessError:
         print('Could not git clone: {repo}, defaults to master'
               .format(repo=output_repo))
-        git_clone_and_checkout('master', repo, repo_destination_path)
+        git_clone_and_checkout(
+            os.getenv('CORE_BRANCH', 'master'),
+            repo, repo_destination_path
+        )
 
     return {
         'manager': os.path.join(repo_destination_path,
@@ -259,7 +267,8 @@ def replace_manager_resources_location(manager_resources_file, modules_info,
             build_dir = '{0}{1}'.format('.dev1-build', pattern)
             ga_release_dir = '{0}{1}'.format('ga-release', pattern)
             ga_build_dir = '{0}{1}'.format('ga-build', pattern)
-            string_to_replace = '/{0}{1}'.format(dev_branch, pattern)
+            string_to_replace = '/premium-builder/{0}{1}'.format(dev_branch,
+                                                                 pattern)
             print("Replacing '{0}' with '{1}' or '{2}' with '{3}' in '{4}'.".
                   format(release_dir, build_dir, ga_release_dir,
                          ga_build_dir, manager_resources_file))
@@ -274,14 +283,13 @@ def replace_manager_resources_location(manager_resources_file, modules_info,
 
 
 def update_resources_url_on_dev_branch(dev_branch, manager_resources_file):
-    modules_info = []
-    if is_branch_exists(MANAGER_INFO['name'], dev_branch):
-        modules_info.append(MANAGER_INFO)
-    if is_branch_exists(CLI_INFO['name'], dev_branch):
-        modules_info.append(CLI_INFO)
-    if is_branch_exists(AGENT_INFO['name'], dev_branch):
-        modules_info.append(AGENT_INFO)
-
+    modules_info = [
+        MANAGER_INFO,
+        CLI_INFO,
+        AGENT_INFO,
+        STAGE_INFO,
+        COMPOSER_INFO
+    ]
     replace_manager_resources_location(manager_resources_file,
                                        modules_info, dev_branch)
 
