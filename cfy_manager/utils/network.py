@@ -139,3 +139,10 @@ def is_ipv6(addr):
     except socket.error:
         return False
     return True
+
+
+def ipv6_url_compat(addr):
+    """Return URL-compatible version of IPv6 address (or just an address)."""
+    if is_ipv6(addr):
+        return '[{0}]'.format(addr)
+    return addr
