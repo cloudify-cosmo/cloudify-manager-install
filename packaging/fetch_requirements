@@ -47,7 +47,7 @@ MANAGER_INFO = {
 }
 STAGE_INFO = {'name': 'cloudify-stage', 'patterns': ['/cloudify-stage']}
 COMPOSER_INFO = {
-    'name': 'cloudify-blueprint-topology',
+    'name': 'cloudify-blueprint-composer',
     'patterns': ['/cloudify-composer']
 }
 
