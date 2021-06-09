@@ -85,6 +85,7 @@ pipeline {
             }
           }
           steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
             container('rpmbuild') {
               dir("${env.WORKSPACE}/prometheus") {
                 echo 'Link items from workspace under rpm sources dir'
