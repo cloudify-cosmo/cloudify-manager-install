@@ -21,7 +21,7 @@ inputs:
     type: string
     default: t3.xlarge
 
-  aws_linux_ami:
+  aws_image_name:
     type: string
     default: 'ami-082ed116ae2c6d2cc'
 
@@ -71,7 +71,7 @@ node_templates:
       resource_config:
         kwargs:
           LaunchSpecification:
-            ImageId: { get_input:  aws_image_name }
+            ImageId: { get_input: aws_image_name }
             InstanceType: { get_input: instance_type }
             UserData: { get_attribute: [ cloud_init, cloud_config ] }
             Placement:
