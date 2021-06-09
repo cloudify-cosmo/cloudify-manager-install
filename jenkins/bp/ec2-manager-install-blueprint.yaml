@@ -61,7 +61,7 @@ dsl_definitions:
 node_templates:
 
   vm:
-    type: cloudify.nodes.aws.ec2.Instances
+    type: cloudify.nodes.aws.ec2.SpotInstances
     properties:
       client_config: *client_config
       agent_config:
@@ -69,22 +69,24 @@ node_templates:
         user: { get_input: agent_user }
         key: { get_attribute: [agent_key, private_key_export] }
       resource_config:
-        ImageId: { get_input:  aws_linux_ami }
-        InstanceType: { get_input: instance_type }
         kwargs:
-          Placement:
-            AvailabilityZone: { get_input:  availability_zone }
-          UserData: { get_attribute: [ cloud_init, cloud_config ] }
-          BlockDeviceMappings:
-          - DeviceName: '/dev/xvda'
-            Ebs:
-              VolumeSize: 22
-              VolumeType: standard
-              DeleteOnTermination: True
-      Tags:
-      - Key: Name  
-        Value: cfy-manager-install      
-      use_public_ip: true
+          LaunchSpecification:
+            ImageId: { get_input:  aws_image_name }
+            InstanceType: { get_input: instance_type }
+            UserData: { get_attribute: [ cloud_init, cloud_config ] }
+            Placement:
+              AvailabilityZone: { get_input:  availability_zone }        
+            BlockDeviceMappings:
+            - DeviceName: '/dev/sda1'
+              Ebs:
+                VolumeSize: 30
+                VolumeType: standard
+                DeleteOnTermination: True
+          TagSpecifications:
+            - ResourceType: spot-instances-request
+              Tags:
+                - Key: Name  
+                  Value: cfy-manager-install
     relationships:
     - type: cloudify.relationships.depends_on
       target: nic

@@ -6,7 +6,11 @@ spec:
       image: python:3.6
       resources:
         requests:
-          cpu: 0.6
+          cpu: 0.5
+          memory: 1.5Gi
+        limits:
+          cpu: 0.5
+          memory: 1.5Gi
       command:
       - cat
       tty: true
@@ -18,14 +22,14 @@ spec:
         valueFrom:
           fieldRef:
             fieldPath: status.podIP
-    - name: python
-      image: python:2
-      command:
-      - cat
-      tty: true
-      securityContext:
-        runAsUser: 0
-        privileged: true
+    # - name: python
+    #   image: python:2
+    #   command:
+    #   - cat
+    #   tty: true
+    #   securityContext:
+    #     runAsUser: 0
+    #     privileged: true
     - name: rpmbuild
       image: rpmbuild/centos7
       command:
@@ -34,12 +38,23 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
+      resources:
+        requests:
+          cpu: 0.5
+          memory: 512Mi
+        limits:
+          cpu: 0.5
+          memory: 512Mi
     - name: awscli
       image: amazon/aws-cli
       command:
       - cat
       tty: true
+      resources:
+        limits:
+          cpu: 0.3
+          memory: 256Mi
   imagePullSecrets:
     - name: dockerhub
   nodeSelector:
-    instance-type: spot-xlarge
+    instance-type: spot
