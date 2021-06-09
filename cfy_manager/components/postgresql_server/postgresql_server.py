@@ -713,12 +713,21 @@ class PostgresqlServer(BaseComponent):
                         members=valid_names,
                     )
                 )
-        etcd_name_suffix = etcd_name_suffix.replace('.', '_')
+        ip_urlized = '[{0}]'.format(private_ip) if network.is_ipv6(private_ip)\
+            else socket.gethostbyname(private_ip)
+        cluster_nodes = {k: v for k, v in
+                         config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
+        for k, v in cluster_nodes.items():
+            if 'ip' in v:
+                v['ip'] = network.ipv6_url_compat(v['ip'])
+        etcd_name_suffix = etcd_name_suffix.replace('.', '_').replace(':', '_')
 
         files.deploy(
             os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
             additional_render_context={
-                'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP]),
+                'ip': ip_urlized,
+                'manager_private_ip': network.ipv6_url_compat(private_ip),
+                'postgresql_server_cluster_nodes': cluster_nodes,
                 'etcd_name_suffix': etcd_name_suffix,
             })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
@@ -772,7 +781,9 @@ class PostgresqlServer(BaseComponent):
                 src_dir='postgresql_server',
                 config_path='config/supervisord',
                 external_configure_params={
-                    'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+                    'ip': ip_urlized,
+                    'manager_private_ip': network.ipv6_url_compat(private_ip),
+                    'postgresql_server_cluster_nodes': cluster_nodes,
                 }
             )
         else:
@@ -784,7 +795,7 @@ class PostgresqlServer(BaseComponent):
                 # Authentication is enabled, we should add this node to the
                 # pg_hba in case this is being added to an existing cluster
                 patroni_conf = self._get_patroni_dcs_conf(local_only=False)
-                node_ip = config[MANAGER][PRIVATE_IP]
+                node_ip = private_ip
                 look_for = ' {address} '.format(
                     address=self._format_pg_hba_address(node_ip))
                 if not any(
