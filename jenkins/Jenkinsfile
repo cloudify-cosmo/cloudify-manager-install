@@ -73,9 +73,18 @@ pipeline {
             }
           }
         }
-        stage('build_prometheus_rpms') {
+      }
+    }
+    stage('build_rpm & deploy ec2 instance') {
+      parallel {
+        stage('build_rpm & prometheus_rpms') {
+          agent {
+            kubernetes {
+              label "manager-install-mb-rpmbuild-${env.BRANCH}-${env.BUILD_NUMBER}"
+              yamlFile 'jenkins/rpm-pod.yaml'
+            }
+          }
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
             container('rpmbuild') {
               dir("${env.WORKSPACE}/prometheus") {
                 echo 'Link items from workspace under rpm sources dir'
@@ -98,21 +107,6 @@ pipeline {
                   """
                 sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf /root/rpmbuild/RPMS/x86_64/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
               }
-            }
-          }
-          post {
-            success {
-              archiveArtifacts '**/prometheus-rpms/*.rpm'
-            }
-          }
-        }
-      }
-    }
-    stage('build_rpm & deploy ec2 instance') {
-      parallel {
-        stage('build_rpm') {
-          steps {
-            container('rpmbuild') {
               sh """
                 cd && cd rpmbuild
                 git clone --single-branch --branch ${env.BRANCH_NAME} https://github.com/cloudify-cosmo/cloudify-manager-install.git SOURCES && cd SOURCES
@@ -155,6 +149,7 @@ pipeline {
           }
           post {
             success {
+              archiveArtifacts '**/prometheus-rpms/*.rpm'
               echo 'Upload artifacts to S3'
               uploadToReleaseS3("${env.WORKSPACE}/manager-rpm/","${env.S3_BUILD_PATH}")
             }
