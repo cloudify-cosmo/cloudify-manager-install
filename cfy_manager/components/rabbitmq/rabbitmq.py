@@ -21,7 +21,7 @@ from ..base_component import BaseComponent
 from ..validations import validate_certificates
 from ..service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
-from ...utils import certificates, common
+from ...utils import certificates, common, network
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import (
@@ -49,6 +49,7 @@ RABBITMQ_CONFIG_PATH = '/etc/cloudify/rabbitmq/rabbitmq.config'
 RABBITMQ_SERVER_SCRIPT = '/var/lib/rabbitmq/start_rabbitmq_server.sh'
 RABBITMQ_ENV_PATH = '/etc/rabbitmq/rabbitmq-env.conf'
 RABBITMQ_ENABLED_PLUGINS = '/etc/cloudify/rabbitmq/enabled_plugins'
+RABBITMQ_ERL_INETRC = '/etc/rabbitmq/erl_inetrc'
 SECURE_PORT = 5671
 
 ALL_IN_ONE_ADDRESS = 'ALL_IN_ONE'
@@ -65,10 +66,13 @@ class RabbitMQ(BaseComponent):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
     def _deploy_configuration(self):
-        ipv6_enabled = bool(
-            socket.getaddrinfo('localhost', SECURE_PORT,
-                               family=socket.AddressFamily.AF_INET6)
-        )
+        try:
+            ipv6_enabled = bool(
+                socket.getaddrinfo('localhost', SECURE_PORT,
+                                   family=socket.AddressFamily.AF_INET6)
+            )
+        except socket.gaierror:
+            ipv6_enabled = False
         logger.info('Deploying RabbitMQ config')
         deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH,
                additional_render_context={'ipv6_enabled': ipv6_enabled})
@@ -78,8 +82,22 @@ class RabbitMQ(BaseComponent):
 
     def _deploy_env(self):
         # This will make 'sudo rabbitmqctl' work without specifying node name
+        try:
+            nodename = config[RABBITMQ]['nodename'].split('@')[-1]
+            default_ip = config[RABBITMQ]['cluster_members'][
+                nodename]['networks']['default']
+            ipv6_enabled = network.is_ipv6(default_ip) or bool(
+                socket.getaddrinfo(default_ip, SECURE_PORT,
+                                   family=socket.AddressFamily.AF_INET6)
+            )
+        except (KeyError, socket.gaierror):
+            ipv6_enabled = False
         logger.info('Deploying RabbitMQ env')
-        deploy(join(CONFIG_PATH, 'rabbitmq-env.conf'), RABBITMQ_ENV_PATH)
+        deploy(join(CONFIG_PATH, 'rabbitmq-env.conf'), RABBITMQ_ENV_PATH,
+               additional_render_context={'ipv6_enabled': ipv6_enabled})
+        if ipv6_enabled:
+            logger.info('Deploying Erlang inet configuration')
+            deploy(join(CONFIG_PATH, 'erl_inetrc'), RABBITMQ_ERL_INETRC)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENV_PATH)
 
     def _init_service(self):
@@ -260,7 +278,8 @@ class RabbitMQ(BaseComponent):
                                'address set in cluster_members, falling '
                                'back to localhost', nodename)
             else:
-                nodes_url = 'https://{0}:15671/api/nodes'.format(default_ip)
+                nodes_url = 'https://{0}:15671/api/nodes'.format(
+                    network.ipv6_url_compat(default_ip))
 
         auth = (
             config[RABBITMQ]['username'],
@@ -363,7 +382,8 @@ class RabbitMQ(BaseComponent):
                         )
                     )
                 try:
-                    ip = socket.gethostbyname(ip)
+                    ip = ip if network.is_ipv6(ip) \
+                        else socket.gethostbyname(ip)
                 except socket.gaierror as e:
                     raise ValidationError(
                         'Cannot resolve: {addr} (rabbitmq node {node} default '
