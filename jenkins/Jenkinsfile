@@ -40,8 +40,8 @@ pipeline {
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH_NAME}/${env.BUILD_NUMBER}"
   }
   stages{
-    stage ('compatability and flake8') {
-      parallel{
+    stage('build_rpms & deploy ec2 instance') {
+      parallel {
         stage('flake8') {
           steps{
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
@@ -55,28 +55,6 @@ pipeline {
             }
           }
         }
-        stage('fetch_rpms') {
-          steps {
-            sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
-            container('py36') {
-              dir("${env.WORKSPACE}/rpms") {
-                withVault([configuration: configuration, vaultSecrets: secrets]) {
-                  echo 'Install requests'
-                  sh 'pip install requests'
-                  sh script:"""#!/bin/bash
-                     source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
-                     chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
-                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
-                     """, label: 'Fetch RPM artifacts stored on Jenkins'
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    stage('build_rpm & deploy ec2 instance') {
-      parallel {
         stage('build_rpm & prometheus_rpms') {
           agent {
             kubernetes {
@@ -85,8 +63,20 @@ pipeline {
             }
           }
           steps {
+            sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
             sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
             container('rpmbuild') {
+              dir("${env.WORKSPACE}/rpms") {
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                  echo 'Install requests'
+                  sh 'yum install -y python-requests'
+                  sh script:"""#!/bin/bash
+                     source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
+                     chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
+                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
+                     """, label: 'Fetch RPM artifacts stored on Jenkins'
+                }
+              }
               dir("${env.WORKSPACE}/prometheus") {
                 echo 'Link items from workspace under rpm sources dir'
                 sh """
@@ -169,7 +159,7 @@ pipeline {
                       sh script:"""#!/bin/bash
                       python -m venv .venv
                       source .venv/bin/activate
-                      pip install --upgrade pip
+                      y
                       pip install cloudify==5.2.3
                       apt-get update
                       apt-get install -y jq
