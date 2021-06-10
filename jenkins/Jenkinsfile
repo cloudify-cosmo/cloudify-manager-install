@@ -55,27 +55,26 @@ pipeline {
             }
           }
         }
-//         stage('fetch_rpms') {
-//           steps {
-//             sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
-//             container('python') {
-//               dir("${env.WORKSPACE}/rpms") {
-//                 withVault([configuration: configuration, vaultSecrets: secrets]) {
-//                   echo 'Install requests'
-//                   sh 'pip install requests'
-//                   sh script:"""#!/bin/bash
-//                      source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
-//                      chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
-//                      ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
-//                      """, label: 'Fetch RPM artifacts stored on Jenkins'
-//                 }
-//               }
-//             }
-//           }
-//         }
-        stage('build_prometheus_rpms') {
+        stage('fetch_rpms') {
           steps {
             sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"
+            container('python') {
+              dir("${env.WORKSPACE}/rpms") {
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                  echo 'Install requests'
+                  sh 'pip install requests'
+                  sh script:"""#!/bin/bash
+                     source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
+                     chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
+                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
+                     """, label: 'Fetch RPM artifacts stored on Jenkins'
+                }
+              }
+            }
+          }
+        }
+        stage('build_prometheus_rpms') {
+          steps {
             sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
             container('rpmbuild') {
               dir("${env.WORKSPACE}/prometheus") {
