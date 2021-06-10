@@ -143,6 +143,6 @@ def is_ipv6(addr):
 
 def ipv6_url_compat(addr):
     """Return URL-compatible version of IPv6 address (or just an address)."""
-    if is_ipv6(addr):
+    if addr and is_ipv6(addr):
         return '[{0}]'.format(addr)
     return addr
