@@ -436,10 +436,10 @@ class PostgresqlServer(BaseComponent):
             )
 
         if local_only:
-            addresses = [config[MANAGER][PRIVATE_IP]]
+            addresses = [network.ipv6_url_compat(config[MANAGER][PRIVATE_IP])]
         else:
             addresses = [
-                node['ip'] for node in
+                network.ipv6_url_compat(node['ip']) for node in
                 config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
             ]
 
@@ -1154,7 +1154,8 @@ class PostgresqlServer(BaseComponent):
             except IndexError:
                 master = None
 
-            replicas = [node for node in nodes if node != master]
+            replicas = [node for node in nodes
+                        if node != network.ipv6_url_compat(master)]
         elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
             manager_conf = files.read_yaml_file(
                 '/opt/manager/cloudify-rest.conf')
@@ -1165,7 +1166,7 @@ class PostgresqlServer(BaseComponent):
             raise DBNodeListError(
                 'Can only list DB nodes from a manager or DB node.'
             )
-        return master, replicas
+        return network.ipv6_url_compat(master), replicas
 
     def _get_raw_node_status(self, address, target_type):
         if address is None:
