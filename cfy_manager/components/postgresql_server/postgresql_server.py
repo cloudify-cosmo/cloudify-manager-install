@@ -816,11 +816,13 @@ class PostgresqlServer(BaseComponent):
                 ).aggr_stdout
                 # Cluster health command queries on 2379...
                 healthy_result = (
-                    'healthy result from https://{ip}:2379'.format(ip=node_ip)
+                    'healthy result from https://{ip}:2379'.format(
+                        ip=network.ipv6_url_compat(node_ip))
                 )
                 if healthy_result not in etcd_members:
                     # ...but node should be added on 2380
-                    etcd_node_address = 'https://{ip}:2380'.format(ip=node_ip)
+                    etcd_node_address = 'https://{ip}:2380'.format(
+                        ip=network.ipv6_url_compat(node_ip))
                     etcd_node_id = self._get_etcd_id(node_ip)
                     try:
                         self._etcd_command(
