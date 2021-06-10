@@ -96,9 +96,11 @@ class Nginx(BaseComponent):
         ca_key = config[SSL_INPUTS]['external_ca_key_path']
         key_password = config[SSL_INPUTS]['external_ca_key_password']
         if not (ca_cert and ca_key):
-            ca_cert = constants.CA_CERT_PATH
-            ca_key = constants.CA_KEY_PATH
-            key_password = config[SSL_INPUTS]['ca_key_password']
+            if exists(constants.CA_CERT_PATH) and \
+                    exists(constants.CA_KEY_PATH):
+                ca_cert = constants.CA_CERT_PATH
+                ca_key = constants.CA_KEY_PATH
+                key_password = config[SSL_INPUTS]['ca_key_password']
         certificates.generate_external_ssl_cert(
             ips=[external_rest_host, internal_rest_host],
             cn=hostname,
