@@ -436,15 +436,15 @@ class PostgresqlServer(BaseComponent):
             )
 
         if local_only:
-            addresses = [network.ipv6_url_compat(config[MANAGER][PRIVATE_IP])]
+            addresses = [config[MANAGER][PRIVATE_IP]]
         else:
             addresses = [
-                network.ipv6_url_compat(node['ip']) for node in
+                node['ip'] for node in
                 config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
             ]
 
         endpoints = ','.join(
-            'https://{addr}:2379'.format(addr=addr)
+            'https://{addr}:2379'.format(addr=network.ipv6_url_compat(addr))
             for addr in addresses
         )
         etcdctl_base_command = [
