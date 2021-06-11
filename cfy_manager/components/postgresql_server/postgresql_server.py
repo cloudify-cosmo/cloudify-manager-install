@@ -1008,14 +1008,16 @@ class PostgresqlServer(BaseComponent):
             )
         )
 
+        patroni_name = manager_ip.replace('.', '_').replace(':', '_')
+        ip_urlized = network.ipv6_url_compat(manager_ip)
         patroni_conf = {
             'scope': 'postgres',
             'namespace': '/db/',
             'log': {'dir': PATRONI_LOG_PATH},
-            'name': 'pg{0}'.format(manager_ip.replace('.', '_')),
+            'name': 'pg{0}'.format(patroni_name),
             'restapi': {
-                'listen': '{0}:8008'.format(manager_ip),
-                'connect_address': '{0}:8008'.format(manager_ip),
+                'listen': '{0}:8008'.format(ip_urlized),
+                'connect_address': '{0}:8008'.format(ip_urlized),
                 'authentication': {
                     'username': pgsrv['cluster']['patroni']['rest_user'],
                     'password': pgsrv['cluster']['patroni']['rest_password']
@@ -1049,8 +1051,8 @@ class PostgresqlServer(BaseComponent):
                 'initdb': [{'encoding': 'UTF8'}, 'data-checksums']
             },
             'postgresql': {
-                'listen': '{0}:5432'.format(manager_ip),
-                'connect_address': '{0}:5432'.format(manager_ip),
+                'listen': '{0}:5432'.format(ip_urlized),
+                'connect_address': '{0}:5432'.format(ip_urlized),
                 'data_dir': PATRONI_DATA_DIR,
                 'pgpass': PATRONI_PGPASS_PATH,
                 'authentication': {
@@ -1081,7 +1083,7 @@ class PostgresqlServer(BaseComponent):
                 'nosync': False
             },
             'etcd': {
-                'hosts': ['{0}:2379'.format(manager_ip)],
+                'hosts': ['{0}:2379'.format(ip_urlized)],
                 'protocol': 'https',
                 'cacert': ETCD_CA_PATH,
                 'username': 'patroni',
