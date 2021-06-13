@@ -371,7 +371,13 @@ def _update_prometheus_configuration(uninstalling=False):
     _update_base_targets(private_ip, uninstalling)
 
     if common.is_installed(MANAGER_SERVICE):
-        cluster_config = _get_cluster_config()
+        if uninstalling:
+            # When uninstalling we don't use the config anyway, so all that we
+            # accomplish by trying to retrieve it is allowing the uninstall to
+            # hang sometimes
+            cluster_config = {}
+        else:
+            cluster_config = _get_cluster_config()
         http_probes_count = _update_manager_targets(
             private_ip, cluster_config, uninstalling)
         _deploy_alerts_configuration(
