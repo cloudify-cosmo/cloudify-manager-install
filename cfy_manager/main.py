@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+import json
 import subprocess
 import pkg_resources
 from traceback import format_exception
@@ -45,6 +46,7 @@ from .components.validations import validate, validate_dependencies
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
+    CLOUDIFY_HOME_DIR,
     SUPERVISORD_CONFIG_DIR,
     NEW_CERTS_TMP_DIR_PATH,
     CONFIG_FILE_HELP_MSG,
@@ -1333,6 +1335,15 @@ def version():
     setup_console_logger()
     cfy_version = pkg_resources.require('cloudify-manager-install')[0].version
     logger.info('Cloudify {}'.format(cfy_version))
+    with open('{}/package_cids.json'.format(CLOUDIFY_HOME_DIR)) as f:
+        version_data = json.load(f)
+    logger.info('Release date: %s', version_data['release-date'])
+    del version_data['release-date']
+    logger.info('')
+    logger.info('Packages commit IDs:')
+    for k, v in version_data.items():
+        k = f'cloudify-{k}:'
+        logger.info(' * %-27s %s', k, v)
 
 
 def main():
