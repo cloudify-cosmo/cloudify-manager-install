@@ -279,6 +279,7 @@ class PostgresqlServer(BaseComponent):
                              '\n'.join(lines)) and enable_remote_connections\
                     and not config[POSTGRESQL_SERVER]['ssl_only_connections']:
                 f.write('host all all 0.0.0.0/0 md5\n')
+                f.write('host all all ::0/0 md5\n')
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # Allow access for monitoring user, locally only, without
@@ -289,8 +290,10 @@ class PostgresqlServer(BaseComponent):
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
                     f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
+                    f.write('hostssl all all ::0/0 md5 clientcert=1\n')
                 else:
                     f.write('hostssl all all 0.0.0.0/0 md5\n')
+                    f.write('hostssl all all ::0/0 md5\n')
         return temp_hba_path
 
     def _configure_ssl(self):
@@ -1002,11 +1005,14 @@ class PostgresqlServer(BaseComponent):
         for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
             hba_entries.append(
                 self._get_monitoring_user_hba_entry(node['ip']))
-        hba_entries.append(
+        hba_entries.extend([
             'hostssl all all 0.0.0.0/0 md5{0}'.format(
                 ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
-            )
-        )
+            ),
+            'hostssl all all ::0/0 md5{0}'.format(
+                ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
+            ),
+        ])
 
         patroni_name = manager_ip.replace('.', '_').replace(':', '_')
         ip_urlized = network.ipv6_url_compat(manager_ip)
