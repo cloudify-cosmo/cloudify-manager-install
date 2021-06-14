@@ -69,7 +69,6 @@ def download_rpm(repo, pattern, rpms_destination):
         print('Start downloading `rpm_url {}`'.format(rpm_url))
         try:
             resp = requests.get(rpm_url, stream=True)
-            print("This is the status code {}".format(resp.status_code))
         except requests.RequestException as e:
             print('Error downloading {url}: {e}'.format(url=rpm_url, e=e))
         else:
