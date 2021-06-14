@@ -9,6 +9,7 @@ import re
 import shutil
 import threading
 import argparse
+import traceback
 
 import requests
 
@@ -117,4 +118,11 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    fetch_rpms(args.rpms_destination)
+    try:
+        fetch_rpms(args.rpms_destination)
+    except Exception:
+        print('Failure while trying to fetch rpms.....')
+        traceback.print_exc()
+        sys.exit(1)
+    else:
+        print('Fetching all rpms successfully')
