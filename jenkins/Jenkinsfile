@@ -1,6 +1,9 @@
 def configuration = [vaultUrl: "${VAULT_URL}",  vaultCredentialId: "vault-app-role", engineVersion: 2]
 
 def secrets = [
+  [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
+    [envVar: 'GITHUB_TOKEN', vaultKey: 'public_token'],
+    [envVar: 'GITHUB_USERNAME', vaultKey: 'username']]],
   [path: 'secret/jenkins/jenkinstoken', engineVersion: 2, secretValues: [
     [envVar: 'JENKINS_USERNAME', vaultKey: 'username'],
     [envVar: 'JENKINS_TOKEN', vaultKey: 'token']]],
@@ -66,7 +69,7 @@ pipeline {
                   sh script:"""#!/bin/bash
                      source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
                      chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
-                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
+                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -d ${env.WORKSPACE}/rpms
                      """, label: 'Fetch RPM artifacts stored on Jenkins'
                 }
               }
