@@ -485,10 +485,10 @@ class PostgresqlServer(BaseComponent):
         ).aggr_stdout)
 
     def _get_etcd_id(self, ip):
-        return 'etcd' + ip.replace('.', '_')
+        return 'etcd' + ip.replace('.', '_').replace(':', '_')
 
     def _get_patroni_id(self, address):
-        return 'pg' + address.replace('.', '_')
+        return 'pg' + address.replace('.', '_').replace(':', '_')
 
     def _etcd_requires_auth(self):
         logger.info('Checking whether etcd requires auth.')
@@ -962,7 +962,7 @@ class PostgresqlServer(BaseComponent):
         for line in etcd_id_list.splitlines():
             line = line.strip()
             result = member_regex.match(line).groupdict()
-            etcd_members[result['ip']] = result['id']
+            etcd_members[network.ipv6_url_strip(result['ip'])] = result['id']
 
         return etcd_members
 
@@ -1164,8 +1164,7 @@ class PostgresqlServer(BaseComponent):
             except IndexError:
                 master = None
 
-            replicas = [node for node in nodes
-                        if node != network.ipv6_url_compat(master)]
+            replicas = [node for node in nodes if node != master]
         elif MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
             manager_conf = files.read_yaml_file(
                 '/opt/manager/cloudify-rest.conf')
@@ -1176,7 +1175,7 @@ class PostgresqlServer(BaseComponent):
             raise DBNodeListError(
                 'Can only list DB nodes from a manager or DB node.'
             )
-        return network.ipv6_url_compat(master), replicas
+        return master, replicas
 
     def _get_raw_node_status(self, address, target_type):
         if address is None:
@@ -1185,7 +1184,7 @@ class PostgresqlServer(BaseComponent):
         url = {
             'etcd': 'https://{address}:2379/v2/stats/self',
             'DB': 'https://{address}:8008',
-        }[target_type].format(address=address)
+        }[target_type].format(address=network.ipv6_url_compat(address))
 
         dead_node_exceptions = (
             requests.exceptions.ConnectionError,
