@@ -146,3 +146,10 @@ def ipv6_url_compat(addr):
     if addr and is_ipv6(addr):
         return '[{0}]'.format(addr)
     return addr
+
+
+def ipv6_url_strip(url_addr):
+    """Strip brackets from the URL-compatible version of IPv6 address."""
+    if url_addr.startswith('[') and url_addr.endswith(']'):
+        return url_addr[1:-1]
+    return url_addr
