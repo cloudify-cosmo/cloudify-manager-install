@@ -752,33 +752,45 @@ def sanity_check(verbose=False, private_ip=None, config_file=None):
 def _get_packages():
     """Yum packages to install/uninstall, based on the current config"""
     packages = []
+    packages_per_service_dict = {}
     # Adding premium components on all, even if we're on community, because
     # yum will return 0 (success) if any packages install successfully even if
     # some of the specified packages don't exist.
     if is_installed(MANAGER_SERVICE):
-        packages += sources.manager
+        manager_packages = sources.manager
         # Premium components
-        packages += sources.manager_cluster + sources.manager_premium
+        manager_packages += sources.manager_cluster + sources.manager_premium
+        packages += manager_packages
+        packages_per_service_dict[MANAGER_SERVICE] = manager_packages
 
     if is_installed(DATABASE_SERVICE):
-        packages += sources.db
+        db_packages = sources.db
         # Premium components
-        packages += sources.db_cluster
+        db_packages += sources.db_cluster
+        packages += db_packages
+        packages_per_service_dict[DATABASE_SERVICE] = db_packages
 
     if is_installed(QUEUE_SERVICE):
-        packages += sources.queue
+        queue_packages = sources.queue
         # Premium components
-        packages += sources.queue_cluster
+        queue_packages += sources.queue_cluster
+        packages += queue_packages
+        packages_per_service_dict[QUEUE_SERVICE] = queue_packages
 
     if is_installed(MONITORING_SERVICE):
-        packages += sources.prometheus
+        monitoring_packages = sources.prometheus
         # Premium components
-        packages += sources.prometheus_cluster
+        monitoring_packages += sources.prometheus_cluster
+        packages += monitoring_packages
+        for main_service in packages_per_service_dict:
+            packages_per_service_dict[main_service] += monitoring_packages
 
     if is_installed(ENTROPY_SERVICE):
         packages += sources.haveged
+        for main_service in packages_per_service_dict:
+            packages_per_service_dict[main_service] += sources.haveged
 
-    return packages
+    return packages, packages_per_service_dict
 
 
 def _configure_supervisord():
@@ -790,13 +802,6 @@ def _configure_supervisord():
     if is_active not in ('active', 'activating'):
         sudo('systemctl enable supervisord.service', ignore_failures=True)
         sudo('systemctl restart supervisord', ignore_failures=True)
-
-
-def _create_packages_installed_file(packages_to_install):
-    for service_name in config[SERVICES_TO_INSTALL]:
-        if service_name in MAIN_SERVICES_NAMES:
-            update_yaml_file(INSTALLED_PACKAGES,
-                             {service_name: packages_to_install})
 
 
 def _create_components_installed_file(components_list):
@@ -831,8 +836,8 @@ def install(verbose=False,
     )
     logger.notice('Installing desired components...')
     set_globals(only_install=only_install)
-    packages_to_install = _get_packages()
-    _create_packages_installed_file(packages_to_install)
+    packages_to_install, packages_per_service_dict = _get_packages()
+    update_yaml_file(INSTALLED_PACKAGES, packages_per_service_dict)
     yum_install(packages_to_install)
 
     if is_supervisord_service():
@@ -920,30 +925,30 @@ def _remove_installation_files():
 
 def _get_items_to_remove(items_file):
     """
-    :param items_file: Can be either INSTALLED_COMPONENTS
-                       or INSTALLED_PACKAGES.
+    :param items_file: Either INSTALLED_COMPONENTS or INSTALLED_PACKAGES.
     :return: A list of items (components or packages) that can be removed
              without affecting the remaining services.
 
-    We use lists instead of sets to keep items' order.
+    We use lists instead of sets to keep the items' order.
     """
+    items_to_remove = []
     items_dict = read_yaml_file(items_file)
-
-    def _get_items_list(lst, services_list):
-        for service_name in services_list:
-            for service_item in items_dict.get(service_name, []):
-                if service_item not in lst:
-                    lst.append(service_item)
-
-    potential_items_to_remove = []
-    remaining_items = []
     removed_services = get_main_services_from_config()
     remaining_services = ({DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE}
                           - set(removed_services))
-    _get_items_list(potential_items_to_remove, removed_services)
-    _get_items_list(remaining_items, remaining_services)
-    return [item for item in potential_items_to_remove
-            if item not in remaining_items]
+
+    for removed_service in removed_services:
+        for item in items_dict[removed_service]:
+            if item in items_to_remove:
+                continue
+            if remaining_services:
+                if all(item not in items_dict[remaining_service] for
+                       remaining_service in remaining_services):
+                    items_to_remove.append(item)
+            else:
+                items_to_remove.append(item)
+
+    return items_to_remove
 
 
 @config_arg
@@ -1069,7 +1074,7 @@ def upgrade(verbose=False, config_file=None):
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart')
     upgrade_components = _get_components()
-    packages_to_update = _get_packages()
+    packages_to_update, _ = _get_packages()
     sudo(['yum', 'clean', 'all'],
          stdout=sys.stdout, stderr=sys.stderr)
     sudo([
