@@ -279,6 +279,7 @@ class PostgresqlServer(BaseComponent):
                              '\n'.join(lines)) and enable_remote_connections\
                     and not config[POSTGRESQL_SERVER]['ssl_only_connections']:
                 f.write('host all all 0.0.0.0/0 md5\n')
+                f.write('host all all ::0/0 md5\n')
             if config[POSTGRESQL_SERVER][SSL_ENABLED] and not \
                     re.search(PG_HBA_HOSTSSL_REGEX_PATTERN, '\n'.join(lines)):
                 # Allow access for monitoring user, locally only, without
@@ -289,8 +290,10 @@ class PostgresqlServer(BaseComponent):
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
                     f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
+                    f.write('hostssl all all ::0/0 md5 clientcert=1\n')
                 else:
                     f.write('hostssl all all 0.0.0.0/0 md5\n')
+                    f.write('hostssl all all ::0/0 md5\n')
         return temp_hba_path
 
     def _configure_ssl(self):
@@ -444,7 +447,7 @@ class PostgresqlServer(BaseComponent):
             ]
 
         endpoints = ','.join(
-            'https://{addr}:2379'.format(addr=addr)
+            'https://{addr}:2379'.format(addr=network.ipv6_url_compat(addr))
             for addr in addresses
         )
         etcdctl_base_command = [
@@ -482,10 +485,10 @@ class PostgresqlServer(BaseComponent):
         ).aggr_stdout)
 
     def _get_etcd_id(self, ip):
-        return 'etcd' + ip.replace('.', '_')
+        return 'etcd' + ip.replace('.', '_').replace(':', '_')
 
     def _get_patroni_id(self, address):
-        return 'pg' + address.replace('.', '_')
+        return 'pg' + address.replace('.', '_').replace(':', '_')
 
     def _etcd_requires_auth(self):
         logger.info('Checking whether etcd requires auth.')
@@ -713,12 +716,21 @@ class PostgresqlServer(BaseComponent):
                         members=valid_names,
                     )
                 )
-        etcd_name_suffix = etcd_name_suffix.replace('.', '_')
+        ip_urlized = '[{0}]'.format(private_ip) if network.is_ipv6(private_ip)\
+            else socket.gethostbyname(private_ip)
+        cluster_nodes = {k: v for k, v in
+                         config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
+        for k, v in cluster_nodes.items():
+            if 'ip' in v:
+                v['ip'] = network.ipv6_url_compat(v['ip'])
+        etcd_name_suffix = etcd_name_suffix.replace('.', '_').replace(':', '_')
 
         files.deploy(
             os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
             additional_render_context={
-                'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP]),
+                'ip': ip_urlized,
+                'manager_private_ip': network.ipv6_url_compat(private_ip),
+                'postgresql_server_cluster_nodes': cluster_nodes,
                 'etcd_name_suffix': etcd_name_suffix,
             })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
@@ -772,7 +784,9 @@ class PostgresqlServer(BaseComponent):
                 src_dir='postgresql_server',
                 config_path='config/supervisord',
                 external_configure_params={
-                    'ip': socket.gethostbyname(config[MANAGER][PRIVATE_IP])
+                    'ip': ip_urlized,
+                    'manager_private_ip': network.ipv6_url_compat(private_ip),
+                    'postgresql_server_cluster_nodes': cluster_nodes,
                 }
             )
         else:
@@ -784,7 +798,7 @@ class PostgresqlServer(BaseComponent):
                 # Authentication is enabled, we should add this node to the
                 # pg_hba in case this is being added to an existing cluster
                 patroni_conf = self._get_patroni_dcs_conf(local_only=False)
-                node_ip = config[MANAGER][PRIVATE_IP]
+                node_ip = private_ip
                 look_for = ' {address} '.format(
                     address=self._format_pg_hba_address(node_ip))
                 if not any(
@@ -805,11 +819,13 @@ class PostgresqlServer(BaseComponent):
                 ).aggr_stdout
                 # Cluster health command queries on 2379...
                 healthy_result = (
-                    'healthy result from https://{ip}:2379'.format(ip=node_ip)
+                    'healthy result from https://{ip}:2379'.format(
+                        ip=network.ipv6_url_compat(node_ip))
                 )
                 if healthy_result not in etcd_members:
                     # ...but node should be added on 2380
-                    etcd_node_address = 'https://{ip}:2380'.format(ip=node_ip)
+                    etcd_node_address = 'https://{ip}:2380'.format(
+                        ip=network.ipv6_url_compat(node_ip))
                     etcd_node_id = self._get_etcd_id(node_ip)
                     try:
                         self._etcd_command(
@@ -946,7 +962,7 @@ class PostgresqlServer(BaseComponent):
         for line in etcd_id_list.splitlines():
             line = line.strip()
             result = member_regex.match(line).groupdict()
-            etcd_members[result['ip']] = result['id']
+            etcd_members[network.ipv6_url_strip(result['ip'])] = result['id']
 
         return etcd_members
 
@@ -989,20 +1005,25 @@ class PostgresqlServer(BaseComponent):
         for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
             hba_entries.append(
                 self._get_monitoring_user_hba_entry(node['ip']))
-        hba_entries.append(
+        hba_entries.extend([
             'hostssl all all 0.0.0.0/0 md5{0}'.format(
                 ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
-            )
-        )
+            ),
+            'hostssl all all ::0/0 md5{0}'.format(
+                ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
+            ),
+        ])
 
+        patroni_name = manager_ip.replace('.', '_').replace(':', '_')
+        ip_urlized = network.ipv6_url_compat(manager_ip)
         patroni_conf = {
             'scope': 'postgres',
             'namespace': '/db/',
             'log': {'dir': PATRONI_LOG_PATH},
-            'name': 'pg{0}'.format(manager_ip.replace('.', '_')),
+            'name': 'pg{0}'.format(patroni_name),
             'restapi': {
-                'listen': '{0}:8008'.format(manager_ip),
-                'connect_address': '{0}:8008'.format(manager_ip),
+                'listen': '{0}:8008'.format(ip_urlized),
+                'connect_address': '{0}:8008'.format(ip_urlized),
                 'authentication': {
                     'username': pgsrv['cluster']['patroni']['rest_user'],
                     'password': pgsrv['cluster']['patroni']['rest_password']
@@ -1036,8 +1057,8 @@ class PostgresqlServer(BaseComponent):
                 'initdb': [{'encoding': 'UTF8'}, 'data-checksums']
             },
             'postgresql': {
-                'listen': '{0}:5432'.format(manager_ip),
-                'connect_address': '{0}:5432'.format(manager_ip),
+                'listen': '{0}:5432'.format(ip_urlized),
+                'connect_address': '{0}:5432'.format(ip_urlized),
                 'data_dir': PATRONI_DATA_DIR,
                 'pgpass': PATRONI_PGPASS_PATH,
                 'authentication': {
@@ -1068,7 +1089,7 @@ class PostgresqlServer(BaseComponent):
                 'nosync': False
             },
             'etcd': {
-                'hosts': ['{0}:2379'.format(manager_ip)],
+                'hosts': ['{0}:2379'.format(ip_urlized)],
                 'protocol': 'https',
                 'cacert': ETCD_CA_PATH,
                 'username': 'patroni',
@@ -1163,7 +1184,7 @@ class PostgresqlServer(BaseComponent):
         url = {
             'etcd': 'https://{address}:2379/v2/stats/self',
             'DB': 'https://{address}:8008',
-        }[target_type].format(address=address)
+        }[target_type].format(address=network.ipv6_url_compat(address))
 
         dead_node_exceptions = (
             requests.exceptions.ConnectionError,

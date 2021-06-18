@@ -129,3 +129,27 @@ def check_http_response(url, **request_kwargs):
         response = e
 
     return response
+
+
+def is_ipv6(addr):
+    """Verifies if `addr` is a valid IPv6 address."""
+    # TODO replace socket with ipaddress once we're py3-only
+    try:
+        socket.inet_pton(socket.AF_INET6, addr)
+    except socket.error:
+        return False
+    return True
+
+
+def ipv6_url_compat(addr):
+    """Return URL-compatible version of IPv6 address (or just an address)."""
+    if addr and is_ipv6(addr):
+        return '[{0}]'.format(addr)
+    return addr
+
+
+def ipv6_url_strip(url_addr):
+    """Strip brackets from the URL-compatible version of IPv6 address."""
+    if url_addr.startswith('[') and url_addr.endswith(']'):
+        return url_addr[1:-1]
+    return url_addr

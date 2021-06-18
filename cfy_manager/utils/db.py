@@ -24,6 +24,7 @@ from cfy_manager.components.components_constants import (
 )
 from cfy_manager.exceptions import BootstrapError
 from cfy_manager.utils import files
+from cfy_manager.utils.network import ipv6_url_compat, ipv6_url_strip
 
 
 def run_psql_command(command, db_key, logger):
@@ -75,7 +76,7 @@ def generate_db_env(database, logger, username=None, password=None):
     host = select_db_host(logger)
 
     db_env = {
-        'PGHOST': host,
+        'PGHOST': ipv6_url_strip(host),
         'PGUSER': username or pg_config['server_username'],
         'PGPASSWORD': (
             password
@@ -136,7 +137,7 @@ def select_db_host(logger):
                 ca_path = POSTGRESQL_CA_CERT_PATH
             try:
                 result = requests.get(
-                    'https://{}:8008'.format(candidate),
+                    'https://{}:8008'.format(ipv6_url_compat(candidate)),
                     verify=ca_path,
                 )
             except Exception as err:
@@ -226,16 +227,20 @@ def get_ui_db_dialect_options_and_url(database, certs):
             conn_string.format(
                 username=config[POSTGRESQL_CLIENT]['cloudify_username'],
                 password=config[POSTGRESQL_CLIENT]['cloudify_password'],
-                host=host,
+                host=ipv6_url_compat(host),
                 port=5432,
                 db=database,
                 params=params,
             )
             for host in postgres_host
         ]
-    host_details = postgres_host.split(':')
-    host = host_details[0]
-    port = host_details[1] if 1 < len(host_details) else '5432'
+    host_details = postgres_host.rsplit(':', 1)
+    if len(host_details) > 1 and host_details[1].isnumeric():
+        host = host_details[0]
+        port = host_details[1]
+    else:
+        host = postgres_host
+        port = '5432'
     return dialect_options, conn_string.format(
         username=config[POSTGRESQL_CLIENT]['cloudify_username'],
         password=config[POSTGRESQL_CLIENT]['cloudify_password'],
