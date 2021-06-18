@@ -55,6 +55,7 @@ from ...logger import get_logger
 from ...exceptions import ValidationError
 from ...utils import common, files, service, certificates
 from ...utils.install import is_premium_installed
+from ...utils.network import ipv6_url_compat
 
 
 CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
@@ -307,7 +308,7 @@ def _update_config():
 
     def postgresql_ip_address():
         if config.get(POSTGRESQL_SERVER, {}).get(ENABLE_REMOTE_CONNECTIONS):
-            return config.get(MANAGER, {}).get(PRIVATE_IP)
+            return ipv6_url_compat(config.get(MANAGER, {}).get(PRIVATE_IP))
         return 'localhost'
 
     def postgres_ca_cert_path():
