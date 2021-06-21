@@ -12,7 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import ipaddress
 import os
 import socket
 import base64
@@ -133,12 +133,10 @@ def check_http_response(url, **request_kwargs):
 
 def is_ipv6(addr):
     """Verifies if `addr` is a valid IPv6 address."""
-    # TODO replace socket with ipaddress once we're py3-only
     try:
-        socket.inet_pton(socket.AF_INET6, addr)
-    except socket.error:
+        return bool(ipaddress.IPv6Address(addr))
+    except ipaddress.AddressValueError:
         return False
-    return True
 
 
 def ipv6_url_compat(addr):

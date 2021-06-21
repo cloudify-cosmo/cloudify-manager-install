@@ -82,16 +82,7 @@ class RabbitMQ(BaseComponent):
 
     def _deploy_env(self):
         # This will make 'sudo rabbitmqctl' work without specifying node name
-        try:
-            nodename = config[RABBITMQ]['nodename'].split('@')[-1]
-            default_ip = config[RABBITMQ]['cluster_members'][
-                nodename]['networks']['default']
-            ipv6_enabled = network.is_ipv6(default_ip) or bool(
-                socket.getaddrinfo(default_ip, SECURE_PORT,
-                                   family=socket.AddressFamily.AF_INET6)
-            )
-        except (KeyError, socket.gaierror):
-            ipv6_enabled = False
+        ipv6_enabled = _is_ipv6_enabled()
         logger.info('Deploying RabbitMQ env')
         deploy(join(CONFIG_PATH, 'rabbitmq-env.conf'), RABBITMQ_ENV_PATH,
                additional_render_context={'ipv6_enabled': ipv6_enabled})
@@ -645,3 +636,18 @@ class RabbitMQ(BaseComponent):
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
         sudo(['rm', '-rf', '/etc/rabbitmq'])
+
+
+def _is_ipv6_enabled():
+    try:
+        nodename = config[RABBITMQ]['nodename'].split('@')[-1]
+        default_ip = config[RABBITMQ]['cluster_members'][nodename][
+            'networks']['default']
+        ipv6_enabled = network.is_ipv6(default_ip) or bool(
+            socket.getaddrinfo(default_ip, SECURE_PORT,
+                               family=socket.AddressFamily.AF_INET6)
+        )
+    except (KeyError, socket.gaierror):
+        ipv6_enabled = False
+
+    return ipv6_enabled
