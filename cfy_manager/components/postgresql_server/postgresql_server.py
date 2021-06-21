@@ -485,10 +485,10 @@ class PostgresqlServer(BaseComponent):
         ).aggr_stdout)
 
     def _get_etcd_id(self, ip):
-        return 'etcd' + ip.replace('.', '_').replace(':', '_')
+        return 'etcd' + _ip_to_identifier(ip)
 
     def _get_patroni_id(self, address):
-        return 'pg' + address.replace('.', '_').replace(':', '_')
+        return 'pg' + _ip_to_identifier(address)
 
     def _etcd_requires_auth(self):
         logger.info('Checking whether etcd requires auth.')
@@ -723,7 +723,7 @@ class PostgresqlServer(BaseComponent):
         for k, v in cluster_nodes.items():
             if 'ip' in v:
                 v['ip'] = network.ipv6_url_compat(v['ip'])
-        etcd_name_suffix = etcd_name_suffix.replace('.', '_').replace(':', '_')
+        etcd_name_suffix = _ip_to_identifier(etcd_name_suffix)
 
         files.deploy(
             os.path.join(CONFIG_PATH, 'etcd.conf'), ETCD_CONFIG_PATH,
@@ -1014,7 +1014,7 @@ class PostgresqlServer(BaseComponent):
             ),
         ])
 
-        patroni_name = manager_ip.replace('.', '_').replace(':', '_')
+        patroni_name = _ip_to_identifier(manager_ip)
         ip_urlized = network.ipv6_url_compat(manager_ip)
         patroni_conf = {
             'scope': 'postgres',
@@ -1761,3 +1761,7 @@ class PostgresqlServer(BaseComponent):
 
     def validate_dependencies(self):
         super(PostgresqlServer, self).validate_dependencies()
+
+
+def _ip_to_identifier(ip):
+    return ip.replace('.', '_').replace(':', '_')
