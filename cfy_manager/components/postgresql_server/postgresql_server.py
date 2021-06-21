@@ -716,7 +716,8 @@ class PostgresqlServer(BaseComponent):
                         members=valid_names,
                     )
                 )
-        ip_urlized = '[{0}]'.format(private_ip) if network.is_ipv6(private_ip)\
+        ip_urlized = network.ipv6_url_compat(private_ip)\
+            if network.is_ipv6(private_ip)\
             else socket.gethostbyname(private_ip)
         cluster_nodes = {k: v for k, v in
                          config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
