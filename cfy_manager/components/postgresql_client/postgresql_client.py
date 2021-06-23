@@ -15,8 +15,6 @@
 
 import os
 
-from ...exceptions import ProcessExecutionError
-
 from ..validations import validate_certificates
 from ..components_constants import (
     SERVICES_TO_INSTALL,
@@ -49,13 +47,6 @@ from ...utils import (
     files,
 )
 
-GROUP_USER_ALREADY_EXISTS_EXIT_CODE = 9
-POSTGRES_USER = POSTGRES_GROUP = 'postgres'
-POSTGRES_USER_ID = POSTGRES_GROUP_ID = '26'
-POSTGRES_USER_COMMENT = 'PostgreSQL Server'
-POSTGRES_USER_HOME_DIR = '/var/lib/pgsql'
-HOST = 'host'
-
 CLOUDIFY_PGPASS_PATH = os.path.join(CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
@@ -64,39 +55,6 @@ logger = get_logger(POSTGRESQL_CLIENT)
 
 
 class PostgresqlClient(BaseComponent):
-    def _create_postgres_group(self):
-        logger.notice('Creating postgres group')
-        try:
-            common.sudo(['groupadd',
-                         '-g', POSTGRES_GROUP_ID,
-                         '-o', '-r',
-                         POSTGRES_GROUP])
-        except ProcessExecutionError as ex:
-            # Return code 9 for non-unique user/group
-            if ex.return_code != GROUP_USER_ALREADY_EXISTS_EXIT_CODE:
-                raise ex
-            else:
-                logger.info('Group postgres already exists')
-
-    def _create_postgres_user(self):
-        logger.notice('Creating postgres user')
-        try:
-            # In case All-in-one, the user already exists so the home dir
-            # won't be created.
-            common.sudo(['useradd', '-m', '-N',
-                         '-g', POSTGRES_GROUP_ID,
-                         '-o', '-r',
-                         '-d', POSTGRES_USER_HOME_DIR,
-                         '-s', '/bin/bash',
-                         '-c', POSTGRES_USER_COMMENT,
-                         '-u', POSTGRES_USER_ID, POSTGRES_USER])
-        except ProcessExecutionError as ex:
-            # Return code 9 for non-unique user/group
-            if ex.return_code != GROUP_USER_ALREADY_EXISTS_EXIT_CODE:
-                raise ex
-            else:
-                logger.info('User postgres already exists')
-
     def _create_pgpass(self, hosts, port, db_name, user, password, pgpass_path,
                        owning_user, owning_group):
         logger.debug('Creating postgresql pgpass file: {0}'
@@ -216,8 +174,6 @@ class PostgresqlClient(BaseComponent):
         db_server_username = config[POSTGRESQL_CLIENT]['server_username']
         if db_server_username == 'postgres' or not db_server_username:
             config[POSTGRESQL_CLIENT]['server_username'] = 'postgres'
-            self._create_postgres_group()
-            self._create_postgres_user()
         logger.notice('PostgreSQL successfully installed')
 
     def configure(self):
