@@ -46,7 +46,7 @@ class UsageCollector(BaseComponent):
         logger.notice('Usage Collector successfully installed')
 
     def configure(self):
-        if self._validate_cronie_installed():
+        if self._validate_crontab_accessible():
             logger.notice('Configuring Usage Collector...')
             common.mkdir(LOG_DIR)
             common.chown(constants.CLOUDIFY_USER,
@@ -57,32 +57,41 @@ class UsageCollector(BaseComponent):
             self.start()
 
     def start(self):
-        if self._validate_cronie_installed():
+        if self._validate_crontab_accessible():
             logger.notice('Enabling usage collector')
             self._remove_cron_jobs()
             self._create_cron_jobs()
             logger.notice('Usage collector enabled')
 
     def stop(self):
-        if self._validate_cronie_installed():
+        if self._validate_crontab_accessible():
             logger.notice('Disabling usage collector')
             self._remove_cron_jobs()
             logger.notice('Usage collector disabled')
 
     def remove(self):
         logger.notice('Removing Usage Collector...')
-        if self._validate_cronie_installed():
+        if self._validate_crontab_accessible():
             self._remove_cron_jobs()
         remove_logrotate(USAGE_COLLECTOR)
         common.remove(SCRIPTS_DESTINATION_PATH)
         common.remove(MANAGER_ID_PATH)
         logger.notice('Usage Collector successfully removed')
 
-    def _validate_cronie_installed(self):
+    def _validate_crontab_accessible(self):
         if not is_package_installed('cronie'):
             logger.warning('Package cronie is not installed,'
                            'Usage Collector cannot be used')
             return False
+
+        try:
+            common.sudo(['crontab', '-u', constants.CLOUDIFY_USER, '-l'])
+        except common.ProcessExecutionError as ex:
+            logger.warning(
+                'Usage Collector cannot be used, unable to use crontab: {0}.'
+                .format(ex.aggr_stderr.strip().replace("\n", "\t"))
+            )
+
         return True
 
     def _deploy_collector_scripts(self):
