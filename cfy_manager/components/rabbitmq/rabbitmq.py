@@ -21,7 +21,7 @@ from ..base_component import BaseComponent
 from ..validations import validate_certificates
 from ..service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
-from ...utils import certificates, common, network
+from ...utils import certificates, common, network, files
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import (
@@ -50,6 +50,7 @@ RABBITMQ_SERVER_SCRIPT = '/var/lib/rabbitmq/start_rabbitmq_server.sh'
 RABBITMQ_ENV_PATH = '/etc/rabbitmq/rabbitmq-env.conf'
 RABBITMQ_ENABLED_PLUGINS = '/etc/cloudify/rabbitmq/enabled_plugins'
 RABBITMQ_ERL_INETRC = '/etc/rabbitmq/erl_inetrc'
+QUEUES_REBALANCING_SCRIPT_PATH = '/etc/cloudify/rabbitmq/rebalance_queues.py'
 SECURE_PORT = 5671
 
 ALL_IN_ONE_ADDRESS = 'ALL_IN_ONE'
@@ -187,6 +188,7 @@ class RabbitMQ(BaseComponent):
         if not join_node:
             return
         self.join_cluster(join_node)
+        self._deploy_rebalancer_script_and_create_cronjob()
 
     def join_cluster(self, join_node, restore_users_on_fail=False):
         join_node = self.add_missing_nodename_prefix(join_node)
@@ -636,6 +638,34 @@ class RabbitMQ(BaseComponent):
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
         sudo(['rm', '-rf', '/etc/rabbitmq'])
+
+    def _deploy_rebalancer_script_and_create_cronjob(self):
+        logger.info('Deploying queue rebalancing script...')
+        source_path = join(constants.COMPONENTS_DIR,
+                           RABBITMQ,
+                           SCRIPTS,
+                           'rebalance_queues.py')
+        files.deploy(source_path, QUEUES_REBALANCING_SCRIPT_PATH)
+        common.chmod('+x', QUEUES_REBALANCING_SCRIPT_PATH)
+        common.chown(constants.CLOUDIFY_USER,
+                     constants.CLOUDIFY_GROUP,
+                     QUEUES_REBALANCING_SCRIPT_PATH)
+
+        logger.info('Creating cron job for rebalancing queues...')
+        time_string = '0 */4 * * *'  # run every 4 hours
+        job_command = '{0} {1} {2} # {3}'.format(
+            time_string,
+            '/opt/cloudify/cfy_manager/bin/python',
+            QUEUES_REBALANCING_SCRIPT_PATH,
+            "Rebalance rabbit queues")
+
+        # Adding a new job to crontab
+        # Adding sudo manually, as common.sudo doesn't support parenthesis
+        cmd = '(sudo crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
+              'sudo crontab -u {0} -'.format(constants.CLOUDIFY_USER,
+                                             job_command)
+        common.run([cmd], shell=True)
+        logger.info('Queue rebalancing cron job successfully created')
 
 
 def _is_ipv6_enabled():
