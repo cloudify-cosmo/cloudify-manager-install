@@ -554,13 +554,19 @@ def _print_finish_message(config_file=None):
         print('#' * 50)
 
 
-def _are_components_installed():
+def _get_installed_services():
     return all(
         os.path.isfile(os.path.join(INITIAL_INSTALL_DIR, service_name))
         for service_name in config[SERVICES_TO_INSTALL])
 
 
-def _are_components_configured():
+def _get_configured_services(get_all=False):
+    """Return a list of configured components.
+    :param get_all: Set this to true to list all configured components, not
+                    just ones from the current config.yaml.
+    """
+    if get_all:
+        return os.listdir(INITIAL_CONFIGURE_DIR)
     return all(
         os.path.isfile(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
         for service_name in config[SERVICES_TO_INSTALL])
@@ -575,7 +581,7 @@ def _create_initial_install_files():
     If the installation finished successfully for the first time,
     create the file /etc/cloudify/.installed/<service_name>.
     """
-    if not _are_components_installed():
+    if not _get_installed_services():
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
 
@@ -585,7 +591,7 @@ def _create_initial_configure_files():
     If the configuration finished successfully for the first time,
     create the file /etc/cloudify/.configured/<service_name>.
     """
-    if not _are_components_configured():
+    if not _get_configured_services():
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
@@ -608,7 +614,7 @@ def _validate_components_prepared(cmd):
     )
     files_list = [os.path.join(INITIAL_INSTALL_DIR, installed_service) for
                   installed_service in config[SERVICES_TO_INSTALL]]
-    if not _are_components_installed():
+    if not _get_installed_services():
         raise BootstrapError(
             error_message.format(
                 fix_cmd='install',
@@ -616,7 +622,7 @@ def _validate_components_prepared(cmd):
                 cmd=cmd
             )
         )
-    if not _are_components_configured() and cmd != 'configure':
+    if not _get_configured_services() and cmd != 'configure':
         raise BootstrapError(
             error_message.format(
                 fix_cmd='configure',
@@ -934,7 +940,9 @@ def _get_items_to_remove(items_file):
     items_to_remove = []
     items_dict = read_yaml_file(items_file)
     removed_services = get_main_services_from_config()
-    remaining_services = ({DATABASE_SERVICE, QUEUE_SERVICE, MANAGER_SERVICE}
+    # We must base this on configured services to avoid partially removing
+    # (e.g.) nginx but leaving its package behind, which will break reinstall.
+    remaining_services = (set(_get_configured_services(get_all=True))
                           - set(removed_services))
 
     for removed_service in removed_services:
@@ -973,7 +981,7 @@ def remove(verbose=False, force=False, config_file=None):
                      [component.__class__.__name__ for component
                       in components_to_remove])
 
-        should_stop = _are_components_configured()
+        should_stop = _get_configured_services()
         for component in components_to_remove:
             if should_stop:
                 component.stop()
@@ -1245,7 +1253,7 @@ def image_starter(verbose=False, config_file=None):
         # if public ip is not given, default it to the same as private
         command += ['--public-ip', private_ip]
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
-            and not _are_components_configured():
+            and not _get_configured_services():
         command += ['--admin-password', 'admin']
     os.execv(sys.executable, command)
 
