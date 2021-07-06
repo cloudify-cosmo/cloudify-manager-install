@@ -942,8 +942,8 @@ def _get_items_to_remove(items_file):
             if item in items_to_remove:
                 continue
             if remaining_services:
-                if all(item not in items_dict[remaining_service] for
-                       remaining_service in remaining_services):
+                if all(item not in items_dict.get(remaining_service, [])
+                       for remaining_service in remaining_services):
                     items_to_remove.append(item)
             else:
                 items_to_remove.append(item)
