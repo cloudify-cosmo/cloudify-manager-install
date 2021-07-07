@@ -13,9 +13,10 @@ import requests
 
 from ..components_constants import (
     CONFIG,
+    HOSTNAME,
+    PRIVATE_IP,
     SCRIPTS,
     SERVICES_TO_INSTALL,
-    HOSTNAME
 )
 from ..base_component import BaseComponent
 from ..validations import validate_certificates
@@ -669,15 +670,29 @@ class RabbitMQ(BaseComponent):
 
 
 def _is_ipv6_enabled():
+    nodename = config[RABBITMQ]['nodename'].split('@')[-1]
+
     try:
-        nodename = config[RABBITMQ]['nodename'].split('@')[-1]
         default_ip = config[RABBITMQ]['cluster_members'][nodename][
             'networks']['default']
-        ipv6_enabled = network.is_ipv6(default_ip) or bool(
-            socket.getaddrinfo(default_ip, SECURE_PORT,
-                               family=socket.AddressFamily.AF_INET6)
-        )
-    except (KeyError, socket.gaierror):
-        ipv6_enabled = False
+    except KeyError:
+        default_ip = config[MANAGER][PRIVATE_IP]
 
-    return ipv6_enabled
+    if network.is_ipv6(default_ip):
+        return True
+
+    try:
+        addresses = socket.getaddrinfo(default_ip, SECURE_PORT,
+                                       family=socket.AddressFamily.AF_INET6)
+    except socket.gaierror:
+        # We can't get the v6 address info, so no IPv6
+        return False
+
+    for _family, _type, _proto, _canonname, sockaddr in addresses:
+        # Assuming link-local will work breaks hostname based setups where
+        # ipv6 isn't fully disabled but also isn't in use.
+        if not network.is_ipv6_link_local(sockaddr[0]):
+            return True
+
+    # No non-link-local ipv6 addresses were found, we're ipv4
+    return False
