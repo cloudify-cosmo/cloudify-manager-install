@@ -139,6 +139,14 @@ def is_ipv6(addr):
         return False
 
 
+def is_ipv6_link_local(addr):
+    """Verifies if `addr` is an ipv6 link local address."""
+    try:
+        return ipaddress.IPv6Address(addr).is_link_local
+    except ipaddress.AddressValueError:
+        return False
+
+
 def ipv6_url_compat(addr):
     """Return URL-compatible version of IPv6 address (or just an address)."""
     if addr and is_ipv6(addr):
