@@ -308,7 +308,7 @@ class Nginx(BaseComponent):
                         'Pass the `--clean-db` flag in order to recreate '
                         'all certificates')
 
-    def _config_files(self, remove=False):
+    def _config_files(self):
         do_monitoring = MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL)
         do_manager = MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL)
         resource = namedtuple('Resource', 'src dst')
@@ -326,7 +326,7 @@ class Nginx(BaseComponent):
                 'cloudify.conf',
             ]
         ]
-        if do_manager or remove:
+        if do_manager:
             resources_list += [
                 resource(
                     src=join(CONFIG_PATH, file_name),
@@ -341,7 +341,7 @@ class Nginx(BaseComponent):
                     'manager.upstream',
                 ]
             ]
-        if do_monitoring or remove:
+        if do_monitoring:
             resources_list += [
                 resource(
                     src=join(CONFIG_PATH, file_name),
@@ -512,7 +512,7 @@ class Nginx(BaseComponent):
             LOG_DIR,
             UNIT_OVERRIDE_PATH,
             HTPASSWD_FILE,
-        ] + [resource.dst for resource in self._config_files(remove=True)])
+        ] + [resource.dst for resource in self._config_files()])
 
     def upgrade(self):
         logger.notice('Upgrading NGINX...')
