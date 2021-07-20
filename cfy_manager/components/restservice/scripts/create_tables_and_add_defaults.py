@@ -134,7 +134,7 @@ def _insert_manager(config):
 
     if not stored_cert and not ca_cert:
         raise RuntimeError('No manager certs found, and ca_cert not given')
-    elif stored_cert and not ca_cert:
+    if stored_cert and not ca_cert:
         with open(CA_CERT_PATH, 'w') as f:
             f.write(stored_cert.value)
         subprocess.check_call(['sudo', 'chown', 'cfyuser.', CA_CERT_PATH])
@@ -188,9 +188,8 @@ def _add_provider_context(context):
 def file_path(path):
     if os.path.exists(path):
         return path
-    else:
-        raise argparse.ArgumentTypeError(
-            "The file path \"{0}\" doesn't exist.".format(path))
+    raise argparse.ArgumentTypeError(
+        "The file path \"{0}\" doesn't exist.".format(path))
 
 
 if __name__ == '__main__':
