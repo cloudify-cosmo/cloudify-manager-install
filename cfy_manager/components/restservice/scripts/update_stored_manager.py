@@ -66,8 +66,7 @@ def main(new_manager, admin_password):
         'name': hostname,
         'host': manager.private_ip
     }, fail_silently=True)
-    for attr in ['private_ip', 'public_ip', 'networks',
-                 'monitoring_username', 'monitoring_password']:
+    for attr in ['private_ip', 'public_ip', 'networks']:
         setattr(manager, attr, new_manager[attr])
 
     sm.update(manager)
@@ -76,14 +75,10 @@ def main(new_manager, admin_password):
             broker.management_host = manager.private_ip
         broker.host = manager.private_ip
         broker.networks = manager.networks
-        broker.monitoring_username = manager.monitoring_username
-        broker.monitoring_password = manager.monitoring_password
         sm.update(broker)
 
     if db_node:
         db_node.host = manager.private_ip
-        db_node.monitoring_username = manager.monitoring_username
-        db_node.monitoring_password = manager.monitoring_password
         sm.update(db_node)
 
     if new_manager.get('ca_cert'):
