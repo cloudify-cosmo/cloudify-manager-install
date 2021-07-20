@@ -148,6 +148,7 @@ def _create_populate_db_args_dict():
 
 def _create_rabbitmq_info():
     use_hostnames = config[RABBITMQ]['use_hostnames_in_db']
+    is_external = config[RABBITMQ].get('is_external', False)
     return [
         {
             'name': name,
@@ -159,7 +160,7 @@ def _create_rabbitmq_info():
             'password': config[RABBITMQ]['password'],
             'params': None,
             'networks': broker[NETWORKS],
-            'is_external': broker.get('networks', {}).get('default') is None,
+            'is_external': is_external,
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
