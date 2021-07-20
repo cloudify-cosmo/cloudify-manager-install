@@ -107,6 +107,10 @@ rabbitmq:
   # This should not be populated on an all-in-one manager.
   cluster_members: {}
 
+  # Set this to true if the RabbitMQ is an external service.  This will result in the RabbitMQ
+  # service not being internally-monitored by the CLoudify cluster status reporter.
+  is_external: false
+
   # Path to cert for CA that signed the broker cert.
   # Must be provided to use external brokers.
   # Will default to cert_path if installing a broker locally.

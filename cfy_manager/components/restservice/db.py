@@ -157,6 +157,7 @@ def _get_monitoring_credentials():
 def _create_rabbitmq_info():
     monitoring_credentials = _get_monitoring_credentials()
     use_hostnames = config[RABBITMQ]['use_hostnames_in_db']
+    is_external = config[RABBITMQ].get('is_external', False)
     return [
         {
             'name': name,
@@ -168,7 +169,7 @@ def _create_rabbitmq_info():
             'password': config[RABBITMQ]['password'],
             'params': None,
             'networks': broker[NETWORKS],
-            'is_external': broker.get('networks', {}).get('default') is None,
+            'is_external': is_external,
             'monitoring_username': monitoring_credentials['username'],
             'monitoring_password': monitoring_credentials['password'],
         }
