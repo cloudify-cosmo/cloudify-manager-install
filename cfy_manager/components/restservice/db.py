@@ -20,7 +20,6 @@ from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
-    PROMETHEUS,
     RABBITMQ,
     RESTSERVICE,
 )
@@ -147,15 +146,7 @@ def _create_populate_db_args_dict():
     return args_dict
 
 
-def _get_monitoring_credentials():
-    return {
-        'username': config[PROMETHEUS].get('credentials', {}).get('username'),
-        'password': config[PROMETHEUS].get('credentials', {}).get('password'),
-    }
-
-
 def _create_rabbitmq_info():
-    monitoring_credentials = _get_monitoring_credentials()
     use_hostnames = config[RABBITMQ]['use_hostnames_in_db']
     is_external = config[RABBITMQ].get('is_external', False)
     return [
@@ -170,23 +161,17 @@ def _create_rabbitmq_info():
             'params': None,
             'networks': broker[NETWORKS],
             'is_external': is_external,
-            'monitoring_username': monitoring_credentials['username'],
-            'monitoring_password': monitoring_credentials['password'],
         }
         for name, broker in config[RABBITMQ]['cluster_members'].items()
     ]
 
 
 def _create_db_nodes_info():
-    monitoring_credentials = _get_monitoring_credentials()
-
     if common.is_all_in_one_manager():
         return [{
             'name': config[MANAGER][HOSTNAME],
             'host': config[NETWORKS]['default'],
             'is_external': False,
-            'monitoring_username': monitoring_credentials['username'],
-            'monitoring_password': monitoring_credentials['password'],
         }]
 
     if common.manager_using_db_cluster():
@@ -196,8 +181,6 @@ def _create_db_nodes_info():
                 'name': name,
                 'host': db['ip'],
                 'is_external': False,
-                'monitoring_username': monitoring_credentials['username'],
-                'monitoring_password': monitoring_credentials['password'],
             }
             for name, db in db_nodes.items()
         ]
@@ -207,8 +190,6 @@ def _create_db_nodes_info():
         'name': config[POSTGRESQL_CLIENT]['host'],
         'host': config[POSTGRESQL_CLIENT]['host'],
         'is_external': True,
-        'monitoring_username': monitoring_credentials['username'],
-        'monitoring_password': monitoring_credentials['password'],
     }]
 
 
@@ -263,7 +244,6 @@ def populate_db(configs):
 
 
 def _get_manager():
-    monitoring_credentials = _get_monitoring_credentials()
     try:
         with open(constants.CA_CERT_PATH) as f:
             ca_cert = f.read()
@@ -275,8 +255,6 @@ def _get_manager():
         'private_ip': config['manager']['private_ip'],
         'networks': config[NETWORKS],
         'last_seen': common.get_formatted_timestamp(),
-        'monitoring_username': monitoring_credentials['username'],
-        'monitoring_password': monitoring_credentials['password'],
         'ca_cert': ca_cert
     }
 
