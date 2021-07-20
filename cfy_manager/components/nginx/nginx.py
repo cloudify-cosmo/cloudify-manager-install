@@ -341,7 +341,7 @@ class Nginx(BaseComponent):
                     'manager.upstream',
                 ]
             ]
-        if do_monitoring:
+        if do_monitoring or remove:
             resources_list += [
                 resource(
                     src=join(CONFIG_PATH, file_name),
