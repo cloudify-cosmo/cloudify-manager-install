@@ -58,7 +58,8 @@ def yum_install(packages, disable_all_repos=True):
 def yum_remove(packages, ignore_failures=False):
     logger.info('yum removing {0}...'.format(', '.join(packages)))
     try:
-        sudo(['yum', 'remove', '-y'] + packages)
+        sudo(['yum', 'remove', '-y',
+              '--setopt=clean_requirements_on_remove=1'] + packages)
     except ProcessExecutionError as e:
         msg = 'Packages `{0}` may not been removed successfully'.format(
             ', '.join(packages))
