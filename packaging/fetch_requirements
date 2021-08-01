@@ -432,10 +432,17 @@ if __name__ == '__main__':
         help='Dev branch to get package resources from.',
         default='',
     )
+    parser.add_argument(
+        '--architecture',
+        help='Architecture for which to get package resources. Currently '
+             'supported are x86_64 (default) and aarch_64',
+        default='x86_64',
+    )
 
     args = parser.parse_args()
     retrieve_resources(
         edition=args.edition,
         branch=args.branch,
-        dev_branch=args.dev_branch
+        dev_branch=args.dev_branch,
+        architecture=args.architecture
     )
