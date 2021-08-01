@@ -16,6 +16,7 @@ License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-manager-install
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
+BuildArch:      ${ARCHITECTURE}
 
 BuildRequires:  python3 >= 3.6, python3-devel >= 3.6, createrepo, gcc
 Requires:       python3 >= 3.6
