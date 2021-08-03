@@ -84,6 +84,8 @@ node_templates:
       Tags:
       - Key: Name  
         Value: cfy-manager-install      
+      - Key: pipeline
+        Value: cfy-manager-install
       use_public_ip: true
     relationships:
     - type: cloudify.relationships.depends_on
