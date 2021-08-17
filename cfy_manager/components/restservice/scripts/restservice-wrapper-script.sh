@@ -20,4 +20,5 @@ exec /opt/manager/env/bin/gunicorn \
     --bind 127.0.0.1:$port \
     --timeout 300 manager_rest.wsgi:app \
     --log-file /var/log/cloudify/rest/gunicorn.log \
-    --access-logfile /var/log/cloudify/rest/gunicorn-access.log
+    --access-logfile /var/log/cloudify/rest/gunicorn-access.log \
+    --access-logformat '%(t)s %(h)s %({X-Cloudify-Audit-Username}o)s %({X-Cloudify-Audit-Tenant}o)s %({X-Cloudify-Audit-Auth-Method}o)s "%(r)s" %(s)s %(b)s "%(a)s" took %(D)sus'
