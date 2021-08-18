@@ -251,7 +251,7 @@ echo 'Build manager container'
 set -eux
 ls -la .
 pushd packaging/docker
-  docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} ./Dockerfile_amd64
+  docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} -f ./Dockerfile_amd64
 popd
 echo 'Run manager container'
 set -eux
@@ -296,7 +296,7 @@ echo 'Build manager container'
 set -eux
 ls -la .
 pushd packaging/docker
-  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} ./Dockerfile_amd64
+  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} -f ./Dockerfile_amd64
 popd
 set -eux
 pushd jenkins/cluster
