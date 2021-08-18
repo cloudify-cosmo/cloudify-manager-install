@@ -177,7 +177,7 @@ pipeline {
                       python -m venv .venv
                       source .venv/bin/activate
                       pip install --upgrade pip
-                      pip install cloudify==5.1.2
+                      pip install cloudify==5.2.4
                       apt-get update
                       apt-get install -y jq
                       cfy profile use ${env.MANAGER_IP} -u ${env.MANAGER_USERNAME} -p ${env.MANAGER_PASSWORD} -t ${env.MANAGER_TENANT} --ssl
