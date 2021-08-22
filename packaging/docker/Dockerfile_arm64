@@ -11,7 +11,7 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 # Handle Erlang for ARM64
 RUN yum install -y https://cloudify-release-eu.s3.eu-west-1.amazonaws.com/cloudify/components/esl-erlang_23.1-1~centos~7_arm64.rpm
 
-RUN yum install -y openssl-1.0.2k libselinux-utils \
+RUN yum install -y sudo openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
     systemd-sysv initscripts tcp_wrappers-libs openssh-clients \
