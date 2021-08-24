@@ -2,6 +2,7 @@ FROM centos:7
 
 ARG rpm_file
 ARG config=config.yaml
+ARG autoremove=true
 ARG uid=1500
 ARG gid=1500
 
@@ -11,8 +12,7 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs openssh-clients \
-    https://github.com/sudo-project/sudo/releases/download/SUDO_1_9_6p1/sudo-1.9.6-2.el7.x86_64.rpm
+    systemd-sysv initscripts tcp_wrappers-libs openssh-clients sudo \
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
@@ -29,7 +29,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && sed -i 's/ssl_enabled: true/ssl_enabled: false/' /etc/cloudify/config.yaml \
     && rm -fr /opt/cloudify/sources/*.rpm -fr \
     && rm /etc/yum.repos.d/Cloudify-Local.repo \
-    && yum autoremove -y \
+    && if [ "$autoremove" == "true" ]; then yum autoremove -y; fi \
     && yum clean all
 
 COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
