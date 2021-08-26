@@ -1,5 +1,6 @@
 %define _tmpdir /tmp/blackbox_exporter
-%define _url    https://github.com/prometheus/blackbox_exporter/releases/download/v0.19.0/blackbox_exporter-0.19.0.linux-amd64.tar.gz
+%define _arch amd64
+%define _url    https://github.com/prometheus/blackbox_exporter/releases/download/v0.19.0/blackbox_exporter-0.19.0.linux-%{_arch}.tar.gz
 Name:           blackbox_exporter
 Version:        0.19.0
 Release:        1%{?dist}

@@ -168,11 +168,15 @@ def git_clone_and_checkout(branch, repo, repo_destination_path):
     ])
 
 
-def get_package_urls_file(edition, branch, repo_destination_path):
+def get_package_urls_file(edition, branch, repo_destination_path,
+                          architecture=None):
     """
         Get the package urls list, returning the paths to the file (in a dict).
         If the given branch does not exists, will default to repo's master.
     """
+    if architecture and architecture not in ['x86_64', 'aarch64']:
+        exit_with_sadness('Unknown architecture type {}'.format(architecture))
+
     edition_details = EDITIONS[edition]
     repo_path = edition_details['repo']
     auth_required = edition_details['requires_auth']
@@ -225,9 +229,12 @@ def get_package_urls_file(edition, branch, repo_destination_path):
             repo, repo_destination_path
         )
 
+    package_yaml_path = 'packages-urls/manager-packages.yaml'
+    if architecture == "aarch64":
+        package_yaml_path = 'packages-urls/manager-packages-aarch.yaml'
+
     return {
-        'manager': os.path.join(repo_destination_path,
-                                'packages-urls/manager-packages.yaml'),
+        'manager': os.path.join(repo_destination_path, package_yaml_path),
     }
 
 
@@ -366,7 +373,7 @@ def download_listed_resources(resource_file, destination_path, concurrency=5):
                            'See the log above for details')
 
 
-def retrieve_resources(edition, branch, dev_branch):
+def retrieve_resources(edition, branch, dev_branch, architecture=None):
     """
         Retrieve all of the required resources for the installer.
     """
@@ -376,6 +383,7 @@ def retrieve_resources(edition, branch, dev_branch):
         edition,
         current_branch,
         package_urls_destination,
+        architecture
     )
     if dev_branch:
         update_resources_url_on_dev_branch(
@@ -424,10 +432,17 @@ if __name__ == '__main__':
         help='Dev branch to get package resources from.',
         default='',
     )
+    parser.add_argument(
+        '--architecture',
+        help='Architecture for which to get package resources. Currently '
+             'supported are x86_64 (default) and aarch_64',
+        default='x86_64',
+    )
 
     args = parser.parse_args()
     retrieve_resources(
         edition=args.edition,
         branch=args.branch,
-        dev_branch=args.dev_branch
+        dev_branch=args.dev_branch,
+        architecture=args.architecture
     )
