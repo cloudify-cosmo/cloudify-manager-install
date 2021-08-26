@@ -200,18 +200,17 @@ class RestService(BaseComponent):
         common.chmod('660', REST_SECURITY_CONFIG_PATH)
 
     def _calculate_worker_count(self):
-        gunicorn_config = config[RESTSERVICE]['gunicorn']
-        worker_count = gunicorn_config['worker_count']
-        max_worker_count = gunicorn_config['max_worker_count']
-        if not worker_count:
-            # Calculate number of processors
-            nproc = int(subprocess.check_output('nproc'))
-            worker_count = nproc * 2 + 1
+        for server_name in ['gunicorn', 'uvicorn']:
+            server_config = config[RESTSERVICE][server_name]
+            worker_count = server_config['worker_count']
+            cpu_ratio = server_config['cpu_ratio']
+            max_worker_count = server_config['max_worker_count']
 
-        if worker_count > max_worker_count:
-            worker_count = max_worker_count
+            if not worker_count:
+                number_of_cpus = int(subprocess.check_output('nproc'))
+                worker_count = int(number_of_cpus * cpu_ratio) + 1
 
-        gunicorn_config['worker_count'] = worker_count
+            server_config['worker_count'] = min(worker_count, max_worker_count)
 
     def _chown_resources_dir(self):
         # Pre-creating paths so permissions fix can

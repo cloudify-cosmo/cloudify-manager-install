@@ -375,9 +375,12 @@ restservice:
 
   gunicorn:
     # The number of gunicorn worker processes for handling requests. If the
-    # default value (0) is set, then min((2 * cpu_count + 1 processes), max_worker_count)
+    # default value (0) is set, then min((cpu_count * cpu_ratio + 1 processes), max_worker_count)
     # will be used.
     worker_count: 0
+
+    # The number used to automatically (based on number of CPUs) calculate worker_count value.
+    cpu_ratio: 2.0
 
     # Maximum number of gunicorn workers (if calculated automatically)
     max_worker_count: 12
