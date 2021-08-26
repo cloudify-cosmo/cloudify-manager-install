@@ -386,6 +386,25 @@ restservice:
     # If this is set to zero then the automatic worker restarts are disabled.
     max_requests: 1000
 
+  uvicorn:
+    # The number of uvicorn worker processes for handling requests. If the
+    # default value (0) is set, then min((cpu_count * cpu_ratio + 1 processes), max_worker_count)
+    # will be used.
+    worker_count: 0
+
+    # The number used to automatically (based on number of CPUs) calculate worker_count value.
+    cpu_ratio: 0.2
+
+    # Maximum number of uvicorn workers (limits number of workers in case of automatic calculation)
+    max_worker_count: 4
+
+    # The maximum number of requests a worker will process before restarting.
+    # If this is set to zero then the automatic worker restarts are disabled.
+    max_requests: 1000
+
+    # Port to be used by the uvicorn server
+    port: 8101
+
   ldap:
     # This should include the protocol and port,
     # e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636
