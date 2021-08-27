@@ -335,9 +335,11 @@ class Nginx(BaseComponent):
                     'logs-conf.cloudify',
                     'rest-location.cloudify',
                     'rest-proxy.cloudify',
-                    'fileserver-location.cloudify',
+                    'api-proxy.cloudify',
+                    'authd-location.cloudify',
                     'ui-locations.cloudify',
                     'composer-location.cloudify',
+                    'api.upstream',
                     'manager.upstream',
                 ]
             ]

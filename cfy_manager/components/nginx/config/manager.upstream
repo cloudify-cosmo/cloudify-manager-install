@@ -32,8 +32,8 @@ server {
   # Serves the Rest Service (backed by the cloudify-rest upstream).
   include "/etc/nginx/conf.d/rest-location.cloudify";
 
-  # Serves the File Server (backed by the cloudify-resources upstream).
-  include "/etc/nginx/conf.d/fileserver-location.cloudify";
+  # Serves the File Server and proxy for the Cloudify-API.
+  include "/etc/nginx/conf.d/authd-location.cloudify";
 }
 {%- else -%}
 # REST and UI external server
@@ -59,8 +59,8 @@ server {
   # Serves the Rest Service (backed by the cloudify-rest upstream).
   include "/etc/nginx/conf.d/rest-location.cloudify";
 
-  # Serves the File Server (backed by the cloudify-resources upstream).
-  include "/etc/nginx/conf.d/fileserver-location.cloudify";
+  # Serves the File Server and proxy for the Cloudify-API.
+  include "/etc/nginx/conf.d/authd-location.cloudify";
 }
 
 {#
@@ -112,6 +112,6 @@ server {
   # Serves the Rest Service (backed by the cloudify-rest upstream).
   include "/etc/nginx/conf.d/rest-location.cloudify";
 
-  # Serves the File Server (backed by the cloudify-resources upstream).
-  include "/etc/nginx/conf.d/fileserver-location.cloudify";{% endif %}
+  # Serves the File Server and proxy for the Cloudify-API.
+  include "/etc/nginx/conf.d/authd-location.cloudify";{% endif %}
 }
