@@ -9,7 +9,7 @@ logger = get_logger(HAVEGED)
 
 class Haveged(BaseComponent):
     component_name = HAVEGED
-    services = ['haveged']
+    services = {'haveged': {'is_group': False}}
 
     def configure(self):
         logger.info('Configuring haveged for entropy generation.')

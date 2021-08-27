@@ -44,7 +44,7 @@ logger = get_logger(MGMTWORKER)
 
 
 class MgmtWorker(BaseComponent):
-    services = ['cloudify-mgmtworker']
+    services = {'cloudify-mgmtworker': {'is_group': False}}
 
     def _add_snapshot_restore_sudo_commands(self):
         scripts = [

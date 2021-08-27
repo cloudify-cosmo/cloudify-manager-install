@@ -60,7 +60,7 @@ logger = get_logger(NGINX)
 
 
 class Nginx(BaseComponent):
-    services = ['nginx']
+    services = {'nginx': {'is_group': False}}
 
     def _deploy_unit_override(self):
         logger.debug('Creating systemd unit override...')

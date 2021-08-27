@@ -63,7 +63,7 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Stage(BaseComponent):
-    services = ['cloudify-stage']
+    services = {'cloudify-stage': {'is_group': False}}
 
     def _set_community_mode(self):
         community_mode = '' if is_premium_installed else '-mode community'

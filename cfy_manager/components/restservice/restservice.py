@@ -91,7 +91,8 @@ RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 
 class RestService(BaseComponent):
-    services = ['cloudify-restservice']
+    services = {'cloudify-restservice': {'is_group': False},
+                'cloudify-api': {'is_group': True}}
 
     def _make_paths(self):
         # Used in the service templates
@@ -522,6 +523,7 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         service.configure('cloudify-restservice')
+        service.configure('cloudify-api', src_dir=RESTSERVICE)
         certificates.handle_ca_cert(logger)
         self._configure_db()
         if is_premium_installed():

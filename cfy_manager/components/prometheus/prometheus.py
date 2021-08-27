@@ -109,9 +109,9 @@ class Prometheus(BaseComponent):
 
     @property
     def services(self):
-        services = ['prometheus']
+        services = {'prometheus': {'is_group': False}}
         for exporter in _prometheus_exporters():
-            services.append(exporter['name'])
+            services.update({exporter['name']: {'is_group': False}})
         return services
 
     def replace_certificates(self):
