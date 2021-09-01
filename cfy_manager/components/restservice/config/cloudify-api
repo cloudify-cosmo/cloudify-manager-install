@@ -1,0 +1,4 @@
+# uvicorn configuration
+UVICORN_PORT={{ restservice.uvicorn.port }}
+UVICORN_WORKER_COUNT={{ restservice.uvicorn.worker_count }}
+UVICORN_MAX_REQUESTS={{ restservice.uvicorn.max_requests }}
