@@ -59,7 +59,7 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 
 
 class Composer(BaseComponent):
-    services = ['cloudify-composer']
+    services = {'cloudify-composer': {'is_group': False}}
 
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):

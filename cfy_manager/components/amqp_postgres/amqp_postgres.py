@@ -28,7 +28,7 @@ logger = get_logger(AMQP_POSTGRES)
 
 
 class AmqpPostgres(BaseComponent):
-    services = ['cloudify-amqp-postgres']
+    services = {'cloudify-amqp-postgres': {'is_group': False}}
 
     def _setup_log_dir(self):
         # Can't use AMQP_POSTGRES here because Jinja doesn't play nice

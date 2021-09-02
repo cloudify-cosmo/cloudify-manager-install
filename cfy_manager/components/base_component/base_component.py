@@ -22,7 +22,7 @@ from ...logger import get_logger
 
 
 class BaseComponent(object):
-    services = []
+    services = {}
 
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
@@ -36,16 +36,17 @@ class BaseComponent(object):
 
     def start(self):
         self.logger.info('Starting component')
-        for service_name in self.services:
-            service.restart(service_name)
-            service.verify_alive(service_name)
+        for name, conf in self.services.items():
+            is_group = conf.get('is_group', False)
+            service.restart(name, is_group)
+            service.verify_alive(name, is_group)
         self.verify_started()
         self.logger.info('Component started')
 
     def stop(self):
         self.logger.info('Stopping component')
-        for service_name in self.services:
-            service.stop(service_name)
+        for name, conf in self.services.items():
+            service.stop(name, conf.get('is_group', False))
         self.logger.info('Component stopped')
 
     def remove(self):

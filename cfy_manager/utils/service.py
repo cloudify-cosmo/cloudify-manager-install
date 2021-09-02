@@ -151,7 +151,8 @@ class SystemD(object):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name, ignore_failure=False, options=None):
+    def start(self, service_name, is_group=False, ignore_failure=False,
+              options=None):
         logger.debug('Starting systemd service {0}...'.format(service_name))
         self.systemctl(
             'start',
@@ -160,17 +161,17 @@ class SystemD(object):
             options=options
         )
 
-    def stop(self, service_name, ignore_failure=False):
+    def stop(self, service_name, is_group=False, ignore_failure=False):
         logger.debug('Stopping systemd service {0}...'.format(service_name))
         self.systemctl('stop', service_name, ignore_failure=ignore_failure)
 
-    def restart(self, service_name, ignore_failure=False):
+    def restart(self, service_name, is_group=False, ignore_failure=False):
         self.systemctl('restart', service_name, ignore_failure=ignore_failure)
 
     def reload(self, service_name, ignore_failure=False):
         self.systemctl('reload', service_name, ignore_failure=ignore_failure)
 
-    def is_alive(self, service_name):
+    def is_alive(self, service_name, is_group=False):
         result = self.systemctl('status', service_name, ignore_failure=True)
         return result.returncode == 0
 
@@ -217,28 +218,29 @@ class Supervisord(object):
             ignore_failure=ignore_failure
         )
 
-    def start(self, service_name, ignore_failure=False, options=None):
+    def start(self, service_name, is_group=False, ignore_failure=False,
+              options=None):
         self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'start',
-            service_name,
+            _supervisord_service_name(service_name, is_group),
             ignore_failure=ignore_failure,
             options=options
         )
 
-    def stop(self, service_name, ignore_failure=False):
+    def stop(self, service_name, is_group=False, ignore_failure=False):
         self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'stop',
-            service_name,
+            _supervisord_service_name(service_name, is_group),
             ignore_failure=ignore_failure
         )
 
-    def restart(self, service_name, ignore_failure=False):
+    def restart(self, service_name, is_group=False, ignore_failure=False):
         self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'restart',
-            service_name,
+            _supervisord_service_name(service_name, is_group),
             ignore_failure=ignore_failure
         )
 
@@ -249,9 +251,11 @@ class Supervisord(object):
         )
         self.enable(service_name, ignore_failure=ignore_failure)
 
-    def is_alive(self, service_name):
+    def is_alive(self, service_name, is_group=False):
         result = self.supervisorctl(
-            'status', service_name, ignore_failure=True)
+            'status',
+            _supervisord_service_name(service_name, is_group),
+            ignore_failure=True)
         return result.returncode == 0
 
     def is_active(self, service_name):
@@ -331,6 +335,10 @@ def _get_backend():
         return SystemD()
 
 
+def _supervisord_service_name(service_name: str, is_group: bool):
+    return service_name + (':*' if is_group else '')
+
+
 def enable(service_name):
     logger.debug('Enabling service {0}...'.format(service_name))
     return _get_backend().enable(service_name)
@@ -341,19 +349,19 @@ def disable(service_name):
     return _get_backend().disable(service_name)
 
 
-def start(service_name, options=None):
+def start(service_name, is_group=False, options=None):
     logger.debug('Starting service {0}...'.format(service_name))
-    return _get_backend().start(service_name, options=options)
+    return _get_backend().start(service_name, is_group, options)
 
 
-def stop(service_name):
+def stop(service_name, is_group=False):
     logger.debug('Stopping service {0}...'.format(service_name))
-    return _get_backend().stop(service_name)
+    return _get_backend().stop(service_name, is_group)
 
 
-def restart(service_name, ignore_failure=False):
+def restart(service_name, is_group=False, ignore_failure=False):
     logger.debug('Restarting service {0}...'.format(service_name))
-    return _get_backend().restart(service_name, ignore_failure=ignore_failure)
+    return _get_backend().restart(service_name, is_group, ignore_failure)
 
 
 def remove(service_name, service_file=True):
@@ -372,8 +380,8 @@ def reread():
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1000)
-def verify_alive(service_name):
-    if _get_backend().is_alive(service_name):
+def verify_alive(service_name, is_group=False):
+    if _get_backend().is_alive(service_name, is_group):
         logger.debug('{0} is running'.format(service_name))
     else:
         raise ValidationError('{0} is not running'.format(service_name))

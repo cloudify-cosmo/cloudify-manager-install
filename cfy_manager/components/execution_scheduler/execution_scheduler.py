@@ -13,7 +13,7 @@ logger = get_logger(EXECUTION_SCHEDULER)
 
 
 class ExecutionScheduler(BaseComponent):
-    services = ['cloudify-execution-scheduler']
+    services = {'cloudify-execution-scheduler': {'is_group': False}}
 
     @staticmethod
     def _setup_log_dir():

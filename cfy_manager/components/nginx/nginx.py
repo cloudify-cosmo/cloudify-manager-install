@@ -60,7 +60,7 @@ logger = get_logger(NGINX)
 
 
 class Nginx(BaseComponent):
-    services = ['nginx']
+    services = {'nginx': {'is_group': False}}
 
     def _deploy_unit_override(self):
         logger.debug('Creating systemd unit override...')
@@ -335,9 +335,11 @@ class Nginx(BaseComponent):
                     'logs-conf.cloudify',
                     'rest-location.cloudify',
                     'rest-proxy.cloudify',
-                    'fileserver-location.cloudify',
+                    'api-proxy.cloudify',
+                    'authd-location.cloudify',
                     'ui-locations.cloudify',
                     'composer-location.cloudify',
+                    'api.upstream',
                     'manager.upstream',
                 ]
             ]
@@ -448,7 +450,7 @@ class Nginx(BaseComponent):
             return
         if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._set_selinux_policy(
-                'cloudify_manager', ['3000', '8088', '8100'])
+                'cloudify_manager', ['3000', '8088', '8100', '8101'])
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._set_selinux_policy(
                 'cloudify_monitoring', ['9090-9094'])

@@ -91,7 +91,8 @@ RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
 
 class RestService(BaseComponent):
-    services = ['cloudify-restservice']
+    services = {'cloudify-restservice': {'is_group': False},
+                'cloudify-api': {'is_group': True}}
 
     def _make_paths(self):
         # Used in the service templates
@@ -200,18 +201,17 @@ class RestService(BaseComponent):
         common.chmod('660', REST_SECURITY_CONFIG_PATH)
 
     def _calculate_worker_count(self):
-        gunicorn_config = config[RESTSERVICE]['gunicorn']
-        worker_count = gunicorn_config['worker_count']
-        max_worker_count = gunicorn_config['max_worker_count']
-        if not worker_count:
-            # Calculate number of processors
-            nproc = int(subprocess.check_output('nproc'))
-            worker_count = nproc * 2 + 1
+        for server_name in ['gunicorn', 'uvicorn']:
+            server_config = config[RESTSERVICE][server_name]
+            worker_count = server_config['worker_count']
+            cpu_ratio = server_config['cpu_ratio']
+            max_worker_count = server_config['max_worker_count']
 
-        if worker_count > max_worker_count:
-            worker_count = max_worker_count
+            if not worker_count:
+                number_of_cpus = int(subprocess.check_output('nproc'))
+                worker_count = int(number_of_cpus * cpu_ratio) + 1
 
-        gunicorn_config['worker_count'] = worker_count
+            server_config['worker_count'] = min(worker_count, max_worker_count)
 
     def _chown_resources_dir(self):
         # Pre-creating paths so permissions fix can
@@ -523,6 +523,7 @@ class RestService(BaseComponent):
         self._make_paths()
         self._configure_restservice()
         service.configure('cloudify-restservice')
+        service.configure('cloudify-api', src_dir=RESTSERVICE)
         certificates.handle_ca_cert(logger)
         self._configure_db()
         if is_premium_installed():

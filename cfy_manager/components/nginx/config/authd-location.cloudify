@@ -8,6 +8,11 @@ location /resources {
     }
 }
 
+location /api/v3.1/audit {
+    auth_request /resources-auth;
+    include "/etc/nginx/conf.d/api-proxy.cloudify";
+}
+
 location /resources-auth {
     internal;
     proxy_pass http://cloudify-rest/api/v3.1/file-server-auth;

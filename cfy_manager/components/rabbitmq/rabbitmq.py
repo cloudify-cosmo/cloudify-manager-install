@@ -62,7 +62,7 @@ logger = get_logger(RABBITMQ)
 
 class RabbitMQ(BaseComponent):
     component_name = 'rabbitmq'
-    services = ['cloudify-rabbitmq']
+    services = {'cloudify-rabbitmq': {'is_group': False}}
 
     def _installing_manager(self):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
