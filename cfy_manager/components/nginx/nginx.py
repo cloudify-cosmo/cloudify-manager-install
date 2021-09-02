@@ -450,7 +450,7 @@ class Nginx(BaseComponent):
             return
         if MANAGER_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._set_selinux_policy(
-                'cloudify_manager', ['3000', '8088', '8100'])
+                'cloudify_manager', ['3000', '8088', '8100', '8101'])
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._set_selinux_policy(
                 'cloudify_monitoring', ['9090-9094'])

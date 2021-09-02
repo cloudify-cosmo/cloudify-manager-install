@@ -7,7 +7,7 @@ require {
         class tcp_socket name_connect;
 }
 
-# Define cloudify_manager_port_t for node on :3000 and :8088 and gunicorn on :8100.
+# Define cloudify_manager_port_t for node on :3000 and :8088, gunicorn on :8100 and uvicorn on :8101.
 # Port numbers must be added with semanage in sepolicy_deploy.sh because it
 # is not possible to do so within Policy Module definition.
 # https://selinuxproject.org/page/PolicyLanguage
