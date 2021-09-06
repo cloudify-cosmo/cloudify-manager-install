@@ -39,7 +39,7 @@ from ...utils import (
     service
 )
 from cfy_manager.utils.db import get_ui_db_dialect_options_and_url
-from ...utils.network import wait_for_port
+from ...utils.network import wait_for_port, ipv6_url_compat
 from ...utils.install import is_premium_installed
 from ...constants import (
     CLOUDIFY_USER,
@@ -170,7 +170,7 @@ class Stage(BaseComponent):
         # We need to use sudo to read this or we break on configure
         stage_config = json.loads(files.sudo_read(config_path))
 
-        stage_config['ip'] = config[MANAGER][PRIVATE_IP]
+        stage_config['ip'] = ipv6_url_compat(config[MANAGER][PRIVATE_IP])
         content = json.dumps(stage_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the stage user,
         # so we need to move with sudo
