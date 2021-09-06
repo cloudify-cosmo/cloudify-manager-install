@@ -18,6 +18,7 @@ import socket
 from .. import constants
 from ..config import config
 from ..logger import get_logger
+from ..utils.network import ipv6_url_compat
 
 from .service_names import (
     MANAGER,
@@ -63,7 +64,7 @@ def _set_ip_config():
 
     config[MANAGER]['file_server_root'] = constants.MANAGER_RESOURCES_HOME
     config[MANAGER]['file_server_url'] = 'https://{0}:{1}/resources'.format(
-        private_ip,
+        ipv6_url_compat(private_ip),
         constants.INTERNAL_REST_PORT
     )
 
