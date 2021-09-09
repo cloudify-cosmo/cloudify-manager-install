@@ -88,10 +88,11 @@ class RabbitMQ(BaseComponent):
         logger.info('Deploying RabbitMQ env')
         deploy(join(CONFIG_PATH, 'rabbitmq-env.conf'), RABBITMQ_ENV_PATH,
                additional_render_context={'ipv6_enabled': ipv6_enabled})
+        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENV_PATH)
         if ipv6_enabled:
             logger.info('Deploying Erlang inet configuration')
             deploy(join(CONFIG_PATH, 'erl_inetrc'), RABBITMQ_ERL_INETRC)
-        common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENV_PATH)
+            common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ERL_INETRC)
 
     def _init_service(self):
         logger.info('Initializing RabbitMQ...')
