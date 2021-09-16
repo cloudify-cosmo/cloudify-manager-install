@@ -1196,7 +1196,7 @@ class _FileFollow(object):
 
 @argh.decorators.named('wait-for-starter')
 @config_arg
-def wait_for_starter(timeout=300, config_file=None):
+def wait_for_starter(timeout=600, config_file=None):
     config.load_config(config_file)
 
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
