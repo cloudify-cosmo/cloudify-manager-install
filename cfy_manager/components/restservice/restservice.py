@@ -201,8 +201,8 @@ class RestService(BaseComponent):
         common.chmod('660', REST_SECURITY_CONFIG_PATH)
 
     def _calculate_worker_count(self):
-        for server_name in ['gunicorn', 'uvicorn']:
-            server_config = config[RESTSERVICE][server_name]
+        for component_name in ['restservice', 'api']:
+            server_config = config[component_name]['gunicorn']
             worker_count = server_config['worker_count']
             cpu_ratio = server_config['cpu_ratio']
             max_worker_count = server_config['max_worker_count']
@@ -235,12 +235,25 @@ class RestService(BaseComponent):
             )
             common.chmod('755', '/etc/cloudify/restservice-wrapper-script.sh')
 
+    def _configure_api_wrapper_script(self):
+        if self.service_type == 'supervisord':
+            deploy(
+                join(
+                    SCRIPTS_PATH,
+                    'api-wrapper-script.sh'
+                ),
+                '/etc/cloudify',
+                render=False
+            )
+            common.chmod('755', '/etc/cloudify/api-wrapper-script.sh')
+
     def _configure_restservice(self):
         self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
         self._deploy_security_configuration()
         self._configure_restservice_wrapper_script()
+        self._configure_api_wrapper_script()
 
     def verify_started(self):
         if config.get(CLUSTER_JOIN):

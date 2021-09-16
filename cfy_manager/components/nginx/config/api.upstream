@@ -1,6 +1,6 @@
 # Upstream for Cloudify-API.
 upstream cloudify-api {
-  server 127.0.0.1:{{ restservice.uvicorn.port }};
+  server 127.0.0.1:{{ api.port }};
 }
 
 map $http_upgrade $connection_upgrade {
