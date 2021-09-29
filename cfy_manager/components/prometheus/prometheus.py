@@ -195,6 +195,25 @@ class Prometheus(BaseComponent):
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
             _deploy_configuration()
+
+        template = '''template(name="{service}-sup" type="list") {
+  property(name="msg" position.from="{trim}" droplastlf="on" )
+  constant(value="\n")
+  }
+if $syslogtag == '/supervisord:' and $rawmsg startswith '{service}' then /var/log/cloudify/prometheus/{service}.log;{service}-sup
+& stop
+if $programname == '{service}' then /var/log/cloudify/prometheus/{service}.log
+& stop'''  # noqa
+        files.write_to_file(template.format(service='prometheus',
+                                            trim=len('prometheus') + 2),
+                            '/etc/rsyslog.d/44-prometheus.conf')
+        for exporter in ['postgres', 'node', 'blackbox']:
+            svc = exporter + '_exporter'
+            files.write_to_file(template.format(service=svc,
+                                                time=len(svc) + 2),
+                                f'/etc/rsyslog.d/44-{svc}.conf')
+        service.restart('rsyslog')
+
         logger.notice('Prometheus successfully configured')
         self.start()
 
