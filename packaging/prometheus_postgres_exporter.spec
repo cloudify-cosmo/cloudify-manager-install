@@ -1,8 +1,8 @@
 %define _tmpdir /tmp/postgres_exporter
 %define _arch amd64
-%define _url    https://github.com/prometheus-community/postgres_exporter/releases/download/v0.9.0/postgres_exporter-0.9.0.linux-%{_arch}.tar.gz
+%define _url    https://github.com/prometheus-community/postgres_exporter/releases/download/v0.10.0/postgres_exporter-0.10.0.linux-%{_arch}.tar.gz
 Name:           postgres_exporter
-Version:        0.9.0
+Version:        0.10.0
 Release:        1%{?dist}
 Summary:        Prometheus postgres_exporter
 Group:          Applications/Multimedia
