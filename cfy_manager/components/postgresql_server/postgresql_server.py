@@ -747,19 +747,22 @@ class PostgresqlServer(BaseComponent):
         common.sudo(['chown', 'postgres.', PATRONI_LOG_PATH])
         common.sudo(['chown', 'postgres.', POSTGRES_LOG_PATH])
 
-        # create rsyslog rule for for etcd
-        fd, tmp_path = mkstemp()
-        os.close(fd)
-        with open(tmp_path, 'w') as etcd_rsyslog:
-            etcd_rsyslog.write('''template(name="etcdsup" type="list") {
-  property(name="msg" position.from="6" droplastlf="on" )
+        # create rsyslog rules
+        template = '''template(name="{service}-sup" type="list") {{
+  property(name="msg" position.from="{trim}" droplastlf="on" )
   constant(value="\n")
-  }
-if $syslogtag == '/supervisord:' and $rawmsg startswith 'etcd' then {logpath}.log;etcdsup
+  }}
+if $syslogtag == '/supervisord:' and $rawmsg startswith '{service}' then /var/log/cloudify/db_cluster/{service}/{service}.log;{service}-sup
 & stop
-if $programname == 'etcd' then /var/log/cloudify/db_cluster/etcd/etcd.log
-& stop'''.format(logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log')))
-        common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
+if $programname == '{service}' then /var/log/cloudify/db_cluster/{service}/{service}.log
+& stop'''  # noqa
+        files.write_to_file(template.format(service='etcd',
+                                            trim=len('etcd') + 2),
+                            '/etc/rsyslog.d/43-etcd.conf')
+        files.write_to_file(template.format(service='patroni',
+                                            trim=len('patroni') + 2),
+                            '/etc/rsyslog.d/40-patroni.conf')
+
         if self.service_type == 'supervisord':
             self._configure_syslog()
         service.restart('rsyslog')
