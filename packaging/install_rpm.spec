@@ -87,6 +87,7 @@ cfy_manager install
 /etc/yum.repos.d/Cloudify-Local.repo
 /usr/lib/systemd/system/supervisord.service
 /etc/supervisord.conf
+/etc/rsyslog.d/50-supervisord.conf
 /usr/bin/supervisorctl
 /usr/bin/supervisord
 %attr(755,cfyuser,cfyuser) /var/log/cloudify
