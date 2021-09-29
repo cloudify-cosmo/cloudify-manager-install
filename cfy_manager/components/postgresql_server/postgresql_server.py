@@ -751,14 +751,14 @@ class PostgresqlServer(BaseComponent):
         fd, tmp_path = mkstemp()
         os.close(fd)
         with open(tmp_path, 'w') as etcd_rsyslog:
-            etcd_rsyslog.write(
-                "if $programname == '{service_type}'"
-                " and $rawmsg contains 'Etcd'"
-                " then {logpath}\n& stop\n"
-                "if $programname == 'etcd' then {logpath}\n& stop\n".format(
-                    logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log'),
-                    service_type=self.service_type
-                ))
+            etcd_rsyslog.write('''template(name="etcdsup" type="list") {
+  property(name="msg" position.from="6" droplastlf="on" )
+  constant(value="\n")
+  }
+if $syslogtag == '/supervisord:' and $rawmsg startswith 'etcd' then {logpath}.log;etcdsup
+& stop
+if $programname == 'etcd' then /var/log/cloudify/db_cluster/etcd/etcd.log
+& stop'''.format(logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log')))
         common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
         if self.service_type == 'supervisord':
             self._configure_syslog()
