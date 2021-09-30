@@ -26,20 +26,16 @@ def _configure_syslog():
     if files.is_file('/opt/cloudify/syslog_wrapper_script.sh'):
         # We already configured syslog
         return
-    files.deploy(
-        join(
-            SCRIPTS_PATH,
-            'syslog_wrapper_script.sh'
-        ),
-        '/opt/cloudify',
-        render=False
-    )
-    common.chmod(
-        '755',
-        '/opt/cloudify/syslog_wrapper_script.sh'
-    )
+    syslog_wrapper = '''#!/bin/bash
+set -e
+
+rm -f /var/run/syslogd.pid
+
+exec /usr/sbin/rsyslogd -n'''
+    syslog_wrapper_path = '/opt/cloudify/syslog_wrapper_script.sh'
+    files.write_to_file(syslog_wrapper, syslog_wrapper_path)
+    common.chmod('755', syslog_wrapper_path)
     service.configure(
         'rsyslog',
-        src_dir='postgresql_server',
         config_path='config/supervisord',
     )
