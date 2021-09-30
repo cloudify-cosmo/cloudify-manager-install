@@ -36,7 +36,7 @@ from ...utils import (
     service
 )
 from cfy_manager.utils.db import get_ui_db_dialect_options_and_url
-from ...utils.network import wait_for_port
+from ...utils.network import wait_for_port, ipv6_url_compat
 from ...constants import (
     CLOUDIFY_USER,
     NEW_POSTGRESQL_CA_CERT_FILE_PATH,
@@ -127,7 +127,8 @@ class Composer(BaseComponent):
         # We need to use sudo to read this or we break on configure
         composer_config = json.loads(files.sudo_read(config_path))
 
-        composer_config['managerConfig']['ip'] = config[MANAGER][PRIVATE_IP]
+        composer_config['managerConfig']['ip'] = \
+            ipv6_url_compat(config[MANAGER][PRIVATE_IP])
 
         certs = {
             'cert': DB_CLIENT_CERT_PATH,

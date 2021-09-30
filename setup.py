@@ -60,6 +60,6 @@ setup(
         'requests>=2.18,<3.0.0',
         'retrying==1.3.3',
         'psycopg2==2.9.1',
-        'supervisor==4.2.0'
+        'supervisor==4.2.2'
     ]
 )

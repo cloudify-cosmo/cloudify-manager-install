@@ -1,4 +1,4 @@
-# uvicorn configuration
-UVICORN_PORT={{ restservice.uvicorn.port }}
-UVICORN_WORKER_COUNT={{ restservice.uvicorn.worker_count }}
-UVICORN_MAX_REQUESTS={{ restservice.uvicorn.max_requests }}
+# gunicorn configuration
+GUNICORN_PORT={{ api.port }}
+GUNICORN_WORKER_COUNT={{ api.gunicorn.worker_count }}
+GUNICORN_MAX_REQUESTS={{ api.gunicorn.max_requests }}
