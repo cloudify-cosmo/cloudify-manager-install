@@ -53,7 +53,7 @@ from ...constants import (
 from ..restservice.db import get_monitoring_config
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common, files, service, certificates
+from ...utils import common, files, service, certificates, syslog
 from ...utils.install import is_premium_installed
 from ...utils.network import ipv6_url_compat
 
@@ -196,23 +196,11 @@ class Prometheus(BaseComponent):
                     CLUSTER_DETAILS_PATH))
             _deploy_configuration()
 
-        template = '''template(name="{service}-sup" type="list") {
-  property(name="msg" position.from="{trim}" droplastlf="on" )
-  constant(value="\n")
-  }
-if $syslogtag == '/supervisord:' and $rawmsg startswith '{service}' then /var/log/cloudify/prometheus/{service}.log;{service}-sup
-& stop
-if $programname == '{service}' then /var/log/cloudify/prometheus/{service}.log
-& stop'''  # noqa
-        files.write_to_file(template.format(service='prometheus',
-                                            trim=len('prometheus') + 2),
-                            '/etc/rsyslog.d/44-prometheus.conf')
-        for exporter in ['postgres', 'node', 'blackbox']:
-            svc = exporter + '_exporter'
-            files.write_to_file(template.format(service=svc,
-                                                time=len(svc) + 2),
-                                f'/etc/rsyslog.d/44-{svc}.conf')
-        service.restart('rsyslog')
+        services = ['prometheus']
+        services.extend([exporter + '_exporter'
+                         for exporter in ['postgres', 'node', 'blackbox']])
+        syslog.deploy_rsyslog_filters('prometheus', services,
+                                      self.service_type)
 
         logger.notice('Prometheus successfully configured')
         self.start()
