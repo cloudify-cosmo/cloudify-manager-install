@@ -33,7 +33,8 @@ from ...utils import (
     common,
     files,
     certificates,
-    service
+    service,
+    syslog,
 )
 from cfy_manager.utils.db import get_ui_db_dialect_options_and_url
 from ...utils.network import wait_for_port, ipv6_url_compat
@@ -168,6 +169,8 @@ class Composer(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
+        syslog.deploy_rsyslog_filters('composer', ['cloudify-composer'],
+                                      self.service_type)
         self.update_composer_config()
         external_configure_params = {}
         if service._get_service_type() == 'supervisord':
