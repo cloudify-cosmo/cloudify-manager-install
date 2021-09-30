@@ -53,7 +53,7 @@ from ...constants import (
 from ..restservice.db import get_monitoring_config
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common, files, service, certificates
+from ...utils import common, files, service, certificates, syslog
 from ...utils.install import is_premium_installed
 from ...utils.network import ipv6_url_compat
 
@@ -195,6 +195,13 @@ class Prometheus(BaseComponent):
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
             _deploy_configuration()
+
+        services = ['prometheus']
+        services.extend([exporter + '_exporter'
+                         for exporter in ['postgres', 'node', 'blackbox']])
+        syslog.deploy_rsyslog_filters('prometheus', services,
+                                      self.service_type)
+
         logger.notice('Prometheus successfully configured')
         self.start()
 
