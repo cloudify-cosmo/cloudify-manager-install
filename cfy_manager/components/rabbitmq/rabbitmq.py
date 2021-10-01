@@ -31,7 +31,7 @@ from ...exceptions import (
     RabbitNodeListError,
     ValidationError,
 )
-from ...utils import service
+from ...utils import service, syslog
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
 from ...utils.files import write_to_file, deploy
@@ -593,6 +593,8 @@ class RabbitMQ(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
+        syslog.deploy_rsyslog_filters('rabbitmq', ['cloudify-rabbitmq'],
+                                      self.service_type)
         self._set_erlang_cookie()
         self._set_config()
         if self.service_type == 'supervisord':
