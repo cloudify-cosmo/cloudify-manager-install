@@ -46,12 +46,13 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import (
+    certificates,
     common,
-    files,
     db,
+    files,
     network,
     service,
-    certificates
+    syslog,
 )
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
@@ -642,26 +643,6 @@ class PostgresqlServer(BaseComponent):
                 new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
             )
 
-    @staticmethod
-    def _configure_syslog():
-        files.deploy(
-            join(
-                SCRIPTS_PATH,
-                'syslog_wrapper_script.sh'
-            ),
-            '/opt/cloudify',
-            render=False
-        )
-        common.chmod(
-            '755',
-            '/opt/cloudify/syslog_wrapper_script.sh'
-        )
-        service.configure(
-            'rsyslog',
-            src_dir='postgresql_server',
-            config_path='config/supervisord',
-        )
-
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(POSTGRES_SERVICE_NAME)
@@ -734,22 +715,8 @@ class PostgresqlServer(BaseComponent):
         common.sudo(['chown', 'postgres.', PATRONI_LOG_PATH])
         common.sudo(['chown', 'postgres.', POSTGRES_LOG_PATH])
 
-        # create rsyslog rule for for etcd
-        fd, tmp_path = mkstemp()
-        os.close(fd)
-        with open(tmp_path, 'w') as etcd_rsyslog:
-            etcd_rsyslog.write(
-                "if $programname == '{service_type}'"
-                " and $rawmsg contains 'Etcd'"
-                " then {logpath}\n& stop\n"
-                "if $programname == 'etcd' then {logpath}\n& stop\n".format(
-                    logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log'),
-                    service_type=self.service_type
-                ))
-        common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
-        if self.service_type == 'supervisord':
-            self._configure_syslog()
-        service.restart('rsyslog')
+        syslog.deploy_rsyslog_filters('db_cluster', ['etcd', 'patroni'],
+                                      self.service_type)
 
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()
