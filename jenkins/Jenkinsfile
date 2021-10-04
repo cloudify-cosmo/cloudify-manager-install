@@ -90,6 +90,7 @@ pipeline {
                 echo 'Install rpmdevtools and build dependencies'
                 sh '''
                   yum install rpmdevtools -y
+                  yum update -y
                   yum-builddep -y packaging/install_rpm.spec
                   '''
                 echo 'build rpms'
@@ -143,7 +144,7 @@ pipeline {
                 chmod a+wx /opt
                 '''
               echo 'Installing build dependencies'
-              sh 'yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
+              sh 'yum update -y && yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
               echo 'set premium_edition in the packaged config.yaml'
               sh 'sed -i "s/set_by_installer_builder/premium/" /root/rpmbuild/SOURCES/config.yaml'
               echo 'Build RPM'
