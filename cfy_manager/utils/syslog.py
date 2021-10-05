@@ -23,7 +23,7 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
 
 
 def _configure_syslog():
-    if files.is_file('/opt/cloudify/syslog_wrapper_script.sh'):
+    if service.is_alive('rsyslog'):
         # We already configured syslog
         return
     syslog_wrapper = '''#!/bin/bash
