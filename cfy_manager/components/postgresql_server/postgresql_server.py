@@ -176,14 +176,6 @@ class PostgresqlServer(BaseComponent):
                 '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
             )
 
-    def _read_old_file_lines(self, file_path):
-        temp_file_path = files.write_to_tempfile('')
-        common.copy(file_path, temp_file_path)
-        common.chmod('777', temp_file_path)
-        with open(temp_file_path, 'r') as f:
-            lines = f.readlines()
-        return lines
-
     def _bytes_as_mb(self, value_in_bytes):
         return '{}MB'.format(value_in_bytes // 1024 // 1024)
 
@@ -310,7 +302,7 @@ class PostgresqlServer(BaseComponent):
         logger.info('Updating PostgreSQL Server configuration...')
         logger.debug('Modifying {0}'.format(PG_HBA_CONF))
         common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
-        lines = self._read_old_file_lines(PG_HBA_CONF)
+        lines = files.sudo_read(PG_HBA_CONF).splitlines(True)
         temp_hba_path = self._write_new_hba_file(lines,
                                                  enable_remote_connections)
         common.move(temp_hba_path, PG_HBA_CONF)
