@@ -640,7 +640,7 @@ def _get_components(include_components=None):
 
     All the "should we install this" config checks are done here.
     """
-    _components = []
+    _components = [components.Rsyslog()]
 
     if is_installed(ENTROPY_SERVICE):
         _components += [components.Haveged()]

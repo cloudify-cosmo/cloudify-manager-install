@@ -1,4 +1,4 @@
-from cfy_manager.utils import common, files, service
+from cfy_manager.utils import files, service
 
 
 def deploy_rsyslog_filters(group, services, service_type):
@@ -16,26 +16,12 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
         files.write_to_file(template.format(svc=svc, trim=trim, group=group),
                             path_template.format(svc=svc))
 
-    if service_type == 'supervisord':
-        _configure_syslog()
+    if using_systemd_rsyslog():
+        service.SystemD().restart('rsyslog')
+    else:
+        service.restart('rsyslog')
 
-    service.restart('rsyslog')
 
-
-def _configure_syslog():
-    if service.is_alive('rsyslog'):
-        # We already configured syslog
-        return
-    syslog_wrapper = '''#!/bin/bash
-set -e
-
-rm -f /var/run/syslogd.pid
-
-exec /usr/sbin/rsyslogd -n'''
-    syslog_wrapper_path = '/opt/cloudify/syslog_wrapper_script.sh'
-    files.write_to_file(syslog_wrapper, syslog_wrapper_path)
-    common.chmod('755', syslog_wrapper_path)
-    service.configure(
-        'rsyslog',
-        config_path='config/supervisord',
-    )
+def using_systemd_rsyslog():
+    # On more complete installs of RHEL/Centos, rsyslog may already be running
+    return service.SystemD().is_alive('rsyslog')

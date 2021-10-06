@@ -48,4 +48,5 @@ COMPONENTS_DEPENDENCIES = {
     'Prometheus': [],
     'Haveged': [],
     'ExecutionScheduler': [],
+    'Rsyslog': [],
 }
