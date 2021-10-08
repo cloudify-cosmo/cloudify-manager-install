@@ -217,7 +217,7 @@ class Supervisord(object):
             ignore_failure=ignore_failure
         )
 
-    def start(self, service_name, ignore_failure=False, options=None):
+    def start(self, service_name, options=None, ignore_failure=False):
         self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'start',
@@ -341,9 +341,10 @@ def disable(service_name):
     return _get_backend().disable(service_name)
 
 
-def start(service_name, options=None):
+def start(service_name, options=None, ignore_failure=False):
     logger.debug('Starting service {0}...'.format(service_name))
-    return _get_backend().start(service_name, options=options)
+    return _get_backend().start(service_name, options=options,
+                                ignore_failure=ignore_failure)
 
 
 def stop(service_name):
