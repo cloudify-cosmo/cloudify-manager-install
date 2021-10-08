@@ -396,11 +396,14 @@ class PostgresqlServer(BaseComponent):
         logger.info('Starting etcd')
         # Systemd only support adding "--no-block"
         options = ['--no-block']
+        ignore_failure = False
         if self.service_type == 'supervisord':
             options = []
+            ignore_failure = True
 
-        service.start('etcd', options=options)
-        self._wait_for_etcd()
+        service.start('etcd', options=options, ignore_failure=ignore_failure)
+        if self.service_type == 'systemd':
+            self._wait_for_etcd()
         logger.info('etcd has started')
 
     def _restart_etcd(self):
