@@ -34,6 +34,9 @@ class BaseComponent(object):
     def configure(self):
         pass
 
+    def configure_service(self, service_name, service_config=None):
+        pass
+
     def start(self):
         self.logger.info('Starting component')
         for name, conf in self.services.items():
@@ -54,7 +57,9 @@ class BaseComponent(object):
         pass
 
     def upgrade(self):
-        pass
+        for service_name, service_config in self.services.items():
+            if not service.is_installed(service_name):
+                self.configure_service(service_name, service_config)
 
     def verify_started(self):
         pass
