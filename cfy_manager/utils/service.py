@@ -182,6 +182,14 @@ class SystemD(object):
             ignore_failure=True
         ).aggr_stdout.strip()
 
+    def is_installed(self, service_name):
+        enabled = self.systemctl(
+            'is-enabled',
+            service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip()
+        return 'Failed to get unit file state' not in enabled
+
     def reread(self):
         return self.systemctl('daemon-reload')
 
@@ -267,6 +275,14 @@ class Supervisord(object):
             'status', service_name,
             ignore_failure=True
         ).aggr_stdout.strip().split()[1].lower()
+
+    def is_installed(self, service_name):
+        status = self.supervisorctl(
+            'status',
+            service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip()
+        return 'ERROR (no such process)' not in status
 
     @staticmethod
     def get_service_config_file_path(service_name):
@@ -394,6 +410,10 @@ def is_alive(service_name):
 
 def is_active(service_name):
     return _get_backend().is_active(service_name)
+
+
+def is_installed(service_name):
+    return _get_backend().is_installed(service_name)
 
 
 def configure(service_name,
