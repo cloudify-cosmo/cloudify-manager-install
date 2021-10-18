@@ -34,6 +34,9 @@ class BaseComponent(object):
     def configure(self):
         pass
 
+    def configure_service(self, service_name, service_config=None):
+        pass
+
     def start(self):
         self.logger.info('Starting component')
         for name, conf in self.services.items():
@@ -43,17 +46,20 @@ class BaseComponent(object):
         self.verify_started()
         self.logger.info('Component started')
 
-    def stop(self):
+    def stop(self, force=True):
         self.logger.info('Stopping component')
         for name, conf in self.services.items():
-            service.stop(name, conf.get('is_group', False))
+            if force or service.is_installed(name):
+                service.stop(name, conf.get('is_group', False))
         self.logger.info('Component stopped')
 
     def remove(self):
         pass
 
     def upgrade(self):
-        pass
+        for service_name, service_config in self.services.items():
+            if not service.is_installed(service_name):
+                self.configure_service(service_name, service_config)
 
     def verify_started(self):
         pass

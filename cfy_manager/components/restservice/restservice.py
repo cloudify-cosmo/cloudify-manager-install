@@ -253,6 +253,8 @@ class RestService(BaseComponent):
         self._deploy_restservice_files()
         self._deploy_security_configuration()
         self._configure_restservice_wrapper_script()
+
+    def _configure_api(self):
         self._configure_api_wrapper_script()
 
     def verify_started(self):
@@ -534,9 +536,8 @@ class RestService(BaseComponent):
         self._ensure_ldap_cert_path_writable()
 
         self._make_paths()
-        self._configure_restservice()
-        service.configure('cloudify-restservice')
-        service.configure('cloudify-api', src_dir=RESTSERVICE)
+        self.configure_service('cloudify-restservice')
+        self.configure_service('cloudify-api')
         certificates.handle_ca_cert(logger)
         self._configure_db()
         if is_premium_installed():
@@ -546,6 +547,14 @@ class RestService(BaseComponent):
             self._upload_cloudify_license()
         logger.notice('Rest Service successfully configured')
 
+    def configure_service(self, service_name, service_config=None):
+        if service_name == 'cloudify-restservice':
+            self._configure_restservice()
+            service.configure('cloudify-restservice')
+        if service_name == 'cloudify-api':
+            self._configure_api()
+            service.configure('cloudify-api', src_dir=RESTSERVICE)
+
     def remove(self):
         service.remove('cloudify-restservice', service_file=False)
         remove_logrotate(RESTSERVICE)
@@ -553,6 +562,7 @@ class RestService(BaseComponent):
 
     def upgrade(self):
         logger.notice('Upgrading Rest Service...')
+        super().upgrade()
         self._deploy_restservice_files()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         run_script_on_manager_venv(

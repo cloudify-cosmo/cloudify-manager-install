@@ -1713,7 +1713,7 @@ class PostgresqlServer(BaseComponent):
             service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
-    def stop(self):
+    def stop(self, force=True):
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')

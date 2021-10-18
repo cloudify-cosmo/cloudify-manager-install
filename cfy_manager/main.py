@@ -1089,7 +1089,7 @@ def upgrade(verbose=False, config_file=None):
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
     for component in reversed(upgrade_components):
-        component.stop()
+        component.stop(force=False)
     set_globals()
     service.reread()
     for component in upgrade_components:
