@@ -46,10 +46,10 @@ class BaseComponent(object):
         self.verify_started()
         self.logger.info('Component started')
 
-    def stop(self, only_if_installed=False):
+    def stop(self, force=True):
         self.logger.info('Stopping component')
         for name, conf in self.services.items():
-            if not only_if_installed or service.is_installed(name):
+            if force or service.is_installed(name):
                 service.stop(name, conf.get('is_group', False))
         self.logger.info('Component stopped')
 
