@@ -151,8 +151,8 @@ class SystemD(object):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name, is_group=False, ignore_failure=False,
-              options=None):
+    def start(self, service_name, is_group=False, options=None,
+              ignore_failure=False):
         logger.debug('Starting systemd service {0}...'.format(service_name))
         self.systemctl(
             'start',
@@ -367,7 +367,7 @@ def disable(service_name):
 
 def start(service_name, is_group=False, options=None, ignore_failure=False):
     logger.debug('Starting service {0}...'.format(service_name))
-    return _get_backend().start(service_name, is_group, options,
+    return _get_backend().start(service_name, is_group, options=options,
                                 ignore_failure=ignore_failure)
 
 
