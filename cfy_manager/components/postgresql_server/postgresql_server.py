@@ -1709,7 +1709,6 @@ class PostgresqlServer(BaseComponent):
             service.start('patroni')
             service.verify_alive('patroni')
             service.start('patroni_startup_check')
-            service.verify_alive('patroni_startup_check')
         else:
             service.start(POSTGRES_SERVICE_NAME)
             service.verify_alive(POSTGRES_SERVICE_NAME)
@@ -1719,7 +1718,9 @@ class PostgresqlServer(BaseComponent):
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')
-            service.stop('patroni_startup_check')
+            if service.is_installed('patroni_startup_check'):
+                # During upgrade we can't always call this service
+                service.stop('patroni_startup_check')
             service.stop('patroni')
         else:
             service.stop(POSTGRES_SERVICE_NAME)
