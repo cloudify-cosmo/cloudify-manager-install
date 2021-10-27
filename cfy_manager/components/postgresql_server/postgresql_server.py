@@ -1709,7 +1709,6 @@ class PostgresqlServer(BaseComponent):
             service.start('patroni')
             service.verify_alive('patroni')
             service.start('patroni_startup_check')
-            service.verify_alive('patroni_startup_check')
         else:
             service.start(POSTGRES_SERVICE_NAME)
             service.verify_alive(POSTGRES_SERVICE_NAME)
