@@ -4,6 +4,7 @@ import time
 import json
 import psutil
 import socket
+import subprocess
 from copy import copy
 from getpass import getuser
 from tempfile import mkstemp
@@ -944,21 +945,8 @@ class PostgresqlServer(BaseComponent):
         # Similarly to the current snapshot post restore commands, this will
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
-        if self.service_type == 'supervisord':
-            service.configure(
-                'patroni_startup_check',
-                src_dir='postgresql_server',
-                config_path='config/supervisord'
-            )
-            service.start('patroni_startup_check')
-        else:
-            common.sudo(
-                [
-                    'systemd-run',
-                    '--unit', 'patroni_startup_check',
-                    '/opt/patroni/bin/patroni_startup_check',
-                ]
-            )
+        # WARNING: Do not use anything other than Popen, this must not block
+        subprocess.Popen(['sudo', '/opt/patroni/bin/patroni_startup_check'])
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]
@@ -1689,7 +1677,6 @@ class PostgresqlServer(BaseComponent):
                 '/etc/patroni.conf',
                 '/etc/etcd',
             ])
-        service.remove('patroni_startup_check')
         logger.notice('Removing PostgreSQL...')
         files.remove_files([
             '/var/lib/pgsql/9.5/data',
@@ -1708,7 +1695,6 @@ class PostgresqlServer(BaseComponent):
             self._start_etcd()
             service.start('patroni')
             service.verify_alive('patroni')
-            service.start('patroni_startup_check')
         else:
             service.start(POSTGRES_SERVICE_NAME)
             service.verify_alive(POSTGRES_SERVICE_NAME)
@@ -1718,9 +1704,6 @@ class PostgresqlServer(BaseComponent):
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')
-            if service.is_installed('patroni_startup_check'):
-                # During upgrade we can't always call this service
-                service.stop('patroni_startup_check')
             service.stop('patroni')
         else:
             service.stop(POSTGRES_SERVICE_NAME)
