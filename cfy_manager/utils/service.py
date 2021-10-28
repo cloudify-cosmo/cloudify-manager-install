@@ -187,7 +187,7 @@ class SystemD(object):
             'is-enabled',
             service_name,
             ignore_failure=True
-        ).aggr_stdout.strip()
+        ).aggr_stderr.strip()
         return 'Failed to get unit file state' not in enabled
 
     def reread(self):
