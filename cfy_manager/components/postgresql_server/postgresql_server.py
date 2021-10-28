@@ -4,6 +4,7 @@ import time
 import json
 import psutil
 import socket
+import subprocess
 from copy import copy
 from getpass import getuser
 from tempfile import mkstemp
@@ -944,17 +945,8 @@ class PostgresqlServer(BaseComponent):
         # Similarly to the current snapshot post restore commands, this will
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
-        if self.service_type == 'supervisord':
-            # This will be replaced with a runonce
-            pass
-        else:
-            common.sudo(
-                [
-                    'systemd-run',
-                    '--unit', 'patroni_startup_check',
-                    '/opt/patroni/bin/patroni_startup_check',
-                ]
-            )
+        # WARNING: Do not use anything other than Popen, this must not block
+        subprocess.Popen(['sudo', '/opt/patroni/bin/patroni_startup_check'])
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]
