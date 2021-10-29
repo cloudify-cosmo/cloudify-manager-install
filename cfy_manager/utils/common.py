@@ -179,7 +179,7 @@ def copy(source, destination, backup=False):
     sudo(['cp', '-rp', source, destination])
 
 
-def move(source, destination, rename_only=False):
+def move(source, destination):
     ensure_destination_dir_exists(destination)
     sudo(['cp', source, destination])
     sudo(['rm', source])
