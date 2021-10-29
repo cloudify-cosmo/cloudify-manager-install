@@ -63,6 +63,7 @@ from .networks.networks import add_networks
 from .accounts import reset_admin_password
 from .utils import CFY_UMASK, service
 from .utils.certificates import (
+    clean_certs,
     create_internal_certs,
     create_external_certs,
     generate_ca_cert,
@@ -1003,6 +1004,8 @@ def remove(verbose=False, force=False, config_file=None):
 
     if is_supervisord_service() and _all_main_services_removed():
         _remove(SUPERVISORD_CONFIG_DIR)
+
+    clean_certs()
 
     logger.notice('Cloudify %s successfully removed!', (
         'Manager' if is_all_in_one_manager() else ', '.join(removed_services)))
