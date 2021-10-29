@@ -19,7 +19,7 @@ import base64
 import random
 import string
 import subprocess
-from os.path import join, exists, dirname
+from os.path import join, exists
 from collections import namedtuple
 
 import requests
@@ -85,7 +85,6 @@ RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
 logger = get_logger(RESTSERVICE)
 CLOUDIFY_LICENSE_PUBLIC_KEY_PATH = join(REST_HOME_DIR, 'license_key.pem.pub')
 REST_URL = 'http://127.0.0.1:{port}/api/v3.1/{endpoint}'
-LDAP_CA_CERT_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
 CLUSTER_DETAILS_PATH = '/tmp/cluster_details.json'
 RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 
@@ -365,27 +364,8 @@ class RestService(BaseComponent):
             random.SystemRandom().sample(ascii_alphanumeric, result_len)
         )
 
-    @staticmethod
-    def _ensure_ldap_cert_path_writable():
-        """This can be set later by the restservice so it must be able to
-        write the relevant directory.
-        """
-        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                     dirname(LDAP_CA_CERT_PATH))
-
-    @staticmethod
-    def handle_ldap_certificate():
-        certificates.use_supplied_certificates(
-            logger=logger,
-            ca_destination=LDAP_CA_CERT_PATH,
-            component_name=RESTSERVICE,
-            sub_component='ldap',
-            just_ca_cert=True
-        )
-
     def replace_certificates(self):
         self.stop()
-        self._replace_ldap_cert()
         self._replace_ca_certs_on_db()
         self.start()
 
@@ -436,14 +416,6 @@ class RestService(BaseComponent):
     @staticmethod
     def _log_replacing_certs_on_db(cert_type):
         logger.info('Replacing %s in Certificate table', cert_type)
-
-    def _replace_ldap_cert(self):
-        if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
-            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
-            logger.info('Replacing ldap CA cert on the restservice component')
-            config['restservice']['ldap']['ca_cert'] = \
-                constants.NEW_LDAP_CA_CERT_PATH
-            self.handle_ldap_certificate()
 
     @staticmethod
     def _upload_cloudify_license():
@@ -531,10 +503,6 @@ class RestService(BaseComponent):
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
-        logger.info('Checking for ldaps CA cert to deploy.')
-        self.handle_ldap_certificate()
-        self._ensure_ldap_cert_path_writable()
-
         self._make_paths()
         self.configure_service('cloudify-restservice')
         self.configure_service('cloudify-api')
@@ -567,5 +535,4 @@ class RestService(BaseComponent):
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
-        self._ensure_ldap_cert_path_writable()
         logger.notice('Rest Service successfully upgraded')
