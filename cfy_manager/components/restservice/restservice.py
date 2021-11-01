@@ -364,6 +364,14 @@ class RestService(BaseComponent):
             random.SystemRandom().sample(ascii_alphanumeric, result_len)
         )
 
+    @staticmethod
+    def _ensure_ldap_cert_path_writable():
+        """This can be set later by the restservice so it must be able to
+        write the relevant directory.
+        """
+        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+                     constants.SSL_CERTS_TARGET_DIR)
+
     def replace_certificates(self):
         self.stop()
         self._replace_ca_certs_on_db()
@@ -508,6 +516,7 @@ class RestService(BaseComponent):
         self.configure_service('cloudify-api')
         certificates.handle_ca_cert(logger)
         self._configure_db()
+        self._ensure_ldap_cert_path_writable()
         if is_premium_installed():
             self._join_cluster_setup()
         self.start()
