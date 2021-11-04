@@ -597,6 +597,9 @@ def certs_identical(cert_a, cert_b):
 
 def clean_certs():
     """Rename the certs on teardown to avoid naming collisions on install."""
+    if not os.path.exists(SSL_CERTS_TARGET_DIR):
+        # SSL was not configured
+        return
     # For the same behaviour as certificates replace
     prefix = datetime.now().strftime('%Y%m%d-%H%M%S_')
     for cert in os.listdir(SSL_CERTS_TARGET_DIR):
