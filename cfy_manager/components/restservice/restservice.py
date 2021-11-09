@@ -434,8 +434,8 @@ class RestService(BaseComponent):
         license_path = config[MANAGER]['cloudify_license_path']
         if license_path:
             try:
-                logger.info('Uploading Cloudify license `{0}` to the'
-                            ' Manager...'.format(license_path))
+                logger.info('Uploading Cloudify license `%s` to the'
+                            ' Manager...', license_path)
                 rest_port = config[RESTSERVICE]['port']
                 wait_for_port(rest_port)
                 url = REST_URL.format(port=rest_port, endpoint='license')
@@ -446,8 +446,8 @@ class RestService(BaseComponent):
                         'Failed to upload Cloudify license: {0} {1}'
                         .format(response.status_code, response.content))
             except IOError as e:
-                logger.warning('Failed to upload Cloudify license `{0}` due'
-                               ' to IOError: {1}'.format(license_path, e))
+                logger.warning('Failed to upload Cloudify license `%s` due'
+                               ' to IOError: %s', license_path, e)
 
     def install(self):
         logger.notice('Installing Rest Service...')
