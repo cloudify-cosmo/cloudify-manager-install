@@ -151,8 +151,8 @@ class SystemD(object):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name, is_group=False, ignore_failure=False,
-              options=None):
+    def start(self, service_name, is_group=False, options=None,
+              ignore_failure=False):
         logger.debug('Starting systemd service {0}...'.format(service_name))
         self.systemctl(
             'start',
@@ -181,6 +181,14 @@ class SystemD(object):
             service_name,
             ignore_failure=True
         ).aggr_stdout.strip()
+
+    def is_installed(self, service_name):
+        enabled = self.systemctl(
+            'is-enabled',
+            service_name,
+            ignore_failure=True
+        ).aggr_stderr.strip()
+        return 'Failed to get unit file state' not in enabled
 
     def reread(self):
         return self.systemctl('daemon-reload')
@@ -268,6 +276,14 @@ class Supervisord(object):
             ignore_failure=True
         ).aggr_stdout.strip().split()[1].lower()
 
+    def is_installed(self, service_name):
+        status = self.supervisorctl(
+            'status',
+            service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip()
+        return 'ERROR (no such process)' not in status
+
     @staticmethod
     def get_service_config_file_path(service_name):
         """Returns the path to a supervisord service config file
@@ -351,7 +367,7 @@ def disable(service_name):
 
 def start(service_name, is_group=False, options=None, ignore_failure=False):
     logger.debug('Starting service {0}...'.format(service_name))
-    return _get_backend().start(service_name, is_group, options,
+    return _get_backend().start(service_name, is_group, options=options,
                                 ignore_failure=ignore_failure)
 
 
@@ -394,6 +410,10 @@ def is_alive(service_name):
 
 def is_active(service_name):
     return _get_backend().is_active(service_name)
+
+
+def is_installed(service_name):
+    return _get_backend().is_installed(service_name)
 
 
 def configure(service_name,

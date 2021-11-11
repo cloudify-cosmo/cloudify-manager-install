@@ -63,7 +63,7 @@ class UsageCollector(BaseComponent):
             self._create_cron_jobs()
             logger.notice('Usage collector enabled')
 
-    def stop(self):
+    def stop(self, force=True):
         if self._validate_crontab_accessible():
             logger.notice('Disabling usage collector')
             self._remove_cron_jobs()

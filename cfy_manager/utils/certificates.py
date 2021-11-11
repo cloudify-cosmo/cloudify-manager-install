@@ -1,25 +1,12 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import argh
 import json
+import string
 from contextlib import contextmanager
+from datetime import datetime
 
 from . import network
-from .common import sudo, remove, chown, chmod, copy
+from .common import sudo, remove, chown, chmod, copy, move
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import (
@@ -606,3 +593,20 @@ def certs_identical(cert_a, cert_b):
     content_a = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_a])
     content_b = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_b])
     return content_a.aggr_stdout == content_b.aggr_stdout
+
+
+def clean_certs():
+    """Rename the certs on teardown to avoid naming collisions on install."""
+    if not os.path.exists(SSL_CERTS_TARGET_DIR):
+        # SSL was not configured
+        return
+    # For the same behaviour as certificates replace
+    prefix = datetime.now().strftime('%Y%m%d-%H%M%S_')
+    for cert in os.listdir(SSL_CERTS_TARGET_DIR):
+        if cert[0] not in string.ascii_letters:
+            # This one was renamed on a previous reinstall
+            continue
+        new_name = prefix + cert
+        cert_path = os.path.join(SSL_CERTS_TARGET_DIR, cert)
+        new_path = os.path.join(SSL_CERTS_TARGET_DIR, new_name)
+        move(cert_path, new_path)

@@ -665,21 +665,6 @@ def _validate_external_postgres():
                 )
 
 
-def _validate_ldap_certificate_setting():
-    """Confirm that if using ldaps we have the required ca cert."""
-    ldaps = config['restservice']['ldap']['server'].startswith('ldaps://')
-    ca_cert = config['restservice']['ldap']['ca_cert']
-
-    if ldaps and not ca_cert:
-        raise ValidationError(
-            'When using ldaps a CA certificate must be provided.'
-        )
-    elif ca_cert and not ldaps:
-        raise ValidationError(
-            'When not using ldaps a CA certificate must not be provided.'
-        )
-
-
 def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         # Inputs always need to be validated, otherwise the install won't work
@@ -692,7 +677,6 @@ def validate(components, skip_validations=False, only_install=False):
     logger.notice('Validating local machine...')
 
     if not only_install:
-        _validate_ldap_certificate_setting()
         _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
