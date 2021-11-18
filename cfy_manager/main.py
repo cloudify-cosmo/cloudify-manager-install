@@ -87,6 +87,10 @@ from .utils.files import (
     read_yaml_file,
     update_yaml_file,
 )
+from cfy_manager.utils.install_state import (
+    get_configured_services,
+    get_installed_services,
+)
 from ._compat import xmlrpclib
 
 logger = get_logger('Main')
@@ -555,22 +559,14 @@ def _print_finish_message(config_file=None):
         print('#' * 50)
 
 
-def _get_installed_services():
-    return all(
-        os.path.isfile(os.path.join(INITIAL_INSTALL_DIR, service_name))
-        for service_name in config[SERVICES_TO_INSTALL])
+def _all_services_installed():
+    return all(service_name in get_installed_services()
+               for service_name in config[SERVICES_TO_INSTALL])
 
 
-def _get_configured_services(get_all=False):
-    """Return a list of configured components.
-    :param get_all: Set this to true to list all configured components, not
-                    just ones from the current config.yaml.
-    """
-    if get_all:
-        return os.listdir(INITIAL_CONFIGURE_DIR)
-    return all(
-        os.path.isfile(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
-        for service_name in config[SERVICES_TO_INSTALL])
+def _all_services_configured():
+    return all(service_name in get_configured_services()
+               for service_name in config[SERVICES_TO_INSTALL])
 
 
 def is_supervisord_service():
@@ -582,7 +578,7 @@ def _create_initial_install_files():
     If the installation finished successfully for the first time,
     create the file /etc/cloudify/.installed/<service_name>.
     """
-    if not _get_installed_services():
+    if not _all_services_installed():
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
 
@@ -592,7 +588,7 @@ def _create_initial_configure_files():
     If the configuration finished successfully for the first time,
     create the file /etc/cloudify/.configured/<service_name>.
     """
-    if not _get_configured_services():
+    if not _all_services_configured():
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
@@ -613,7 +609,7 @@ def _validate_components_prepared(cmd):
     )
     files_list = [os.path.join(INITIAL_INSTALL_DIR, installed_service) for
                   installed_service in config[SERVICES_TO_INSTALL]]
-    if not _get_installed_services():
+    if not _all_services_installed():
         raise BootstrapError(
             error_message.format(
                 fix_cmd='install',
@@ -621,7 +617,7 @@ def _validate_components_prepared(cmd):
                 cmd=cmd
             )
         )
-    if not _get_configured_services() and cmd != 'configure':
+    if not _all_services_configured() and cmd != 'configure':
         raise BootstrapError(
             error_message.format(
                 fix_cmd='configure',
@@ -940,7 +936,7 @@ def _get_items_to_remove(items_file):
     removed_services = get_main_services_from_config()
     # We must base this on configured services to avoid partially removing
     # (e.g.) nginx but leaving its package behind, which will break reinstall.
-    remaining_services = (set(_get_configured_services(get_all=True))
+    remaining_services = (set(get_configured_services())
                           - set(removed_services))
 
     for removed_service in removed_services:
@@ -979,7 +975,7 @@ def remove(verbose=False, force=False, config_file=None):
                      [component.__class__.__name__ for component
                       in components_to_remove])
 
-        should_stop = _get_configured_services()
+        should_stop = _all_services_configured()
         for component in components_to_remove:
             if should_stop:
                 component.stop()
@@ -1252,7 +1248,7 @@ def image_starter(verbose=False, config_file=None):
         # if public ip is not given, default it to the same as private
         command += ['--public-ip', private_ip]
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
-            and not _get_configured_services():
+            and not _all_services_configured():
         command += ['--admin-password', 'admin']
     os.execv(sys.executable, command)
 
