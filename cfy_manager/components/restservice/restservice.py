@@ -496,7 +496,7 @@ class RestService(BaseComponent):
         files.remove(cluster_cfg_filename, ignore_failure=True)
 
     def _join_cluster_setup(self):
-        if not common.is_manager_service_only_installed():
+        if not common.is_manager_service_only_in_config():
             return
 
         # this flag is set inside of restservice._configure_db

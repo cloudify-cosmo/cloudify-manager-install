@@ -192,7 +192,7 @@ class PostgresqlServer(BaseComponent):
         standalone database installation (like in cluster) or 25% for the
         all-in-one installation.
         """
-        if common.is_installed(MANAGER_SERVICE):
+        if common.service_is_installed(MANAGER_SERVICE):
             return self._bytes_as_mb(psutil.virtual_memory().total // 4)
         else:
             return self._bytes_as_mb(psutil.virtual_memory().total // 2)

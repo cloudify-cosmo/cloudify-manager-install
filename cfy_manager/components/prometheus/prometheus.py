@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2020 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import json
 from os import sep
 from os.path import join, exists
@@ -378,7 +363,7 @@ def _update_prometheus_configuration(uninstalling=False):
 
     _update_base_targets(private_ip, uninstalling)
 
-    if common.is_installed(MANAGER_SERVICE):
+    if common.service_is_installed(MANAGER_SERVICE):
         if uninstalling:
             # When uninstalling we don't use the config anyway, so all that we
             # accomplish by trying to retrieve it is allowing the uninstall to
@@ -391,10 +376,10 @@ def _update_prometheus_configuration(uninstalling=False):
         _deploy_alerts_configuration(
             http_probes_count, cluster_config, uninstalling)
 
-    if common.is_installed(DATABASE_SERVICE):
+    if common.service_is_installed(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
 
-    if common.is_installed(QUEUE_SERVICE):
+    if common.service_is_installed(QUEUE_SERVICE):
         _update_local_rabbit_targets(private_ip, uninstalling)
 
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)

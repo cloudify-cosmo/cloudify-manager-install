@@ -74,9 +74,9 @@ from .utils.common import (
     sudo,
     copy,
     can_lookup_hostname,
-    is_installed,
     is_all_in_one_manager,
     get_main_services_from_config,
+    service_is_in_config,
 )
 from cfy_manager.utils.db import get_psql_env_and_base_command
 from .utils.install import is_premium_installed, yum_install, yum_remove
@@ -473,7 +473,7 @@ def db_shell(**kwargs):
     """Access the current DB leader using psql"""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         db_env, base_command = get_psql_env_and_base_command(
             logger, db_override=kwargs['dbname'])
         command = ['/bin/sudo', '-E'] + base_command
@@ -482,7 +482,7 @@ def db_shell(**kwargs):
         os.execve(command[0], command, db_env)
     else:
         logger.error(
-            'DB shell is only accessible with the manager installed.')
+            'DB shell is only accessible with the installed manager config.')
 
 
 def _print_time():
@@ -540,7 +540,7 @@ def _prepare_execution(verbose=False,
 
 
 def _print_finish_message(config_file=None):
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         manager_config = config[MANAGER]
         protocol = \
             'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
@@ -637,16 +637,16 @@ def _get_components(include_components=None):
     """
     _components = [components.Rsyslog()]
 
-    if is_installed(ENTROPY_SERVICE):
+    if service_is_in_config(ENTROPY_SERVICE):
         _components += [components.Haveged()]
 
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
 
-    if is_installed(QUEUE_SERVICE):
+    if service_is_in_config(QUEUE_SERVICE):
         _components += [components.RabbitMQ()]
 
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         _components += [
             components.Manager(),
             components.PostgresqlClient(),
@@ -669,12 +669,15 @@ def _get_components(include_components=None):
             components.UsageCollector(),
         ]
 
-    if is_installed(MONITORING_SERVICE):
+    if service_is_in_config(MONITORING_SERVICE):
         _components += [components.Prometheus()]
-        if not is_installed(MANAGER_SERVICE):
+        if not service_is_in_config(MANAGER_SERVICE):
             _components += [components.Nginx()]
 
-    if is_installed(MANAGER_SERVICE) and not config[SANITY]['skip_sanity']:
+    if (
+        service_is_in_config(MANAGER_SERVICE)
+        and not config[SANITY]['skip_sanity']
+    ):
         _components += [components.Sanity()]
 
     if include_components:
@@ -757,28 +760,28 @@ def _get_packages():
     # Adding premium components on all, even if we're on community, because
     # yum will return 0 (success) if any packages install successfully even if
     # some of the specified packages don't exist.
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         manager_packages = sources.manager
         # Premium components
         manager_packages += sources.manager_cluster + sources.manager_premium
         packages += manager_packages
         packages_per_service_dict[MANAGER_SERVICE] = manager_packages
 
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         db_packages = sources.db
         # Premium components
         db_packages += sources.db_cluster
         packages += db_packages
         packages_per_service_dict[DATABASE_SERVICE] = db_packages
 
-    if is_installed(QUEUE_SERVICE):
+    if service_is_in_config(QUEUE_SERVICE):
         queue_packages = sources.queue
         # Premium components
         queue_packages += sources.queue_cluster
         packages += queue_packages
         packages_per_service_dict[QUEUE_SERVICE] = queue_packages
 
-    if is_installed(MONITORING_SERVICE):
+    if service_is_in_config(MONITORING_SERVICE):
         monitoring_packages = sources.prometheus
         # Premium components
         monitoring_packages += sources.prometheus_cluster
@@ -786,7 +789,7 @@ def _get_packages():
         for main_service in packages_per_service_dict:
             packages_per_service_dict[main_service] += monitoring_packages
 
-    if is_installed(ENTROPY_SERVICE):
+    if service_is_in_config(ENTROPY_SERVICE):
         packages += sources.haveged
         for main_service in packages_per_service_dict:
             packages_per_service_dict[main_service] += sources.haveged
