@@ -363,7 +363,7 @@ def _update_prometheus_configuration(uninstalling=False):
 
     _update_base_targets(private_ip, uninstalling)
 
-    if common.service_is_installed(MANAGER_SERVICE):
+    if common.service_is_in_config(MANAGER_SERVICE):
         if uninstalling:
             # When uninstalling we don't use the config anyway, so all that we
             # accomplish by trying to retrieve it is allowing the uninstall to
@@ -376,10 +376,10 @@ def _update_prometheus_configuration(uninstalling=False):
         _deploy_alerts_configuration(
             http_probes_count, cluster_config, uninstalling)
 
-    if common.service_is_installed(DATABASE_SERVICE):
+    if common.service_is_in_config(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
 
-    if common.service_is_installed(QUEUE_SERVICE):
+    if common.service_is_in_config(QUEUE_SERVICE):
         _update_local_rabbit_targets(private_ip, uninstalling)
 
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
