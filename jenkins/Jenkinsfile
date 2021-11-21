@@ -89,8 +89,6 @@ pipeline {
                   """
                 echo 'Install rpmdevtools and build dependencies'
                 sh '''
-                  yum install rpmdevtools -y
-                  yum update -y
                   yum-builddep -y packaging/install_rpm.spec
                   '''
                 echo 'build rpms'
@@ -140,11 +138,10 @@ pipeline {
                 """, label: 'fetching requirements'
               echo 'prepare to build rpm'
               sh '''
-                yum install rpmdevtools -y
                 chmod a+wx /opt
                 '''
               echo 'Installing build dependencies'
-              sh 'yum update -y && yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
+              sh 'yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
               echo 'set premium_edition in the packaged config.yaml'
               sh 'sed -i "s/set_by_installer_builder/premium/" /root/rpmbuild/SOURCES/config.yaml'
               echo 'Build RPM'
@@ -175,12 +172,9 @@ pipeline {
                   dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                     withVault([configuration: configuration, vaultSecrets: secrets]){
                       sh script:"""#!/bin/bash
+                      set -e
                       python -m venv .venv
                       source .venv/bin/activate
-                      pip install --upgrade pip
-                      pip install cloudify==5.2.4
-                      apt-get update
-                      apt-get install -y jq
                       cfy profile use ${env.MANAGER_IP} -u ${env.MANAGER_USERNAME} -p ${env.MANAGER_PASSWORD} -t ${env.MANAGER_TENANT} --ssl
                       pushd 'bp'
                         cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
