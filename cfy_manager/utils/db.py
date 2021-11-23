@@ -6,7 +6,7 @@ import requests
 from cfy_manager.utils.common import (
     is_all_in_one_manager,
     service_is_in_config,
-    service_is_installed,
+    service_is_configured,
     sudo,
 )
 from ..config import config
@@ -51,7 +51,7 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
     pg_cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
     peer_authentication = False
 
-    if service_is_installed(DATABASE_SERVICE) and not pg_cluster_nodes:
+    if service_is_configured(DATABASE_SERVICE) and not pg_cluster_nodes:
         # In case the default user is postgres and we're in AIO installation,
         # or if we're installing a single database node,
         # "peer" authentication is used
@@ -134,7 +134,7 @@ def select_db_host(logger):
         attempt = 1
         for i, candidate in enumerate(itertools.cycle(cluster_nodes)):
             result = None
-            if service_is_installed(DATABASE_SERVICE):
+            if service_is_in_config(DATABASE_SERVICE):
                 # Use the etcd CA if this is a DB node as it'll be readable
                 ca_path = ETCD_CA_PATH
             else:

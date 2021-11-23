@@ -345,7 +345,7 @@ def _get_cluster_config():
     Based on config.yaml, but with fallback to reading nodes stored
     in the db (on manager-only nodes).
     """
-    if common.is_manager_service_only_installed():
+    if common.is_only_manager_service_in_config():
         return get_monitoring_config()
 
     return {}

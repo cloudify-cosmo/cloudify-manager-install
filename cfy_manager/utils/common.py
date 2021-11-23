@@ -26,7 +26,7 @@ from cfy_manager.components.service_names import (
     DATABASE_SERVICE,
     MAIN_SERVICES_NAMES,
 )
-from cfy_manager.utils.install_state import get_installed_services
+from cfy_manager.utils.install_state import get_configured_services
 from . import subprocess_preexec
 
 logger = get_logger('utils')
@@ -195,8 +195,8 @@ def is_all_in_one_manager():
     )
 
 
-def service_is_installed(service):
-    return service in get_installed_services()
+def service_is_configured(service):
+    return service in get_configured_services()
 
 
 def service_is_in_config(service):
@@ -208,13 +208,7 @@ def get_main_services_from_config():
             if service_name in MAIN_SERVICES_NAMES]
 
 
-def is_manager_service_only_installed():
-    return (service_is_installed(MANAGER_SERVICE) and
-            not service_is_installed(DATABASE_SERVICE) and
-            not service_is_installed(QUEUE_SERVICE))
-
-
-def is_manager_service_only_in_config():
+def is_only_manager_service_in_config():
     return (service_is_in_config(MANAGER_SERVICE) and
             not service_is_in_config(DATABASE_SERVICE) and
             not service_is_in_config(QUEUE_SERVICE))
