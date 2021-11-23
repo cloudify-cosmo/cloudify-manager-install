@@ -76,6 +76,7 @@ from .utils.common import (
     can_lookup_hostname,
     is_all_in_one_manager,
     get_main_services_from_config,
+    service_is_configured,
     service_is_in_config,
 )
 from cfy_manager.utils.db import get_psql_env_and_base_command
@@ -627,7 +628,8 @@ def _validate_components_prepared(cmd):
         )
 
 
-def _get_components(include_components=None):
+def _get_components(include_components=None,
+                    only_configured=False):
     """Get the component objects based on the config.
 
     This looks at the config, and returns only the component objects
@@ -635,18 +637,23 @@ def _get_components(include_components=None):
 
     All the "should we install this" config checks are done here.
     """
+    if only_configured:
+        check = service_is_configured
+    else:
+        check = service_is_in_config
+
     _components = [components.Rsyslog()]
 
-    if service_is_in_config(ENTROPY_SERVICE):
+    if check(ENTROPY_SERVICE):
         _components += [components.Haveged()]
 
-    if service_is_in_config(DATABASE_SERVICE):
+    if check(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
 
-    if service_is_in_config(QUEUE_SERVICE):
+    if check(QUEUE_SERVICE):
         _components += [components.RabbitMQ()]
 
-    if service_is_in_config(MANAGER_SERVICE):
+    if check(MANAGER_SERVICE):
         _components += [
             components.Manager(),
             components.PostgresqlClient(),
@@ -669,13 +676,13 @@ def _get_components(include_components=None):
             components.UsageCollector(),
         ]
 
-    if service_is_in_config(MONITORING_SERVICE):
+    if check(MONITORING_SERVICE):
         _components += [components.Prometheus()]
-        if not service_is_in_config(MANAGER_SERVICE):
+        if not check(MANAGER_SERVICE):
             _components += [components.Nginx()]
 
     if (
-        service_is_in_config(MANAGER_SERVICE)
+        check(MANAGER_SERVICE)
         and not config[SANITY]['skip_sanity']
     ):
         _components += [components.Sanity()]
@@ -1298,10 +1305,10 @@ def replace_certificates(input_path=None,
 
 def _replace_certificates():
     logger.info('Replacing certificates')
-    for component in _get_components():
+    for component in _get_components(only_configured=True):
         component.replace_certificates()
 
-    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+    if service_is_configured(MANAGER_SERVICE):
         # restart services that might not have been restarted
         for service_name in MGMTWORKER, AMQP_POSTGRES, STAGE, COMPOSER:
             service_name = 'cloudify-{0}'.format(service_name)
@@ -1321,7 +1328,7 @@ def _handle_replace_certs_config_path(replace_certs_config_path):
 
 def _only_validate():
     logger.info('Validating new certificates')
-    for component in _get_components():
+    for component in _get_components(only_configured=True):
         component.validate_new_certs()
 
 
