@@ -1,6 +1,5 @@
 import collections
 import logging
-import os
 import subprocess
 
 from os.path import isfile, join, abspath
@@ -14,8 +13,8 @@ from .constants import (
     DEFAULT_CONFIG_FILE_NAME,
     DEFAULT_CONFIG_PATH,
     CLOUDIFY_HOME_DIR,
-    INITIAL_INSTALL_DIR,
 )
+from cfy_manager.utils.install_state import get_installed_services
 yaml = YAML()
 logger = logging.getLogger('[CONFIG]')
 
@@ -36,15 +35,6 @@ def dict_merge(dct, merge_dct):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
-
-
-def get_installed_services():
-    try:
-        return [service_name for service_name in
-                os.listdir(INITIAL_INSTALL_DIR)
-                if not service_name.endswith('yaml')]
-    except OSError:
-        return []
 
 
 class Config(CommentedMap):

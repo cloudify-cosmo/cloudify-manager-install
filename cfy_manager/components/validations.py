@@ -22,7 +22,7 @@ from collections import namedtuple
 from ipaddress import ip_address
 from distutils.version import LooseVersion
 
-from cfy_manager.utils.common import is_installed
+from cfy_manager.utils.common import service_is_in_config
 from .components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
@@ -535,14 +535,16 @@ def _validate_postgres_inputs():
     Validating that an external DB will always listen to remote connections
     and, that a postgres password is set - needed for remote connections
     """
-    if is_installed(DATABASE_SERVICE) and is_installed(MANAGER_SERVICE):
+    db_service_in_config = service_is_in_config(DATABASE_SERVICE)
+    manager_service_in_config = service_is_in_config(MANAGER_SERVICE)
+    if db_service_in_config and manager_service_in_config:
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             raise ValidationError('Cannot install database_service when '
                                   'connecting to an external database')
         elif config[POSTGRESQL_SERVER]['cluster']['nodes']:
             raise ValidationError('Cannot install database_service when '
                                   'connecting to a Postgres Cluster')
-    if is_installed(DATABASE_SERVICE) and not is_installed(MANAGER_SERVICE):
+    if db_service_in_config and not manager_service_in_config:
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             if not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
                 raise ValidationError('When using an external database with '
@@ -558,7 +560,7 @@ def _validate_postgres_inputs():
                                   'enable_remote_connections and '
                                   'postgres_password must be set')
 
-    if is_installed(MANAGER_SERVICE) and not is_installed(DATABASE_SERVICE):
+    if manager_service_in_config and not db_service_in_config:
         postgres_host = config[POSTGRESQL_CLIENT]['host'].rsplit(':', 1)[0]
         if postgres_host in ('localhost', '127.0.0.1', '::1') and \
                 not config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
@@ -583,7 +585,7 @@ def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
                 'config.yaml in {1}'
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         if not (config['postgresql_server']['cert_path'] and
                 config['postgresql_server']['key_path'] and
                 config['postgresql_server']['ca_path']):
@@ -604,7 +606,7 @@ def _validate_postgres_ssl_certificates_provided():
                     'ssl_inputs.postgresql_client_cert_path, '
                     'ssl_inputs.postgresql_client_key_path, '
                     'and postgresql_server.ca_path'))
-    elif is_installed(MANAGER_SERVICE):
+    elif service_is_in_config(MANAGER_SERVICE):
         if not config['postgresql_server']['ca_path'] and not \
                 config['postgresql_client']['ca_path']:
             # Do not allow external postgres without SSL
@@ -618,7 +620,10 @@ def _validate_postgres_ssl_certificates_provided():
 def _validate_external_postgres():
     pg_conf = config[POSTGRESQL_SERVER]
 
-    if is_installed(DATABASE_SERVICE) and is_installed(MANAGER_SERVICE):
+    if (
+        service_is_in_config(DATABASE_SERVICE)
+        and service_is_in_config(MANAGER_SERVICE)
+    ):
         if pg_conf['cluster']['nodes']:
             raise ValidationError('Postgres cluster nodes cannot be '
                                   'installed on manager nodes.')
@@ -626,7 +631,7 @@ def _validate_external_postgres():
             # Local DB, no need to conduct external checks
             return
 
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         if pg_conf['cluster']['nodes']:
             problems = []
 

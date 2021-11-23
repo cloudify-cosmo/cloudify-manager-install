@@ -74,9 +74,10 @@ from .utils.common import (
     sudo,
     copy,
     can_lookup_hostname,
-    is_installed,
     is_all_in_one_manager,
     get_main_services_from_config,
+    service_is_configured,
+    service_is_in_config,
 )
 from cfy_manager.utils.db import get_psql_env_and_base_command
 from .utils.install import is_premium_installed, yum_install, yum_remove
@@ -86,6 +87,10 @@ from .utils.files import (
     touch,
     read_yaml_file,
     update_yaml_file,
+)
+from cfy_manager.utils.install_state import (
+    get_configured_services,
+    get_installed_services,
 )
 from ._compat import xmlrpclib
 
@@ -469,7 +474,7 @@ def db_shell(**kwargs):
     """Access the current DB leader using psql"""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         db_env, base_command = get_psql_env_and_base_command(
             logger, db_override=kwargs['dbname'])
         command = ['/bin/sudo', '-E'] + base_command
@@ -478,7 +483,7 @@ def db_shell(**kwargs):
         os.execve(command[0], command, db_env)
     else:
         logger.error(
-            'DB shell is only accessible with the manager installed.')
+            'DB shell is only accessible with the installed manager config.')
 
 
 def _print_time():
@@ -536,7 +541,7 @@ def _prepare_execution(verbose=False,
 
 
 def _print_finish_message(config_file=None):
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         manager_config = config[MANAGER]
         protocol = \
             'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
@@ -555,22 +560,14 @@ def _print_finish_message(config_file=None):
         print('#' * 50)
 
 
-def _get_installed_services():
-    return all(
-        os.path.isfile(os.path.join(INITIAL_INSTALL_DIR, service_name))
-        for service_name in config[SERVICES_TO_INSTALL])
+def _all_services_installed():
+    return all(service_name in get_installed_services()
+               for service_name in config[SERVICES_TO_INSTALL])
 
 
-def _get_configured_services(get_all=False):
-    """Return a list of configured components.
-    :param get_all: Set this to true to list all configured components, not
-                    just ones from the current config.yaml.
-    """
-    if get_all:
-        return os.listdir(INITIAL_CONFIGURE_DIR)
-    return all(
-        os.path.isfile(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
-        for service_name in config[SERVICES_TO_INSTALL])
+def _all_services_configured():
+    return all(service_name in get_configured_services()
+               for service_name in config[SERVICES_TO_INSTALL])
 
 
 def is_supervisord_service():
@@ -582,7 +579,7 @@ def _create_initial_install_files():
     If the installation finished successfully for the first time,
     create the file /etc/cloudify/.installed/<service_name>.
     """
-    if not _get_installed_services():
+    if not _all_services_installed():
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_INSTALL_DIR, service_name))
 
@@ -592,7 +589,7 @@ def _create_initial_configure_files():
     If the configuration finished successfully for the first time,
     create the file /etc/cloudify/.configured/<service_name>.
     """
-    if not _get_configured_services():
+    if not _all_services_configured():
         for service_name in config[SERVICES_TO_INSTALL]:
             touch(os.path.join(INITIAL_CONFIGURE_DIR, service_name))
 
@@ -613,7 +610,7 @@ def _validate_components_prepared(cmd):
     )
     files_list = [os.path.join(INITIAL_INSTALL_DIR, installed_service) for
                   installed_service in config[SERVICES_TO_INSTALL]]
-    if not _get_installed_services():
+    if not _all_services_installed():
         raise BootstrapError(
             error_message.format(
                 fix_cmd='install',
@@ -621,7 +618,7 @@ def _validate_components_prepared(cmd):
                 cmd=cmd
             )
         )
-    if not _get_configured_services() and cmd != 'configure':
+    if not _all_services_configured() and cmd != 'configure':
         raise BootstrapError(
             error_message.format(
                 fix_cmd='configure',
@@ -631,7 +628,8 @@ def _validate_components_prepared(cmd):
         )
 
 
-def _get_components(include_components=None):
+def _get_components(include_components=None,
+                    only_configured=False):
     """Get the component objects based on the config.
 
     This looks at the config, and returns only the component objects
@@ -639,18 +637,23 @@ def _get_components(include_components=None):
 
     All the "should we install this" config checks are done here.
     """
+    if only_configured:
+        check = service_is_configured
+    else:
+        check = service_is_in_config
+
     _components = [components.Rsyslog()]
 
-    if is_installed(ENTROPY_SERVICE):
+    if check(ENTROPY_SERVICE):
         _components += [components.Haveged()]
 
-    if is_installed(DATABASE_SERVICE):
+    if check(DATABASE_SERVICE):
         _components += [components.PostgresqlServer()]
 
-    if is_installed(QUEUE_SERVICE):
+    if check(QUEUE_SERVICE):
         _components += [components.RabbitMQ()]
 
-    if is_installed(MANAGER_SERVICE):
+    if check(MANAGER_SERVICE):
         _components += [
             components.Manager(),
             components.PostgresqlClient(),
@@ -673,12 +676,15 @@ def _get_components(include_components=None):
             components.UsageCollector(),
         ]
 
-    if is_installed(MONITORING_SERVICE):
+    if check(MONITORING_SERVICE):
         _components += [components.Prometheus()]
-        if not is_installed(MANAGER_SERVICE):
+        if not check(MANAGER_SERVICE):
             _components += [components.Nginx()]
 
-    if is_installed(MANAGER_SERVICE) and not config[SANITY]['skip_sanity']:
+    if (
+        check(MANAGER_SERVICE)
+        and not config[SANITY]['skip_sanity']
+    ):
         _components += [components.Sanity()]
 
     if include_components:
@@ -761,28 +767,28 @@ def _get_packages():
     # Adding premium components on all, even if we're on community, because
     # yum will return 0 (success) if any packages install successfully even if
     # some of the specified packages don't exist.
-    if is_installed(MANAGER_SERVICE):
+    if service_is_in_config(MANAGER_SERVICE):
         manager_packages = sources.manager
         # Premium components
         manager_packages += sources.manager_cluster + sources.manager_premium
         packages += manager_packages
         packages_per_service_dict[MANAGER_SERVICE] = manager_packages
 
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         db_packages = sources.db
         # Premium components
         db_packages += sources.db_cluster
         packages += db_packages
         packages_per_service_dict[DATABASE_SERVICE] = db_packages
 
-    if is_installed(QUEUE_SERVICE):
+    if service_is_in_config(QUEUE_SERVICE):
         queue_packages = sources.queue
         # Premium components
         queue_packages += sources.queue_cluster
         packages += queue_packages
         packages_per_service_dict[QUEUE_SERVICE] = queue_packages
 
-    if is_installed(MONITORING_SERVICE):
+    if service_is_in_config(MONITORING_SERVICE):
         monitoring_packages = sources.prometheus
         # Premium components
         monitoring_packages += sources.prometheus_cluster
@@ -790,7 +796,7 @@ def _get_packages():
         for main_service in packages_per_service_dict:
             packages_per_service_dict[main_service] += monitoring_packages
 
-    if is_installed(ENTROPY_SERVICE):
+    if service_is_in_config(ENTROPY_SERVICE):
         packages += sources.haveged
         for main_service in packages_per_service_dict:
             packages_per_service_dict[main_service] += sources.haveged
@@ -940,7 +946,7 @@ def _get_items_to_remove(items_file):
     removed_services = get_main_services_from_config()
     # We must base this on configured services to avoid partially removing
     # (e.g.) nginx but leaving its package behind, which will break reinstall.
-    remaining_services = (set(_get_configured_services(get_all=True))
+    remaining_services = (set(get_configured_services())
                           - set(removed_services))
 
     for removed_service in removed_services:
@@ -979,7 +985,7 @@ def remove(verbose=False, force=False, config_file=None):
                      [component.__class__.__name__ for component
                       in components_to_remove])
 
-        should_stop = _get_configured_services()
+        should_stop = _all_services_configured()
         for component in components_to_remove:
             if should_stop:
                 component.stop()
@@ -1252,7 +1258,7 @@ def image_starter(verbose=False, config_file=None):
         # if public ip is not given, default it to the same as private
         command += ['--public-ip', private_ip]
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
-            and not _get_configured_services():
+            and not _all_services_configured():
         command += ['--admin-password', 'admin']
     os.execv(sys.executable, command)
 
@@ -1299,10 +1305,10 @@ def replace_certificates(input_path=None,
 
 def _replace_certificates():
     logger.info('Replacing certificates')
-    for component in _get_components():
+    for component in _get_components(only_configured=True):
         component.replace_certificates()
 
-    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+    if service_is_configured(MANAGER_SERVICE):
         # restart services that might not have been restarted
         for service_name in MGMTWORKER, AMQP_POSTGRES, STAGE, COMPOSER:
             service_name = 'cloudify-{0}'.format(service_name)
@@ -1322,7 +1328,7 @@ def _handle_replace_certs_config_path(replace_certs_config_path):
 
 def _only_validate():
     logger.info('Validating new certificates')
-    for component in _get_components():
+    for component in _get_components(only_configured=True):
         component.validate_new_certs()
 
 

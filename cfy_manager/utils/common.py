@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from __future__ import print_function
 
 import os
@@ -41,6 +26,7 @@ from cfy_manager.components.service_names import (
     DATABASE_SERVICE,
     MAIN_SERVICES_NAMES,
 )
+from cfy_manager.utils.install_state import get_configured_services
 from . import subprocess_preexec
 
 logger = get_logger('utils')
@@ -209,7 +195,11 @@ def is_all_in_one_manager():
     )
 
 
-def is_installed(service):
+def service_is_configured(service):
+    return service in get_configured_services()
+
+
+def service_is_in_config(service):
     return service in config[SERVICES_TO_INSTALL]
 
 
@@ -218,10 +208,10 @@ def get_main_services_from_config():
             if service_name in MAIN_SERVICES_NAMES]
 
 
-def is_manager_service_only_installed():
-    return (is_installed(MANAGER_SERVICE) and
-            not is_installed(DATABASE_SERVICE) and
-            not is_installed(QUEUE_SERVICE))
+def is_only_manager_service_in_config():
+    return (service_is_in_config(MANAGER_SERVICE) and
+            not service_is_in_config(DATABASE_SERVICE) and
+            not service_is_in_config(QUEUE_SERVICE))
 
 
 def allows_json_format():
