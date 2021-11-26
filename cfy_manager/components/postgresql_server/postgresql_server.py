@@ -791,23 +791,7 @@ class PostgresqlServer(BaseComponent):
                     etcd_node_address = 'https://{ip}:2380'.format(
                         ip=network.ipv6_url_compat(node_ip))
                     etcd_node_id = self._get_etcd_id(node_ip)
-                    try:
-                        self._etcd_command(
-                            [
-                                'member', 'add',
-                                etcd_node_id, etcd_node_address,
-                            ],
-                            username='root',
-                        )
-                    except ProcessExecutionError as err:
-                        raise BootstrapError(
-                            'Error was: {err}\n'
-                            'Failed to join etcd cluster. '
-                            'If this node is being reinstalled you may need '
-                            'to uninstall it then run the DB node '
-                            'removal command on a healthy DB node before '
-                            'attempting to install again.'.format(err=err)
-                        )
+                    self._add_etcd_member(etcd_node_id, etcd_node_address)
                     common.sudo([
                         'sed', '-i',
                         's/ETCD_INITIAL_CLUSTER_STATE.*/'
@@ -894,6 +878,28 @@ class PostgresqlServer(BaseComponent):
         logger.info('Activating patroni initial startup monitor.')
         self._activate_patroni_startup_check()
         logger.info('Patroni started.')
+
+    # Joining the cluster sometimes runs into problems while the cluster is
+    # electing a leader, but just retrying makes it work.
+    @retry(stop_max_attempt_number=15, wait_fixed=2000)
+    def _add_etcd_member(self, etcd_node_id, etcd_node_address):
+        try:
+            self._etcd_command(
+                [
+                    'member', 'add',
+                    etcd_node_id, etcd_node_address,
+                ],
+                username='root',
+            )
+        except ProcessExecutionError as err:
+            raise BootstrapError(
+                'Error was: {err}\n'
+                'Failed to join etcd cluster. '
+                'If this node is being reinstalled you may need '
+                'to uninstall it then run the DB node '
+                'removal command on a healthy DB node before '
+                'attempting to install again.'.format(err=err)
+            )
 
     def _get_etcd_members(self):
         """Get a dict mapping etcd member IPs to their IDs."""
