@@ -416,6 +416,11 @@ if __name__ == '__main__':
         help='Dev branch to get package resources from.',
         default='',
     )
+    parser.add_argument(
+        '--architecture',
+        help='Unused and ignored, added for compatibility with 6.2 and newer',
+        default='x86_64',
+    )
 
     args = parser.parse_args()
     retrieve_resources(
