@@ -5,141 +5,109 @@ Collect & install the RPMs from other Jenkins jobs
 from __future__ import print_function
 import os
 import sys
+import re
 import shutil
-import zipfile
 import threading
-import traceback
 import argparse
-import contextlib
+import traceback
 
 import requests
 
+RPM_URL = 'https://cloudify-release-eu.s3.eu-west-1.amazonaws.com/cloudify' \
+          '/{version}/{prerelease}-build/{repo_name}/{branch_name}' \
+          '/latest/{rpm_name}'
 
-ARCHIVE_PREFIX = \
-    'https://jenkins.cloudify.co/job/{pipeline_name}/job/{branch_name}/' \
-    'lastSuccessfulBuild/artifact/*zip*/archive.zip'
 
-PIPELINES = {
-    'Manager-Multibranch': ['rpm'],
-    'Agent-Multibranch': ['rpm'],
-    'cli-Multibranch': ['rpm_artifacts', 'deb_artifacts'],
-    'Premium-Multibranch': ['premium-rpm', 'patroni-rpm']
+REPOS_RPMS = {
+    'cloudify-manager': [
+        'cloudify-rest-service',
+        'cloudify-rabbitmq',
+        'cloudify-management-worker'
+    ],
+    'cloudify-premium': ['cloudify-premium', 'patroni'],
+    'cloudify-cli': ['cloudify-cli'],
+    'cloudify-agent': ['cloudify-agents']
 }
 
 
-def download_archive(pipeline_name, archive_dir, username, token):
-    for branch in (os.getenv('BRANCH_NAME'), os.getenv('CORE_BRANCH')):
-        archive_url = ARCHIVE_PREFIX.format(
-            pipeline_name=pipeline_name, branch_name=branch
+def get_cloudify_package_names(branch, package_pattern):
+    content = requests.get('https://raw.githubusercontent.com'
+                           '/cloudify-cosmo/cloudify-premium/'
+                           '{0}/packages-urls/manager-packages.yaml'
+                           ''.format(branch),
+                           auth=(os.environ['GITHUB_USERNAME'],
+                                 os.environ['GITHUB_TOKEN'])
+                           )
+    _yaml = content.content.decode('utf-8').strip().split('\n')
+    _result = None
+    for _match in _yaml:
+        _n = re.search(
+            r'{pattern}-(.*?).rpm'.format(pattern=package_pattern),
+            _match
         )
-        print('Start downloading `archive_url {}`'.format(archive_url))
+        if _n:
+            _result = _n.group()
+            break
+    return _result
+
+
+def get_cloudify_release_and_version():
+    return os.getenv('CLOUDIFY_VERSION'), os.getenv('CLOUDIFY_PACKAGE_RELEASE')
+
+
+def download_rpm(repo, pattern, rpms_destination):
+    version, prerelease = get_cloudify_release_and_version()
+    for branch in (os.getenv('BRANCH_NAME'), os.getenv('CORE_BRANCH'),):
+        rpm_name = get_cloudify_package_names(branch, pattern)
+        rpm_url = RPM_URL.format(
+            version=version,
+            prerelease=prerelease,
+            repo_name=repo,
+            branch_name=branch,
+            rpm_name=rpm_name
+        )
+        print('Start downloading `rpm_url {}`'.format(rpm_url))
         try:
-            resp = requests.get(
-                archive_url, auth=(username, token), stream=True)
+            resp = requests.get(rpm_url, stream=True)
         except requests.RequestException as e:
-            print('Error downloading {url}: {e}'.format(url=archive_url, e=e))
+            print('Error downloading {url}: {e}'.format(url=rpm_url, e=e))
         else:
             if resp.status_code == 200:
-                _filename = os.path.join(archive_dir, pipeline_name + '.zip')
+                _filename = os.path.join(rpms_destination, rpm_name + '.rpm')
                 with open(_filename, 'wb') as f:
                     resp.raw.decode_content = True
                     shutil.copyfileobj(resp.raw, f)
-                print('...finished downloading {url}'.format(url=archive_url))
+                print('...finished downloading {url}'.format(url=rpm_url))
                 break
             else:
                 print('Error downloading {url}: {e}'.format(
-                    url=archive_url, e=resp.content))
-
+                    url=rpm_url, e=resp.content))
     else:
         print('Unable to'
-              ' find archive '
-              'for `pipeline` {} for all branches`'
-              ''.format(pipeline_name))
+              ' download rpm '
+              'for `repo` {} for all branches`'
+              ''.format(repo))
         sys.exit(1)
 
 
-def unzip(archive, destination):
-    with zipfile.ZipFile(archive, 'r') as zip_file:
-        zip_file.extractall(destination)
-    print('Archive {0} extracted successfully to {1}'
-          ''.format(archive, destination))
-
-
-def unzip_rpms_archives(archive_dir, pipeline, folders, rpms_destination):
-    _archive = os.path.join(archive_dir, pipeline + '.zip')
-    _extract_location = os.path.join(archive_dir, pipeline)
-    os.mkdir(_extract_location)
-    print('Extract pipeline: {pipeline} archive: {archive} ...'.format(
-        pipeline=pipeline, archive=_archive))
-    unzip(_archive, _extract_location)
-    for folder in folders:
-        rpm_dir = os.path.join(_extract_location, 'archive', folder)
-        rpm_files = [
-            _file for _file in os.listdir(rpm_dir)
-            if os.path.isfile(os.path.join(rpm_dir, _file))
-        ]
-        for _rpm_file in rpm_files:
-            _rpm_file = os.path.join(rpm_dir, _rpm_file)
-            print('Copy rpm: {0} to {1}'.format(_rpm_file, rpms_destination))
-            shutil.copy(_rpm_file, rpms_destination)
-
-
-@contextlib.contextmanager
-def get_archive_dir():
-    archive_dir = os.path.join(os.getcwd(), 'archives')
-    if not os.path.exists(archive_dir):
-        os.mkdir(archive_dir)
-    try:
-        yield archive_dir
-    except Exception:
-        traceback.print_exc()
-        sys.exit(1)
-    finally:
-        shutil.rmtree(archive_dir)
-
-
-def fetch_rpms(username, token, rpms_destination):
+def fetch_rpms(rpms_destination):
     downloads = []
-    with get_archive_dir() as archive_dir:
-        for pipeline, _ in PIPELINES.items():
+    for repo, patterns in REPOS_RPMS.items():
+        for _pattern in patterns:
             download = threading.Thread(
-                target=download_archive,
-                args=(pipeline, archive_dir, username, token),
+                target=download_rpm,
+                args=(repo, _pattern, rpms_destination)
             )
             download.start()
             downloads.append(download)
-
-        for download in downloads:
-            download.join()
-
-        # Unzip archives
-        for pipeline, folders in PIPELINES.items():
-            unzip_rpms_archives(
-                archive_dir,
-                pipeline,
-                folders,
-                rpms_destination
-            )
+    for download in downloads:
+        download.join()
+        print('Join thread {} finished execution'.format(download))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Download RPMS from other repos'
-    )
-
-    parser.add_argument(
-        '-u', '--username',
-        help='Username who has permission to access/download jenkins '
-             'artifacts',
-        required=True
-    )
-
-    parser.add_argument(
-        '-t', '--token',
-        help=(
-            'Valid token in order to access jenkins artifacts'
-        ),
-        required=True
     )
 
     parser.add_argument(
@@ -149,4 +117,11 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    fetch_rpms(args.username, args.token, args.rpms_destination)
+    try:
+        fetch_rpms(args.rpms_destination)
+    except Exception:
+        print('Failure while trying to fetch rpms.....')
+        traceback.print_exc()
+        sys.exit(1)
+    else:
+        print('Fetching all rpms successfully')
