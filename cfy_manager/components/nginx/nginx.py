@@ -356,12 +356,16 @@ class Nginx(BaseComponent):
         return resources_list
 
     def _deploy_nginx_config_files(self):
+        lo_ip6_addr = common.sudo(['ip', '-6', 'addr', 'show', 'dev', 'lo'],
+                                  ignore_failures=True).aggr_stdout.strip()
+        ipv6_enabled = 'inet6' in (lo_ip6_addr or '')
         logger.info('Deploying Nginx configuration files...')
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
             self._update_credentials_config()
             self._create_htpasswd_file()
         for resource in self._config_files():
-            deploy(resource.src, resource.dst)
+            deploy(resource.src, resource.dst,
+                   additional_render_context={'ipv6_enabled': ipv6_enabled})
 
         # remove the default configuration which reserves localhost:80 for a
         # nginx default landing page
