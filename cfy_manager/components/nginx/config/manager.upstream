@@ -1,4 +1,4 @@
-{% macro lo() %}{% if ipv6_enabled %}[::]{% else %}127.0.0.1{% endif %}{% endmacro %}
+{% macro lo() %}{% if ipv6_enabled %}[::]{% else %}0.0.0.0{% endif %}{% endmacro %}
 # Upstream for Cloudify stage.
 upstream cloudify-stage {
   server 127.0.0.1:8088;
