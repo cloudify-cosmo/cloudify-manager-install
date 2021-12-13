@@ -1,136 +1,127 @@
 #!/usr/bin/env python
 """
-Collect & install the RPMs from other CircleCI jobs
+Collect & install the RPMs from other Jenkins jobs
 """
 from __future__ import print_function
-
-import itertools
 import os
+import sys
+import re
+import shutil
 import threading
-from fnmatch import fnmatch
-from shutil import copyfileobj
+import argparse
+import traceback
 
 import requests
 
+RPM_URL = 'https://cloudify-release-eu.s3.eu-west-1.amazonaws.com/cloudify' \
+          '/{version}/{prerelease}-build/{repo_name}/{branch_name}' \
+          '/latest/{rpm_name}'
 
-BATCH_SIZE = 100
-API_PREFIX = (
-    'https://circleci.com/api/v1.1/project/github/'
-    '{organization}/{{project}}/'.format(
-        organization=os.getenv(
-            'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo')))
 
-URL_TEMPLATE = API_PREFIX + 'tree/{branch}'
-ARTIFACTS_TEMPLATE = API_PREFIX + '{build[build_num]}/artifacts'
-TRY_BRANCHES = (os.getenv('CIRCLE_BRANCH'), 'master')
-
-# Keys: other repositories in the same organization
-# Values: collection of Workflow jobs from which we need to fetch artifacts.
-REPOS = {
-    'cloudify-manager': {
-        'build-rpms': {'cloudify-*.rpm'},
-    },
-    'cloudify-agent': {
-        'build_rpm': {'cloudify-*.rpm'},
-    },
-    'cloudify-premium': {
-        'build-rpm': {'cloudify-*.rpm'},
-        'build-patroni-rpm': {'*.rpm'}
-    },
-    'cloudify-cli': {
-        'build-rpm': {'cloudify-*.rpm'}
-    }
+REPOS_RPMS = {
+    'cloudify-manager': [
+        'cloudify-rest-service',
+        'cloudify-rabbitmq',
+        'cloudify-management-worker'
+    ],
+    'cloudify-premium': ['cloudify-premium', 'patroni'],
+    'cloudify-cli': ['cloudify-cli'],
+    'cloudify-agent': ['cloudify-agents']
 }
-NEED_AUTH = {'cloudify-premium'}
 
 
-def list_builds(repo, query):
-    """List all builds for the given repo (filtered to only the current
-    CIRCLE_BRANCH and then master branches)
-    """
-    for branch in TRY_BRANCHES:
-        url = URL_TEMPLATE.format(
-            organization=os.getenv(
-                'CIRCLE_PROJECT_USERNAME', 'cloudify-cosmo'),
-            project=repo,
-            branch=branch,
-        ) + query
-
-        print('API path', url)
-        for offset in itertools.count(0, BATCH_SIZE):
-            resp = requests.get(
-                url, params={'branch': branch, 'offset': offset})
-            builds = resp.json()
-
-            if not builds:
-                # Empty list means we reached the end of the build list for
-                # this branch
-                break
-
-            for build in builds:
-                yield build
-
-        print('WARNING: matching build not found in branch', branch)
+def get_cloudify_package_names(branch, package_pattern):
+    content = requests.get('https://raw.githubusercontent.com'
+                           '/cloudify-cosmo/cloudify-premium/'
+                           '{0}/packages-urls/manager-packages.yaml'
+                           ''.format(branch),
+                           auth=(os.environ['GITHUB_USERNAME'],
+                                 os.environ['GITHUB_TOKEN'])
+                           )
+    _yaml = content.content.decode('utf-8').strip().split('\n')
+    _result = None
+    for _match in _yaml:
+        _n = re.search(
+            r'{pattern}-(.*?).rpm'.format(pattern=package_pattern),
+            _match
+        )
+        if _n:
+            _result = _n.group()
+            break
+    return _result
 
 
-def get_builds(repo, jobs, query):
-    """For the given repo, find a build which successfully built each rpm.
-
-    This will examine the CircleCI build outputs going backwards (fetching
-    the builds list in batches of BATCH_SIZE), looking for a successful
-    build that had built the rpm.
-    """
-    for build in list_builds(repo, query):
-        job = build.get('workflows', {'job_name': None})['job_name']
-        if job in jobs and build['status'] == 'success':
-
-            yield build, jobs.pop(job)
-
-            if not jobs:
-                # All rpms for this repo found
-                break
-
-    if jobs:
-        raise ValueError("Didn't find builds for jobs", jobs)
+def get_cloudify_release_and_version():
+    return os.getenv('CLOUDIFY_VERSION'), os.getenv('CLOUDIFY_PACKAGE_RELEASE')
 
 
-def get_artifacts(repo, build, rpms, query):
-    url = ARTIFACTS_TEMPLATE.format(project=repo, build=build) + query
-    resp = requests.get(url)
-
-    for artifact in resp.json():
-        filename = os.path.basename(artifact['path'])
-        if any(fnmatch(filename, glob) for glob in rpms):
-            print('Downloading {} (build {})'.format(
-                artifact['path'], build['build_num']))
-            resp = requests.get(artifact['url'] + query, stream=True)
-            with open(filename, 'wb') as f:
-                resp.raw.decode_content = True
-                copyfileobj(resp.raw, f)
-
-
-def main():
-    downloads = []
-    for repo, jobs in REPOS.items():
-        if repo in NEED_AUTH:
-            key = os.environ.get('CLOUDIFY_PREMIUM_CIRCLE_ARTIFACTS_TOKEN')
-            if not key:
-                raise RuntimeError('CircleCI token must be set in env '
-                                   'CLOUDIFY_PREMIUM_CIRCLE_ARTIFACTS_TOKEN')
-            query = '?circle-token=' + key
+def download_rpm(repo, pattern, rpms_destination):
+    version, prerelease = get_cloudify_release_and_version()
+    for branch in (os.getenv('BRANCH_NAME'), os.getenv('CORE_BRANCH'),):
+        rpm_name = get_cloudify_package_names(branch, pattern)
+        rpm_url = RPM_URL.format(
+            version=version,
+            prerelease=prerelease,
+            repo_name=repo,
+            branch_name=branch,
+            rpm_name=rpm_name
+        )
+        print('Start downloading `rpm_url {}`'.format(rpm_url))
+        try:
+            resp = requests.get(rpm_url, stream=True)
+        except requests.RequestException as e:
+            print('Error downloading {url}: {e}'.format(url=rpm_url, e=e))
         else:
-            query = ''
-        for build, rpms in get_builds(repo, jobs, query):
+            if resp.status_code == 200:
+                _filename = os.path.join(rpms_destination, rpm_name + '.rpm')
+                with open(_filename, 'wb') as f:
+                    resp.raw.decode_content = True
+                    shutil.copyfileobj(resp.raw, f)
+                print('...finished downloading {url}'.format(url=rpm_url))
+                break
+            else:
+                print('Error downloading {url}: {e}'.format(
+                    url=rpm_url, e=resp.content))
+    else:
+        print('Unable to'
+              ' download rpm '
+              'for `repo` {} for all branches`'
+              ''.format(repo))
+        sys.exit(1)
+
+
+def fetch_rpms(rpms_destination):
+    downloads = []
+    for repo, patterns in REPOS_RPMS.items():
+        for _pattern in patterns:
             download = threading.Thread(
-                target=get_artifacts,
-                args=(repo, build, rpms, query),
+                target=download_rpm,
+                args=(repo, _pattern, rpms_destination)
             )
             download.start()
             downloads.append(download)
-
     for download in downloads:
         download.join()
+        print('Join thread {} finished execution'.format(download))
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(
+        description='Download RPMS from other repos'
+    )
+
+    parser.add_argument(
+        '-d', '--rpms-destination',
+        help='The destination folder to store downloaded artifacts',
+        required=True
+    )
+
+    args = parser.parse_args()
+    try:
+        fetch_rpms(args.rpms_destination)
+    except Exception:
+        print('Failure while trying to fetch rpms.....')
+        traceback.print_exc()
+        sys.exit(1)
+    else:
+        print('Fetching all rpms successfully')

@@ -66,7 +66,7 @@ pipeline {
                   sh script:"""#!/bin/bash
                      source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
                      chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
-                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -u ${env.JENKINS_USERNAME} -t ${env.JENKINS_TOKEN} -d ${env.WORKSPACE}/rpms
+                     ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -d ${env.WORKSPACE}/rpms
                      """, label: 'Fetch RPM artifacts stored on Jenkins'
                 }
               }
@@ -248,7 +248,7 @@ echo 'Build manager container'
 set -eux
 ls -la .
 pushd packaging/docker
-  docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.IMAGE_NAME} .
+  docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm --tag ${env.IMAGE_NAME} .
 popd
 echo 'Run manager container'
 set -eux
@@ -294,7 +294,7 @@ echo 'Build manager container'
 set -eux
 ls -la .
 pushd packaging/docker
-  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.centos.x86_64.rpm --tag ${env.CLUSTER_IMAGE} .
+  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm --tag ${env.CLUSTER_IMAGE} .
 popd
 set -eux
 pushd jenkins/cluster
