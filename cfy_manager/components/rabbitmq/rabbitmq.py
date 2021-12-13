@@ -34,7 +34,8 @@ from ...exceptions import (
 )
 from ...utils import service, syslog
 from ...utils.network import wait_for_port, is_port_open
-from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
+from ...utils.common import (sudo, can_lookup_hostname, run,
+                             remove as remove_file)
 from ...utils.files import write_to_file, deploy
 
 
@@ -68,8 +69,8 @@ class RabbitMQ(BaseComponent):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
     def _deploy_configuration(self):
-        lo_ip6_addr = sudo(['ip', '-6', 'addr', 'show', 'dev', 'lo'],
-                           ignore_failures=True).aggr_stdout.strip()
+        lo_ip6_addr = run(['/usr/sbin/ip', '-6', 'addr', 'show', 'dev', 'lo'],
+                          ignore_failures=True).aggr_stdout.strip()
         ipv6_enabled = 'inet6' in (lo_ip6_addr or '')
         logger.info('Deploying RabbitMQ config')
         deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH,

@@ -356,8 +356,10 @@ class Nginx(BaseComponent):
         return resources_list
 
     def _deploy_nginx_config_files(self):
-        lo_ip6_addr = common.sudo(['ip', '-6', 'addr', 'show', 'dev', 'lo'],
-                                  ignore_failures=True).aggr_stdout.strip()
+        lo_ip6_addr = common.run(
+            ['/usr/sbin/ip', '-6', 'addr', 'show', 'dev', 'lo'],
+            ignore_failures=True)\
+            .aggr_stdout.strip()
         ipv6_enabled = 'inet6' in (lo_ip6_addr or '')
         logger.info('Deploying Nginx configuration files...')
         if MONITORING_SERVICE in config.get(SERVICES_TO_INSTALL):
