@@ -33,7 +33,7 @@ from ...exceptions import (
     ValidationError,
 )
 from ...utils import service, syslog
-from ...utils.network import wait_for_port, is_port_open
+from ...utils.network import wait_for_port, is_port_open, lo_has_ipv6_addr
 from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
 from ...utils.files import write_to_file, deploy
 
@@ -68,16 +68,9 @@ class RabbitMQ(BaseComponent):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
     def _deploy_configuration(self):
-        try:
-            ipv6_enabled = bool(
-                socket.getaddrinfo('localhost', SECURE_PORT,
-                                   family=socket.AddressFamily.AF_INET6)
-            )
-        except socket.gaierror:
-            ipv6_enabled = False
         logger.info('Deploying RabbitMQ config')
         deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH,
-               additional_render_context={'ipv6_enabled': ipv6_enabled})
+               additional_render_context={'ipv6_enabled': lo_has_ipv6_addr()})
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
         deploy(join(CONFIG_PATH, 'enabled_plugins'), RABBITMQ_ENABLED_PLUGINS)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENABLED_PLUGINS)

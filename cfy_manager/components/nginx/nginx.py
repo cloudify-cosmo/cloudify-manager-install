@@ -45,6 +45,7 @@ from ...utils import (
 )
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.network import lo_has_ipv6_addr
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
@@ -361,7 +362,9 @@ class Nginx(BaseComponent):
             self._update_credentials_config()
             self._create_htpasswd_file()
         for resource in self._config_files():
-            deploy(resource.src, resource.dst)
+            deploy(resource.src, resource.dst,
+                   additional_render_context={'ipv6_enabled':
+                                              lo_has_ipv6_addr()})
 
         # remove the default configuration which reserves localhost:80 for a
         # nginx default landing page

@@ -159,3 +159,9 @@ def ipv6_url_strip(url_addr):
     if url_addr.startswith('[') and url_addr.endswith(']'):
         return url_addr[1:-1]
     return url_addr
+
+
+def lo_has_ipv6_addr():
+    lo_ip6_addr = run(['/usr/sbin/ip', '-6', 'addr', 'show', 'dev', 'lo'],
+                      ignore_failures=True).aggr_stdout
+    return 'inet6' in (lo_ip6_addr or '')
