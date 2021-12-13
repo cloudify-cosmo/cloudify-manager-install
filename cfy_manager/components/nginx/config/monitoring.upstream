@@ -1,4 +1,3 @@
-{% macro iface() %}{% if ipv6_enabled %}[::]{% else %}0.0.0.0{% endif %}{% endmacro %}
 # Upstream for Prometheus.
 upstream cloudify-monitoring {
   server 127.0.0.1:{{ prometheus.port }};
@@ -20,7 +19,10 @@ upstream cloudify-monitoring-blackbox {
 server {
   # server listening for monitoring requests
   listen              {{ constants.monitoring_port }} ssl default_server;
-  listen              {{ iface() }}:{{ constants.monitoring_port }} ssl default_server;
+  {% if ipv6_enabled -%}
+  listen              [::]:{{ constants.monitoring_port }} ssl default_server;
+  {%- endif %}
+
   server_name         _;
 
   ssl_certificate     {{ constants.monitoring_cert_path }};

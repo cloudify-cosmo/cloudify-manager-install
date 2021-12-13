@@ -1,4 +1,3 @@
-{% macro iface() %}{% if ipv6_enabled %}[::]{% else %}0.0.0.0{% endif %}{% endmacro %}
 # Upstream for Cloudify stage.
 upstream cloudify-stage {
   server 127.0.0.1:8088;
@@ -19,7 +18,9 @@ upstream cloudify-rest {
 server {
   # server listening
   listen              *:{{ nginx.port | default('80', true) }};
-  listen              {{ iface() }}:{{ nginx.port | default('80', true) }};
+  {% if ipv6_enabled -%}
+  listen              [::]:{{ nginx.port | default('80', true) }};
+  {%- endif %}
   server_name         _;
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
@@ -41,7 +42,9 @@ server {
 server {
   # server listening for external requests
   listen              {{ nginx.port | default('443', true) }} ssl;
-  listen              {{ iface() }}:{{ nginx.port | default('443', true) }} ssl;
+  {% if ipv6_enabled -%}
+  listen              [::]:{{ nginx.port | default('443', true) }} ssl;
+  {%- endif %}
   server_name         {{ manager.public_ip }};
 
   ssl_certificate     {{ constants.external_cert_path }};
@@ -71,7 +74,9 @@ server {
 {% if nginx.port is none %}
 server {
   listen 80;
-  listen {{ iface() }}:80;
+  {% if ipv6_enabled -%}
+  listen              [::]:80;
+  {%- endif %}
   server_name _;
 
   # For REST API requests, return HTTP 400.
@@ -94,7 +99,10 @@ server {
 server {
   # server listening for internal requests
   listen              {{ constants.internal_rest_port }} ssl default_server;
-  listen              {{ iface() }}:{{ constants.internal_rest_port }} ssl default_server;
+  {% if ipv6_enabled -%}
+  listen              [::]:{{ constants.internal_rest_port }} ssl default_server;
+  {%- endif %}
+
   server_name         _;
 
   ssl_certificate     {{ constants.internal_cert_path }};
