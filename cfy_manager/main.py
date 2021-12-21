@@ -899,6 +899,16 @@ def configure(verbose=False,
         config_file=config_file,
     )
 
+    if not _all_services_installed():
+        raise BootstrapError(
+            'Not all services {services_to_install} are installed.\n'
+            'You may need to run `cfy_manager install` first.\nAlso make sure '
+            'you use the correct config file (currently used: '
+            '{config_path}).\n'.format(
+                services_to_install=config[SERVICES_TO_INSTALL],
+                config_path=(config_file or USER_CONFIG_PATH),
+            )
+        )
     _validate_components_prepared('configure', config_file)
     logger.notice('Configuring desired components...')
     components = _get_components()
