@@ -533,7 +533,8 @@ class RestService(BaseComponent):
             service.configure('cloudify-api', src_dir=RESTSERVICE)
 
     def remove(self):
-        service.remove('cloudify-restservice', service_file=False)
+        service.remove('cloudify-restservice')
+        service.remove('cloudify-api')
         remove_logrotate(RESTSERVICE)
         common.remove('/opt/manager')
 

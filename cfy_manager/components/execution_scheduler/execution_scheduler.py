@@ -39,5 +39,5 @@ class ExecutionScheduler(BaseComponent):
 
     def remove(self):
         logger.notice('Removing execution scheduler...')
-        service.remove('cloudify-execution-scheduler', service_file=False)
+        service.remove('cloudify-execution-scheduler')
         logger.notice('Execution scheduler successfully removed')

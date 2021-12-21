@@ -115,17 +115,12 @@ class SystemD(object):
         self.enable('{0}.service'.format(service_name),
                     ignore_failure=ignore_failure)
 
-    def remove(self, service_name, service_file=True):
+    def remove(self, service_name):
         """Stop and disable the service, and then delete its data
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
-
-        # components that have had their unit file moved to the RPM, will
-        # also remove it during RPM uninstall
-        if service_file:
-            remove_file(self.get_service_file_path(service_name))
-
+        remove_file(self.get_service_file_path(service_name))
         remove_file(self.get_vars_file_path(service_name))
 
     @staticmethod
@@ -290,8 +285,6 @@ class Supervisord(object):
         for a given service_name.
         (e.g./etc/supervisord.d/rabbitmq.cloudify.conf)
         """
-        if service_name.startswith('cloudify-'):
-            service_name = service_name.split('-')[1]
         return "/etc/supervisord.d/{0}.cloudify.conf".format(service_name)
 
     def configure(self,
@@ -322,16 +315,12 @@ class Supervisord(object):
                    additional_render_context=external_configure_params)
             chown(user, group, dst)
 
-    def remove(self, service_name, service_file=True):
+    def remove(self, service_name):
         """Stop and disable the service, and then delete its data
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
-
-        # components that have had their unit file moved to the RPM, will
-        # also remove it during RPM uninstall
-        if service_file:
-            remove_file(self.get_service_config_file_path(service_name))
+        remove_file(self.get_service_config_file_path(service_name))
 
     def reread(self):
         return self.supervisorctl('reread')
@@ -381,9 +370,9 @@ def restart(service_name, is_group=False, ignore_failure=False):
     return _get_backend().restart(service_name, is_group, ignore_failure)
 
 
-def remove(service_name, service_file=True):
+def remove(service_name):
     logger.debug('Removing service {0}...'.format(service_name))
-    return _get_backend().remove(service_name, service_file)
+    return _get_backend().remove(service_name)
 
 
 def reload(service_name, ignore_failure=False):

@@ -125,6 +125,6 @@ class MgmtWorker(BaseComponent):
         self.start()
 
     def remove(self):
-        service.remove('cloudify-mgmtworker', service_file=False)
+        service.remove('cloudify-mgmtworker')
         common.remove('/opt/mgmtworker')
         common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
