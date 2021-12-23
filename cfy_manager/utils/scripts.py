@@ -1,24 +1,9 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import json
-from os.path import join, dirname, isfile
+from os.path import join, dirname
 
 from ..utils import common
 from ..logger import get_logger
-from ..utils.files import write_to_tempfile
+from ..utils.files import write_to_tempfile, is_file
 from cfy_manager.exceptions import FileError
 from ..constants import REST_HOME_DIR, SCRIPTS, REST_SECURITY_CONFIG_PATH
 
@@ -46,7 +31,7 @@ def run_script_on_manager_venv(script_path,
     :param json_dump: if to json.dump the script_input.
     :return: process result of the run script.
     """
-    if not isfile(script_path):
+    if not is_file(script_path):
         raise FileError('Provided script path "{0}" isn\'t a file or doesn\'t '
                         'exist.'.format(script_path))
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
