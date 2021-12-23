@@ -214,7 +214,7 @@ class Stage(BaseComponent):
 
     def remove(self):
         logger.notice('Removing Stage...')
-        service.remove('cloudify-stage', service_file=False)
+        service.remove('cloudify-stage')
         logger.notice('Removing Stage data....')
         common.sudo(['rm', '-rf', '/opt/cloudify-stage'])
         logger.notice('Stage successfully removed')

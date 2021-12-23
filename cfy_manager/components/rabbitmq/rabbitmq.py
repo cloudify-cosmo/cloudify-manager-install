@@ -631,7 +631,7 @@ class RabbitMQ(BaseComponent):
     def remove(self):
         logger.info('Stopping the Erlang Port Mapper Daemon...')
         sudo(['epmd', '-kill'], ignore_failures=True)
-        service.remove('cloudify-rabbitmq', service_file=False)
+        service.remove('cloudify-rabbitmq')
         logger.info('Removing rabbit data...')
         sudo(['rm', '-rf', '/var/lib/rabbitmq'])
         sudo(['rm', '-rf', '/etc/rabbitmq'])

@@ -512,6 +512,9 @@ class Nginx(BaseComponent):
     def remove(self):
         remove_notice(NGINX)
         remove_logrotate(NGINX)
+        service.remove('nginx')
+        if self.service_type == 'supervisord':
+            service.remove('wait_on_restart')
         remove_files([
             join('/var/cache', NGINX),
             LOG_DIR,

@@ -13,6 +13,7 @@ class Rsyslog(BaseComponent):
     def configure(self):
         if syslog.using_systemd_rsyslog():
             logger.notice('Using system rsyslog')
+            return
         logger.notice('Configuring Rsyslog...')
         syslog_wrapper = '''#!/bin/bash
 set -e

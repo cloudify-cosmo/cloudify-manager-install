@@ -1658,6 +1658,7 @@ class PostgresqlServer(BaseComponent):
         self._configure_postgresql_server_service()
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
+            service.remove(POSTGRES_SERVICE_NAME)
         else:
             self._init_postgresql_server()
             enable_remote_connections = \
@@ -1689,7 +1690,11 @@ class PostgresqlServer(BaseComponent):
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
-        service.remove(POSTGRES_SERVICE_NAME)
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            service.remove('etcd')
+            service.remove('patroni')
+        else:
+            service.remove(POSTGRES_SERVICE_NAME)
         logger.info('Removing postgres bin links')
         files.remove_files(
             [os.path.join('/usr/sbin', pg_bin) for pg_bin in PG_BINS],
