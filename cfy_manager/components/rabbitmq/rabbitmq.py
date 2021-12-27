@@ -233,7 +233,7 @@ class RabbitMQ(BaseComponent):
             # the cluster
             required = [
                 join_node,
-                config[RABBITMQ]['nodename'],
+                self.add_missing_nodename_prefix(config[RABBITMQ]['nodename']),
             ]
             if not all(node in rabbit_nodes['nodes'] for node in required):
                 if attempt == max_attempts:
