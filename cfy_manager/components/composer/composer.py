@@ -1,22 +1,7 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import json
 
-from os.path import join
+from os.path import join, isfile
 
 from ..components_constants import (
     CLUSTER_JOIN,
@@ -125,8 +110,7 @@ class Composer(BaseComponent):
 
     def update_composer_config(self):
         config_path = os.path.join(CONF_DIR, 'prod.json')
-        # We need to use sudo to read this or we break on configure
-        composer_config = json.loads(files.sudo_read(config_path))
+        composer_config = json.loads(files.read(config_path))
 
         composer_config['managerConfig']['ip'] = \
             ipv6_url_compat(config[MANAGER][PRIVATE_IP])
@@ -149,7 +133,6 @@ class Composer(BaseComponent):
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
         # Using `write_to_file` because the path belongs to the composer
-        # user, so we need to move with sudo
         files.write_to_file(contents=content, destination=config_path)
         common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
         common.chmod('640', config_path)
@@ -164,7 +147,7 @@ class Composer(BaseComponent):
             excluded_file = os.path.join(
                 CONF_DIR, excluded_file,
             )
-            if files.is_file(excluded_file):
+            if isfile(excluded_file):
                 common.chown(COMPOSER_USER, COMPOSER_GROUP, excluded_file)
 
     def configure(self):
@@ -191,7 +174,7 @@ class Composer(BaseComponent):
         logger.notice('Removing Cloudify Composer...')
         service.remove('cloudify-composer')
         logger.notice('Removing Composer data....')
-        common.sudo(['rm', '-rf', '/opt/cloudify-composer'])
+        common.run(['rm', '-rf', '/opt/cloudify-composer'])
         logger.notice('Cloudify Composer successfully removed')
 
     def upgrade(self):

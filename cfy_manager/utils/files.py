@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import re
 import json
@@ -25,7 +10,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from .network import is_url, curl_download
-from .common import (move, sudo, copy, remove, chown,
+from .common import (move, run, copy, remove, chown,
                      ensure_destination_dir_exists)
 
 from .._compat import StringIO
@@ -44,20 +29,13 @@ def read(path):
         return f.read()
 
 
-def sudo_read(path):
-    # This will probably fail with binary files
-    # If we start needing it for such files, the best approach is likely:
-    # copy to tmpfile; chown; read; delete tmpfile
-    return sudo(['cat', path]).aggr_stdout
-
-
 def replace_in_file(this, with_this, in_here):
     """Replaces all occurrences of the regex in all matches
     from a file with a specific value.
     """
     logger.debug('Replacing {0} with {1} in {2}...'.format(
         this, with_this, in_here))
-    content = sudo_read(in_here)
+    content = read(in_here)
     new_content = re.sub(this, with_this, content)
     write_to_file(new_content, in_here)
 
@@ -71,9 +49,9 @@ def ln(source, target, params=None):
     command.append(source)
     command.append(target)
     if '*' in source or '*' in target:
-        sudo(command, globx=True)
+        run(command, globx=True)
     else:
-        sudo(command)
+        run(command)
 
 
 def get_local_source_path(source_url):
@@ -140,7 +118,7 @@ def remove_temp_files():
 def remove_files(file_list, ignore_failure=False):
     for path in file_list:
         logger.debug('Removing {0}...'.format(path))
-        sudo(['rm', '-rf', path], ignore_failures=ignore_failure)
+        run(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
 def deploy(src, dst, render=True, additional_render_context=None):
@@ -172,7 +150,7 @@ def remove_notice(service_name):
 def touch(file_path):
     """ Create an empty file in the provided path """
     ensure_destination_dir_exists(file_path)
-    sudo(['touch', file_path])
+    run(['touch', file_path])
 
 
 def read_yaml_file(yaml_path):
@@ -181,9 +159,9 @@ def read_yaml_file(yaml_path):
     :param yaml_path: the path to the yaml file.
     :return: YAML file parsed content.
     """
-    if is_file(yaml_path):
+    if os.path.isfile(yaml_path):
         try:
-            file_content = sudo_read(yaml_path)
+            file_content = read(yaml_path)
             yaml = YAML(typ='safe', pure=True)
             return yaml.load(file_content)
         except YAMLError as e:
@@ -211,17 +189,3 @@ def update_yaml_file(yaml_path,
     write_to_file(stream.getvalue(), yaml_path)
     if user_owner:
         chown(user_owner, group_owner, yaml_path)
-
-
-def is_file(file_path):
-    """Is the path a file?"""
-    return sudo(
-        ['test', '-f', file_path], ignore_failures=True
-    ).returncode == 0
-
-
-def is_dir(dir_path):
-    """Is the path a directory?"""
-    return sudo(
-        ['test', '-d', dir_path], ignore_failures=True
-    ).returncode == 0

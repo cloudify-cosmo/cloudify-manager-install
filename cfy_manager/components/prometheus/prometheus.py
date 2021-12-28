@@ -1,6 +1,6 @@
 import json
 from os import sep
-from os.path import join, exists
+from os.path import join, exists, isfile
 import re
 
 from ..base_component import BaseComponent
@@ -175,7 +175,7 @@ class Prometheus(BaseComponent):
                 exporter['name'],
                 ignore_failure=True
             )
-        if files.is_file(CLUSTER_DETAILS_PATH):
+        if isfile(CLUSTER_DETAILS_PATH):
             logger.notice(
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
@@ -357,7 +357,7 @@ def _update_prometheus_configuration(uninstalling=False):
     if not uninstalling:
         files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
                      PROMETHEUS_CONFIG_PATH)
-        common.sudo(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
+        common.run(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
 
@@ -654,6 +654,6 @@ def _update_manager_alerts_services():
 
     match_pattern = r'name=~"\([a-z\|\-_]*\)'
 
-    prometheus_conf = files.sudo_read(src_file_name)
+    prometheus_conf = files.read(src_file_name)
     new_services = re.findall(match_pattern, prometheus_conf)[0]
     files.replace_in_file(match_pattern, new_services, dest_file_name)

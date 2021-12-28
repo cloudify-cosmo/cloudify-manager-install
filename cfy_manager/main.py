@@ -72,7 +72,6 @@ from .utils.certificates import (
 )
 from .utils.common import (
     run,
-    sudo,
     copy,
     can_lookup_hostname,
     is_all_in_one_manager,
@@ -479,9 +478,8 @@ def db_shell(**kwargs):
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
     if service_is_in_config(MANAGER_SERVICE):
-        db_env, base_command = get_psql_env_and_base_command(
+        db_env, command = get_psql_env_and_base_command(
             logger, db_override=kwargs['dbname'])
-        command = ['/bin/sudo', '-E'] + base_command
         if kwargs['query']:
             command += ['-c', kwargs['query']]
         os.execve(command[0], command, db_env)
@@ -814,12 +812,12 @@ def _get_packages():
 def _configure_supervisord():
     # These services will be relevant for using supervisord on VM not on
     # containers
-    is_active = sudo('systemctl is-active supervisord',
-                     ignore_failures=True
-                     ).aggr_stdout.strip()
+    is_active = run('systemctl is-active supervisord',
+                    ignore_failures=True
+                    ).aggr_stdout.strip()
     if is_active not in ('active', 'activating'):
-        sudo('systemctl enable supervisord.service', ignore_failures=True)
-        sudo('systemctl restart supervisord', ignore_failures=True)
+        run('systemctl enable supervisord.service', ignore_failures=True)
+        run('systemctl restart supervisord', ignore_failures=True)
 
 
 def _create_components_installed_file(components_list):
@@ -1106,9 +1104,9 @@ def upgrade(verbose=False, config_file=None):
     _validate_components_prepared('restart', config_file)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
-    sudo(['yum', 'clean', 'all'],
-         stdout=sys.stdout, stderr=sys.stderr)
-    sudo([
+    run(['yum', 'clean', 'all'],
+        stdout=sys.stdout, stderr=sys.stderr)
+    run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
     for component in reversed(upgrade_components):

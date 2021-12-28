@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import json
 import base64
@@ -72,7 +57,7 @@ from ...utils.scripts import (run_script_on_manager_venv,
                               log_script_run_results)
 from ...utils.files import (
     deploy,
-    sudo_read,
+    read,
     write_to_file,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
@@ -178,7 +163,7 @@ class RestService(BaseComponent):
 
         security_config = config[FLASK_SECURITY]
 
-        current_config = json.loads(sudo_read(REST_SECURITY_CONFIG_PATH))
+        current_config = json.loads(read(REST_SECURITY_CONFIG_PATH))
 
         # We want the existing config values to take precedence, but for any
         # new values to also be in the final config dict

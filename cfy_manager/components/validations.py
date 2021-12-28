@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import sys
 import platform
@@ -50,9 +35,8 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, sudo, ProcessExecutionError
+from ..utils.common import run, ProcessExecutionError
 from ..utils.network import is_ipv6
-from cfy_manager.utils.files import is_file
 
 logger = get_logger(VALIDATIONS)
 
@@ -288,7 +272,7 @@ def validate_dependencies(components):
 
 def _check_ssl_file(filename, kind='Key', password=None):
     """Does the cert/key file exist and is it valid?"""
-    if not is_file(filename):
+    if not os.path.isfile(filename):
         raise ValidationError(
             '{0} file {1} does not exist'
             .format(kind, filename))
@@ -303,7 +287,7 @@ def _check_ssl_file(filename, kind='Key', password=None):
         check_command = ['openssl', 'x509', '-in', filename, '-noout']
     else:
         raise ValueError('Unknown kind: {0}'.format(kind))
-    proc = sudo(check_command, ignore_failures=True)
+    proc = run(check_command, ignore_failures=True)
     if proc.returncode != 0:
         password_err = ''
         if password:
@@ -322,7 +306,7 @@ def _check_signed_by(ca_filename, cert_filename):
         cert_filename
     ]
     try:
-        sudo(ca_check_command)
+        run(ca_check_command)
     except ProcessExecutionError:
         raise ValidationError(
             'Provided certificate {cert} was not signed by provided '
@@ -345,8 +329,8 @@ def _check_cert_key_match(cert_filename, key_filename, password=None):
         ]
     cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
                             '-in', cert_filename]
-    key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
-    cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
+    key_modulus = run(key_modulus_command).aggr_stdout.strip()
+    cert_modulus = run(cert_modulus_command).aggr_stdout.strip()
     if cert_modulus != key_modulus:
         raise ValidationError(
             'Key {key_path} does not match the cert {cert_path}'.format(

@@ -72,21 +72,11 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     return proc
 
 
-def sudo(command, *args, **kwargs):
-    if isinstance(command, str):
-        command = shlex.split(command)
-    if 'env' in kwargs:
-        command = ['sudo', '-E'] + command
-    else:
-        command.insert(0, 'sudo')
-    return run(command=command, *args, **kwargs)
-
-
 def cfy(*command, **kwargs):
     # all `cfy` run calls have LC_ALL explicitly provided because
     # click on py3.6 absolutely requires some locale to be set
     env = {'LC_ALL': 'en_US.UTF-8'}
-    base = ['sudo', 'cfy'] if kwargs.pop('sudo', False) else ['cfy']
+    base = ['cfy']
     try:
         return run(base + list(command), env=env, **kwargs)
     except ProcessExecutionError as e:
@@ -95,15 +85,12 @@ def cfy(*command, **kwargs):
         raise
 
 
-def mkdir(folder, use_sudo=True):
+def mkdir(folder):
     if os.path.isdir(folder):
         return
     logger.debug('Creating Directory: {0}'.format(folder))
     cmd = ['mkdir', '-p', folder]
-    if use_sudo:
-        sudo(cmd)
-    else:
-        run(cmd)
+    run(cmd)
 
 
 def chmod(mode, path, recursive=False):
@@ -112,18 +99,18 @@ def chmod(mode, path, recursive=False):
     if recursive:
         command.append('-R')
     command += [mode, path]
-    sudo(command)
+    run(command)
 
 
 def chown(user, group, path):
     logger.debug('chowning {0} by {1}:{2}...'.format(
         path, user, group))
-    sudo(['chown', '-R', '{0}:{1}'.format(user, group), path])
+    run(['chown', '-R', '{0}:{1}'.format(user, group), path])
 
 
 def remove(path, ignore_failure=False):
     logger.debug('Removing {0}...'.format(path))
-    sudo(['rm', '-rf', path], ignore_failures=ignore_failure)
+    run(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
 def untar(source,
@@ -138,7 +125,7 @@ def untar(source,
     tar_command = ['tar', '-xvf', source, '-C', destination, '--strip=1']
     if skip_old_files:
         tar_command.append('--skip-old-files')
-    sudo(tar_command)
+    run(tar_command)
 
     return destination
 
@@ -149,7 +136,7 @@ def ensure_destination_dir_exists(destination):
         logger.debug(
             'Path does not exist: {0}. Creating it...'.format(
                 destination_dir))
-        sudo(['mkdir', '-p', destination_dir])
+        run(['mkdir', '-p', destination_dir])
 
 
 def copy(source, destination, backup=False):
@@ -159,16 +146,16 @@ def copy(source, destination, backup=False):
                             os.path.basename(destination)
             new_dest = os.path.join(os.path.dirname(destination),
                                     modified_name)
-            sudo(['cp', '-rp', destination, new_dest])
+            run(['cp', '-rp', destination, new_dest])
     else:
         ensure_destination_dir_exists(destination)
-    sudo(['cp', '-rp', source, destination])
+    run(['cp', '-rp', source, destination])
 
 
 def move(source, destination):
     ensure_destination_dir_exists(destination)
-    sudo(['cp', source, destination])
-    sudo(['rm', source])
+    run(['cp', source, destination])
+    run(['rm', source])
 
 
 def can_lookup_hostname(hostname):

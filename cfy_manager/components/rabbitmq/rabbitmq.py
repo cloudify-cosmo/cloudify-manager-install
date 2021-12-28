@@ -34,7 +34,7 @@ from ...exceptions import (
 )
 from ...utils import service, syslog
 from ...utils.network import wait_for_port, is_port_open, lo_has_ipv6_addr
-from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
+from ...utils.common import run, can_lookup_hostname, remove as remove_file
 from ...utils.files import write_to_file, deploy
 
 
@@ -102,7 +102,7 @@ class RabbitMQ(BaseComponent):
         base_command = [RABBITMQ_CTL]
         if config[RABBITMQ]['use_long_name']:
             base_command.append('--longnames')
-        return sudo(base_command + command, **kwargs)
+        return run(base_command + command, **kwargs)
 
     def user_exists(self, username):
         output = self._rabbitmqctl(['list_users'], retries=5).aggr_stdout
@@ -176,7 +176,7 @@ class RabbitMQ(BaseComponent):
                 )
 
         write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
-        sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
+        run(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
 
     def _possibly_join_cluster(self):
         join_node = config[RABBITMQ]['join_cluster']
@@ -398,7 +398,7 @@ class RabbitMQ(BaseComponent):
             hosts = '\n'.join(hosts) + '\n'
 
             # Back up original hosts file
-            sudo([
+            run([
                 'cp', '/etc/hosts', '/etc/hosts.bak-{timestamp:.0f}'.format(
                     timestamp=time.time()
                 )
@@ -630,11 +630,11 @@ class RabbitMQ(BaseComponent):
 
     def remove(self):
         logger.info('Stopping the Erlang Port Mapper Daemon...')
-        sudo(['epmd', '-kill'], ignore_failures=True)
+        run(['epmd', '-kill'], ignore_failures=True)
         service.remove('cloudify-rabbitmq')
         logger.info('Removing rabbit data...')
-        sudo(['rm', '-rf', '/var/lib/rabbitmq'])
-        sudo(['rm', '-rf', '/etc/rabbitmq'])
+        run(['rm', '-rf', '/var/lib/rabbitmq'])
+        run(['rm', '-rf', '/etc/rabbitmq'])
 
     def _deploy_rebalancer_script_and_create_cronjob(self):
         logger.info('Deploying queue rebalancing script...')
@@ -657,10 +657,9 @@ class RabbitMQ(BaseComponent):
             "Rebalance rabbit queues")
 
         # Adding a new job to crontab
-        # Adding sudo manually, as common.sudo doesn't support parenthesis
-        cmd = '(sudo crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'sudo crontab -u {0} -'.format(constants.CLOUDIFY_USER,
-                                             job_command)
+        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
+              'crontab -u {0} -'.format(constants.CLOUDIFY_USER,
+                                        job_command)
         common.run([cmd], shell=True)
         logger.info('Queue rebalancing cron job successfully created')
 

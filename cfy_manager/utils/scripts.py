@@ -1,9 +1,9 @@
 import json
-from os.path import join, dirname
+from os.path import join, dirname, isfile
 
 from ..utils import common
 from ..logger import get_logger
-from ..utils.files import write_to_tempfile, is_file
+from ..utils.files import write_to_tempfile
 from cfy_manager.exceptions import FileError
 from ..constants import REST_HOME_DIR, SCRIPTS, REST_SECURITY_CONFIG_PATH
 
@@ -31,7 +31,7 @@ def run_script_on_manager_venv(script_path,
     :param json_dump: if to json.dump the script_input.
     :return: process result of the run script.
     """
-    if not is_file(script_path):
+    if not isfile(script_path):
         raise FileError('Provided script path "{0}" isn\'t a file or doesn\'t '
                         'exist.'.format(script_path))
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')
@@ -42,7 +42,7 @@ def run_script_on_manager_venv(script_path,
         args_json_path = write_to_tempfile(script_input, json_dump)
         cmd.extend([script_input_arg, args_json_path])
 
-    return common.sudo(cmd, env=envvars)
+    return common.run(cmd, env=envvars)
 
 
 def log_script_run_results(script_result):
