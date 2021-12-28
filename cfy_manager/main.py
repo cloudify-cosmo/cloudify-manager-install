@@ -94,6 +94,14 @@ from cfy_manager.utils.install_state import (
 )
 from ._compat import xmlrpclib
 
+SKIP_ROOT_CHECK = '--skip-root-check'
+if SKIP_ROOT_CHECK in sys.argv:
+    sys.argv.remove(SKIP_ROOT_CHECK)
+else:
+    if os.geteuid() != 0:
+        sys.exit(subprocess.call(
+            ['sudo'] + sys.argv + [SKIP_ROOT_CHECK]))
+
 logger = get_logger('Main')
 
 STARTER_SERVICE = 'cloudify-starter'
