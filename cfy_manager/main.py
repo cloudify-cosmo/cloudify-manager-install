@@ -1264,7 +1264,8 @@ def image_starter(verbose=False, config_file=None):
         config_file=config_file,
     )
     config.load_config(config_file)
-    command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
+    executable = os.path.join(os.path.dirname(sys.executable), 'cfy_manager')
+    command = [executable, 'configure']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()
@@ -1275,7 +1276,7 @@ def image_starter(verbose=False, config_file=None):
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
             and not _all_services_configured():
         command += ['--admin-password', 'admin']
-    os.execv(sys.executable, command)
+    os.execv(executable, command)
 
 
 @argh.decorators.named('run-init')
