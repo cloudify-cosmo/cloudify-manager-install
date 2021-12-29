@@ -1,4 +1,5 @@
 import os
+import shutil
 import re
 import json
 from glob import glob
@@ -10,7 +11,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from .network import is_url, curl_download
-from .common import (move, run, copy, remove, chown,
+from .common import (run, copy, remove, chown,
                      ensure_destination_dir_exists)
 
 from .._compat import StringIO
@@ -37,7 +38,7 @@ def replace_in_file(this, with_this, in_here):
         this, with_this, in_here))
     content = read(in_here)
     new_content = re.sub(this, with_this, content)
-    write_to_file(new_content, in_here)
+    write(new_content, in_here)
 
 
 def ln(source, target, params=None):
@@ -90,22 +91,23 @@ def get_glob_path(path):
 def write_to_tempfile(contents, json_dump=False, cleanup=True):
     fd, file_path = mkstemp()
     os.close(fd)
-    if json_dump:
-        contents = json.dumps(contents)
-
-    with open(file_path, 'w') as f:
-        f.write(contents)
-
+    write(contents, file_path)
     if cleanup:
         config.add_temp_path_to_clean(file_path)
     return file_path
 
 
-def write_to_file(contents, destination, json_dump=False):
-    """ Used to write files to locations that require sudo to access """
+def write(contents, destination, json_dump=False,
+          owner=None, group=None, mode=None):
+    if json_dump:
+        contents = json.dumps(contents)
+    with open(destination, 'w') as fh:
+        fh.write(contents)
 
-    temp_path = write_to_tempfile(contents, json_dump=json_dump, cleanup=False)
-    move(temp_path, destination)
+    if owner or group:
+        shutil.chown(destination, owner, group)
+    if mode:
+        os.chmod(destination, mode)
 
 
 def remove_temp_files():
@@ -129,7 +131,7 @@ def deploy(src, dst, render=True, additional_render_context=None):
         render_context = additional_render_context.copy()
         render_context.update(config)
         content = template.render(**render_context)
-        write_to_file(content, dst)
+        write(content, dst)
     else:
         copy(src, dst)
 
@@ -186,6 +188,6 @@ def update_yaml_file(yaml_path,
     yaml = YAML(typ='safe')
     yaml.default_flow_style = False
     yaml.dump(yaml_content, stream)
-    write_to_file(stream.getvalue(), yaml_path)
+    write(stream.getvalue(), yaml_path)
     if user_owner:
         chown(user_owner, group_owner, yaml_path)

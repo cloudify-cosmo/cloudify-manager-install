@@ -35,7 +35,7 @@ from ...exceptions import (
 from ...utils import service, syslog
 from ...utils.network import wait_for_port, is_port_open, lo_has_ipv6_addr
 from ...utils.common import run, can_lookup_hostname, remove as remove_file
-from ...utils.files import write_to_file, deploy
+from ...utils.files import write, deploy
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
@@ -175,8 +175,8 @@ class RabbitMQ(BaseComponent):
                     for _ in range(64)
                 )
 
-        write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
-        run(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
+        write(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie',
+              owner='rabbitmq', group='rabbitmq', mode=0o600)
 
     def _possibly_join_cluster(self):
         join_node = config[RABBITMQ]['join_cluster']
@@ -404,7 +404,7 @@ class RabbitMQ(BaseComponent):
                 )
             ])
 
-            write_to_file(hosts, '/etc/hosts')
+            write(hosts, '/etc/hosts')
 
             logger.info('Updated /etc/hosts')
 
@@ -575,34 +575,36 @@ class RabbitMQ(BaseComponent):
         return base64.b64encode(salt + hashed).decode('utf-8')
 
     def _write_definitions_file(self):
-        write_to_file({
-            'vhosts': [{'name': '/'}],
-            'users': [{
-                'hashing_algorithm': 'rabbit_password_hashing_sha256',
-                'name': config[RABBITMQ]['username'],
-                'password_hash': self._rabbitmq_hash(
-                    config[RABBITMQ]['password']),
-                'tags': 'administrator'
-            }],
-            'permissions': [{
-                'user': config[RABBITMQ]['username'],
-                'vhost': '/',
-                'configure': '.*',
-                'write': '.*',
-                'read': '.*'
-            }],
-            'policies': [{
-                'name': policy['name'],
-                'vhost': policy.get('vhost', '/'),
-                'pattern': policy['expression'],
-                'priority': policy.get('priority', 1),
-                'apply-to': (policy.get('apply-to') or
-                             policy.get('apply_to') or 'queues'),
-                'definition': policy['policy']
-            } for policy in config[RABBITMQ]['policies']]
-        }, '/etc/cloudify/rabbitmq/definitions.json', json_dump=True)
-        common.chown(
-            'rabbitmq', 'rabbitmq', '/etc/cloudify/rabbitmq/definitions.json')
+        write(
+            {
+                'vhosts': [{'name': '/'}],
+                'users': [{
+                    'hashing_algorithm': 'rabbit_password_hashing_sha256',
+                    'name': config[RABBITMQ]['username'],
+                    'password_hash': self._rabbitmq_hash(
+                        config[RABBITMQ]['password']),
+                    'tags': 'administrator'
+                }],
+                'permissions': [{
+                    'user': config[RABBITMQ]['username'],
+                    'vhost': '/',
+                    'configure': '.*',
+                    'write': '.*',
+                    'read': '.*'
+                }],
+                'policies': [{
+                    'name': policy['name'],
+                    'vhost': policy.get('vhost', '/'),
+                    'pattern': policy['expression'],
+                    'priority': policy.get('priority', 1),
+                    'apply-to': (policy.get('apply-to') or
+                                 policy.get('apply_to') or 'queues'),
+                    'definition': policy['policy']
+                } for policy in config[RABBITMQ]['policies']]
+            },
+            '/etc/cloudify/rabbitmq/definitions.json', json_dump=True,
+            owner='rabbitmq', group='rabbitmq', mode=0o600,
+        )
 
     def configure(self):
         logger.notice('Configuring RabbitMQ...')

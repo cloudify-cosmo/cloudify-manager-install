@@ -1,6 +1,6 @@
 from cfy_manager.components.base_component import BaseComponent
 from cfy_manager.logger import get_logger
-from cfy_manager.utils import common, files, service, syslog
+from cfy_manager.utils import files, service, syslog
 
 SYSLOG_WRAPPER_PATH = '/opt/cloudify/syslog_wrapper_script.sh'
 
@@ -21,8 +21,8 @@ set -e
 rm -f /var/run/syslogd.pid
 
 exec /usr/sbin/rsyslogd -n'''
-        files.write_to_file(syslog_wrapper, SYSLOG_WRAPPER_PATH)
-        common.chmod('755', SYSLOG_WRAPPER_PATH)
+        files.write(syslog_wrapper, SYSLOG_WRAPPER_PATH,
+                    owner='root', group='root', mode=0o750)
         service.configure(
             'rsyslog',
             config_path='config/supervisord',

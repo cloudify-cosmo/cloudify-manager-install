@@ -17,7 +17,7 @@ from ..constants import (
     SSL_CERTS_TARGET_DIR,
 )
 from ..exceptions import ProcessExecutionError
-from .files import write_to_file, write_to_tempfile
+from .files import write, write_to_tempfile
 from ..components.validations import check_certificates, validate_certificates
 
 from ..logger import get_logger, setup_console_logger
@@ -139,8 +139,8 @@ def store_cert_metadata(hostname=None,
         networks.extend(new_networks)
         # Add, deduplicated
         metadata['network_names'] = list(set(networks))
-    write_to_file(metadata, filename, json_dump=True)
-    chown(owner, group, filename)
+    write(metadata, filename, json_dump=True,
+          owner=owner, group=group, mode=0o640)
 
 
 def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):

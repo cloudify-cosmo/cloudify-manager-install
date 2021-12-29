@@ -143,10 +143,8 @@ class Stage(BaseComponent):
 
         content = json.dumps(stage_config, indent=4, sort_keys=True)
 
-        # Using `write_to_file` because the path belongs to the stage user
-        files.write_to_file(contents=content, destination=config_path)
-        common.chown(STAGE_USER, STAGE_GROUP, config_path)
-        common.chmod('640', config_path)
+        files.write(contents=content, destination=config_path,
+                    owner=STAGE_USER, group=STAGE_GROUP, mode=0o640)
 
     def _set_internal_manager_ip(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
@@ -154,10 +152,8 @@ class Stage(BaseComponent):
 
         stage_config['ip'] = ipv6_url_compat(config[MANAGER][PRIVATE_IP])
         content = json.dumps(stage_config, indent=4, sort_keys=True)
-        # Using `write_to_file` because the path belongs to the stage user
-        files.write_to_file(contents=content, destination=config_path)
-        common.chown(STAGE_USER, STAGE_GROUP, config_path)
-        common.chmod('640', config_path)
+        files.write(contents=content, destination=config_path,
+                    owner=STAGE_USER, group=STAGE_GROUP, mode=0o640)
 
     def verify_started(self):
         wait_for_port(8088)

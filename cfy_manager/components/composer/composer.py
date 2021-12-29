@@ -132,10 +132,8 @@ class Composer(BaseComponent):
             self._handle_cert_and_key()
 
         content = json.dumps(composer_config, indent=4, sort_keys=True)
-        # Using `write_to_file` because the path belongs to the composer
-        files.write_to_file(contents=content, destination=config_path)
-        common.chown(COMPOSER_USER, COMPOSER_GROUP, config_path)
-        common.chmod('640', config_path)
+        files.write(contents=content, destination=config_path,
+                    owner=COMPOSER_USER, group=COMPOSER_GROUP, mode=0o640)
 
     def verify_started(self):
         wait_for_port(3000)

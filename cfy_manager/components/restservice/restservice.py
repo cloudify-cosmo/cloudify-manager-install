@@ -58,7 +58,7 @@ from ...utils.scripts import (run_script_on_manager_venv,
 from ...utils.files import (
     deploy,
     read,
-    write_to_file,
+    write,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
@@ -123,9 +123,9 @@ class RestService(BaseComponent):
             'ca_cert_path': const['ca_cert_path'],
             'manager_hostname': config[MANAGER][HOSTNAME],
         }
-        files.write_to_file(rest_conf, REST_CONFIG_PATH, json_dump=True)
-        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                     REST_CONFIG_PATH)
+        files.write(rest_conf, REST_CONFIG_PATH, json_dump=True,
+                    owner=constants.CLOUDIFY_USER,
+                    group=constants.CLOUDIFY_GROUP)
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
@@ -175,14 +175,9 @@ class RestService(BaseComponent):
         logger.info('Deploying REST Security configuration file...')
 
         flask_security = self._get_flask_security()
-        write_to_file(flask_security, REST_SECURITY_CONFIG_PATH,
-                      json_dump=True)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            REST_SECURITY_CONFIG_PATH
-        )
-        common.chmod('660', REST_SECURITY_CONFIG_PATH)
+        write(flask_security, REST_SECURITY_CONFIG_PATH, json_dump=True,
+              owner=constants.CLOUDIFY_USER, group=constants.CLOUDIFY_GROUP,
+              mode=0o660)
 
     def _calculate_worker_count(self):
         for component_name in ['restservice', 'api']:
