@@ -1,7 +1,8 @@
 import errno
 import logging
+import os
+import pwd
 from contextlib import contextmanager
-from getpass import getuser
 from os.path import join, exists, expanduser
 
 from ..components_constants import SECURITY, SSL_INPUTS
@@ -30,13 +31,18 @@ def _hide_logs():
         set_file_handlers_level(current_level)
 
 
+def getuser():
+    # Given that this will be under sudo, getpass.getuser will be unhelpful
+    return pwd.getpwuid(os.getuid()).pw_name
+
+
 class Cli(BaseComponent):
-    def _set_colors(self):
+    def _set_colors(self, is_root):
         """
         Makes sure colors are enabled by default in cloudify logs via CLI
         """
 
-        home_dir = expanduser('~')
+        home_dir = expanduser('~root') if is_root else expanduser('~')
         sed_cmd = 's/colors: false/colors: true/g'
         config_path = join(home_dir, '.cloudify', 'config.yaml')
         cmd = "/usr/bin/sed -i -e '{0}' {1}".format(sed_cmd, config_path)
@@ -69,25 +75,26 @@ class Cli(BaseComponent):
         if config['nginx']['port']:
             set_cmd += ['--rest-port', '{0}'.format(config['nginx']['port'])]
 
-        logger.info('Setting CLI for the current user (%s)...', current_user)
-
+        logger.info('Setting CLI for the root user...')
         with _hide_logs():
             common.cfy(*use_cmd)
             common.cfy(*set_cmd)
-        self._set_colors()
+        self._set_colors(is_root=True)
 
         if current_user != 'root':
-            logger.info('Setting CLI for the root user...')
+            logger.info('Setting CLI for the current user (%s)...',
+                        current_user)
+
             with _hide_logs():
-                common.cfy(*use_cmd)
-                common.cfy(*set_cmd)
-            self._set_colors()
+                common.cfy(*use_cmd, as_user=current_user)
+                common.cfy(*set_cmd, as_user=current_user)
+            self._set_colors(is_root=False)
 
         logger.notice('Cloudify CLI successfully configured')
 
-    def _remove_profile(self, profile, silent=False):
+    def _remove_profile(self, profile, silent=False, as_user=None):
         proc = common.cfy('profiles', 'delete', profile,
-                          ignore_failures=True)
+                          ignore_failures=True, as_user=as_user)
         if silent:
             return
         if proc.returncode == 0:
@@ -99,13 +106,14 @@ class Cli(BaseComponent):
     def remove(self, silent=False):
         profile_name = config[MANAGER]['cli_local_profile_host_name']
         try:
-            logger.notice('Removing CLI profile...')
+            logger.notice('Removing CLI profile for root user...')
             self._remove_profile(profile_name)
 
             current_user = getuser()
             if current_user != 'root':
-                logger.notice('Removing CLI profile for root user...')
-                self._remove_profile(profile_name)
+                logger.notice('Removing CLI profile for %s user...',
+                              current_user)
+                self._remove_profile(profile_name, as_user=current_user)
         except OSError as ex:
             if ex.errno == errno.ENOENT:
                 logger.warning('Could not find the `cfy` executable; it has '

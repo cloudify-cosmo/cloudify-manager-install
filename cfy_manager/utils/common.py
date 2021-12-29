@@ -73,10 +73,16 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
 
 
 def cfy(*command, **kwargs):
+    as_user = kwargs.pop('as_user', None)
     # all `cfy` run calls have LC_ALL explicitly provided because
     # click on py3.6 absolutely requires some locale to be set
     env = {'LC_ALL': 'en_US.UTF-8'}
-    base = ['cfy']
+
+    base = []
+    if as_user:
+        base = ['sudo', '-E', '-u', as_user]
+
+    base.append('cfy')
     try:
         return run(base + list(command), env=env, **kwargs)
     except ProcessExecutionError as e:
