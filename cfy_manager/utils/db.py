@@ -56,7 +56,7 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
         # or if we're installing a single database node,
         # "peer" authentication is used
         if pg_config['server_username'] == 'postgres':
-            base_command.extend(['sudo', '-E', '-u', 'postgres'])
+            base_command.extend(['/usr/bin/sudo', '-E', '-u', 'postgres'])
             peer_authentication = True
 
     base_command.append('/usr/bin/psql')

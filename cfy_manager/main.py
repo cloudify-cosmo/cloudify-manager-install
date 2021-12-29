@@ -1413,4 +1413,4 @@ def _ensure_root():
     else:
         if os.geteuid() != 0:
             sys.exit(subprocess.call(
-                ['sudo'] + sys.argv + [skip_root_check]))
+                ['/usr/bin/sudo'] + sys.argv + [skip_root_check]))

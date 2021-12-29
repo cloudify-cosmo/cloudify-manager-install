@@ -55,7 +55,7 @@ class Composer(BaseComponent):
         npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
-                'sudo', '-u', COMPOSER_USER, 'bash', '-c',
+                '/usr/bin/sudo', '-u', COMPOSER_USER, 'bash', '-c',
                 'cd {path}; {npm} run db-migrate'.format(
                     path=backend_dir,
                     npm=npm_path,
