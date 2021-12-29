@@ -57,7 +57,6 @@ from ...utils.scripts import (run_script_on_manager_venv,
 from ...utils.files import (
     chown,
     deploy,
-    move,
     read,
     remove,
     write,
@@ -469,7 +468,7 @@ class RestService(BaseComponent):
             cfg = json.load(fp)
         if (rabbitmq_ca_cert_filename and
                 not os.path.isfile(RABBITMQ_CA_CERT_PATH)):
-            move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
+            common.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
             cfg['rabbitmq']['ca_path'] = RABBITMQ_CA_CERT_PATH
         with open(CLUSTER_DETAILS_PATH, 'w') as fp:
             json.dump(cfg, fp)
