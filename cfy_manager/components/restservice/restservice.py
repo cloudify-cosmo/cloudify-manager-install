@@ -46,8 +46,7 @@ from ...logger import get_logger
 from ...utils import (
     certificates,
     common,
-    files,
-    service
+    service,
 )
 from cfy_manager.utils.db import get_postgres_host
 from ...exceptions import BootstrapError
@@ -56,8 +55,11 @@ from ...utils.install import is_premium_installed
 from ...utils.scripts import (run_script_on_manager_venv,
                               log_script_run_results)
 from ...utils.files import (
+    chown,
     deploy,
+    move,
     read,
+    remove,
     write,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
@@ -123,9 +125,9 @@ class RestService(BaseComponent):
             'ca_cert_path': const['ca_cert_path'],
             'manager_hostname': config[MANAGER][HOSTNAME],
         }
-        files.write(rest_conf, REST_CONFIG_PATH, json_dump=True,
-                    owner=constants.CLOUDIFY_USER,
-                    group=constants.CLOUDIFY_GROUP)
+        write(rest_conf, REST_CONFIG_PATH, json_dump=True,
+              owner=constants.CLOUDIFY_USER,
+              group=constants.CLOUDIFY_GROUP)
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
@@ -467,13 +469,13 @@ class RestService(BaseComponent):
             cfg = json.load(fp)
         if (rabbitmq_ca_cert_filename and
                 not os.path.isfile(RABBITMQ_CA_CERT_PATH)):
-            files.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
+            move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
             cfg['rabbitmq']['ca_path'] = RABBITMQ_CA_CERT_PATH
         with open(CLUSTER_DETAILS_PATH, 'w') as fp:
             json.dump(cfg, fp)
-        files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                    CLUSTER_DETAILS_PATH)
-        files.remove(cluster_cfg_filename, ignore_failure=True)
+        chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+              CLUSTER_DETAILS_PATH)
+        remove(cluster_cfg_filename, ignore_failure=True)
 
     def _join_cluster_setup(self):
         if not common.is_only_manager_service_in_config():
