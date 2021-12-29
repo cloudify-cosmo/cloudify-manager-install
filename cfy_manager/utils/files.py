@@ -55,7 +55,7 @@ def ln(source, target, params=None):
 def write_to_tempfile(contents, json_dump=False, cleanup=True):
     fd, file_path = mkstemp()
     os.close(fd)
-    write(contents, file_path)
+    write(contents, file_path, json_dump=json_dump)
     if cleanup:
         config.add_temp_path_to_clean(file_path)
     return file_path
