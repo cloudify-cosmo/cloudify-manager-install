@@ -1355,6 +1355,7 @@ def version():
 
 
 def main():
+    _ensure_root()
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
     """Main entry point"""
@@ -1413,8 +1414,3 @@ def _ensure_root():
         if os.geteuid() != 0:
             sys.exit(subprocess.call(
                 ['sudo'] + sys.argv + [skip_root_check]))
-
-
-if __name__ == '__main__':
-    _ensure_root()
-    main()
