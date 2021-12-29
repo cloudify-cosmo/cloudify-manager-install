@@ -4,6 +4,7 @@ import os
 import glob
 import time
 import shlex
+import shutil
 import socket
 import logging
 import tempfile
@@ -154,8 +155,7 @@ def copy(source, destination, backup=False):
 
 def move(source, destination):
     ensure_destination_dir_exists(destination)
-    run(['cp', source, destination])
-    run(['rm', source])
+    shutil.move(source, destination)
 
 
 def can_lookup_hostname(hostname):
