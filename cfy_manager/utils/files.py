@@ -65,6 +65,7 @@ def write(contents, destination, json_dump=False,
           owner=None, group=None, mode=None):
     if json_dump:
         contents = json.dumps(contents)
+    ensure_destination_dir_exists(destination)
     with open(destination, 'w') as fh:
         fh.write(contents)
 
