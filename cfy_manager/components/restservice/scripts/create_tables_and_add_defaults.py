@@ -1,19 +1,4 @@
 #!/usr/bin/env python
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from __future__ import print_function
 
 import os
@@ -137,8 +122,9 @@ def _insert_manager(config):
     if stored_cert and not ca_cert:
         with open(CA_CERT_PATH, 'w') as f:
             f.write(stored_cert.value)
-        subprocess.check_call(['sudo', 'chown', 'cfyuser.', CA_CERT_PATH])
-        subprocess.check_call(['sudo', 'chmod', '444', CA_CERT_PATH])
+        subprocess.check_call(['/usr/bin/sudo', 'chown', 'cfyuser.',
+                               CA_CERT_PATH])
+        subprocess.check_call(['/usr/bin/sudo', 'chmod', '444', CA_CERT_PATH])
         ca = stored_cert.id
     elif ca_cert and not stored_cert:
         ca = _insert_cert(ca_cert, '{0}-ca'.format(config['hostname']))

@@ -1,21 +1,6 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import json
-from os.path import join
+from os.path import join, isfile
 
 from ..components_constants import (
     CLUSTER_JOIN,
@@ -79,7 +64,7 @@ class Stage(BaseComponent):
         npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
-                'sudo', '-u', STAGE_USER, 'bash', '-c',
+                '/usr/bin/sudo', '-u', STAGE_USER, 'bash', '-c',
                 'cd {path}; {npm} run db-migrate'.format(
                     path=backend_dir,
                     npm=npm_path,
@@ -138,8 +123,7 @@ class Stage(BaseComponent):
 
     def set_db_url(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'app.json')
-        # We need to use sudo to read this or we break on configure
-        stage_config = json.loads(files.sudo_read(config_path))
+        stage_config = json.loads(files.read(config_path))
 
         certs = {
             'cert': DB_CLIENT_CERT_PATH,
@@ -159,24 +143,17 @@ class Stage(BaseComponent):
 
         content = json.dumps(stage_config, indent=4, sort_keys=True)
 
-        # Using `write_to_file` because the path belongs to the stage user, so
-        # we need to move with sudo
-        files.write_to_file(contents=content, destination=config_path)
-        common.chown(STAGE_USER, STAGE_GROUP, config_path)
-        common.chmod('640', config_path)
+        files.write(contents=content, destination=config_path,
+                    owner=STAGE_USER, group=STAGE_GROUP, mode=0o640)
 
     def _set_internal_manager_ip(self):
         config_path = os.path.join(HOME_DIR, 'conf', 'manager.json')
-        # We need to use sudo to read this or we break on configure
-        stage_config = json.loads(files.sudo_read(config_path))
+        stage_config = json.loads(files.read(config_path))
 
         stage_config['ip'] = ipv6_url_compat(config[MANAGER][PRIVATE_IP])
         content = json.dumps(stage_config, indent=4, sort_keys=True)
-        # Using `write_to_file` because the path belongs to the stage user,
-        # so we need to move with sudo
-        files.write_to_file(contents=content, destination=config_path)
-        common.chown(STAGE_USER, STAGE_GROUP, config_path)
-        common.chmod('640', config_path)
+        files.write(contents=content, destination=config_path,
+                    owner=STAGE_USER, group=STAGE_GROUP, mode=0o640)
 
     def verify_started(self):
         wait_for_port(8088)
@@ -189,7 +166,7 @@ class Stage(BaseComponent):
             excluded_file = os.path.join(
                 config_path, excluded_file,
             )
-            if files.is_file(excluded_file):
+            if isfile(excluded_file):
                 common.chown(STAGE_USER, STAGE_GROUP, excluded_file)
 
     def configure(self):
@@ -216,7 +193,7 @@ class Stage(BaseComponent):
         logger.notice('Removing Stage...')
         service.remove('cloudify-stage')
         logger.notice('Removing Stage data....')
-        common.sudo(['rm', '-rf', '/opt/cloudify-stage'])
+        common.run(['rm', '-rf', '/opt/cloudify-stage'])
         logger.notice('Stage successfully removed')
 
     def upgrade(self):

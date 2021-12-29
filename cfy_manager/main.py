@@ -72,7 +72,6 @@ from .utils.certificates import (
 )
 from .utils.common import (
     run,
-    sudo,
     copy,
     can_lookup_hostname,
     is_all_in_one_manager,
@@ -479,9 +478,8 @@ def db_shell(**kwargs):
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
     if service_is_in_config(MANAGER_SERVICE):
-        db_env, base_command = get_psql_env_and_base_command(
+        db_env, command = get_psql_env_and_base_command(
             logger, db_override=kwargs['dbname'])
-        command = ['/bin/sudo', '-E'] + base_command
         if kwargs['query']:
             command += ['-c', kwargs['query']]
         os.execve(command[0], command, db_env)
@@ -814,12 +812,12 @@ def _get_packages():
 def _configure_supervisord():
     # These services will be relevant for using supervisord on VM not on
     # containers
-    is_active = sudo('systemctl is-active supervisord',
-                     ignore_failures=True
-                     ).aggr_stdout.strip()
+    is_active = run('systemctl is-active supervisord',
+                    ignore_failures=True
+                    ).aggr_stdout.strip()
     if is_active not in ('active', 'activating'):
-        sudo('systemctl enable supervisord.service', ignore_failures=True)
-        sudo('systemctl restart supervisord', ignore_failures=True)
+        run('systemctl enable supervisord.service', ignore_failures=True)
+        run('systemctl restart supervisord', ignore_failures=True)
 
 
 def _create_components_installed_file(components_list):
@@ -1106,9 +1104,9 @@ def upgrade(verbose=False, config_file=None):
     _validate_components_prepared('restart', config_file)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
-    sudo(['yum', 'clean', 'all'],
-         stdout=sys.stdout, stderr=sys.stderr)
-    sudo([
+    run(['yum', 'clean', 'all'],
+        stdout=sys.stdout, stderr=sys.stderr)
+    run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
     for component in reversed(upgrade_components):
@@ -1266,7 +1264,8 @@ def image_starter(verbose=False, config_file=None):
         config_file=config_file,
     )
     config.load_config(config_file)
-    command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
+    executable = os.path.join(os.path.dirname(sys.executable), 'cfy_manager')
+    command = [executable, 'configure']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()
@@ -1277,7 +1276,7 @@ def image_starter(verbose=False, config_file=None):
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
             and not _all_services_configured():
         command += ['--admin-password', 'admin']
-    os.execv(sys.executable, command)
+    os.execv(executable, command)
 
 
 @argh.decorators.named('run-init')
@@ -1357,6 +1356,7 @@ def version():
 
 
 def main():
+    _ensure_root()
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
     """Main entry point"""
@@ -1407,5 +1407,11 @@ def main():
     os.umask(current_umask)
 
 
-if __name__ == '__main__':
-    main()
+def _ensure_root():
+    skip_root_check = '--skip-root-check'
+    if skip_root_check in sys.argv:
+        sys.argv.remove(skip_root_check)
+    else:
+        if os.geteuid() != 0:
+            sys.exit(subprocess.call(
+                ['/usr/bin/sudo'] + sys.argv + [skip_root_check]))

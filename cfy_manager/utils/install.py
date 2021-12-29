@@ -3,7 +3,7 @@ import subprocess
 
 from ..logger import get_logger
 
-from .common import run, sudo
+from .common import run
 from ..exceptions import RPMNotFound, YumError, ProcessExecutionError
 
 logger = get_logger('yum')
@@ -23,7 +23,7 @@ def _yum_install(packages, disable_all_repos=True):
     ] + packages
     if not disable_all_repos:
         install_cmd.remove('--disablerepo=*')
-    sudo(install_cmd, stderr=subprocess.STDOUT)
+    run(install_cmd, stderr=subprocess.STDOUT)
 
 
 def yum_install(packages, disable_all_repos=True):
@@ -45,8 +45,8 @@ def yum_install(packages, disable_all_repos=True):
 def yum_remove(packages, ignore_failures=False):
     logger.info('yum removing {0}...'.format(', '.join(packages)))
     try:
-        sudo(['yum', 'remove', '-y',
-              '--setopt=clean_requirements_on_remove=1'] + packages)
+        run(['yum', 'remove', '-y',
+             '--setopt=clean_requirements_on_remove=1'] + packages)
     except ProcessExecutionError as e:
         msg = 'Packages `{0}` may not been removed successfully'.format(
             ', '.join(packages))
@@ -69,7 +69,7 @@ def pip_install(source, venv='', constraints_file=None):
         log_message += ' using constraints file {0}'.format(constraints_file)
 
     logger.info(log_message)
-    sudo(cmdline)
+    run(cmdline)
 
 
 def is_premium_installed():

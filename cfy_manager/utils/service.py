@@ -1,17 +1,3 @@
-#########
-# Copyright (c) 2020 Cloudify Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
 import socket
 from os.path import exists, join
 from functools import partial
@@ -20,9 +6,9 @@ from retrying import retry
 
 from .files import deploy
 from .common import (
-    sudo,
+    chown,
     remove as remove_file,
-    chown
+    run,
 )
 
 from ..config import config
@@ -69,8 +55,8 @@ class SystemD(object):
         # If options are passed to the systemctl action
         if options:
             systemctl_cmd.extend(options)
-        return sudo(systemctl_cmd, retries=retries,
-                    ignore_failures=ignore_failure)
+        return run(systemctl_cmd, retries=retries,
+                   ignore_failures=ignore_failure)
 
     def configure(self,
                   service_name,
@@ -205,7 +191,7 @@ class Supervisord(object):
             cmd += [service]
         if options:
             cmd.extend(options)
-        return sudo(cmd, ignore_failures=ignore_failure)
+        return run(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
         self.supervisorctl(

@@ -139,7 +139,7 @@ class PostgresqlServer(BaseComponent):
         cmd = '\"{0} -D {1} initdb\"'.format(pg_ctl, PGSQL_DATA_DIR)
         initdb = 'su - postgres -c {0}'.format(cmd)
         try:
-            common.sudo(initdb)
+            common.run(initdb)
         except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
 
@@ -303,19 +303,19 @@ class PostgresqlServer(BaseComponent):
         logger.info('Updating PostgreSQL Server configuration...')
         logger.debug('Modifying {0}'.format(PG_HBA_CONF))
         common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
-        lines = files.sudo_read(PG_HBA_CONF).splitlines(True)
+        lines = files.read(PG_HBA_CONF).splitlines(True)
         temp_hba_path = self._write_new_hba_file(lines,
                                                  enable_remote_connections)
         common.move(temp_hba_path, PG_HBA_CONF)
         common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
         include_line = "include = '{config}'".format(config=PG_CONF_PATH)
-        already_included = common.sudo(
+        already_included = common.run(
             ['grep', include_line, PG_BASE_CONF_PATH],
             ignore_failures=True,
         ).returncode == 0
         if not already_included:
-            common.sudo(
+            common.run(
                 ['tee', '-a', PG_BASE_CONF_PATH],
                 stdin="{include}\n".format(include=include_line),
             )
@@ -423,7 +423,7 @@ class PostgresqlServer(BaseComponent):
         patronictl_base_command = [
             '/opt/patroni/bin/patronictl', '-c', PATRONI_CONFIG_PATH,
         ]
-        return common.sudo(patronictl_base_command + command)
+        return common.run(patronictl_base_command + command)
 
     def _etcd_command(self, command, ignore_failures=False, stdin=None,
                       local_only=False, username=None):
@@ -721,8 +721,8 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(PATRONI_LOG_PATH)
         common.mkdir(ETCD_LOG_PATH)
         common.mkdir(POSTGRES_LOG_PATH)
-        common.sudo(['chown', 'postgres.', PATRONI_LOG_PATH])
-        common.sudo(['chown', 'postgres.', POSTGRES_LOG_PATH])
+        common.run(['chown', 'postgres.', PATRONI_LOG_PATH])
+        common.run(['chown', 'postgres.', POSTGRES_LOG_PATH])
 
         syslog.deploy_rsyslog_filters('db_cluster', ['etcd', 'patroni'],
                                       self.service_type)
@@ -736,8 +736,8 @@ class PostgresqlServer(BaseComponent):
             for name, value in pg_params.items():
                 pg_conf.write("{0} = {1}\n".format(name, value))
 
-        common.sudo(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
-        common.sudo(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
+        common.run(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
+        common.run(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
         logger.info('Configuring etcd')
         if self.service_type == 'supervisord':
@@ -792,7 +792,7 @@ class PostgresqlServer(BaseComponent):
                         ip=network.ipv6_url_compat(node_ip))
                     etcd_node_id = self._get_etcd_id(node_ip)
                     self._add_etcd_member(etcd_node_id, etcd_node_address)
-                    common.sudo([
+                    common.run([
                         'sed', '-i',
                         's/ETCD_INITIAL_CLUSTER_STATE.*/'
                         "ETCD_INITIAL_CLUSTER_STATE='existing'/",
@@ -868,8 +868,8 @@ class PostgresqlServer(BaseComponent):
 
         logger.info('Creating postgres bin links for patroni')
         for pg_bin in PG_BINS:
-            common.sudo(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
-                         '/usr/sbin'])
+            common.run(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
+                        '/usr/sbin'])
 
         logger.info('Starting patroni')
         self._configure_patroni()
@@ -952,7 +952,7 @@ class PostgresqlServer(BaseComponent):
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
         # WARNING: Do not use anything other than Popen, this must not block
-        subprocess.Popen(['sudo', '/opt/patroni/bin/patroni_startup_check'])
+        subprocess.Popen(['/opt/patroni/bin/patroni_startup_check'])
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]
@@ -1058,7 +1058,7 @@ class PostgresqlServer(BaseComponent):
                 patroni_conf['bootstrap']['dcs']['postgresql']['pg_hba'],
                 node['ip']
             )
-        common.sudo([
+        common.run([
             'touch', patroni_config_path,
         ])
         common.chown(getuser(), '', patroni_config_path)

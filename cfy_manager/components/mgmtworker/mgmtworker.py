@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from os.path import join
 
 from ..components_constants import (
@@ -86,13 +71,13 @@ class MgmtWorker(BaseComponent):
         script_path = join(const.BASE_RESOURCES_PATH, MGMTWORKER, script_name)
         common.chown('root', 'root', script_path)
         common.chmod('0500', script_path)
-        common.run(['sudo', script_path])
+        common.run([script_path])
 
     def _deploy_hooks_config(self):
         # If the hooks config file already exists, do nothing. This file
         # can be altered by users, so we shouldn't overwrite it once present.
         # Can't use os.path.exists because the file is owned by cfyuser
-        r = common.sudo(
+        r = common.run(
             'ls {0}'.format(HOOKS_CONFIG), ignore_failures=True
         )
         if r.returncode == 0:
@@ -112,8 +97,8 @@ class MgmtWorker(BaseComponent):
     def _prepare_snapshot_permissions(self):
         self._add_snapshot_restore_sudo_commands()
         # TODO: See if these are necessary
-        common.sudo(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
-        common.sudo(['chmod', 'g+rw', '/opt/manager'])
+        common.run(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
+        common.run(['chmod', 'g+rw', '/opt/manager'])
 
     def configure(self):
         logger.notice('Configuring Management Worker...')

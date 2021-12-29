@@ -1,6 +1,5 @@
 import collections
 import logging
-import subprocess
 
 from os.path import isfile, join, abspath
 
@@ -61,15 +60,8 @@ class Config(CommentedMap):
 
     def _load_yaml(self, path_to_yaml):
         try:
-            try:
-                with open(path_to_yaml) as f:
-                    yaml_data = f.read()
-            except PermissionError as e:
-                logger.debug('Cannot access %s, trying with sudo (%s)',
-                             path_to_yaml, e)
-                yaml_data = subprocess.check_output([
-                    'sudo', 'cat', path_to_yaml
-                ])
+            with open(path_to_yaml) as f:
+                yaml_data = f.read()
         except IOError as e:
             raise RuntimeError(
                 'Cannot access {config}: {error}'.format(

@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import json
 import base64
@@ -61,8 +46,7 @@ from ...logger import get_logger
 from ...utils import (
     certificates,
     common,
-    files,
-    service
+    service,
 )
 from cfy_manager.utils.db import get_postgres_host
 from ...exceptions import BootstrapError
@@ -71,9 +55,11 @@ from ...utils.install import is_premium_installed
 from ...utils.scripts import (run_script_on_manager_venv,
                               log_script_run_results)
 from ...utils.files import (
+    chown,
     deploy,
-    sudo_read,
-    write_to_file,
+    read,
+    remove,
+    write,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
@@ -138,9 +124,9 @@ class RestService(BaseComponent):
             'ca_cert_path': const['ca_cert_path'],
             'manager_hostname': config[MANAGER][HOSTNAME],
         }
-        files.write_to_file(rest_conf, REST_CONFIG_PATH, json_dump=True)
-        common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                     REST_CONFIG_PATH)
+        write(rest_conf, REST_CONFIG_PATH, json_dump=True,
+              owner=constants.CLOUDIFY_USER,
+              group=constants.CLOUDIFY_GROUP)
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
@@ -178,7 +164,7 @@ class RestService(BaseComponent):
 
         security_config = config[FLASK_SECURITY]
 
-        current_config = json.loads(sudo_read(REST_SECURITY_CONFIG_PATH))
+        current_config = json.loads(read(REST_SECURITY_CONFIG_PATH))
 
         # We want the existing config values to take precedence, but for any
         # new values to also be in the final config dict
@@ -190,14 +176,9 @@ class RestService(BaseComponent):
         logger.info('Deploying REST Security configuration file...')
 
         flask_security = self._get_flask_security()
-        write_to_file(flask_security, REST_SECURITY_CONFIG_PATH,
-                      json_dump=True)
-        common.chown(
-            constants.CLOUDIFY_USER,
-            constants.CLOUDIFY_GROUP,
-            REST_SECURITY_CONFIG_PATH
-        )
-        common.chmod('660', REST_SECURITY_CONFIG_PATH)
+        write(flask_security, REST_SECURITY_CONFIG_PATH, json_dump=True,
+              owner=constants.CLOUDIFY_USER, group=constants.CLOUDIFY_GROUP,
+              mode=0o660)
 
     def _calculate_worker_count(self):
         for component_name in ['restservice', 'api']:
@@ -487,13 +468,13 @@ class RestService(BaseComponent):
             cfg = json.load(fp)
         if (rabbitmq_ca_cert_filename and
                 not os.path.isfile(RABBITMQ_CA_CERT_PATH)):
-            files.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
+            common.move(rabbitmq_ca_cert_filename, RABBITMQ_CA_CERT_PATH)
             cfg['rabbitmq']['ca_path'] = RABBITMQ_CA_CERT_PATH
         with open(CLUSTER_DETAILS_PATH, 'w') as fp:
             json.dump(cfg, fp)
-        files.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
-                    CLUSTER_DETAILS_PATH)
-        files.remove(cluster_cfg_filename, ignore_failure=True)
+        chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
+              CLUSTER_DETAILS_PATH)
+        remove(cluster_cfg_filename, ignore_failure=True)
 
     def _join_cluster_setup(self):
         if not common.is_only_manager_service_in_config():

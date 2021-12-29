@@ -13,8 +13,8 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
     path_template = '/etc/rsyslog.d/40-{svc}.conf'
     for svc in services:
         trim = len(svc) + 2
-        files.write_to_file(template.format(svc=svc, trim=trim, group=group),
-                            path_template.format(svc=svc))
+        files.write(template.format(svc=svc, trim=trim, group=group),
+                    path_template.format(svc=svc))
 
     if using_systemd_rsyslog():
         service.SystemD().restart('rsyslog')
