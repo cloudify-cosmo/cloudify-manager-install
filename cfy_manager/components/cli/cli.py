@@ -33,7 +33,8 @@ def _hide_logs():
 
 def getuser():
     # Given that this will be under sudo, getpass.getuser will be unhelpful
-    return pwd.getpwuid(os.getuid()).pw_name
+    # Also, when using the sudo trampoline in main, os.getuid is returning 0
+    return pwd.getpwuid(int(os.environ.get('SUDO_UID', 0))).pw_name
 
 
 class Cli(BaseComponent):
