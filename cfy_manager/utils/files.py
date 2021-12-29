@@ -2,23 +2,20 @@ import os
 import shutil
 import re
 import json
-from glob import glob
 from tempfile import mkstemp
-from os.path import join, isabs
+from os.path import join
 
 from jinja2 import Environment, FileSystemLoader
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from .network import is_url, curl_download
 from .common import (run, copy, remove, chown,
                      ensure_destination_dir_exists)
 
 from .._compat import StringIO
 from ..config import config
 from ..logger import get_logger
-from ..exceptions import FileError
-from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
+from ..constants import COMPONENTS_DIR
 
 logger = get_logger('Files')
 
@@ -53,39 +50,6 @@ def ln(source, target, params=None):
         run(command, globx=True)
     else:
         run(command)
-
-
-def get_local_source_path(source_url):
-    if is_url(source_url):
-        return curl_download(source_url)
-    # If it's already an absolute path, just return it
-    if isabs(source_url):
-        return source_url
-
-    # Otherwise, it's a relative `sources` path
-    path = join(CLOUDIFY_SOURCES_PATH, source_url)
-    path = get_glob_path(path)
-    if not os.path.exists(path):
-        raise FileError(
-            'File {path} not found.'.format(path=path)
-        )
-    return path
-
-
-def get_glob_path(path):
-    if '*' in path:
-        matching_paths = glob(path)
-        if not matching_paths:
-            raise FileError(
-                'Could not locate source matching {0}'.format(path)
-            )
-        if len(matching_paths) > 1:
-            raise FileError(
-                'Expected to find single source matching '
-                '{0}, but found: {1}'.format(path, matching_paths)
-            )
-        path = matching_paths[0]
-    return path
 
 
 def write_to_tempfile(contents, json_dump=False, cleanup=True):

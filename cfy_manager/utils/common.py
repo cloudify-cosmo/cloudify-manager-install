@@ -7,7 +7,6 @@ import shlex
 import shutil
 import socket
 import logging
-import tempfile
 import subprocess
 from functools import wraps
 from datetime import datetime
@@ -112,23 +111,6 @@ def chown(user, group, path):
 def remove(path, ignore_failure=False):
     logger.debug('Removing {0}...'.format(path))
     run(['rm', '-rf', path], ignore_failures=ignore_failure)
-
-
-def untar(source,
-          destination=None,
-          skip_old_files=False,
-          unique_tmp_dir=False):
-    if not destination:
-        destination = tempfile.mkdtemp() if unique_tmp_dir else '/tmp'
-        config.add_temp_path_to_clean(destination)
-    logger.debug('Extracting {0} to {1}...'.format(
-        source, destination))
-    tar_command = ['tar', '-xvf', source, '-C', destination, '--strip=1']
-    if skip_old_files:
-        tar_command.append('--skip-old-files')
-    run(tar_command)
-
-    return destination
 
 
 def ensure_destination_dir_exists(destination):
