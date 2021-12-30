@@ -261,8 +261,12 @@ def _generate_ssl_certificate(ips,
             '-out', csr_path,
             '-keyout', key_path,
         ])
-        chown(owner, group, key_path)
-        chmod(key_perms, key_path)
+        if os.geteuid() == 0:
+            # Don't try to change cert/key ownership if we're not root
+            # (this indicates we're running non-sudo-commands such as
+            # generate-test-cert)
+            chown(owner, group, key_path)
+            chmod(key_perms, key_path)
         x509_command = [
             'openssl', 'x509',
             '-days', '3650',
@@ -289,8 +293,12 @@ def _generate_ssl_certificate(ips,
                 '-signkey', key_path
             ]
         run(x509_command)
-        chown(owner, group, cert_path)
-        chmod(cert_perms, cert_path)
+        if os.geteuid() == 0:
+            # Don't try to change cert/key ownership if we're not root
+            # (this indicates we're running non-sudo-commands such as
+            # generate-test-cert)
+            chown(owner, group, cert_path)
+            chmod(cert_perms, cert_path)
         remove(csr_path)
 
     logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
