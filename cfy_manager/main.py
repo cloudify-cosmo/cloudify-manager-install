@@ -1408,10 +1408,22 @@ def main():
 
 
 def _ensure_root():
+    excluded_subcommands = ['generate-test-cert']
+
+    # To get the subcommand we need the second argument that does not begin
+    # with a hyphen. The first will be the command itself
+    # (e.g. /usr/bin/cfy_manager), and any beginning with hyphens will be
+    # arguments such as --verbose or -h
+    commands = [arg for arg in sys.argv
+                if not arg.startswith('-')]
+
     skip_root_check = '--skip-root-check'
     if skip_root_check in sys.argv:
         sys.argv.remove(skip_root_check)
     else:
+        # Checking subcommands here so we never pass through --skip-root-check
+        if commands[1] in excluded_subcommands:
+            return
         if os.geteuid() != 0:
             sys.exit(subprocess.call(
                 ['/usr/bin/sudo'] + sys.argv + [skip_root_check]))
