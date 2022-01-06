@@ -14,7 +14,7 @@ def secrets = [
     [envVar: 'MANAGER_PASSWORD', vaultKey: 'password']]],
 ]
 
-@Library('pipeline-shared-library') _
+@Library('pipeline-shared-library@fix-arch-var-buildrpm') _
 
 pipeline {
   agent {
