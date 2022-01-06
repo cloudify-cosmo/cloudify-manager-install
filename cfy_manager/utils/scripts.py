@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import json
 from os.path import join, dirname, isfile
 
@@ -57,7 +42,7 @@ def run_script_on_manager_venv(script_path,
         args_json_path = write_to_tempfile(script_input, json_dump)
         cmd.extend([script_input_arg, args_json_path])
 
-    return common.sudo(cmd, env=envvars)
+    return common.run(cmd, env=envvars)
 
 
 def log_script_run_results(script_result):

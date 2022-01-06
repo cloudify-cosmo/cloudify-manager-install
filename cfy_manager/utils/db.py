@@ -5,9 +5,9 @@ import requests
 
 from cfy_manager.utils.common import (
     is_all_in_one_manager,
+    run,
     service_is_in_config,
     service_is_configured,
-    sudo,
 )
 from ..config import config
 from cfy_manager.constants import (
@@ -40,7 +40,7 @@ def run_psql_command(command, db_key, logger):
     # and exit with non-zero status if a provided query/command fails
     base_command.extend(['-t', '-X', '-n', '-v', 'ON_ERROR_STOP=1'])
 
-    result = sudo(base_command, env=db_env, stdin=command)
+    result = run(base_command, env=db_env, stdin=command)
     return result.aggr_stdout.strip()
 
 
@@ -56,7 +56,7 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
         # or if we're installing a single database node,
         # "peer" authentication is used
         if pg_config['server_username'] == 'postgres':
-            base_command.extend(['-u', 'postgres'])
+            base_command.extend(['/usr/bin/sudo', '-E', '-u', 'postgres'])
             peer_authentication = True
 
     base_command.append('/usr/bin/psql')

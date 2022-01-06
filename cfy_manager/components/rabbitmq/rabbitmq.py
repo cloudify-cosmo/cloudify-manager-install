@@ -33,9 +33,9 @@ from ...exceptions import (
     ValidationError,
 )
 from ...utils import service, syslog
-from ...utils.network import wait_for_port, is_port_open
-from ...utils.common import sudo, can_lookup_hostname, remove as remove_file
-from ...utils.files import write_to_file, deploy
+from ...utils.network import wait_for_port, is_port_open, lo_has_ipv6_addr
+from ...utils.common import run, can_lookup_hostname, remove as remove_file
+from ...utils.files import write, deploy
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
@@ -68,16 +68,9 @@ class RabbitMQ(BaseComponent):
         return MANAGER_SERVICE in config[SERVICES_TO_INSTALL]
 
     def _deploy_configuration(self):
-        try:
-            ipv6_enabled = bool(
-                socket.getaddrinfo('localhost', SECURE_PORT,
-                                   family=socket.AddressFamily.AF_INET6)
-            )
-        except socket.gaierror:
-            ipv6_enabled = False
         logger.info('Deploying RabbitMQ config')
         deploy(join(CONFIG_PATH, 'rabbitmq.config'), RABBITMQ_CONFIG_PATH,
-               additional_render_context={'ipv6_enabled': ipv6_enabled})
+               additional_render_context={'ipv6_enabled': lo_has_ipv6_addr()})
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_CONFIG_PATH)
         deploy(join(CONFIG_PATH, 'enabled_plugins'), RABBITMQ_ENABLED_PLUGINS)
         common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ENABLED_PLUGINS)
@@ -109,7 +102,7 @@ class RabbitMQ(BaseComponent):
         base_command = [RABBITMQ_CTL]
         if config[RABBITMQ]['use_long_name']:
             base_command.append('--longnames')
-        return sudo(base_command + command, **kwargs)
+        return run(base_command + command, **kwargs)
 
     def user_exists(self, username):
         output = self._rabbitmqctl(['list_users'], retries=5).aggr_stdout
@@ -182,8 +175,8 @@ class RabbitMQ(BaseComponent):
                     for _ in range(64)
                 )
 
-        write_to_file(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie')
-        sudo(['chown', 'rabbitmq.', '/var/lib/rabbitmq/.erlang.cookie'])
+        write(cookie.strip(), '/var/lib/rabbitmq/.erlang.cookie',
+              owner='rabbitmq', group='rabbitmq', mode=0o600)
 
     def _possibly_join_cluster(self):
         join_node = config[RABBITMQ]['join_cluster']
@@ -240,7 +233,7 @@ class RabbitMQ(BaseComponent):
             # the cluster
             required = [
                 join_node,
-                config[RABBITMQ]['nodename'],
+                self.add_missing_nodename_prefix(config[RABBITMQ]['nodename']),
             ]
             if not all(node in rabbit_nodes['nodes'] for node in required):
                 if attempt == max_attempts:
@@ -405,13 +398,13 @@ class RabbitMQ(BaseComponent):
             hosts = '\n'.join(hosts) + '\n'
 
             # Back up original hosts file
-            sudo([
+            run([
                 'cp', '/etc/hosts', '/etc/hosts.bak-{timestamp:.0f}'.format(
                     timestamp=time.time()
                 )
             ])
 
-            write_to_file(hosts, '/etc/hosts')
+            write(hosts, '/etc/hosts')
 
             logger.info('Updated /etc/hosts')
 
@@ -582,34 +575,36 @@ class RabbitMQ(BaseComponent):
         return base64.b64encode(salt + hashed).decode('utf-8')
 
     def _write_definitions_file(self):
-        write_to_file({
-            'vhosts': [{'name': '/'}],
-            'users': [{
-                'hashing_algorithm': 'rabbit_password_hashing_sha256',
-                'name': config[RABBITMQ]['username'],
-                'password_hash': self._rabbitmq_hash(
-                    config[RABBITMQ]['password']),
-                'tags': 'administrator'
-            }],
-            'permissions': [{
-                'user': config[RABBITMQ]['username'],
-                'vhost': '/',
-                'configure': '.*',
-                'write': '.*',
-                'read': '.*'
-            }],
-            'policies': [{
-                'name': policy['name'],
-                'vhost': policy.get('vhost', '/'),
-                'pattern': policy['expression'],
-                'priority': policy.get('priority', 1),
-                'apply-to': (policy.get('apply-to') or
-                             policy.get('apply_to') or 'queues'),
-                'definition': policy['policy']
-            } for policy in config[RABBITMQ]['policies']]
-        }, '/etc/cloudify/rabbitmq/definitions.json', json_dump=True)
-        common.chown(
-            'rabbitmq', 'rabbitmq', '/etc/cloudify/rabbitmq/definitions.json')
+        write(
+            {
+                'vhosts': [{'name': '/'}],
+                'users': [{
+                    'hashing_algorithm': 'rabbit_password_hashing_sha256',
+                    'name': config[RABBITMQ]['username'],
+                    'password_hash': self._rabbitmq_hash(
+                        config[RABBITMQ]['password']),
+                    'tags': 'administrator'
+                }],
+                'permissions': [{
+                    'user': config[RABBITMQ]['username'],
+                    'vhost': '/',
+                    'configure': '.*',
+                    'write': '.*',
+                    'read': '.*'
+                }],
+                'policies': [{
+                    'name': policy['name'],
+                    'vhost': policy.get('vhost', '/'),
+                    'pattern': policy['expression'],
+                    'priority': policy.get('priority', 1),
+                    'apply-to': (policy.get('apply-to') or
+                                 policy.get('apply_to') or 'queues'),
+                    'definition': policy['policy']
+                } for policy in config[RABBITMQ]['policies']]
+            },
+            '/etc/cloudify/rabbitmq/definitions.json', json_dump=True,
+            owner='rabbitmq', group='rabbitmq', mode=0o600,
+        )
 
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
@@ -637,11 +632,11 @@ class RabbitMQ(BaseComponent):
 
     def remove(self):
         logger.info('Stopping the Erlang Port Mapper Daemon...')
-        sudo(['epmd', '-kill'], ignore_failures=True)
-        service.remove('cloudify-rabbitmq', service_file=False)
+        run(['epmd', '-kill'], ignore_failures=True)
+        service.remove('cloudify-rabbitmq')
         logger.info('Removing rabbit data...')
-        sudo(['rm', '-rf', '/var/lib/rabbitmq'])
-        sudo(['rm', '-rf', '/etc/rabbitmq'])
+        run(['rm', '-rf', '/var/lib/rabbitmq'])
+        run(['rm', '-rf', '/etc/rabbitmq'])
 
     def _deploy_rebalancer_script_and_create_cronjob(self):
         logger.info('Deploying queue rebalancing script...')
@@ -664,10 +659,9 @@ class RabbitMQ(BaseComponent):
             "Rebalance rabbit queues")
 
         # Adding a new job to crontab
-        # Adding sudo manually, as common.sudo doesn't support parenthesis
-        cmd = '(sudo crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'sudo crontab -u {0} -'.format(constants.CLOUDIFY_USER,
-                                             job_command)
+        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
+              'crontab -u {0} -'.format(constants.CLOUDIFY_USER,
+                                        job_command)
         common.run([cmd], shell=True)
         logger.info('Queue rebalancing cron job successfully created')
 

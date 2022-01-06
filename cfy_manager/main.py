@@ -52,6 +52,7 @@ from .constants import (
     INITIAL_CONFIGURE_DIR,
     INSTALLED_COMPONENTS,
     INSTALLED_PACKAGES,
+    USER_CONFIG_PATH,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -71,7 +72,6 @@ from .utils.certificates import (
 )
 from .utils.common import (
     run,
-    sudo,
     copy,
     can_lookup_hostname,
     is_all_in_one_manager,
@@ -216,15 +216,6 @@ def generate_test_cert(**kwargs):
     )
 
 
-def _only_on_brokers():
-    if QUEUE_SERVICE not in config[SERVICES_TO_INSTALL]:
-        logger.error(
-            'Broker management tasks must be performed on nodes with '
-            'installed brokers.'
-        )
-        sys.exit(1)
-
-
 @argh.named('add')
 @config_arg
 @argh.decorators.arg('-j', '--join-node', help=BROKER_ADD_JOIN_NODE_HELP_MSG,
@@ -238,10 +229,10 @@ def brokers_add(**kwargs):
     """
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('brokers_add')
+    _validate_components_prepared('brokers_add', kwargs.get('config_file'))
+    _validate_supported_services_configured('brokers_add', [QUEUE_SERVICE])
     join_node = kwargs['join_node']
     rabbitmq = components.RabbitMQ()
-    _only_on_brokers()
 
     nodes = rabbitmq.list_rabbit_nodes()
     complain_about_dead_broker_cluster(nodes)
@@ -279,9 +270,9 @@ def brokers_remove(**kwargs):
     """
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('brokers_remove')
+    _validate_components_prepared('brokers_remove', kwargs.get('config_file'))
+    _validate_supported_services_configured('brokers_remove', [QUEUE_SERVICE])
     rabbitmq = components.RabbitMQ()
-    _only_on_brokers()
 
     remove_node = rabbitmq.add_missing_nodename_prefix(kwargs['remove_node'])
     nodes = rabbitmq.list_rabbit_nodes()
@@ -321,9 +312,9 @@ def brokers_list(**kwargs):
     """
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('brokers_list')
+    _validate_components_prepared('brokers_list', kwargs.get('config_file'))
+    _validate_supported_services_configured('brokers_list', [QUEUE_SERVICE])
     rabbitmq = components.RabbitMQ()
-    _only_on_brokers()
 
     brokers = rabbitmq.list_rabbit_nodes()
     complain_about_dead_broker_cluster(brokers)
@@ -359,7 +350,10 @@ def db_node_list(**kwargs):
     """List DB cluster members and DB cluster health."""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('db_cluster_list')
+    _validate_components_prepared('db_cluster_list', kwargs.get('config_file'))
+    _validate_supported_services_configured(
+        'db_cluster_list', [DATABASE_SERVICE, MANAGER_SERVICE])
+
     db = components.PostgresqlServer()
 
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
@@ -387,7 +381,9 @@ def db_node_add(**kwargs):
     """Add a DB cluster node."""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('db_node_add')
+    _validate_components_prepared('db_node_add', kwargs.get('config_file'))
+    _validate_supported_services_configured(
+        'db_node_add', [DATABASE_SERVICE, MANAGER_SERVICE])
     db = components.PostgresqlServer()
     client = components.PostgresqlClient()
     stage = components.Stage()
@@ -411,7 +407,9 @@ def db_node_remove(**kwargs):
     """Remove a DB cluster node."""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('db_node_remove')
+    _validate_components_prepared('db_node_remove', kwargs.get('config_file'))
+    _validate_supported_services_configured(
+        'db_node_remove', [DATABASE_SERVICE, MANAGER_SERVICE])
     db = components.PostgresqlServer()
     client = components.PostgresqlClient()
     stage = components.Stage()
@@ -437,7 +435,9 @@ def db_node_reinit(**kwargs):
     """Re-initialise an unhealthy DB cluster node."""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('db_node_reinit')
+    _validate_components_prepared('db_node_reinit', kwargs.get('config_file'))
+    _validate_supported_services_configured(
+        'db_node_reinit', [DATABASE_SERVICE, MANAGER_SERVICE])
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.reinit_cluster_node(kwargs['address'])
@@ -455,7 +455,10 @@ def db_node_set_master(**kwargs):
     """Switch the current DB master node."""
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
-    _validate_components_prepared('db_node_set_master')
+    _validate_components_prepared(
+        'db_node_set_master', kwargs.get('config_file'))
+    _validate_supported_services_configured(
+        'db_node_set_master', [DATABASE_SERVICE, MANAGER_SERVICE])
     db = components.PostgresqlServer()
     if config[POSTGRESQL_SERVER]['cluster']['nodes']:
         db.set_master(kwargs['address'])
@@ -475,9 +478,8 @@ def db_shell(**kwargs):
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
     if service_is_in_config(MANAGER_SERVICE):
-        db_env, base_command = get_psql_env_and_base_command(
+        db_env, command = get_psql_env_and_base_command(
             logger, db_override=kwargs['dbname'])
-        command = ['/bin/sudo', '-E'] + base_command
         if kwargs['query']:
             command += ['-c', kwargs['query']]
         os.execve(command[0], command, db_env)
@@ -602,28 +604,31 @@ def _finish_configuration(only_install):
     _print_time()
 
 
-def _validate_components_prepared(cmd):
+def _validate_components_prepared(cmd, config_path):
     error_message = (
-        'Could not find {touched_files}.\nThis most likely means '
-        'that you need to run `cfy_manager {fix_cmd}` before '
-        'running `cfy_manager {cmd}`'
-    )
-    files_list = [os.path.join(INITIAL_INSTALL_DIR, installed_service) for
-                  installed_service in config[SERVICES_TO_INSTALL]]
-    if not _all_services_installed():
-        raise BootstrapError(
-            error_message.format(
-                fix_cmd='install',
-                touched_files=', '.join(files_list),
-                cmd=cmd
-            )
-        )
+         'Files in {configure_dir} do not match configured services.\n'
+         'Make sure you use the correct config file (currently used: '
+         '{config_path}).\n'
+         'This can also mean you need to run `cfy_manager configure` '
+         'before running `cfy_manager {cmd}`.'
+     )
     if not _all_services_configured() and cmd != 'configure':
         raise BootstrapError(
             error_message.format(
-                fix_cmd='configure',
-                touched_files=', '.join(files_list),
+                configure_dir=INITIAL_CONFIGURE_DIR,
+                config_path=(config_path or USER_CONFIG_PATH),
                 cmd=cmd
+            )
+        )
+
+
+def _validate_supported_services_configured(cmd, supported_services):
+    if not any(x in get_configured_services() for x in supported_services):
+        raise BootstrapError(
+            'Running `cfy_manager {cmd}` requires at least one of {services} '
+            'to be configured on this node'.format(
+                cmd=cmd,
+                services=supported_services
             )
         )
 
@@ -807,12 +812,12 @@ def _get_packages():
 def _configure_supervisord():
     # These services will be relevant for using supervisord on VM not on
     # containers
-    is_active = sudo('systemctl is-active supervisord',
-                     ignore_failures=True
-                     ).aggr_stdout.strip()
+    is_active = run('systemctl is-active supervisord',
+                    ignore_failures=True
+                    ).aggr_stdout.strip()
     if is_active not in ('active', 'activating'):
-        sudo('systemctl enable supervisord.service', ignore_failures=True)
-        sudo('systemctl restart supervisord', ignore_failures=True)
+        run('systemctl enable supervisord.service', ignore_failures=True)
+        run('systemctl restart supervisord', ignore_failures=True)
 
 
 def _create_components_installed_file(components_list):
@@ -892,7 +897,17 @@ def configure(verbose=False,
         config_file=config_file,
     )
 
-    _validate_components_prepared('configure')
+    if not _all_services_installed():
+        raise BootstrapError(
+            'Not all services {services_to_install} are installed.\n'
+            'You may need to run `cfy_manager install` first.\nAlso make sure '
+            'you use the correct config file (currently used: '
+            '{config_path}).\n'.format(
+                services_to_install=config[SERVICES_TO_INSTALL],
+                config_path=(config_file or USER_CONFIG_PATH),
+            )
+        )
+    _validate_components_prepared('configure', config_file)
     logger.notice('Configuring desired components...')
     components = _get_components()
     validate(components=components)
@@ -1035,7 +1050,7 @@ def start(include_components,
         config_write_required=True,
         config_file=config_file,
     )
-    _validate_components_prepared('start')
+    _validate_components_prepared('start', config_file)
     set_globals()
     logger.notice('Starting Cloudify Manager services...')
     service.reread()
@@ -1050,7 +1065,7 @@ def start(include_components,
 def stop(include_components, verbose=False, force=False, config_file=None):
     """ Stop Cloudify Manager services """
     _prepare_execution(verbose, config_file=config_file)
-    _validate_components_prepared('stop')
+    _validate_components_prepared('stop', config_file)
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
@@ -1068,7 +1083,7 @@ def restart(include_components, verbose=False, force=False, config_file=None):
     """ Restart Cloudify Manager services """
 
     _prepare_execution(verbose, config_file=config_file)
-    _validate_components_prepared('restart')
+    _validate_components_prepared('restart', config_file)
     if force:
         logger.warning('--force is deprecated, does nothing, and will be '
                        'removed in a future version')
@@ -1086,12 +1101,12 @@ def upgrade(verbose=False, config_file=None):
     """Update the current manager using the available yum repos."""
 
     _prepare_execution(verbose, config_file=config_file)
-    _validate_components_prepared('restart')
+    _validate_components_prepared('restart', config_file)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
-    sudo(['yum', 'clean', 'all'],
-         stdout=sys.stdout, stderr=sys.stderr)
-    sudo([
+    run(['yum', 'clean', 'all'],
+        stdout=sys.stdout, stderr=sys.stderr)
+    run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
     for component in reversed(upgrade_components):
@@ -1249,7 +1264,8 @@ def image_starter(verbose=False, config_file=None):
         config_file=config_file,
     )
     config.load_config(config_file)
-    command = [sys.executable, '-m', 'cfy_manager.main', 'configure']
+    executable = os.path.join(os.path.dirname(sys.executable), 'cfy_manager')
+    command = [executable, 'configure']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()
@@ -1260,7 +1276,7 @@ def image_starter(verbose=False, config_file=None):
     if not config[MANAGER].get(SECURITY, {}).get(ADMIN_PASSWORD) \
             and not _all_services_configured():
         command += ['--admin-password', 'admin']
-    os.execv(sys.executable, command)
+    os.execv(executable, command)
 
 
 @argh.decorators.named('run-init')
@@ -1340,6 +1356,7 @@ def version():
 
 
 def main():
+    _ensure_root()
     # Set the umask to 0022; restore it later.
     current_umask = os.umask(CFY_UMASK)
     """Main entry point"""
@@ -1390,5 +1407,23 @@ def main():
     os.umask(current_umask)
 
 
-if __name__ == '__main__':
-    main()
+def _ensure_root():
+    excluded_subcommands = ['generate-test-cert']
+
+    # To get the subcommand we need the second argument that does not begin
+    # with a hyphen. The first will be the command itself
+    # (e.g. /usr/bin/cfy_manager), and any beginning with hyphens will be
+    # arguments such as --verbose or -h
+    commands = [arg for arg in sys.argv
+                if not arg.startswith('-')]
+
+    skip_root_check = '--skip-root-check'
+    if skip_root_check in sys.argv:
+        sys.argv.remove(skip_root_check)
+    else:
+        # Checking subcommands here so we never pass through --skip-root-check
+        if commands[1] in excluded_subcommands:
+            return
+        if os.geteuid() != 0:
+            sys.exit(subprocess.call(
+                ['/usr/bin/sudo'] + sys.argv + [skip_root_check]))

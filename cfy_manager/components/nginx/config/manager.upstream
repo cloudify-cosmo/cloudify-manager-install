@@ -18,7 +18,9 @@ upstream cloudify-rest {
 server {
   # server listening
   listen              *:{{ nginx.port | default('80', true) }};
+  {% if ipv6_enabled -%}
   listen              [::]:{{ nginx.port | default('80', true) }};
+  {%- endif %}
   server_name         _;
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
@@ -40,7 +42,9 @@ server {
 server {
   # server listening for external requests
   listen              {{ nginx.port | default('443', true) }} ssl;
+  {% if ipv6_enabled -%}
   listen              [::]:{{ nginx.port | default('443', true) }} ssl;
+  {%- endif %}
   server_name         {{ manager.public_ip }};
 
   ssl_certificate     {{ constants.external_cert_path }};
@@ -70,7 +74,9 @@ server {
 {% if nginx.port is none %}
 server {
   listen 80;
-  listen [::]:80;
+  {% if ipv6_enabled -%}
+  listen              [::]:80;
+  {%- endif %}
   server_name _;
 
   # For REST API requests, return HTTP 400.
@@ -93,7 +99,10 @@ server {
 server {
   # server listening for internal requests
   listen              {{ constants.internal_rest_port }} ssl default_server;
+  {% if ipv6_enabled -%}
   listen              [::]:{{ constants.internal_rest_port }} ssl default_server;
+  {%- endif %}
+
   server_name         _;
 
   ssl_certificate     {{ constants.internal_cert_path }};

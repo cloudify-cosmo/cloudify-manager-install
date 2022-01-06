@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from . import network
-from .common import sudo, remove, chown, chmod, copy, move
+from .common import remove, chown, chmod, copy, move, run
 from ..components.components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import (
@@ -17,7 +17,7 @@ from ..constants import (
     SSL_CERTS_TARGET_DIR,
 )
 from ..exceptions import ProcessExecutionError
-from .files import write_to_file, write_to_tempfile
+from .files import write, write_to_tempfile
 from ..components.validations import check_certificates, validate_certificates
 
 from ..logger import get_logger, setup_console_logger
@@ -73,7 +73,7 @@ def handle_ca_cert(logger, generate_if_missing=True):
     elif generate_if_missing:
         logger.info('Generating CA certificate...')
         if not os.path.exists(SSL_CERTS_TARGET_DIR):
-            sudo(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
+            run(['mkdir', '-p', SSL_CERTS_TARGET_DIR])
         generate_ca_cert()
         has_ca_key = True
 
@@ -139,15 +139,15 @@ def store_cert_metadata(hostname=None,
         networks.extend(new_networks)
         # Add, deduplicated
         metadata['network_names'] = list(set(networks))
-    write_to_file(metadata, filename, json_dump=True)
-    chown(owner, group, filename)
+    write(metadata, filename, json_dump=True,
+          owner=owner, group=group, mode=0o640)
 
 
 def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):
     try:
         # Don't use open because file permissions may cause us to load
         # nothing then stomp the contents if we do
-        return json.loads(sudo(['cat', filename]).aggr_stdout)
+        return json.loads(run(['cat', filename]).aggr_stdout)
     except ProcessExecutionError:
         return {}
 
@@ -251,7 +251,7 @@ def _generate_ssl_certificate(ips,
     csr_path = '{0}.csr'.format(cert_path)
 
     with _csr_config(cn, subject_altnames) as conf_path:
-        sudo([
+        run([
             'openssl', 'req',
             '-newkey', 'rsa:2048',
             '-nodes',
@@ -261,8 +261,12 @@ def _generate_ssl_certificate(ips,
             '-out', csr_path,
             '-keyout', key_path,
         ])
-        chown(owner, group, key_path)
-        chmod(key_perms, key_path)
+        if os.geteuid() == 0:
+            # Don't try to change cert/key ownership if we're not root
+            # (this indicates we're running non-sudo-commands such as
+            # generate-test-cert)
+            chown(owner, group, key_path)
+            chmod(key_perms, key_path)
         x509_command = [
             'openssl', 'x509',
             '-days', '3650',
@@ -288,9 +292,13 @@ def _generate_ssl_certificate(ips,
             x509_command += [
                 '-signkey', key_path
             ]
-        sudo(x509_command)
-        chown(owner, group, cert_path)
-        chmod(cert_perms, cert_path)
+        run(x509_command)
+        if os.geteuid() == 0:
+            # Don't try to change cert/key ownership if we're not root
+            # (this indicates we're running non-sudo-commands such as
+            # generate-test-cert)
+            chown(owner, group, cert_path)
+            chmod(cert_perms, cert_path)
         remove(csr_path)
 
     logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
@@ -327,7 +335,7 @@ def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
 def generate_ca_cert(cert_path=const.CA_CERT_PATH,
                      key_path=const.CA_KEY_PATH):
     with _ca_config() as conf_path:
-        sudo([
+        run([
             'openssl', 'req',
             '-x509',
             '-nodes',
@@ -343,7 +351,7 @@ def generate_ca_cert(cert_path=const.CA_CERT_PATH,
 def remove_key_encryption(src_key_path,
                           dst_key_path,
                           key_password):
-    sudo([
+    run([
         'openssl', 'rsa',
         '-in', src_key_path,
         '-out', dst_key_path,
@@ -590,8 +598,8 @@ def get_ca_filename(new_ca_location, default_ca_location):
 
 
 def certs_identical(cert_a, cert_b):
-    content_a = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_a])
-    content_b = sudo(['openssl', 'x509', '-noout', '-modulus', '-in', cert_b])
+    content_a = run(['openssl', 'x509', '-noout', '-modulus', '-in', cert_a])
+    content_b = run(['openssl', 'x509', '-noout', '-modulus', '-in', cert_b])
     return content_a.aggr_stdout == content_b.aggr_stdout
 
 

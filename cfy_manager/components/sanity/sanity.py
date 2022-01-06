@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import sys
 import time
 import uuid
@@ -25,7 +10,7 @@ from ..service_names import SANITY
 from ...logger import get_logger
 from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common
-from ...utils.files import write_to_file, remove_files
+from ...utils.files import write, remove_files
 
 
 logger = get_logger(SANITY)
@@ -95,8 +80,8 @@ class Sanity(BaseComponent):
     def sanity_check_mode(self):
         marker_file = '/opt/manager/sanity_mode'
         try:
-            write_to_file('sanity: True', marker_file)
-            common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, marker_file)
+            write('sanity: True', marker_file,
+                  owner=CLOUDIFY_USER, group=CLOUDIFY_GROUP)
             yield
         finally:
             remove_files([marker_file])

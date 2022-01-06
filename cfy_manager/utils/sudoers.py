@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from os.path import join
 
 from .. import constants
@@ -20,7 +5,7 @@ from ..logger import get_logger
 from ..exceptions import ValidationError
 
 from .files import deploy
-from .common import sudo, chmod, chown
+from .common import chmod, chown, run
 
 logger = get_logger('sudoers')
 
@@ -33,10 +18,10 @@ def add_entry_to_sudoers(entry, description):
     for line in (description, entry, '#' * 60):
         # `visudo` handles sudoers file. Setting EDITOR to `tee -a` means that
         # whatever is piped should be appended to the file passed.
-        sudo(['/sbin/visudo', '-f', constants.CLOUDIFY_SUDOERS_FILE],
-             stdin=line, env={'EDITOR': '/bin/tee -a'})
+        run(['/sbin/visudo', '-f', constants.CLOUDIFY_SUDOERS_FILE],
+            stdin=line, env={'EDITOR': '/bin/tee -a'})
 
-    valid = sudo(
+    valid = run(
         ['visudo', '-cf', constants.CLOUDIFY_SUDOERS_FILE],
         ignore_failures=False,
     )
