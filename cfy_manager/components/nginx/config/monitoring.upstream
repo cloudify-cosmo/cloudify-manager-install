@@ -19,7 +19,10 @@ upstream cloudify-monitoring-blackbox {
 server {
   # server listening for monitoring requests
   listen              {{ constants.monitoring_port }} ssl default_server;
+  {% if ipv6_enabled -%}
   listen              [::]:{{ constants.monitoring_port }} ssl default_server;
+  {%- endif %}
+
   server_name         _;
 
   ssl_certificate     {{ constants.monitoring_cert_path }};

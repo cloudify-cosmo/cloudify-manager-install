@@ -45,5 +45,5 @@ class AmqpPostgres(BaseComponent):
 
     def remove(self):
         logger.notice('Removing AMQP-Postgres...')
-        service.remove('cloudify-amqp-postgres', service_file=False)
+        service.remove('cloudify-amqp-postgres')
         logger.notice('AMQP-Postgres successfully removed')

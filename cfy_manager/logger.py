@@ -1,23 +1,8 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from __future__ import absolute_import
 
 import sys
 from os import geteuid, getegid
-from os.path import join, isdir
+from os.path import join, isdir, expanduser
 from subprocess import check_output
 
 import logging
@@ -137,13 +122,19 @@ def setup_console_logger(verbose=False):
 
 
 def _create_log_dir():
-    log_dir = join(BASE_LOG_DIR, 'manager')
+    if geteuid() == 0:
+        base_log_dir = BASE_LOG_DIR
+    else:
+        # Non sudo-requiring commands will be logged to the user's home
+        # directory's cloudify area to avoid permissions issues.
+        base_log_dir = expanduser('~/.cloudify')
+    log_dir = join(base_log_dir, 'manager')
     if not isdir(log_dir):
         # Need to call subprocess directly, because utils.common depends on the
         # logger, and we'd get a cyclical import
-        check_output(['sudo', 'mkdir', '-p', log_dir],
+        check_output(['mkdir', '-p', log_dir],
                      preexec_fn=subprocess_preexec)
-        check_output(['sudo', 'chown', '-R',
+        check_output(['chown', '-R',
                       '{0}:{1}'.format(geteuid(), getegid()),
                       log_dir], preexec_fn=subprocess_preexec)
     return log_dir

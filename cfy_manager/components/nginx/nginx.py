@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import re
 from collections import namedtuple
 from os.path import join, exists
@@ -45,6 +30,7 @@ from ...utils import (
 )
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.network import lo_has_ipv6_addr
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
@@ -361,7 +347,9 @@ class Nginx(BaseComponent):
             self._update_credentials_config()
             self._create_htpasswd_file()
         for resource in self._config_files():
-            deploy(resource.src, resource.dst)
+            deploy(resource.src, resource.dst,
+                   additional_render_context={'ipv6_enabled':
+                                              lo_has_ipv6_addr()})
 
         # remove the default configuration which reserves localhost:80 for a
         # nginx default landing page
@@ -456,7 +444,7 @@ class Nginx(BaseComponent):
                 'cloudify_monitoring', ['9090-9094'])
 
     def _set_selinux_policy(self, policy_module, ports):
-        output = common.sudo(['/usr/sbin/semodule', '-l'])
+        output = common.run(['/usr/sbin/semodule', '-l'])
         if re.search(r'^' + re.escape(policy_module) + r'\s+',
                      output.aggr_stdout, flags=re.MULTILINE):
             logger.info('SELinux policy already installed: %s',
@@ -467,19 +455,19 @@ class Nginx(BaseComponent):
             logger.info('Deploying SELinux policy %s', policy_module)
             deploy(join(CONFIG_PATH, '{0}.te'.format(policy_module)),
                    '{0}.te'.format(base_file_name))
-            common.sudo(['/bin/checkmodule',
-                         '-M', '-m',
-                         '-o', '{0}.mod'.format(base_file_name),
-                         '{0}.te'.format(base_file_name)])
-            common.sudo(['/bin/semodule_package',
-                         '-o', '{0}.pp'.format(base_file_name),
-                         '-m', '{0}.mod'.format(base_file_name)])
-            common.sudo(['/usr/sbin/semodule',
-                         '-i', '{0}.pp'.format(base_file_name)])
+            common.run(['/bin/checkmodule',
+                        '-M', '-m',
+                        '-o', '{0}.mod'.format(base_file_name),
+                        '{0}.te'.format(base_file_name)])
+            common.run(['/bin/semodule_package',
+                        '-o', '{0}.pp'.format(base_file_name),
+                        '-m', '{0}.mod'.format(base_file_name)])
+            common.run(['/usr/sbin/semodule',
+                        '-i', '{0}.pp'.format(base_file_name)])
         for port in ports:
-            common.sudo(['/usr/sbin/semanage', 'port', '-a',
-                         '-t', '{0}_port_t'.format(policy_module),
-                         '-p', 'tcp', port])
+            common.run(['/usr/sbin/semanage', 'port', '-a',
+                        '-t', '{0}_port_t'.format(policy_module),
+                        '-p', 'tcp', port])
         logger.info('SELinux policies in place: %s', policy_module)
 
     def install(self):
@@ -509,6 +497,9 @@ class Nginx(BaseComponent):
     def remove(self):
         remove_notice(NGINX)
         remove_logrotate(NGINX)
+        service.remove('nginx')
+        if self.service_type == 'supervisord':
+            service.remove('wait_on_restart')
         remove_files([
             join('/var/cache', NGINX),
             LOG_DIR,

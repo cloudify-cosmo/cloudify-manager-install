@@ -1,22 +1,9 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
 import re
+import subprocess
 
 from ..logger import get_logger
 
-from .common import run, sudo
+from .common import run
 from ..exceptions import RPMNotFound, YumError, ProcessExecutionError
 
 logger = get_logger('yum')
@@ -36,7 +23,7 @@ def _yum_install(packages, disable_all_repos=True):
     ] + packages
     if not disable_all_repos:
         install_cmd.remove('--disablerepo=*')
-    sudo(install_cmd)
+    run(install_cmd, stderr=subprocess.STDOUT)
 
 
 def yum_install(packages, disable_all_repos=True):
@@ -58,8 +45,8 @@ def yum_install(packages, disable_all_repos=True):
 def yum_remove(packages, ignore_failures=False):
     logger.info('yum removing {0}...'.format(', '.join(packages)))
     try:
-        sudo(['yum', 'remove', '-y',
-              '--setopt=clean_requirements_on_remove=1'] + packages)
+        run(['yum', 'remove', '-y',
+             '--setopt=clean_requirements_on_remove=1'] + packages)
     except ProcessExecutionError as e:
         msg = 'Packages `{0}` may not been removed successfully'.format(
             ', '.join(packages))
@@ -82,7 +69,7 @@ def pip_install(source, venv='', constraints_file=None):
         log_message += ' using constraints file {0}'.format(constraints_file)
 
     logger.info(log_message)
-    sudo(cmdline)
+    run(cmdline)
 
 
 def is_premium_installed():
