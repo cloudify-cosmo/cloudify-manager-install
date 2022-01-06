@@ -1,6 +1,5 @@
 %define _tmpdir /tmp/node_exporter
-%define _arch amd64
-%define _url    https://github.com/prometheus/node_exporter/releases/download/v1.2.2/node_exporter-1.2.2.linux-%{_arch}.tar.gz
+%define _url    https://github.com/prometheus/node_exporter/releases/download/v1.2.2/node_exporter-1.2.2.linux-%{?arch}.tar.gz
 Name:           node_exporter
 Version:        1.2.2
 Release:        1%{?dist}
