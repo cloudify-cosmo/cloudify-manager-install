@@ -1,5 +1,5 @@
 %define _tmpdir /tmp/prometheus
-%define _url    https://github.com/prometheus/prometheus/releases/download/v2.30.1/prometheus-2.30.1.linux-%{?arch}.tar.gz
+%define _url    https://github.com/prometheus/prometheus/releases/download/v2.30.1/prometheus-2.30.1.linux-%{arch}.tar.gz
 Name:           prometheus
 Version:        2.30.1
 Release:        1%{?dist}
