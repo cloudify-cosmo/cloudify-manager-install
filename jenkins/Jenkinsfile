@@ -95,7 +95,7 @@ pipeline {
                 sh """
                   for file in prometheus prometheus_node_exporter prometheus_postgres_exporter prometheus_blackbox_exporter; do
                     echo "build \$file rpm"
-                    rpmbuild -bb packaging/\$file.spec
+                    rpmbuild -D "arch amd64" -bb packaging/\$file.spec
                   done
                   """
                 sh script:("mkdir -p ${env.WORKSPACE}/prometheus-rpms && cp -rf /root/rpmbuild/RPMS/x86_64/*.x86_64.rpm ${env.WORKSPACE}/prometheus-rpms"), label:'Copy RPMS to rpms folder'
