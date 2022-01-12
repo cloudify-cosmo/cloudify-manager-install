@@ -37,7 +37,7 @@ def _get_cpu_model():
     model_command = "cat {0} | grep 'model name' | uniq".format(CPU_INFO_PATH)
     proc = subprocess.Popen(model_command, shell=True, stdout=subprocess.PIPE)
     stdout = proc.communicate()[0]
-    if proc.returncode != 0:
+    if proc.returncode != 0 or not stdout:
         return None
 
     # Get only the model name
