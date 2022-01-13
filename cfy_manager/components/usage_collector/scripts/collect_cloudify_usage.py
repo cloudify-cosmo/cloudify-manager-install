@@ -73,6 +73,9 @@ def _collect_cloudify_data(data):
             'sites_count': sm.count(models.Site),
             'blueprints_count': sm.count(models.Blueprint),
             'deployments_count': sm.count(models.Deployment),
+            'environments_count': len(sm.list(
+                models.Deployment,
+                filters=_licensed_environments_filter())),
             'executions_count': executions['total'],
             'executions_succeeded': executions['succeeded'],
             'executions_failed': executions['failed'],
@@ -180,6 +183,19 @@ def _is_clustered():
     with get_storage_manager_instance() as sm:
         managers = sm.list(models.Manager)
     return len(managers) > 1
+
+
+def _licensed_environments_filter():
+    # stolen from cloudify-manager/rest-service/manager_rest/rest/rest_utils.py
+    return {
+        '_storage_id': lambda col:
+            ~models.InterDeploymentDependencies.query.filter(
+                col ==
+                models.InterDeploymentDependencies._target_deployment,
+                models.InterDeploymentDependencies.dependency_creator.like(
+                    'component.%')
+            ).exists()
+    }
 
 
 def main():
