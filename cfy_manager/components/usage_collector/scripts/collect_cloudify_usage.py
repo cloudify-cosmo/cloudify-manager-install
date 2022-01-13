@@ -154,14 +154,15 @@ def _get_first_and_last_login(sm):
     users_list = sm.list(models.User)
     in_fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
     out_fmt = '%Y-%m-%dT%H:%M:%S'
-    first_login = min(datetime.strptime(u.first_login_at, in_fmt)
-                      for u in users_list)
-    last_login = max(datetime.strptime(u.last_login_at, in_fmt)
-                     for u in users_list)
-    return {
-        'first_login': datetime.strftime(first_login, out_fmt),
-        'last_login': datetime.strftime(last_login, out_fmt)
-    }
+    first_logins = [datetime.strptime(u.first_login_at, in_fmt)
+                    for u in users_list if u.first_login_at]
+    last_logins = [datetime.strptime(u.last_login_at, in_fmt)
+                   for u in users_list if u.last_login_at]
+    first_login = datetime.strftime(min(first_logins), out_fmt) \
+        if first_logins else None
+    last_login = datetime.strftime(max(last_logins), out_fmt) \
+        if last_logins else None
+    return {'first_login': first_login, 'last_login': last_login}
 
 
 def _collect_cloudify_config(data):
