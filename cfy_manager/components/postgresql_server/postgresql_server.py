@@ -20,7 +20,6 @@ from cfy_manager.exceptions import (
     ClusteringError,
     DBNodeListError,
     DBManagementError,
-    ProcessExecutionError,
 )
 from ..components_constants import (
     CONFIG,
@@ -883,23 +882,30 @@ class PostgresqlServer(BaseComponent):
     # electing a leader, but just retrying makes it work.
     @retry(stop_max_attempt_number=15, wait_fixed=2000)
     def _add_etcd_member(self, etcd_node_id, etcd_node_address):
-        try:
-            self._etcd_command(
-                [
-                    'member', 'add',
-                    etcd_node_id, etcd_node_address,
-                ],
-                username='root',
-            )
-        except ProcessExecutionError as err:
-            raise BootstrapError(
-                'Error was: {err}\n'
-                'Failed to join etcd cluster. '
-                'If this node is being reinstalled you may need '
-                'to uninstall it then run the DB node '
-                'removal command on a healthy DB node before '
-                'attempting to install again.'.format(err=err)
-            )
+        add_result = self._etcd_command(
+            [
+                'member', 'add',
+                etcd_node_id, etcd_node_address,
+            ],
+            username='root',
+            ignore_failures=True,
+        )
+        if add_result.returncode == 0:
+            return
+        err = add_result.aggr_stderr
+        if 'peerURL exists' in err:
+            # This succeeded on a previous attempt
+            return
+        # Debug level logging because this is not unexpected
+        logger.debug('Etcd member add failed: %s', err)
+        raise BootstrapError(
+            'Error was: {err}\n'
+            'Failed to join etcd cluster. '
+            'If this node is being reinstalled you may need '
+            'to uninstall it then run the DB node '
+            'removal command on a healthy DB node before '
+            'attempting to install again.'.format(err=err)
+        )
 
     def _get_etcd_members(self):
         """Get a dict mapping etcd member IPs to their IDs."""
