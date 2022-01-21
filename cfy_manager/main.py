@@ -552,8 +552,6 @@ def _print_finish_message(config_file=None):
                 protocol=protocol,
                 ip=manager_config[PUBLIC_IP])
         )
-        # reload the config in case the admin password changed
-        config.load_config(config_file)
         password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
         print('Admin password: {0}'.format(password))
         print('#' * 50)
