@@ -64,6 +64,7 @@ def _collect_cloudify_data(data):
                                               get_all_results=True)]
         executions = _summarize_executions(sm)
         nodes = _summarize_nodes(sm)
+        usage_collector_metrics = sm.get(models.UsageCollector, 0)
 
         data['cloudify_usage'] = {
             'tenants_count': sm.count(models.Tenant),
@@ -94,7 +95,18 @@ def _collect_cloudify_data(data):
             'compute_count': sm.count(models.NodeInstance,
                                       filters={models.NodeInstance.state:
                                                'started'},
-                                      distinct_by=models.NodeInstance.host_id)
+                                      distinct_by=models.NodeInstance.host_id),
+
+            'max_deployments': usage_collector_metrics.max_deployments,
+            'max_blueprints': usage_collector_metrics.max_blueprints,
+            'max_users': usage_collector_metrics.max_users,
+            'max_tenants': usage_collector_metrics.max_tenants,
+            'total_deployments': usage_collector_metrics.total_deployments,
+            'total_blueprints': usage_collector_metrics.total_blueprints,
+            'total_executions': usage_collector_metrics.max_tenants,
+            'total_logins': usage_collector_metrics.total_logins,
+            'total_logged_in_users':
+                usage_collector_metrics.total_logged_in_users,
         }
         data['cloudify_usage'].update(_get_first_and_last_login(sm))
 
