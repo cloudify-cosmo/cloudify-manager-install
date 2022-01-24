@@ -304,7 +304,7 @@ class RestService(BaseComponent):
         if issues:
             raise BootstrapError(
                 'Existing cluster could not be joined due to configuration '
-                'issues. Please run cfy_manager remove --force, then fix the '
+                'issues. Please run cfy_manager remove, then fix the '
                 'configuration issues before reinstalling. Issues were:\n'
                 '{issues}'.format(
                     issues='\n'.join(issues),
