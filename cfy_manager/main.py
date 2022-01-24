@@ -147,9 +147,6 @@ BROKER_REMOVE_NODE_HELP_MSG = (
 DB_NODE_ADDRESS_HELP_MSG = (
     "Address of target DB cluster node."
 )
-DB_NODE_FORCE_HELP_MSG = (
-    "Force removal of cluster node even if it is the master."
-)
 DB_SHELL_DBNAME_HELP_MSG = (
     "Which DB to connect to using DB shell"
 )
@@ -977,13 +974,10 @@ def _get_items_to_remove(items_file):
 
 
 @config_arg
-def remove(verbose=False, force=False, config_file=None):
+def remove(verbose=False, config_file=None):
     """ Uninstall Cloudify Manager """
 
     _prepare_execution(verbose, config_file=config_file)
-    if force:
-        logger.warning('--force is deprecated, does nothing, and will be '
-                       'removed in a future version')
 
     removed_services = [service_name.split('_')[0].capitalize() for
                         service_name in get_main_services_from_config()]
@@ -1060,13 +1054,10 @@ def start(include_components,
 
 @argh.arg('include_components', nargs='*')
 @config_arg
-def stop(include_components, verbose=False, force=False, config_file=None):
+def stop(include_components, verbose=False, config_file=None):
     """ Stop Cloudify Manager services """
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('stop', config_file)
-    if force:
-        logger.warning('--force is deprecated, does nothing, and will be '
-                       'removed in a future version')
 
     logger.notice('Stopping Cloudify Manager services...')
     for component in _get_components(include_components):
@@ -1077,14 +1068,11 @@ def stop(include_components, verbose=False, force=False, config_file=None):
 
 @argh.arg('include_components', nargs='*')
 @config_arg
-def restart(include_components, verbose=False, force=False, config_file=None):
+def restart(include_components, verbose=False, config_file=None):
     """ Restart Cloudify Manager services """
 
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart', config_file)
-    if force:
-        logger.warning('--force is deprecated, does nothing, and will be '
-                       'removed in a future version')
     service.reread()
     components = _get_components(include_components)
     for component in components:
