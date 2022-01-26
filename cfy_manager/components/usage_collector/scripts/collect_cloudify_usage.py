@@ -64,7 +64,7 @@ def _collect_cloudify_data(data):
                                               get_all_results=True)]
         executions = _summarize_executions(sm)
         nodes = _summarize_nodes(sm)
-        usage_collector_metrics = sm.get(models.UsageCollector, 0)
+        usage_collector_metrics = models.UsageCollector.query.first()
 
         data['cloudify_usage'] = {
             'tenants_count': sm.count(models.Tenant),
