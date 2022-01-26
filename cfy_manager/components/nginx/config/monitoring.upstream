@@ -18,15 +18,15 @@ upstream cloudify-monitoring-blackbox {
 # Monitoring internal server - always SSL enabled
 server {
   # server listening for monitoring requests
-  listen              {{ constants.monitoring_port }} ssl default_server;
+  listen              {{ constants.MONITORING_PORT }} ssl default_server;
   {% if ipv6_enabled -%}
-  listen              [::]:{{ constants.monitoring_port }} ssl default_server;
+  listen              [::]:{{ constants.MONITORING_PORT }} ssl default_server;
   {%- endif %}
 
   server_name         _;
 
-  ssl_certificate     {{ constants.monitoring_cert_path }};
-  ssl_certificate_key {{ constants.monitoring_key_path }};
+  ssl_certificate     {{ constants.MONITORING_CERT_PATH }};
+  ssl_certificate_key {{ constants.MONITORING_KEY_PATH }};
 
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 

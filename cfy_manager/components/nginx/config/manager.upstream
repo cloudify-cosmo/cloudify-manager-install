@@ -47,8 +47,8 @@ server {
   {%- endif %}
   server_name         {{ manager.public_ip }};
 
-  ssl_certificate     {{ constants.external_cert_path }};
-  ssl_certificate_key {{ constants.external_key_path }};
+  ssl_certificate     {{ constants.EXTERNAL_CERT_PATH }};
+  ssl_certificate_key {{ constants.EXTERNAL_KEY_PATH }};
 
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -98,15 +98,15 @@ server {
 # REST and UI internal server - always SSL enabled
 server {
   # server listening for internal requests
-  listen              {{ constants.internal_rest_port }} ssl default_server;
+  listen              {{ constants.INTERNAL_REST_PORT }} ssl default_server;
   {% if ipv6_enabled -%}
-  listen              [::]:{{ constants.internal_rest_port }} ssl default_server;
+  listen              [::]:{{ constants.INTERNAL_REST_PORT }} ssl default_server;
   {%- endif %}
 
   server_name         _;
 
-  ssl_certificate     {{ constants.internal_cert_path }};
-  ssl_certificate_key {{ constants.internal_key_path }};
+  ssl_certificate     {{ constants.INTERNAL_CERT_PATH }};
+  ssl_certificate_key {{ constants.INTERNAL_KEY_PATH }};
 
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 

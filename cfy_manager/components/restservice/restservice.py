@@ -106,7 +106,6 @@ class RestService(BaseComponent):
 
     def _deploy_rest_conf(self):
         client_conf = config[POSTGRESQL_CLIENT]
-        const = config['constants']
         rest_conf = {
             'postgresql_bin_path': '/usr/pgsql-9.5/bin/',
             'postgresql_db_name': client_conf['cloudify_db_name'],
@@ -117,11 +116,13 @@ class RestService(BaseComponent):
             'postgresql_ssl_client_verification':
                 client_conf['ssl_client_verification'],
             'postgresql_ssl_cert_path':
-                const.get('postgresql_client_cert_path'),
+                constants.POSTGRESQL_CLIENT_CERT_PATH,
             'postgresql_ssl_key_path':
-                const.get('postgresql_client_key_path'),
-            'postgresql_ca_cert_path': const.get('postgresql_ca_cert_path'),
-            'ca_cert_path': const['ca_cert_path'],
+                constants.POSTGRESQL_CLIENT_KEY_PATH,
+            'postgresql_ca_cert_path':
+                constants.POSTGRESQL_CA_CERT_PATH,
+            'ca_cert_path':
+                constants.CA_CERT_PATH,
             'manager_hostname': config[MANAGER][HOSTNAME],
         }
         write(rest_conf, REST_CONFIG_PATH, json_dump=True,

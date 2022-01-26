@@ -30,10 +30,8 @@ from . import DATABASE_SERVICE, MANAGER_SERVICE
 from .components_constants import (
     PRIVATE_IP,
     SECURITY,
-    CONSTANTS,
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
-    SSL_CLIENT_VERIFICATION,
     HOSTNAME,
     ENABLE_REMOTE_CONNECTIONS
 )
@@ -72,30 +70,6 @@ def _set_ip_config():
     config['networks'].setdefault('default', private_ip)
 
 
-def _set_constant_config():
-    const_conf = config.setdefault(CONSTANTS, {})
-
-    const_conf['ca_cert_path'] = constants.CA_CERT_PATH
-    const_conf['internal_cert_path'] = constants.INTERNAL_CERT_PATH
-    const_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
-    const_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
-    const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
-    const_conf['monitoring_ca_cert_path'] = constants.MONITORING_CA_CERT_PATH
-    const_conf['monitoring_cert_path'] = constants.MONITORING_CERT_PATH
-    const_conf['monitoring_key_path'] = constants.MONITORING_KEY_PATH
-    if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
-        const_conf['postgresql_ca_cert_path'] = \
-            constants.POSTGRESQL_CA_CERT_PATH
-        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-            const_conf['postgresql_client_cert_path'] = \
-                constants.POSTGRESQL_CLIENT_CERT_PATH
-            const_conf['postgresql_client_key_path'] = \
-                constants.POSTGRESQL_CLIENT_KEY_PATH
-
-    const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
-    const_conf['monitoring_port'] = constants.MONITORING_PORT
-
-
 def _set_hostname():
     if not config[MANAGER][HOSTNAME]:
         config[MANAGER][HOSTNAME] = socket.gethostname()
@@ -123,5 +97,4 @@ def set_globals(only_install=False):
     _apply_forced_settings()
     _set_ip_config()
     _set_external_port_and_protocol()
-    _set_constant_config()
     _set_hostname()
