@@ -526,7 +526,6 @@ def _prepare_execution(verbose=False,
                        public_ip=None,
                        admin_password=None,
                        clean_db=False,
-                       config_write_required=False,
                        only_install=False,
                        config_file=None):
     setup_console_logger(verbose)
@@ -738,7 +737,6 @@ def validate_command(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=False,
         config_file=config_file,
     )
     components = _get_components()
@@ -841,7 +839,6 @@ def install(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=True,
         config_file=config_file,
         only_install=only_install,
     )
@@ -888,7 +885,6 @@ def configure(verbose=False,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=True,
         config_file=config_file,
     )
 
@@ -1039,7 +1035,6 @@ def start(include_components,
         public_ip,
         admin_password,
         clean_db,
-        config_write_required=True,
         config_file=config_file,
     )
     _validate_components_prepared('start', config_file)
@@ -1246,7 +1241,6 @@ def image_starter(verbose=False, config_file=None):
     """
     _prepare_execution(
         verbose,
-        config_write_required=False,
         config_file=config_file,
     )
     config.load_config(config_file)
