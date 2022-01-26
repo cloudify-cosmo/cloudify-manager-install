@@ -1,15 +1,8 @@
 from os.path import join
 
-from ..components_constants import (
-    CONFIG,
-    HOME_DIR_KEY,
-    LOG_DIR_KEY,
-    SERVICE_USER,
-    SERVICE_GROUP,
-)
+from ..components_constants import CONFIG
 from ..base_component import BaseComponent
 from ..service_names import MGMTWORKER
-from ...config import config
 from ...logger import get_logger
 from ... import constants as const
 from ...utils import (
@@ -20,11 +13,7 @@ from ...utils import (
 from ...utils.files import deploy
 
 
-HOME_DIR = '/opt/mgmtworker'
-MGMTWORKER_VENV = join(HOME_DIR, 'env')
-LOG_DIR = join(const.BASE_LOG_DIR, MGMTWORKER)
 CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
-HOOKS_CONFIG = join(HOME_DIR, 'config', 'hooks.conf')
 logger = get_logger(MGMTWORKER)
 
 
@@ -54,11 +43,8 @@ class MgmtWorker(BaseComponent):
             common.chmod('0500', script_path)
 
     def _deploy_mgmtworker_config(self):
-        config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
-        config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
-        config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
-        config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
         self._deploy_hooks_config()
+        # FIXME
 
     def _deploy_admin_token(self):
         script_name = 'create-admin-token.py'
@@ -78,21 +64,22 @@ class MgmtWorker(BaseComponent):
         # can be altered by users, so we shouldn't overwrite it once present.
         # Can't use os.path.exists because the file is owned by cfyuser
         r = common.run(
-            'ls {0}'.format(HOOKS_CONFIG), ignore_failures=True
+            'ls {0}'.format(const.MGMWORKER_HOOKS_CONFIG),
+            ignore_failures=True
         )
         if r.returncode == 0:
             return
 
         deploy(
             src=join(CONFIG_PATH, 'hooks.conf'),
-            dst=HOOKS_CONFIG
+            dst=const.MGMWORKER_HOOKS_CONFIG
         )
 
         # The user should use root to edit the hooks config file
-        common.chmod('440', HOOKS_CONFIG)
+        common.chmod('440', const.MGMWORKER_HOOKS_CONFIG)
         common.chown(const.CLOUDIFY_USER,
                      const.CLOUDIFY_GROUP,
-                     HOOKS_CONFIG)
+                     const.MGMWORKER_HOOKS_CONFIG)
 
     def _prepare_snapshot_permissions(self):
         self._add_snapshot_restore_sudo_commands()

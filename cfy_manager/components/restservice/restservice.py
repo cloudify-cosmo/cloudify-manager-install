@@ -18,14 +18,11 @@ from ...constants import (
     REST_AUTHORIZATION_CONFIG_PATH
 )
 from ..components_constants import (
-    VENV,
     CONFIG,
     SCRIPTS,
     CLEAN_DB,
     SECURITY,
     SSL_INPUTS,
-    LOG_DIR_KEY,
-    HOME_DIR_KEY,
     CLUSTER_JOIN,
     ADMIN_PASSWORD,
     FLASK_SECURITY,
@@ -63,8 +60,6 @@ from ...utils.files import (
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
-REST_VENV = join(REST_HOME_DIR, 'env')
-LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
@@ -78,12 +73,6 @@ RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 class RestService(BaseComponent):
     services = {'cloudify-restservice': {'is_group': False},
                 'cloudify-api': {'is_group': True}}
-
-    def _make_paths(self):
-        # Used in the service templates
-        config[RESTSERVICE][HOME_DIR_KEY] = REST_HOME_DIR
-        config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
-        config[RESTSERVICE][VENV] = REST_VENV
 
     def _deploy_restservice_files(self):
         logger.info('Deploying REST authorization, REST Service configuration'
@@ -493,7 +482,6 @@ class RestService(BaseComponent):
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
-        self._make_paths()
         self.configure_service('cloudify-restservice')
         self.configure_service('cloudify-api')
         certificates.handle_ca_cert(logger)
