@@ -42,10 +42,6 @@ class MgmtWorker(BaseComponent):
             common.chown('root', 'root', script_path)
             common.chmod('0500', script_path)
 
-    def _deploy_mgmtworker_config(self):
-        self._deploy_hooks_config()
-        # FIXME
-
     def _deploy_admin_token(self):
         script_name = 'create-admin-token.py'
         sudoers.deploy_sudo_command_script(
@@ -89,7 +85,7 @@ class MgmtWorker(BaseComponent):
 
     def configure(self):
         logger.notice('Configuring Management Worker...')
-        self._deploy_mgmtworker_config()
+        self._deploy_hooks_config()
         service.configure('cloudify-mgmtworker')
         self._prepare_snapshot_permissions()
         self._deploy_admin_token()
