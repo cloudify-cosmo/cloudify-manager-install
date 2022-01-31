@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import sys
 import platform
@@ -22,7 +7,7 @@ from collections import namedtuple
 from ipaddress import ip_address
 from distutils.version import LooseVersion
 
-from cfy_manager.utils.common import is_installed
+from cfy_manager.utils.common import service_is_in_config
 from .components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
@@ -50,9 +35,8 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, sudo, ProcessExecutionError
+from ..utils.common import run, ProcessExecutionError
 from ..utils.network import is_ipv6
-from cfy_manager.utils.files import is_file
 
 logger = get_logger(VALIDATIONS)
 
@@ -264,7 +248,7 @@ def _validate_user_has_sudo_permissions():
     logger.info('Validating user `{0}` has sudo permissions...'.format(
         current_user
     ))
-    result = run(['sudo', '-n', 'true'])
+    result = run(['/usr/bin/sudo', '-n', 'true'])
     if result.returncode != 0:
         _errors.append(
             "Failed executing 'sudo'. Please ensure that the "
@@ -288,7 +272,7 @@ def validate_dependencies(components):
 
 def _check_ssl_file(filename, kind='Key', password=None):
     """Does the cert/key file exist and is it valid?"""
-    if not is_file(filename):
+    if not os.path.isfile(filename):
         raise ValidationError(
             '{0} file {1} does not exist'
             .format(kind, filename))
@@ -303,7 +287,7 @@ def _check_ssl_file(filename, kind='Key', password=None):
         check_command = ['openssl', 'x509', '-in', filename, '-noout']
     else:
         raise ValueError('Unknown kind: {0}'.format(kind))
-    proc = sudo(check_command, ignore_failures=True)
+    proc = run(check_command, ignore_failures=True)
     if proc.returncode != 0:
         password_err = ''
         if password:
@@ -322,7 +306,7 @@ def _check_signed_by(ca_filename, cert_filename):
         cert_filename
     ]
     try:
-        sudo(ca_check_command)
+        run(ca_check_command)
     except ProcessExecutionError:
         raise ValidationError(
             'Provided certificate {cert} was not signed by provided '
@@ -345,8 +329,8 @@ def _check_cert_key_match(cert_filename, key_filename, password=None):
         ]
     cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
                             '-in', cert_filename]
-    key_modulus = sudo(key_modulus_command).aggr_stdout.strip()
-    cert_modulus = sudo(cert_modulus_command).aggr_stdout.strip()
+    key_modulus = run(key_modulus_command).aggr_stdout.strip()
+    cert_modulus = run(cert_modulus_command).aggr_stdout.strip()
     if cert_modulus != key_modulus:
         raise ValidationError(
             'Key {key_path} does not match the cert {cert_path}'.format(
@@ -535,14 +519,16 @@ def _validate_postgres_inputs():
     Validating that an external DB will always listen to remote connections
     and, that a postgres password is set - needed for remote connections
     """
-    if is_installed(DATABASE_SERVICE) and is_installed(MANAGER_SERVICE):
+    db_service_in_config = service_is_in_config(DATABASE_SERVICE)
+    manager_service_in_config = service_is_in_config(MANAGER_SERVICE)
+    if db_service_in_config and manager_service_in_config:
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             raise ValidationError('Cannot install database_service when '
                                   'connecting to an external database')
         elif config[POSTGRESQL_SERVER]['cluster']['nodes']:
             raise ValidationError('Cannot install database_service when '
                                   'connecting to a Postgres Cluster')
-    if is_installed(DATABASE_SERVICE) and not is_installed(MANAGER_SERVICE):
+    if db_service_in_config and not manager_service_in_config:
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             if not config[POSTGRESQL_SERVER][POSTGRES_PASSWORD]:
                 raise ValidationError('When using an external database with '
@@ -558,7 +544,7 @@ def _validate_postgres_inputs():
                                   'enable_remote_connections and '
                                   'postgres_password must be set')
 
-    if is_installed(MANAGER_SERVICE) and not is_installed(DATABASE_SERVICE):
+    if manager_service_in_config and not db_service_in_config:
         postgres_host = config[POSTGRESQL_CLIENT]['host'].rsplit(':', 1)[0]
         if postgres_host in ('localhost', '127.0.0.1', '::1') and \
                 not config[POSTGRESQL_CLIENT][SERVER_PASSWORD]:
@@ -583,7 +569,7 @@ def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
                 'config.yaml in {1}'
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         if not (config['postgresql_server']['cert_path'] and
                 config['postgresql_server']['key_path'] and
                 config['postgresql_server']['ca_path']):
@@ -604,7 +590,7 @@ def _validate_postgres_ssl_certificates_provided():
                     'ssl_inputs.postgresql_client_cert_path, '
                     'ssl_inputs.postgresql_client_key_path, '
                     'and postgresql_server.ca_path'))
-    elif is_installed(MANAGER_SERVICE):
+    elif service_is_in_config(MANAGER_SERVICE):
         if not config['postgresql_server']['ca_path'] and not \
                 config['postgresql_client']['ca_path']:
             # Do not allow external postgres without SSL
@@ -618,7 +604,10 @@ def _validate_postgres_ssl_certificates_provided():
 def _validate_external_postgres():
     pg_conf = config[POSTGRESQL_SERVER]
 
-    if is_installed(DATABASE_SERVICE) and is_installed(MANAGER_SERVICE):
+    if (
+        service_is_in_config(DATABASE_SERVICE)
+        and service_is_in_config(MANAGER_SERVICE)
+    ):
         if pg_conf['cluster']['nodes']:
             raise ValidationError('Postgres cluster nodes cannot be '
                                   'installed on manager nodes.')
@@ -626,7 +615,7 @@ def _validate_external_postgres():
             # Local DB, no need to conduct external checks
             return
 
-    if is_installed(DATABASE_SERVICE):
+    if service_is_in_config(DATABASE_SERVICE):
         if pg_conf['cluster']['nodes']:
             problems = []
 
@@ -665,21 +654,6 @@ def _validate_external_postgres():
                 )
 
 
-def _validate_ldap_certificate_setting():
-    """Confirm that if using ldaps we have the required ca cert."""
-    ldaps = config['restservice']['ldap']['server'].startswith('ldaps://')
-    ca_cert = config['restservice']['ldap']['ca_cert']
-
-    if ldaps and not ca_cert:
-        raise ValidationError(
-            'When using ldaps a CA certificate must be provided.'
-        )
-    elif ca_cert and not ldaps:
-        raise ValidationError(
-            'When not using ldaps a CA certificate must not be provided.'
-        )
-
-
 def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         # Inputs always need to be validated, otherwise the install won't work
@@ -692,7 +666,6 @@ def validate(components, skip_validations=False, only_install=False):
     logger.notice('Validating local machine...')
 
     if not only_install:
-        _validate_ldap_certificate_setting()
         _validate_ip(config[MANAGER][PRIVATE_IP], check_local_interfaces=True)
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):

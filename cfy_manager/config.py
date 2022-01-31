@@ -1,41 +1,19 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import collections
 import logging
-import os
-import pwd
-import subprocess
 
-from contextlib import contextmanager
-from getpass import getuser
 from os.path import isfile, join, abspath
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from ruamel.yaml.comments import CommentedMap
 
-from .exceptions import InputError, BootstrapError, ValidationError
+from .exceptions import InputError, ValidationError
 from .constants import (
     DEFAULT_CONFIG_FILE_NAME,
-    USER_CONFIG_PATH,
     DEFAULT_CONFIG_PATH,
-    CLOUDIFY_USER,
     CLOUDIFY_HOME_DIR,
-    INITIAL_INSTALL_DIR,
 )
+from cfy_manager.utils.install_state import get_installed_services
 yaml = YAML()
 logger = logging.getLogger('[CONFIG]')
 
@@ -56,15 +34,6 @@ def dict_merge(dct, merge_dct):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
-
-
-def get_installed_services():
-    try:
-        return [service_name for service_name in
-                os.listdir(INITIAL_INSTALL_DIR)
-                if not service_name.endswith('yaml')]
-    except OSError:
-        return []
 
 
 class Config(CommentedMap):
@@ -89,36 +58,10 @@ class Config(CommentedMap):
             user_config = self._load_yaml(config_file)
             dict_merge(self, user_config)
 
-    @contextmanager
-    def _own_config_file(self, config_file_path=USER_CONFIG_PATH):
-        try:
-            # Not using common module because of circular import issues
-            subprocess.check_call([
-                'sudo', 'chown', getuser() + '.', config_file_path
-            ])
-            yield
-        finally:
-            try:
-                pwd.getpwnam('cfyuser')
-                subprocess.check_call([
-                    'sudo', 'chown', CLOUDIFY_USER + '.', config_file_path
-                ])
-            except KeyError:
-                # No cfyuser, don't pass ownnership back (this is probably a
-                # DB or rabbit node)
-                pass
-
     def _load_yaml(self, path_to_yaml):
         try:
-            try:
-                with open(path_to_yaml) as f:
-                    yaml_data = f.read()
-            except PermissionError as e:
-                logger.debug('Cannot access %s, trying with sudo (%s)',
-                             path_to_yaml, e)
-                yaml_data = subprocess.check_output([
-                    'sudo', 'cat', path_to_yaml
-                ])
+            with open(path_to_yaml) as f:
+                yaml_data = f.read()
         except IOError as e:
             raise RuntimeError(
                 'Cannot access {config}: {error}'.format(
@@ -133,19 +76,6 @@ class Config(CommentedMap):
             raise InputError(
                 'User config file {0} is not a properly formatted '
                 'YAML file:\n{1}'.format(path_to_yaml, e)
-            )
-
-    def dump_config(self):
-        self.pop(self.TEMP_PATHS, None)
-        try:
-            with self._own_config_file():
-                with open(USER_CONFIG_PATH, 'w') as f:
-                    yaml.dump(CommentedMap(self, relax=True), f)
-        except (IOError, YAMLError) as e:
-            raise BootstrapError(
-                'Could not dump config to {0}:\n{1}'.format(
-                    USER_CONFIG_PATH, e
-                )
             )
 
     def load_config(self, config_files=None):

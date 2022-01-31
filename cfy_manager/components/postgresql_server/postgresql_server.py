@@ -4,6 +4,7 @@ import time
 import json
 import psutil
 import socket
+import subprocess
 from copy import copy
 from getpass import getuser
 from tempfile import mkstemp
@@ -19,7 +20,6 @@ from cfy_manager.exceptions import (
     ClusteringError,
     DBNodeListError,
     DBManagementError,
-    ProcessExecutionError,
 )
 from ..components_constants import (
     CONFIG,
@@ -46,12 +46,13 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import (
+    certificates,
     common,
-    files,
     db,
+    files,
     network,
     service,
-    certificates
+    syslog,
 )
 
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
@@ -137,7 +138,7 @@ class PostgresqlServer(BaseComponent):
         cmd = '\"{0} -D {1} initdb\"'.format(pg_ctl, PGSQL_DATA_DIR)
         initdb = 'su - postgres -c {0}'.format(cmd)
         try:
-            common.sudo(initdb)
+            common.run(initdb)
         except Exception:
             logger.debug('PostreSQL Server DATA folder already initialized...')
 
@@ -175,14 +176,6 @@ class PostgresqlServer(BaseComponent):
                 '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
             )
 
-    def _read_old_file_lines(self, file_path):
-        temp_file_path = files.write_to_tempfile('')
-        common.copy(file_path, temp_file_path)
-        common.chmod('777', temp_file_path)
-        with open(temp_file_path, 'r') as f:
-            lines = f.readlines()
-        return lines
-
     def _bytes_as_mb(self, value_in_bytes):
         return '{}MB'.format(value_in_bytes // 1024 // 1024)
 
@@ -198,7 +191,7 @@ class PostgresqlServer(BaseComponent):
         standalone database installation (like in cluster) or 25% for the
         all-in-one installation.
         """
-        if common.is_installed(MANAGER_SERVICE):
+        if common.service_is_configured(MANAGER_SERVICE):
             return self._bytes_as_mb(psutil.virtual_memory().total // 4)
         else:
             return self._bytes_as_mb(psutil.virtual_memory().total // 2)
@@ -309,19 +302,19 @@ class PostgresqlServer(BaseComponent):
         logger.info('Updating PostgreSQL Server configuration...')
         logger.debug('Modifying {0}'.format(PG_HBA_CONF))
         common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
-        lines = self._read_old_file_lines(PG_HBA_CONF)
+        lines = files.read(PG_HBA_CONF).splitlines(True)
         temp_hba_path = self._write_new_hba_file(lines,
                                                  enable_remote_connections)
         common.move(temp_hba_path, PG_HBA_CONF)
         common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
         include_line = "include = '{config}'".format(config=PG_CONF_PATH)
-        already_included = common.sudo(
+        already_included = common.run(
             ['grep', include_line, PG_BASE_CONF_PATH],
             ignore_failures=True,
         ).returncode == 0
         if not already_included:
-            common.sudo(
+            common.run(
                 ['tee', '-a', PG_BASE_CONF_PATH],
                 stdin="{include}\n".format(include=include_line),
             )
@@ -403,11 +396,14 @@ class PostgresqlServer(BaseComponent):
         logger.info('Starting etcd')
         # Systemd only support adding "--no-block"
         options = ['--no-block']
+        ignore_failure = False
         if self.service_type == 'supervisord':
             options = []
+            ignore_failure = True
 
-        service.start('etcd', options=options)
-        self._wait_for_etcd()
+        service.start('etcd', options=options, ignore_failure=ignore_failure)
+        if self.service_type == 'systemd':
+            self._wait_for_etcd()
         logger.info('etcd has started')
 
     def _restart_etcd(self):
@@ -426,7 +422,7 @@ class PostgresqlServer(BaseComponent):
         patronictl_base_command = [
             '/opt/patroni/bin/patronictl', '-c', PATRONI_CONFIG_PATH,
         ]
-        return common.sudo(patronictl_base_command + command)
+        return common.run(patronictl_base_command + command)
 
     def _etcd_command(self, command, ignore_failures=False, stdin=None,
                       local_only=False, username=None):
@@ -645,26 +641,6 @@ class PostgresqlServer(BaseComponent):
                 new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
             )
 
-    @staticmethod
-    def _configure_syslog():
-        files.deploy(
-            join(
-                SCRIPTS_PATH,
-                'syslog_wrapper_script.sh'
-            ),
-            '/opt/cloudify',
-            render=False
-        )
-        common.chmod(
-            '755',
-            '/opt/cloudify/syslog_wrapper_script.sh'
-        )
-        service.configure(
-            'rsyslog',
-            src_dir='postgresql_server',
-            config_path='config/supervisord',
-        )
-
     def _configure_cluster(self):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(POSTGRES_SERVICE_NAME)
@@ -744,25 +720,11 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(PATRONI_LOG_PATH)
         common.mkdir(ETCD_LOG_PATH)
         common.mkdir(POSTGRES_LOG_PATH)
-        common.sudo(['chown', 'postgres.', PATRONI_LOG_PATH])
-        common.sudo(['chown', 'postgres.', POSTGRES_LOG_PATH])
+        common.run(['chown', 'postgres.', PATRONI_LOG_PATH])
+        common.run(['chown', 'postgres.', POSTGRES_LOG_PATH])
 
-        # create rsyslog rule for for etcd
-        fd, tmp_path = mkstemp()
-        os.close(fd)
-        with open(tmp_path, 'w') as etcd_rsyslog:
-            etcd_rsyslog.write(
-                "if $programname == '{service_type}'"
-                " and $rawmsg contains 'Etcd'"
-                " then {logpath}\n& stop\n"
-                "if $programname == 'etcd' then {logpath}\n& stop\n".format(
-                    logpath=os.path.join(ETCD_LOG_PATH, 'etcd.log'),
-                    service_type=self.service_type
-                ))
-        common.sudo(['mv', '-T', tmp_path, '/etc/rsyslog.d/43-etcd.conf'])
-        if self.service_type == 'supervisord':
-            self._configure_syslog()
-        service.restart('rsyslog')
+        syslog.deploy_rsyslog_filters('db_cluster', ['etcd', 'patroni'],
+                                      self.service_type)
 
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()
@@ -773,8 +735,8 @@ class PostgresqlServer(BaseComponent):
             for name, value in pg_params.items():
                 pg_conf.write("{0} = {1}\n".format(name, value))
 
-        common.sudo(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
-        common.sudo(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
+        common.run(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
+        common.run(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
         logger.info('Configuring etcd')
         if self.service_type == 'supervisord':
@@ -828,24 +790,8 @@ class PostgresqlServer(BaseComponent):
                     etcd_node_address = 'https://{ip}:2380'.format(
                         ip=network.ipv6_url_compat(node_ip))
                     etcd_node_id = self._get_etcd_id(node_ip)
-                    try:
-                        self._etcd_command(
-                            [
-                                'member', 'add',
-                                etcd_node_id, etcd_node_address,
-                            ],
-                            username='root',
-                        )
-                    except ProcessExecutionError as err:
-                        raise BootstrapError(
-                            'Error was: {err}\n'
-                            'Failed to join etcd cluster. '
-                            'If this node is being reinstalled you may need '
-                            'to uninstall it then run the DB node '
-                            'removal command on a healthy DB node before '
-                            'attempting to install again.'.format(err=err)
-                        )
-                    common.sudo([
+                    self._add_etcd_member(etcd_node_id, etcd_node_address)
+                    common.run([
                         'sed', '-i',
                         's/ETCD_INITIAL_CLUSTER_STATE.*/'
                         "ETCD_INITIAL_CLUSTER_STATE='existing'/",
@@ -921,8 +867,8 @@ class PostgresqlServer(BaseComponent):
 
         logger.info('Creating postgres bin links for patroni')
         for pg_bin in PG_BINS:
-            common.sudo(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
-                         '/usr/sbin'])
+            common.run(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
+                        '/usr/sbin'])
 
         logger.info('Starting patroni')
         self._configure_patroni()
@@ -931,6 +877,35 @@ class PostgresqlServer(BaseComponent):
         logger.info('Activating patroni initial startup monitor.')
         self._activate_patroni_startup_check()
         logger.info('Patroni started.')
+
+    # Joining the cluster sometimes runs into problems while the cluster is
+    # electing a leader, but just retrying makes it work.
+    @retry(stop_max_attempt_number=15, wait_fixed=2000)
+    def _add_etcd_member(self, etcd_node_id, etcd_node_address):
+        add_result = self._etcd_command(
+            [
+                'member', 'add',
+                etcd_node_id, etcd_node_address,
+            ],
+            username='root',
+            ignore_failures=True,
+        )
+        if add_result.returncode == 0:
+            return
+        err = add_result.aggr_stderr
+        if 'peerURL exists' in err:
+            # This succeeded on a previous attempt
+            return
+        # Debug level logging because this is not unexpected
+        logger.debug('Etcd member add failed: %s', err)
+        raise BootstrapError(
+            'Error was: {err}\n'
+            'Failed to join etcd cluster. '
+            'If this node is being reinstalled you may need '
+            'to uninstall it then run the DB node '
+            'removal command on a healthy DB node before '
+            'attempting to install again.'.format(err=err)
+        )
 
     def _get_etcd_members(self):
         """Get a dict mapping etcd member IPs to their IDs."""
@@ -982,21 +957,8 @@ class PostgresqlServer(BaseComponent):
         # Similarly to the current snapshot post restore commands, this will
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
-        if self.service_type == 'supervisord':
-            service.configure(
-                'patroni_startup_check',
-                src_dir='postgresql_server',
-                config_path='config/supervisord'
-            )
-            service.start('patroni_startup_check')
-        else:
-            common.sudo(
-                [
-                    'systemd-run',
-                    '--unit', 'patroni_startup_check',
-                    '/opt/patroni/bin/patroni_startup_check',
-                ]
-            )
+        # WARNING: Do not use anything other than Popen, this must not block
+        subprocess.Popen(['/opt/patroni/bin/patroni_startup_check'])
 
     def _create_patroni_config(self, patroni_config_path):
         manager_ip = config['manager'][PRIVATE_IP]
@@ -1102,7 +1064,7 @@ class PostgresqlServer(BaseComponent):
                 patroni_conf['bootstrap']['dcs']['postgresql']['pg_hba'],
                 node['ip']
             )
-        common.sudo([
+        common.run([
             'touch', patroni_config_path,
         ])
         common.chown(getuser(), '', patroni_config_path)
@@ -1702,6 +1664,7 @@ class PostgresqlServer(BaseComponent):
         self._configure_postgresql_server_service()
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             self._configure_cluster()
+            service.remove(POSTGRES_SERVICE_NAME)
         else:
             self._init_postgresql_server()
             enable_remote_connections = \
@@ -1727,14 +1690,17 @@ class PostgresqlServer(BaseComponent):
                 '/etc/patroni.conf',
                 '/etc/etcd',
             ])
-        service.remove('patroni_startup_check')
         logger.notice('Removing PostgreSQL...')
         files.remove_files([
             '/var/lib/pgsql/9.5/data',
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
-        service.remove(POSTGRES_SERVICE_NAME)
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            service.remove('etcd')
+            service.remove('patroni')
+        else:
+            service.remove(POSTGRES_SERVICE_NAME)
         logger.info('Removing postgres bin links')
         files.remove_files(
             [os.path.join('/usr/sbin', pg_bin) for pg_bin in PG_BINS],
@@ -1751,7 +1717,7 @@ class PostgresqlServer(BaseComponent):
             service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
-    def stop(self):
+    def stop(self, force=True):
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')

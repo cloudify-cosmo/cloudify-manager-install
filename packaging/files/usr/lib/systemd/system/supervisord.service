@@ -10,6 +10,7 @@ ExecReload=/usr/bin/supervisorctl -c /etc/supervisord.conf reload
 KillMode=process
 Restart=on-failure
 RestartSec=10s
+LimitNOFILE=102400
 
 [Install]
 WantedBy=multi-user.target

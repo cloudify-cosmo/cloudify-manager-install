@@ -17,4 +17,5 @@ location /resources-auth {
     internal;
     proxy_pass http://cloudify-rest/api/v3.1/file-server-auth;
     proxy_set_header X-Original-URI $request_uri;
+    proxy_set_header X-Original-Method $request_method;
 }

@@ -1,21 +1,6 @@
-#########
-# Copyright (c) 2020 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import json
 from os import sep
-from os.path import join, exists
+from os.path import join, exists, isfile
 import re
 
 from ..base_component import BaseComponent
@@ -53,7 +38,7 @@ from ...constants import (
 from ..restservice.db import get_monitoring_config
 from ...logger import get_logger
 from ...exceptions import ValidationError
-from ...utils import common, files, service, certificates
+from ...utils import common, files, service, certificates, syslog
 from ...utils.install import is_premium_installed
 from ...utils.network import ipv6_url_compat
 
@@ -190,11 +175,18 @@ class Prometheus(BaseComponent):
                 exporter['name'],
                 ignore_failure=True
             )
-        if files.is_file(CLUSTER_DETAILS_PATH):
+        if isfile(CLUSTER_DETAILS_PATH):
             logger.notice(
                 'File {0} exists will update Prometheus config...'.format(
                     CLUSTER_DETAILS_PATH))
             _deploy_configuration()
+
+        services = ['prometheus']
+        services.extend([exporter + '_exporter'
+                         for exporter in ['postgres', 'node', 'blackbox']])
+        syslog.deploy_rsyslog_filters('prometheus', services,
+                                      self.service_type)
+
         logger.notice('Prometheus successfully configured')
         self.start()
 
@@ -353,7 +345,7 @@ def _get_cluster_config():
     Based on config.yaml, but with fallback to reading nodes stored
     in the db (on manager-only nodes).
     """
-    if common.is_manager_service_only_installed():
+    if common.is_only_manager_service_in_config():
         return get_monitoring_config()
 
     return {}
@@ -365,13 +357,13 @@ def _update_prometheus_configuration(uninstalling=False):
     if not uninstalling:
         files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
                      PROMETHEUS_CONFIG_PATH)
-        common.sudo(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
+        common.run(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
 
     _update_base_targets(private_ip, uninstalling)
 
-    if common.is_installed(MANAGER_SERVICE):
+    if common.service_is_in_config(MANAGER_SERVICE):
         if uninstalling:
             # When uninstalling we don't use the config anyway, so all that we
             # accomplish by trying to retrieve it is allowing the uninstall to
@@ -384,10 +376,10 @@ def _update_prometheus_configuration(uninstalling=False):
         _deploy_alerts_configuration(
             http_probes_count, cluster_config, uninstalling)
 
-    if common.is_installed(DATABASE_SERVICE):
+    if common.service_is_in_config(DATABASE_SERVICE):
         _update_local_postgres_targets(private_ip, uninstalling)
 
-    if common.is_installed(QUEUE_SERVICE):
+    if common.service_is_in_config(QUEUE_SERVICE):
         _update_local_rabbit_targets(private_ip, uninstalling)
 
     common.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, PROMETHEUS_CONFIG_DIR)
@@ -665,6 +657,6 @@ def _update_manager_alerts_services():
 
     match_pattern = r'name=~"\([a-z\|\-_]*\)'
 
-    prometheus_conf = files.sudo_read(src_file_name)
+    prometheus_conf = files.read(src_file_name)
     new_services = re.findall(match_pattern, prometheus_conf)[0]
     files.replace_in_file(match_pattern, new_services, dest_file_name)

@@ -114,6 +114,8 @@ VERBOSE_HELP_MSG = (
 
 NEW_CERTS_TMP_DIR_PATH = '/tmp/new_cloudify_certs/'
 
+NEW_LDAP_CA_CERT_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ldap_ca_cert.pem')
+
 NEW_BROKER_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_cert.pem'
 NEW_BROKER_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_key.pem'
 NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
@@ -138,8 +140,6 @@ NEW_EXTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_cert.pem'
 NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
 NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                   'new_external_ca_cert.pem')
-
-NEW_LDAP_CA_CERT_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ldap_ca_cert.pem')
 
 NEW_PROMETHEUS_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                  'new_prometheus_cert.pem')

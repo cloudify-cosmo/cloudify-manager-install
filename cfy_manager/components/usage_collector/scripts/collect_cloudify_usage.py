@@ -37,7 +37,7 @@ def _get_cpu_model():
     model_command = "cat {0} | grep 'model name' | uniq".format(CPU_INFO_PATH)
     proc = subprocess.Popen(model_command, shell=True, stdout=subprocess.PIPE)
     stdout = proc.communicate()[0]
-    if proc.returncode != 0:
+    if proc.returncode != 0 or not stdout:
         return None
 
     # Get only the model name
@@ -64,6 +64,7 @@ def _collect_cloudify_data(data):
                                               get_all_results=True)]
         executions = _summarize_executions(sm)
         nodes = _summarize_nodes(sm)
+        usage_collector_metrics = models.UsageCollector.query.first()
 
         data['cloudify_usage'] = {
             'tenants_count': sm.count(models.Tenant),
@@ -73,6 +74,9 @@ def _collect_cloudify_data(data):
             'sites_count': sm.count(models.Site),
             'blueprints_count': sm.count(models.Blueprint),
             'deployments_count': sm.count(models.Deployment),
+            'environments_count': len(sm.list(
+                models.Deployment,
+                filters=_licensed_environments_filter())),
             'executions_count': executions['total'],
             'executions_succeeded': executions['succeeded'],
             'executions_failed': executions['failed'],
@@ -91,7 +95,18 @@ def _collect_cloudify_data(data):
             'compute_count': sm.count(models.NodeInstance,
                                       filters={models.NodeInstance.state:
                                                'started'},
-                                      distinct_by=models.NodeInstance.host_id)
+                                      distinct_by=models.NodeInstance.host_id),
+
+            'max_deployments': usage_collector_metrics.max_deployments,
+            'max_blueprints': usage_collector_metrics.max_blueprints,
+            'max_users': usage_collector_metrics.max_users,
+            'max_tenants': usage_collector_metrics.max_tenants,
+            'total_deployments': usage_collector_metrics.total_deployments,
+            'total_blueprints': usage_collector_metrics.total_blueprints,
+            'total_executions': usage_collector_metrics.max_tenants,
+            'total_logins': usage_collector_metrics.total_logins,
+            'total_logged_in_users':
+                usage_collector_metrics.total_logged_in_users,
         }
         data['cloudify_usage'].update(_get_first_and_last_login(sm))
 
@@ -151,14 +166,15 @@ def _get_first_and_last_login(sm):
     users_list = sm.list(models.User)
     in_fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
     out_fmt = '%Y-%m-%dT%H:%M:%S'
-    first_login = min(datetime.strptime(u.first_login_at, in_fmt)
-                      for u in users_list)
-    last_login = max(datetime.strptime(u.last_login_at, in_fmt)
-                     for u in users_list)
-    return {
-        'first_login': datetime.strftime(first_login, out_fmt),
-        'last_login': datetime.strftime(last_login, out_fmt)
-    }
+    first_logins = [datetime.strptime(u.first_login_at, in_fmt)
+                    for u in users_list if u.first_login_at]
+    last_logins = [datetime.strptime(u.last_login_at, in_fmt)
+                   for u in users_list if u.last_login_at]
+    first_login = datetime.strftime(min(first_logins), out_fmt) \
+        if first_logins else None
+    last_login = datetime.strftime(max(last_logins), out_fmt) \
+        if last_logins else None
+    return {'first_login': first_login, 'last_login': last_login}
 
 
 def _collect_cloudify_config(data):
@@ -180,6 +196,19 @@ def _is_clustered():
     with get_storage_manager_instance() as sm:
         managers = sm.list(models.Manager)
     return len(managers) > 1
+
+
+def _licensed_environments_filter():
+    # stolen from cloudify-manager/rest-service/manager_rest/rest/rest_utils.py
+    return {
+        '_storage_id': lambda col:
+            ~models.InterDeploymentDependencies.query.filter(
+                col ==
+                models.InterDeploymentDependencies._target_deployment,
+                models.InterDeploymentDependencies.dependency_creator.like(
+                    'component.%')
+            ).exists()
+    }
 
 
 def main():

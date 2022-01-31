@@ -1,17 +1,3 @@
-#########
-# Copyright (c) 2020 Cloudify Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
 import socket
 from os.path import exists, join
 from functools import partial
@@ -20,9 +6,9 @@ from retrying import retry
 
 from .files import deploy
 from .common import (
-    sudo,
+    chown,
     remove as remove_file,
-    chown
+    run,
 )
 
 from ..config import config
@@ -69,8 +55,8 @@ class SystemD(object):
         # If options are passed to the systemctl action
         if options:
             systemctl_cmd.extend(options)
-        return sudo(systemctl_cmd, retries=retries,
-                    ignore_failures=ignore_failure)
+        return run(systemctl_cmd, retries=retries,
+                   ignore_failures=ignore_failure)
 
     def configure(self,
                   service_name,
@@ -115,17 +101,12 @@ class SystemD(object):
         self.enable('{0}.service'.format(service_name),
                     ignore_failure=ignore_failure)
 
-    def remove(self, service_name, service_file=True):
+    def remove(self, service_name):
         """Stop and disable the service, and then delete its data
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
-
-        # components that have had their unit file moved to the RPM, will
-        # also remove it during RPM uninstall
-        if service_file:
-            remove_file(self.get_service_file_path(service_name))
-
+        remove_file(self.get_service_file_path(service_name))
         remove_file(self.get_vars_file_path(service_name))
 
     @staticmethod
@@ -151,8 +132,8 @@ class SystemD(object):
         logger.debug('Disabling systemd service {0}...'.format(service_name))
         self.systemctl('disable', service_name, ignore_failure=ignore_failure)
 
-    def start(self, service_name, is_group=False, ignore_failure=False,
-              options=None):
+    def start(self, service_name, is_group=False, options=None,
+              ignore_failure=False):
         logger.debug('Starting systemd service {0}...'.format(service_name))
         self.systemctl(
             'start',
@@ -182,6 +163,14 @@ class SystemD(object):
             ignore_failure=True
         ).aggr_stdout.strip()
 
+    def is_installed(self, service_name):
+        enabled = self.systemctl(
+            'is-enabled',
+            service_name,
+            ignore_failure=True
+        ).aggr_stderr.strip()
+        return 'Failed to get unit file state' not in enabled
+
     def reread(self):
         return self.systemctl('daemon-reload')
 
@@ -202,7 +191,7 @@ class Supervisord(object):
             cmd += [service]
         if options:
             cmd.extend(options)
-        return sudo(cmd, ignore_failures=ignore_failure)
+        return run(cmd, ignore_failures=ignore_failure)
 
     def enable(self, service_name, ignore_failure=False):
         self.supervisorctl(
@@ -218,8 +207,8 @@ class Supervisord(object):
             ignore_failure=ignore_failure
         )
 
-    def start(self, service_name, is_group=False, ignore_failure=False,
-              options=None):
+    def start(self, service_name, is_group=False, options=None,
+              ignore_failure=False):
         self.enable(service_name, ignore_failure=ignore_failure)
         self.supervisorctl(
             'start',
@@ -268,14 +257,20 @@ class Supervisord(object):
             ignore_failure=True
         ).aggr_stdout.strip().split()[1].lower()
 
+    def is_installed(self, service_name):
+        status = self.supervisorctl(
+            'status',
+            service_name,
+            ignore_failure=True
+        ).aggr_stdout.strip()
+        return 'ERROR (no such process)' not in status
+
     @staticmethod
     def get_service_config_file_path(service_name):
         """Returns the path to a supervisord service config file
         for a given service_name.
         (e.g./etc/supervisord.d/rabbitmq.cloudify.conf)
         """
-        if service_name.startswith('cloudify-'):
-            service_name = service_name.split('-')[1]
         return "/etc/supervisord.d/{0}.cloudify.conf".format(service_name)
 
     def configure(self,
@@ -306,16 +301,12 @@ class Supervisord(object):
                    additional_render_context=external_configure_params)
             chown(user, group, dst)
 
-    def remove(self, service_name, service_file=True):
+    def remove(self, service_name):
         """Stop and disable the service, and then delete its data
         """
         self.stop(service_name, ignore_failure=True)
         self.disable(service_name, ignore_failure=True)
-
-        # components that have had their unit file moved to the RPM, will
-        # also remove it during RPM uninstall
-        if service_file:
-            remove_file(self.get_service_config_file_path(service_name))
+        remove_file(self.get_service_config_file_path(service_name))
 
     def reread(self):
         return self.supervisorctl('reread')
@@ -349,9 +340,10 @@ def disable(service_name):
     return _get_backend().disable(service_name)
 
 
-def start(service_name, is_group=False, options=None):
+def start(service_name, is_group=False, options=None, ignore_failure=False):
     logger.debug('Starting service {0}...'.format(service_name))
-    return _get_backend().start(service_name, is_group, options)
+    return _get_backend().start(service_name, is_group, options=options,
+                                ignore_failure=ignore_failure)
 
 
 def stop(service_name, is_group=False):
@@ -364,9 +356,9 @@ def restart(service_name, is_group=False, ignore_failure=False):
     return _get_backend().restart(service_name, is_group, ignore_failure)
 
 
-def remove(service_name, service_file=True):
+def remove(service_name):
     logger.debug('Removing service {0}...'.format(service_name))
-    return _get_backend().remove(service_name, service_file)
+    return _get_backend().remove(service_name)
 
 
 def reload(service_name, ignore_failure=False):
@@ -393,6 +385,10 @@ def is_alive(service_name):
 
 def is_active(service_name):
     return _get_backend().is_active(service_name)
+
+
+def is_installed(service_name):
+    return _get_backend().is_installed(service_name)
 
 
 def configure(service_name,

@@ -1,27 +1,12 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from __future__ import print_function
 
 import os
 import glob
 import time
 import shlex
+import shutil
 import socket
 import logging
-import tempfile
 import subprocess
 from functools import wraps
 from datetime import datetime
@@ -41,6 +26,7 @@ from cfy_manager.components.service_names import (
     DATABASE_SERVICE,
     MAIN_SERVICES_NAMES,
 )
+from cfy_manager.utils.install_state import get_configured_services
 from . import subprocess_preexec
 
 logger = get_logger('utils')
@@ -86,21 +72,17 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     return proc
 
 
-def sudo(command, *args, **kwargs):
-    if isinstance(command, str):
-        command = shlex.split(command)
-    if 'env' in kwargs:
-        command = ['sudo', '-E'] + command
-    else:
-        command.insert(0, 'sudo')
-    return run(command=command, *args, **kwargs)
-
-
 def cfy(*command, **kwargs):
+    as_user = kwargs.pop('as_user', None)
     # all `cfy` run calls have LC_ALL explicitly provided because
     # click on py3.6 absolutely requires some locale to be set
     env = {'LC_ALL': 'en_US.UTF-8'}
-    base = ['sudo', 'cfy'] if kwargs.pop('sudo', False) else ['cfy']
+
+    base = []
+    if as_user:
+        base = ['sudo', '-E', '-u', as_user]
+
+    base.append('cfy')
     try:
         return run(base + list(command), env=env, **kwargs)
     except ProcessExecutionError as e:
@@ -109,15 +91,12 @@ def cfy(*command, **kwargs):
         raise
 
 
-def mkdir(folder, use_sudo=True):
+def mkdir(folder):
     if os.path.isdir(folder):
         return
     logger.debug('Creating Directory: {0}'.format(folder))
     cmd = ['mkdir', '-p', folder]
-    if use_sudo:
-        sudo(cmd)
-    else:
-        run(cmd)
+    run(cmd)
 
 
 def chmod(mode, path, recursive=False):
@@ -126,35 +105,18 @@ def chmod(mode, path, recursive=False):
     if recursive:
         command.append('-R')
     command += [mode, path]
-    sudo(command)
+    run(command)
 
 
 def chown(user, group, path):
     logger.debug('chowning {0} by {1}:{2}...'.format(
         path, user, group))
-    sudo(['chown', '-R', '{0}:{1}'.format(user, group), path])
+    run(['chown', '-R', '{0}:{1}'.format(user, group), path])
 
 
 def remove(path, ignore_failure=False):
     logger.debug('Removing {0}...'.format(path))
-    sudo(['rm', '-rf', path], ignore_failures=ignore_failure)
-
-
-def untar(source,
-          destination=None,
-          skip_old_files=False,
-          unique_tmp_dir=False):
-    if not destination:
-        destination = tempfile.mkdtemp() if unique_tmp_dir else '/tmp'
-        config.add_temp_path_to_clean(destination)
-    logger.debug('Extracting {0} to {1}...'.format(
-        source, destination))
-    tar_command = ['tar', '-xvf', source, '-C', destination, '--strip=1']
-    if skip_old_files:
-        tar_command.append('--skip-old-files')
-    sudo(tar_command)
-
-    return destination
+    run(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
 def ensure_destination_dir_exists(destination):
@@ -163,7 +125,7 @@ def ensure_destination_dir_exists(destination):
         logger.debug(
             'Path does not exist: {0}. Creating it...'.format(
                 destination_dir))
-        sudo(['mkdir', '-p', destination_dir])
+        run(['mkdir', '-p', destination_dir])
 
 
 def copy(source, destination, backup=False):
@@ -173,16 +135,15 @@ def copy(source, destination, backup=False):
                             os.path.basename(destination)
             new_dest = os.path.join(os.path.dirname(destination),
                                     modified_name)
-            sudo(['cp', '-rp', destination, new_dest])
+            run(['cp', '-rp', destination, new_dest])
     else:
         ensure_destination_dir_exists(destination)
-    sudo(['cp', '-rp', source, destination])
+    run(['cp', '-rp', source, destination])
 
 
-def move(source, destination, rename_only=False):
+def move(source, destination):
     ensure_destination_dir_exists(destination)
-    sudo(['cp', source, destination])
-    sudo(['rm', source])
+    shutil.move(source, destination)
 
 
 def can_lookup_hostname(hostname):
@@ -209,7 +170,11 @@ def is_all_in_one_manager():
     )
 
 
-def is_installed(service):
+def service_is_configured(service):
+    return service in get_configured_services()
+
+
+def service_is_in_config(service):
     return service in config[SERVICES_TO_INSTALL]
 
 
@@ -218,10 +183,10 @@ def get_main_services_from_config():
             if service_name in MAIN_SERVICES_NAMES]
 
 
-def is_manager_service_only_installed():
-    return (is_installed(MANAGER_SERVICE) and
-            not is_installed(DATABASE_SERVICE) and
-            not is_installed(QUEUE_SERVICE))
+def is_only_manager_service_in_config():
+    return (service_is_in_config(MANAGER_SERVICE) and
+            not service_is_in_config(DATABASE_SERVICE) and
+            not service_is_in_config(QUEUE_SERVICE))
 
 
 def allows_json_format():

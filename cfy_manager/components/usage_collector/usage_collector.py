@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from os.path import join
 from random import randint
 
@@ -63,7 +48,7 @@ class UsageCollector(BaseComponent):
             self._create_cron_jobs()
             logger.notice('Usage collector enabled')
 
-    def stop(self):
+    def stop(self, force=True):
         if self._validate_crontab_accessible():
             logger.notice('Disabling usage collector')
             self._remove_cron_jobs()
@@ -85,7 +70,7 @@ class UsageCollector(BaseComponent):
             return False
 
         try:
-            common.sudo(['crontab', '-u', constants.CLOUDIFY_USER, '-l'])
+            common.run(['crontab', '-u', constants.CLOUDIFY_USER, '-l'])
         except common.ProcessExecutionError as ex:
             logger.warning(
                 'Usage Collector cannot be used, unable to use crontab: {0}.'
@@ -138,9 +123,8 @@ class UsageCollector(BaseComponent):
                                          script_name)
 
         # Adding a new job to crontab
-        # Adding sudo manually, because common.sudo doesn't support parenthesis
-        cmd = '(sudo crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'sudo crontab -u {0} -'.format(constants.CLOUDIFY_USER, job)
+        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
+              'crontab -u {0} -'.format(constants.CLOUDIFY_USER, job)
         common.run([cmd], shell=True)
 
     def _get_cron_time_string(self, interval_type, interval):
@@ -166,8 +150,8 @@ class UsageCollector(BaseComponent):
         logger.info('Usage Collector cron jobs successfully removed')
 
     def _delete_cron_job(self, job_comment):
-        cmd = "sudo crontab -u {0} -l | " \
+        cmd = "crontab -u {0} -l | " \
               "grep -v '# {1}' | " \
-              "sudo crontab -u {0} -" \
+              "crontab -u {0} -" \
               .format(constants.CLOUDIFY_USER, job_comment)
         common.run([cmd], shell=True)

@@ -21,15 +21,6 @@ def make_manager_config():
         'rest_service_log_path':
             config['restservice']['log_dir'] + '/cloudify-rest-service.log',
         'rest_service_log_level': config['restservice']['log']['level'],
-        'ldap_server': config['restservice']['ldap']['server'],
-        'ldap_username': config['restservice']['ldap']['username'],
-        'ldap_password': config['restservice']['ldap']['password'],
-        'ldap_domain': config['restservice']['ldap']['domain'],
-        'ldap_is_active_directory':
-            config['restservice']['ldap']['is_active_directory'],
-        'ldap_dn_extra': config['restservice']['ldap']['dn_extra'],
-        'ldap_timeout': 5.0,
-        'ldap_ca_path': config['restservice']['ldap']['ca_cert'],
         'file_server_root': config['manager']['file_server_root'],
         'file_server_url': config['manager']['file_server_url'],
         'insecure_endpoints_disabled':

@@ -38,7 +38,7 @@ def main():
         return
 
     logger.info('Rebalancing queues...')
-    output = out('sudo -u rabbitmq rabbitmq-queues rebalance '
+    output = out('/usr/bin/sudo -u rabbitmq rabbitmq-queues rebalance '
                  '"all" --vhost-pattern "/" --queue-pattern ".*"')
     logger.info(output)
 
