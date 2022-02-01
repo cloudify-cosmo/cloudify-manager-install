@@ -25,6 +25,9 @@ from cfy_manager.components.service_names import (
     MANAGER_SERVICE,
     DATABASE_SERVICE,
     MAIN_SERVICES_NAMES,
+    MANAGER,
+    PROMETHEUS,
+    RABBITMQ,
 )
 from cfy_manager.utils.install_state import get_configured_services
 from . import subprocess_preexec
@@ -262,3 +265,22 @@ def output_table_row(lengths, entries):
 def get_formatted_timestamp():
     # Adding 'Z' to match ISO format
     return '{0}Z'.format(datetime.utcnow().isoformat()[:-3])
+
+
+def get_prometheus_credentials():
+    creds = config.get(PROMETHEUS, {}).get('credentials', {})
+    if creds.get('username') and creds.get('password'):
+        return creds
+    if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
+        manager_security_cfg = config.get(MANAGER).get('security', {})
+        creds['username'] = manager_security_cfg.get('admin_username')
+        creds['password'] = manager_security_cfg.get('admin_password')
+    elif DATABASE_SERVICE in config[SERVICES_TO_INSTALL]:
+        creds['username'] = 'postgres'
+        creds['password'] = \
+            config.get(POSTGRESQL_SERVER).get('postgres_password')
+    elif QUEUE_SERVICE in config[SERVICES_TO_INSTALL]:
+        rabbitmq_cfg = config.get(RABBITMQ)
+        creds['username'] = rabbitmq_cfg.get('username')
+        creds['password'] = rabbitmq_cfg.get('password')
+    return creds

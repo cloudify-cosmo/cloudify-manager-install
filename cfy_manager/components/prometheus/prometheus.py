@@ -355,8 +355,11 @@ def _update_prometheus_configuration(uninstalling=False):
     logger.notice('Updating Prometheus configuration...')
 
     if not uninstalling:
-        files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
-                     PROMETHEUS_CONFIG_PATH)
+        credentials = common.get_prometheus_credentials()
+        files.deploy(
+            join(CONFIG_DIR, 'prometheus.yml'),
+            PROMETHEUS_CONFIG_PATH,
+            additional_render_context={'credentials': credentials})
         common.run(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
