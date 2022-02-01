@@ -18,14 +18,11 @@ from ...constants import (
     REST_AUTHORIZATION_CONFIG_PATH
 )
 from ..components_constants import (
-    VENV,
     CONFIG,
     SCRIPTS,
     CLEAN_DB,
     SECURITY,
     SSL_INPUTS,
-    LOG_DIR_KEY,
-    HOME_DIR_KEY,
     CLUSTER_JOIN,
     ADMIN_PASSWORD,
     FLASK_SECURITY,
@@ -63,8 +60,6 @@ from ...utils.files import (
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
-REST_VENV = join(REST_HOME_DIR, 'env')
-LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 RESTSERVICE_RESOURCES = join(constants.BASE_RESOURCES_PATH, RESTSERVICE)
@@ -78,12 +73,6 @@ RABBITMQ_CA_CERT_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 class RestService(BaseComponent):
     services = {'cloudify-restservice': {'is_group': False},
                 'cloudify-api': {'is_group': True}}
-
-    def _make_paths(self):
-        # Used in the service templates
-        config[RESTSERVICE][HOME_DIR_KEY] = REST_HOME_DIR
-        config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
-        config[RESTSERVICE][VENV] = REST_VENV
 
     def _deploy_restservice_files(self):
         logger.info('Deploying REST authorization, REST Service configuration'
@@ -106,7 +95,6 @@ class RestService(BaseComponent):
 
     def _deploy_rest_conf(self):
         client_conf = config[POSTGRESQL_CLIENT]
-        const = config['constants']
         rest_conf = {
             'postgresql_bin_path': '/usr/pgsql-9.5/bin/',
             'postgresql_db_name': client_conf['cloudify_db_name'],
@@ -117,11 +105,13 @@ class RestService(BaseComponent):
             'postgresql_ssl_client_verification':
                 client_conf['ssl_client_verification'],
             'postgresql_ssl_cert_path':
-                const.get('postgresql_client_cert_path'),
+                constants.POSTGRESQL_CLIENT_CERT_PATH,
             'postgresql_ssl_key_path':
-                const.get('postgresql_client_key_path'),
-            'postgresql_ca_cert_path': const.get('postgresql_ca_cert_path'),
-            'ca_cert_path': const['ca_cert_path'],
+                constants.POSTGRESQL_CLIENT_KEY_PATH,
+            'postgresql_ca_cert_path':
+                constants.POSTGRESQL_CA_CERT_PATH,
+            'ca_cert_path':
+                constants.CA_CERT_PATH,
             'manager_hostname': config[MANAGER][HOSTNAME],
         }
         write(rest_conf, REST_CONFIG_PATH, json_dump=True,
@@ -131,7 +121,7 @@ class RestService(BaseComponent):
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
         security_config = config.get(FLASK_SECURITY, {})
-        config[FLASK_SECURITY] = {
+        new_flask_security = {
             'hash_salt': base64.b64encode(os.urandom(32)).decode('ascii'),
             'secret_key': base64.b64encode(os.urandom(32)).decode('ascii'),
             'encoding_alphabet': self._random_alphanumeric(),
@@ -143,7 +133,8 @@ class RestService(BaseComponent):
 
         # We want the config values to take precedence and generate the
         # missing values
-        config[FLASK_SECURITY].update(security_config)
+        new_flask_security.update(security_config)
+        return new_flask_security
 
     def _pre_create_snapshot_paths(self):
         for resource_dir in (
@@ -156,13 +147,13 @@ class RestService(BaseComponent):
             path = join(constants.MANAGER_RESOURCES_HOME, resource_dir)
             common.mkdir(path)
 
-    def _get_flask_security(self):
+    def _get_flask_security(self, flask_security_config):
         # If we're recreating the DB, or if there's no previous security
         # config file, just use the config that was generated
         if config[CLEAN_DB] or not exists(REST_SECURITY_CONFIG_PATH):
-            return config[FLASK_SECURITY]
+            return flask_security_config
 
-        security_config = config[FLASK_SECURITY]
+        security_config = flask_security_config
 
         current_config = json.loads(read(REST_SECURITY_CONFIG_PATH))
 
@@ -172,10 +163,10 @@ class RestService(BaseComponent):
 
         return security_config
 
-    def _deploy_security_configuration(self):
+    def _deploy_security_configuration(self, flask_security_config):
         logger.info('Deploying REST Security configuration file...')
 
-        flask_security = self._get_flask_security()
+        flask_security = self._get_flask_security(flask_security_config)
         write(flask_security, REST_SECURITY_CONFIG_PATH, json_dump=True,
               owner=constants.CLOUDIFY_USER, group=constants.CLOUDIFY_GROUP,
               mode=0o660)
@@ -228,10 +219,10 @@ class RestService(BaseComponent):
             common.chmod('755', '/etc/cloudify/api-wrapper-script.sh')
 
     def _configure_restservice(self):
-        self._generate_flask_security_config()
+        flask_security_config = self._generate_flask_security_config()
         self._calculate_worker_count()
         self._deploy_restservice_files()
-        self._deploy_security_configuration()
+        self._deploy_security_configuration(flask_security_config)
         self._configure_restservice_wrapper_script()
 
     def _configure_api(self):
@@ -270,7 +261,7 @@ class RestService(BaseComponent):
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
-        self._generate_passwords()
+        self._generate_admin_password_if_empty()
         db.prepare_db()
         db.populate_db(configs)
         run_script_on_manager_venv(
@@ -332,9 +323,6 @@ class RestService(BaseComponent):
         return (config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE] or
                 config[SERVICES_TO_INSTALL] == [MANAGER_SERVICE,
                                                 MONITORING_SERVICE])
-
-    def _generate_passwords(self):
-        self._generate_admin_password_if_empty()
 
     def _random_alphanumeric(self, result_len=31):
         """
@@ -492,7 +480,6 @@ class RestService(BaseComponent):
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
-        self._make_paths()
         self.configure_service('cloudify-restservice')
         self.configure_service('cloudify-api')
         certificates.handle_ca_cert(logger)

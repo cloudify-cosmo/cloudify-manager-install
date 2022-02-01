@@ -622,8 +622,6 @@ class RabbitMQ(BaseComponent):
         if self._installing_manager():
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         self._init_service()
-        if self._installing_manager():
-            config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         if not config[RABBITMQ]['join_cluster']:
             self._write_definitions_file()
         self.start()

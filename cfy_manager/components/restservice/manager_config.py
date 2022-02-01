@@ -14,19 +14,20 @@
 #  * limitations under the License.
 
 from ...config import config
+from ... import constants
 
 
 def make_manager_config():
     rest_config = {
         'rest_service_log_path':
-            config['restservice']['log_dir'] + '/cloudify-rest-service.log',
+            constants.REST_LOG_DIR + '/cloudify-rest-service.log',
         'rest_service_log_level': config['restservice']['log']['level'],
         'file_server_root': config['manager']['file_server_root'],
         'file_server_url': config['manager']['file_server_url'],
         'insecure_endpoints_disabled':
             config['restservice']['insecure_endpoints_disabled'],
         'maintenance_folder':
-            config['restservice']['home_dir'] + '/maintenance',
+            constants.REST_HOME_DIR + '/maintenance',
         'min_available_memory_mb':
             config['restservice']['min_available_memory_mb'],
         'failed_logins_before_account_lock':

@@ -1,2 +1,2 @@
 STAGE_HOME=/opt/cloudify-stage
-STAGE_BACKEND_ARGS={{ stage.community_mode }}
+STAGE_BACKEND_ARGS={{ community_mode }}

@@ -13,15 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join
-
-from ..components_constants import LOG_DIR_KEY
 from ..base_component import BaseComponent
 from ..service_names import AMQP_POSTGRES
-from ...config import config
 from ...logger import get_logger
 from ...utils import service
-from ...constants import BASE_LOG_DIR
 
 
 logger = get_logger(AMQP_POSTGRES)
@@ -30,15 +25,8 @@ logger = get_logger(AMQP_POSTGRES)
 class AmqpPostgres(BaseComponent):
     services = {'cloudify-amqp-postgres': {'is_group': False}}
 
-    def _setup_log_dir(self):
-        # Can't use AMQP_POSTGRES here because Jinja doesn't play nice
-        # with `-`s
-        conf = config.setdefault('amqp_postgres', {})
-        conf[LOG_DIR_KEY] = join(BASE_LOG_DIR, AMQP_POSTGRES)
-
     def configure(self):
         logger.notice('Configuring AMQP-Postgres...')
-        self._setup_log_dir()
         service.configure('cloudify-amqp-postgres')
         logger.notice('AMQP-Postgres successfully configured')
         self.start()

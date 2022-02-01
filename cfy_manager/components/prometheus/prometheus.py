@@ -21,6 +21,7 @@ from ..service_names import (
     NODE_EXPORTER,
     BLACKBOX_EXPORTER,
     POSTGRES_EXPORTER,
+    POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
     RABBITMQ,
     NGINX,
@@ -307,9 +308,8 @@ def _update_config():
         if ('ca_path' in config[POSTGRESQL_SERVER] and
                 config[POSTGRESQL_SERVER]['ca_path']):
             return config[POSTGRESQL_SERVER]['ca_path']
-        if ('postgresql_ca_cert_path' in config[CONSTANTS] and
-                config[CONSTANTS]['postgresql_ca_cert_path']):
-            return config[CONSTANTS]['postgresql_ca_cert_path']
+        if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
+            return constants.POSTGRESQL_CA_CERT_PATH
         return ''
 
     logger.notice('Updating Prometheus configuration...')
@@ -355,8 +355,11 @@ def _update_prometheus_configuration(uninstalling=False):
     logger.notice('Updating Prometheus configuration...')
 
     if not uninstalling:
-        files.deploy(join(CONFIG_DIR, 'prometheus.yml'),
-                     PROMETHEUS_CONFIG_PATH)
+        credentials = common.get_prometheus_credentials()
+        files.deploy(
+            join(CONFIG_DIR, 'prometheus.yml'),
+            PROMETHEUS_CONFIG_PATH,
+            additional_render_context={'credentials': credentials})
         common.run(['mkdir', '-p', PROMETHEUS_TARGETS_DIR])
 
     private_ip = config[MANAGER][PRIVATE_IP]
@@ -466,7 +469,7 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
         # Monitor cloudify-api's openapi.json
         http_200_targets.append('http://127.0.0.1:8101/openapi.json')
 
-        monitoring_port = str(config[CONSTANTS]['monitoring_port'])
+        monitoring_port = str(constants.MONITORING_PORT)
 
         # Monitor remote rabbit nodes
         use_rabbit_host = config[RABBITMQ]['use_hostnames_in_db']

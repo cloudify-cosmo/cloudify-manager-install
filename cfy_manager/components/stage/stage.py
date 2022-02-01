@@ -50,12 +50,6 @@ DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
 class Stage(BaseComponent):
     services = {'cloudify-stage': {'is_group': False}}
 
-    def _set_community_mode(self):
-        community_mode = '' if is_premium_installed else '-mode community'
-
-        # This is used in the stage systemd service file
-        config[STAGE]['community_mode'] = community_mode
-
     def _run_db_migrate(self):
         if config.get(CLUSTER_JOIN):
             logger.debug('Joining cluster - not creating the stage db')
@@ -173,8 +167,9 @@ class Stage(BaseComponent):
         logger.notice('Configuring Stage...')
         self.set_db_url()
         self._set_internal_manager_ip()
-        self._set_community_mode()
-        external_configure_params = {}
+        external_configure_params = {
+            'community_mode': '' if is_premium_installed else '-mode community'
+        }
         if self.service_type == 'supervisord':
             external_configure_params['service_user'] = STAGE_USER
             external_configure_params['service_group'] = STAGE_GROUP
