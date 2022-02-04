@@ -193,7 +193,7 @@ class Prometheus(BaseComponent):
 
     def upgrade(self):
         try:
-            _update_manager_alerts_services()
+            _deploy_configuration()
         except FileNotFoundError:
             self.configure()
 
@@ -642,24 +642,3 @@ def _calculate_lookback_delta_for(scrape_interval):
         return '40s'
     scrape_seconds = int(m[2] or 0) + 0.001 * int(m[4] or 0)
     return '{0:d}s'.format(round(2.7 * scrape_seconds))
-
-
-def _update_manager_alerts_services():
-    logger.notice("Updating Prometheus' manager services alerts ...")
-    src_file_name = join(CONFIG_DIR, 'alerts', 'manager.yml')
-    dest_file_name = join(PROMETHEUS_ALERTS_DIR, 'manager.yml')
-    if not exists(PROMETHEUS_ALERTS_DIR):
-        # we're in version < 5.1.1 so there aren't prometheus alerts
-        logger.notice("No prometheus alerts; "
-                      "re-rendering prometheus config...")
-        raise FileNotFoundError
-    if not exists(dest_file_name):
-        # the alerts folder is there but there's no manager alerts file -
-        # meaning we're in a 9-nodes cluster on a rabbit/db machine
-        return
-
-    match_pattern = r'name=~"\([a-z\|\-_]*\)'
-
-    prometheus_conf = files.read(src_file_name)
-    new_services = re.findall(match_pattern, prometheus_conf)[0]
-    files.replace_in_file(match_pattern, new_services, dest_file_name)
