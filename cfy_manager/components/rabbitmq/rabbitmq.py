@@ -254,7 +254,8 @@ class RabbitMQ(BaseComponent):
                 break
 
     def list_rabbit_nodes(self):
-        nodename = config[RABBITMQ]['nodename'].split('@')[-1]
+        raw_nodename = config[RABBITMQ]['nodename'] or 'rabbit@localhost'
+        nodename = raw_nodename.split('@')[-1]
         nodes_url = 'https://{}:15671/api/nodes'.format(nodename)
 
         if config[RABBITMQ]['cluster_members']:
@@ -269,6 +270,8 @@ class RabbitMQ(BaseComponent):
                 nodes_url = 'https://{0}:15671/api/nodes'.format(
                     network.ipv6_url_compat(default_ip))
 
+        ca_path = config[RABBITMQ]['ca_path'] or constants.CA_CERT_PATH
+
         auth = (
             config[RABBITMQ]['username'],
             config[RABBITMQ]['password'],
@@ -277,7 +280,7 @@ class RabbitMQ(BaseComponent):
             nodes_list = requests.get(
                 nodes_url,
                 auth=auth,
-                verify=config[RABBITMQ]['ca_path'],
+                verify=ca_path,
             ).json()
         except requests.ConnectionError as err:
             logger.error(
