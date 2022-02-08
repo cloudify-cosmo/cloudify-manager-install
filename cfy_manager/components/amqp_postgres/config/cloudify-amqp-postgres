@@ -1,4 +1,4 @@
 # REST Service's config files
-MANAGER_REST_CONFIG_PATH="{{ restservice.home_dir }}/cloudify-rest.conf"
+MANAGER_REST_CONFIG_PATH="{{ constants.REST_HOME_DIR }}/cloudify-rest.conf"
 
-LOG_PATH="{{ amqp_postgres.log_dir }}/amqp_postgres.log"
+LOG_PATH="{{ constants.AMQP_POSTGRES_LOG_DIR }}/amqp_postgres.log"

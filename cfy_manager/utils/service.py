@@ -169,7 +169,10 @@ class SystemD(object):
             service_name,
             ignore_failure=True
         ).aggr_stderr.strip()
-        return 'Failed to get unit file state' not in enabled
+        # We actually have the servies installed on yum install, but what we
+        # care about where we use this function is whether we're using it-
+        # and in that case it'll be enabled.
+        return enabled.strip().lower() == 'enabled'
 
     def reread(self):
         return self.systemctl('daemon-reload')

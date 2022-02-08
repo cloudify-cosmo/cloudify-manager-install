@@ -152,13 +152,6 @@ class PostgresqlClient(BaseComponent):
 
             validate_certificates(cert_filename, key_filename, ca_filename)
 
-    def install(self):
-        logger.notice('Installing PostgreSQL Client...')
-        db_server_username = config[POSTGRESQL_CLIENT]['server_username']
-        if db_server_username == 'postgres' or not db_server_username:
-            config[POSTGRESQL_CLIENT]['server_username'] = 'postgres'
-        logger.notice('PostgreSQL successfully installed')
-
     def configure(self):
         logger.notice('Configuring PostgreSQL Client...')
         self.create_postgres_pgpass_files()

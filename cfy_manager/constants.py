@@ -19,11 +19,22 @@ BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 NETWORKS_DIR = join(BASE_DIR, 'networks')
 UTILS_DIR = join(BASE_DIR, 'utils')
+BASE_LOG_DIR = '/var/log/cloudify'
+
 
 REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
+REST_LOG_DIR = join(BASE_LOG_DIR, 'rest')
+
+MGMWORKER_HOME_DIR = '/opt/mgmtworker'
+MGMWORKER_HOOKS_CONFIG = join(MGMWORKER_HOME_DIR, 'config', 'hooks.conf')
+MGMWORKER_LOG_DIR = join(BASE_LOG_DIR, 'mgmtworker')
+
+AMQP_POSTGRES_LOG_DIR = join(BASE_LOG_DIR, 'amqp-postgres')
+
+EXECUTION_SCHEDULER_LOG_DIR = join(BASE_LOG_DIR, 'execution-scheduler')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
@@ -45,8 +56,6 @@ DEFAULT_CONFIG_FILE_NAME = 'config.yaml'
 USER_CONFIG_PATH = join(CLOUDIFY_HOME_DIR, DEFAULT_CONFIG_FILE_NAME)
 # For defaults, use the version supplied in the package
 DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), DEFAULT_CONFIG_FILE_NAME)
-
-BASE_LOG_DIR = '/var/log/cloudify'
 
 INTERNAL_REST_PORT = 53333
 MONITORING_PORT = 8009

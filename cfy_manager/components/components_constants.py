@@ -23,11 +23,6 @@ SERVICE_GROUP = 'service_group'
 SCRIPTS = 'scripts'
 CONFIG = 'config'
 
-HOME_DIR_KEY = 'home_dir'
-LOG_DIR_KEY = 'log_dir'
-
-VENV = 'venv'
-
 HOSTNAME = 'hostname'
 PRIVATE_IP = 'private_ip'
 PUBLIC_IP = 'public_ip'

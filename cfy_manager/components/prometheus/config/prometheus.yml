@@ -41,8 +41,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -57,8 +57,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -73,8 +73,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -94,8 +94,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -110,8 +110,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -126,8 +126,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -147,8 +147,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -163,8 +163,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':
@@ -179,8 +179,8 @@ scrape_configs:
     tls_config:
       ca_file: {{ prometheus.ca_path }}
     basic_auth:
-      username: {{ prometheus.credentials.username }}
-      password: {{ prometheus.credentials.password }}
+      username: {{ credentials.username }}
+      password: {{ credentials.password }}
     metrics_path: /monitoring/federate
     params:
       'match[]':

@@ -12,10 +12,10 @@ from ruamel.yaml.error import YAMLError
 from .common import (run, copy, remove, chown,
                      ensure_destination_dir_exists)
 
+from .. import constants
 from .._compat import StringIO
 from ..config import config
 from ..logger import get_logger
-from ..constants import COMPONENTS_DIR
 
 logger = get_logger('Files')
 
@@ -95,6 +95,7 @@ def deploy(src, dst, render=True, additional_render_context=None):
         template = _template_env.get_template(src)
         render_context = additional_render_context.copy()
         render_context.update(config)
+        render_context.update({'constants': constants})
         content = template.render(**render_context)
         write(content, dst)
     else:
@@ -106,7 +107,7 @@ def _get_notice_path(service_name):
 
 
 def copy_notice(service_name):
-    src = join(COMPONENTS_DIR, service_name, 'NOTICE.txt')
+    src = join(constants.COMPONENTS_DIR, service_name, 'NOTICE.txt')
     copy(src, _get_notice_path(service_name))
 
 
@@ -145,8 +146,8 @@ def update_yaml_file(yaml_path,
         raise ValueError('Expected input of type dict, got {0} '
                          'instead'.format(type(updated_content)))
     if bool(user_owner) != bool(group_owner):
-        raise ValueError('Both `user_owner` and `group_owner` must be specied,'
-                         'or neither.')
+        raise ValueError('Both `user_owner` and `group_owner` must be'
+                         'specified, or neither.')
     yaml_content = read_yaml_file(yaml_path) or {}
     yaml_content.update(**updated_content)
     stream = StringIO()
