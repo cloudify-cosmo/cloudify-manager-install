@@ -1402,7 +1402,7 @@ def _ensure_root():
         sys.argv.remove(skip_root_check)
     else:
         # Checking subcommands here so we never pass through --skip-root-check
-        if commands[1] in excluded_subcommands:
+        if len(commands) < 2 or commands[1] in excluded_subcommands:
             return
         if os.geteuid() != 0:
             sys.exit(subprocess.call(
