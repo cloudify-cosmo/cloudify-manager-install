@@ -1,14 +1,14 @@
 import os
 
 from ..validations import validate_certificates
-from ..components_constants import (
+from ...components_constants import (
     SERVICES_TO_INSTALL,
     SSL_CLIENT_VERIFICATION,
     SSL_ENABLED,
     SSL_INPUTS,
 )
 from ..base_component import BaseComponent
-from ..service_names import (
+from ...service_names import (
     MANAGER_SERVICE,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,

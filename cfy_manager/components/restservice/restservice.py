@@ -17,7 +17,7 @@ from ...constants import (
     REST_SECURITY_CONFIG_PATH,
     REST_AUTHORIZATION_CONFIG_PATH
 )
-from ..components_constants import (
+from ...components_constants import (
     CONFIG,
     SCRIPTS,
     CLEAN_DB,
@@ -30,7 +30,7 @@ from ..components_constants import (
     HOSTNAME
 )
 from ..base_component import BaseComponent
-from ..service_names import (
+from ...service_names import (
     MANAGER,
     RESTSERVICE,
     POSTGRESQL_CLIENT,

@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 from ..base_component import BaseComponent
-from ..service_names import AMQP_POSTGRES
+from ...service_names import AMQP_POSTGRES
 from ...logger import get_logger
 from ...utils import service
 
