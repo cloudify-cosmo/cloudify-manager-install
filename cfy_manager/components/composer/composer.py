@@ -3,7 +3,7 @@ import json
 
 from os.path import join, isfile
 
-from ..components_constants import (
+from ...components_constants import (
     CLUSTER_JOIN,
     PRIVATE_IP,
     SSL_CLIENT_VERIFICATION,
@@ -11,7 +11,7 @@ from ..components_constants import (
     SSL_INPUTS,
 )
 from ..base_component import BaseComponent
-from ..service_names import COMPOSER, MANAGER, POSTGRESQL_CLIENT
+from ...service_names import COMPOSER, MANAGER, POSTGRESQL_CLIENT
 from ...config import config
 from ...logger import get_logger
 from ...utils import (

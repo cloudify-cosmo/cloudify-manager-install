@@ -31,8 +31,8 @@ from ..utils.certificates import (
     store_cert_metadata
 )
 from ..config import config
-from ..components.service_names import MANAGER
-from ..components.components_constants import HOSTNAME
+from ..service_names import MANAGER
+from ..components_constants import HOSTNAME
 from ..utils.scripts import run_script_on_manager_venv
 
 SCRIPT_DIR = join(NETWORKS_DIR, 'scripts')

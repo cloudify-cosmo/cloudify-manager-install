@@ -8,7 +8,7 @@ from ipaddress import ip_address
 from distutils.version import LooseVersion
 
 from cfy_manager.utils.common import service_is_in_config
-from .components_constants import (
+from ..components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
     SECURITY,
@@ -21,7 +21,7 @@ from .components_constants import (
     POSTGRES_PASSWORD,
     SERVER_PASSWORD
 )
-from .service_names import (
+from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,

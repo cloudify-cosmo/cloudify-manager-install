@@ -15,12 +15,12 @@ from cfy_manager.constants import (
     POSTGRESQL_CLIENT_KEY_PATH,
 )
 
-from cfy_manager.components.service_names import (
+from cfy_manager.service_names import (
     DATABASE_SERVICE,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
 )
-from cfy_manager.components.components_constants import (
+from cfy_manager.components_constants import (
     ETCD_CA_PATH,
     PATRONI_DB_CA_PATH,
     SSL_CLIENT_VERIFICATION,

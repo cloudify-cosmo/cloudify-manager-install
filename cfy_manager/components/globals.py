@@ -20,14 +20,14 @@ from ..config import config
 from ..logger import get_logger
 from ..utils.network import ipv6_url_compat
 
-from .service_names import (
+from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER
 )
 
 from . import DATABASE_SERVICE, MANAGER_SERVICE
-from .components_constants import (
+from ..components_constants import (
     PRIVATE_IP,
     SECURITY,
     CONSTANTS,

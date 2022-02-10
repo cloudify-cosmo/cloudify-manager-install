@@ -4,7 +4,7 @@ from os.path import join, exists, isfile
 import re
 
 from ..base_component import BaseComponent
-from ..components_constants import (
+from ...components_constants import (
     CLUSTER_JOIN,
     CONFIG,
     CONSTANTS,
@@ -14,7 +14,7 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
 )
-from ..service_names import (
+from ...service_names import (
     COMPOSER,
     MANAGER,
     PROMETHEUS,
