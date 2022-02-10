@@ -5,9 +5,9 @@ import pwd
 from contextlib import contextmanager
 from os.path import join, exists, expanduser
 
-from ..components_constants import SECURITY, SSL_INPUTS
+from ...components_constants import SECURITY, SSL_INPUTS
 from ..base_component import BaseComponent
-from ..service_names import CLI, MANAGER
+from ...service_names import CLI, MANAGER
 from ...config import config
 from ...logger import (get_logger,
                        set_file_handlers_level,

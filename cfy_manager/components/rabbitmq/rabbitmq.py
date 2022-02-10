@@ -11,7 +11,7 @@ import time
 from retrying import retry
 import requests
 
-from ..components_constants import (
+from ...components_constants import (
     CONFIG,
     HOSTNAME,
     PRIVATE_IP,
@@ -20,7 +20,7 @@ from ..components_constants import (
 )
 from ..base_component import BaseComponent
 from ..validations import validate_certificates
-from ..service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
+from ...service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
 from ...utils import certificates, common, network, files
 from ...config import config

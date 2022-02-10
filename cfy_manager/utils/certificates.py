@@ -7,7 +7,7 @@ from datetime import datetime
 
 from . import network
 from .common import remove, chown, chmod, copy, move, run
-from ..components.components_constants import SSL_INPUTS
+from ..components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import (
     BROKER_CERT_LOCATION,
