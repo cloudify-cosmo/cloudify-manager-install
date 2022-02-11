@@ -19,8 +19,8 @@ from tempfile import gettempdir
 
 from ..base_component import BaseComponent
 from ..validations import validate_certificates
-from ..service_names import MANAGER, RABBITMQ, QUEUE_SERVICE
-from ..components_constants import CONFIG, SERVICES_TO_INSTALL
+from ...service_names import MANAGER, RABBITMQ, QUEUE_SERVICE
+from ...components_constants import CONFIG, SERVICES_TO_INSTALL
 from ... import constants
 from ...config import config
 from ...logger import get_logger

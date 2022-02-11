@@ -1,14 +1,14 @@
 from os.path import join
 
-from ..components_constants import (
+from ..base_component import BaseComponent
+from ...components_constants import (
     CONFIG,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
     SERVICE_USER,
     SERVICE_GROUP,
 )
-from ..base_component import BaseComponent
-from ..service_names import MGMTWORKER
+from ...service_names import MGMTWORKER
 from ...config import config
 from ...logger import get_logger
 from ... import constants as const

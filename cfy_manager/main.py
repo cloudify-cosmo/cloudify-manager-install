@@ -20,7 +20,7 @@ from .components import (
     ENTROPY_SERVICE,
     sources,
 )
-from .components.components_constants import (
+from .components_constants import (
     CLEAN_DB,
     SECURITY,
     PUBLIC_IP,
@@ -31,7 +31,7 @@ from .components.components_constants import (
 )
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
-from .components.service_names import (
+from .service_names import (
     COMPOSER,
     MANAGER,
     POSTGRESQL_SERVER,

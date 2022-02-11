@@ -345,6 +345,8 @@ postgresql_client:
 stage:
   # If set to true, Cloudify UI will not be installed
   skip_installation: false
+  # Additional environment variables to add to stage's service file.
+  extra_env: {}
 
 composer:
   # If set to true, Cloudify Composer will not be installed

@@ -15,9 +15,9 @@
 
 from os.path import join
 
-from ..components_constants import LOG_DIR_KEY
 from ..base_component import BaseComponent
-from ..service_names import AMQP_POSTGRES
+from ...components_constants import LOG_DIR_KEY
+from ...service_names import AMQP_POSTGRES
 from ...config import config
 from ...logger import get_logger
 from ...utils import service

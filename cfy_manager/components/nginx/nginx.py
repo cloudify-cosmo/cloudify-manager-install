@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from cfy_manager.components.prometheus import prometheus
 from ..base_component import BaseComponent
-from ..components_constants import (
+from ...components_constants import (
     CONFIG,
     SCRIPTS,
     PRIVATE_IP,
@@ -15,10 +15,11 @@ from ..components_constants import (
     HOSTNAME,
     SERVICES_TO_INSTALL
 )
-from ..service_names import (NGINX, MANAGER, MANAGER_SERVICE,
-                             MONITORING_SERVICE, PROMETHEUS,
-                             DATABASE_SERVICE, POSTGRESQL_SERVER,
-                             QUEUE_SERVICE, RABBITMQ, )
+from ...service_names import (NGINX, MANAGER, MANAGER_SERVICE,
+                              MONITORING_SERVICE, PROMETHEUS,
+                              DATABASE_SERVICE, POSTGRESQL_SERVER,
+                              QUEUE_SERVICE, RABBITMQ, )
+
 from ... import constants
 from ...config import config
 from ...exceptions import ValidationError

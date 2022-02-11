@@ -22,7 +22,7 @@ from ipaddress import ip_address
 
 from .._compat import HTTPError, Request, urlopen, urlparse
 from ..exceptions import NetworkError
-from ..components.service_names import MANAGER
+from ..service_names import MANAGER
 
 from .common import run
 from ..config import config

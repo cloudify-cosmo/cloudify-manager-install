@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 from ..restservice.db import get_managers
 from ..base_component import BaseComponent
-from ..service_names import SANITY
+from ...service_names import SANITY
 from ...logger import get_logger
 from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common

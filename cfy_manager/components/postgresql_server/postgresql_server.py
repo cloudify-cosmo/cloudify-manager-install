@@ -21,7 +21,7 @@ from cfy_manager.exceptions import (
     DBNodeListError,
     DBManagementError,
 )
-from ..components_constants import (
+from ...components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
     ETCD_CA_PATH,
@@ -35,7 +35,7 @@ from ..components_constants import (
     SSL_ENABLED,
 )
 from ..base_component import BaseComponent
-from ..service_names import (
+from ...service_names import (
     POSTGRESQL_SERVER,
     MANAGER,
     MANAGER_SERVICE,

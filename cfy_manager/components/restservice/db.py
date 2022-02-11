@@ -5,7 +5,7 @@ import uuid
 from os.path import join
 
 from .manager_config import make_manager_config
-from ..components_constants import (
+from ...components_constants import (
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
     AGENT,
@@ -16,7 +16,7 @@ from ..components_constants import (
     SECURITY,
 )
 
-from ..service_names import (
+from ...service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
