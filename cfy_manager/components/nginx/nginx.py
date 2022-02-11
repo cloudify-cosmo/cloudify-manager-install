@@ -16,9 +16,9 @@ from ...components_constants import (
     SERVICES_TO_INSTALL
 )
 from ...service_names import (NGINX, MANAGER, MANAGER_SERVICE,
-                             MONITORING_SERVICE, PROMETHEUS,
-                             DATABASE_SERVICE, POSTGRESQL_SERVER,
-                             QUEUE_SERVICE, RABBITMQ, )
+                              MONITORING_SERVICE, PROMETHEUS,
+                              DATABASE_SERVICE, POSTGRESQL_SERVER,
+                              QUEUE_SERVICE, RABBITMQ, )
 
 from ... import constants
 from ...config import config
