@@ -1,2 +1,5 @@
 STAGE_HOME=/opt/cloudify-stage
 STAGE_BACKEND_ARGS={{ stage.community_mode }}
+{% for key, value in stage.extra_env.items() %}
+{{ key }}="{{ value }}"
+{% endfor %}
