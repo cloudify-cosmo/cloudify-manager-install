@@ -1331,19 +1331,33 @@ def _only_validate():
 
 
 @argh.named('version')
-def version():
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=0,
+                     action='count')
+def version(**kwargs):
     setup_console_logger()
     cfy_version = pkg_resources.require('cloudify-manager-install')[0].version
     logger.info('Cloudify {}'.format(cfy_version))
-    with open('{}/package_cids.json'.format(CLOUDIFY_HOME_DIR)) as f:
-        version_data = json.load(f)
-    logger.info('Release date: %s', version_data['release-date'])
-    del version_data['release-date']
+    verbose = kwargs['verbose']
+    if not verbose:
+        return
+    with open('{}/metadata.json'.format(CLOUDIFY_HOME_DIR)) as f:
+        package_data = json.load(f)
+    package_names = ['common', 'manager', 'premium', 'agent', 'cli', 'agent',
+                     'stage', 'composer', 'manager-install']
+    logger.info('Release date: %s', package_data['@creation_date'])
+    mgr_install_info = next(r for r in package_data['repos']
+                            if r['name'] == 'cloudify-manager-install')
+    logger.info('Release branch: %s', mgr_install_info['branch_name'])
     logger.info('')
     logger.info('Packages commit IDs:')
-    for k, v in version_data.items():
-        k = f'cloudify-{k}:'
-        logger.info(' * %-27s %s', k, v)
+    for repo in package_data['repos']:
+        if repo['name'].replace('cloudify-', '') in package_names:
+            if verbose == 1:
+                logger.info(' * %-27s %s', repo['name'], repo['sha_id'][:7])
+            else:
+                logger.info(' * %-27s %s  [%s]',
+                            repo['name'], repo['sha_id'][:7],
+                            repo['branch_name'])
 
 
 def main():

@@ -49,7 +49,7 @@ mkdir -p %{buildroot}/etc/yum.repos.d/
 cp ${RPM_SOURCE_DIR}/packaging/localrepo %{buildroot}/etc/yum.repos.d/Cloudify-Local.repo
 mkdir -p %{buildroot}/var/log/cloudify
 
-curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/package_cids.json -o %{buildroot}/etc/cloudify/package_cids.json
+curl https://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/metadata.json -o %{buildroot}/etc/cloudify/metadata.json
 
 %pre
 ver=`cat /etc/redhat-release | grep -o 'release.*' | cut -f2 -d\ | cut -b 1-3`
