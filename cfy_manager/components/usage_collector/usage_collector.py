@@ -6,9 +6,9 @@ from ...config import config
 from ...logger import get_logger
 from ...utils import common, files
 from ...exceptions import InputError
-from ..components_constants import SCRIPTS
+from ...components_constants import SCRIPTS
 from ..base_component import BaseComponent
-from ..service_names import USAGE_COLLECTOR
+from ...service_names import USAGE_COLLECTOR
 from ...utils.install import is_package_installed
 from ...utils.logrotate import set_logrotate, remove_logrotate
 

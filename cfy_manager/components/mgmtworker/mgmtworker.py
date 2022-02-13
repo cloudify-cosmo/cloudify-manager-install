@@ -1,8 +1,8 @@
 from os.path import join
 
-from ..components_constants import CONFIG
+from ...components_constants import CONFIG
 from ..base_component import BaseComponent
-from ..service_names import MGMTWORKER
+from ...service_names import MGMTWORKER
 from ...logger import get_logger
 from ... import constants as const
 from ...utils import (

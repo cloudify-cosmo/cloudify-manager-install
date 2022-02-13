@@ -1,5 +1,5 @@
 from ..base_component import BaseComponent
-from ..service_names import HAVEGED
+from ...service_names import HAVEGED
 from ...logger import get_logger
 from ...utils import service
 
