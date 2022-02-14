@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+import json
 import subprocess
 import pkg_resources
 from traceback import format_exception
@@ -45,6 +46,7 @@ from .components.validations import validate, validate_dependencies
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
+    CLOUDIFY_HOME_DIR,
     SUPERVISORD_CONFIG_DIR,
     NEW_CERTS_TMP_DIR_PATH,
     CONFIG_FILE_HELP_MSG,
@@ -1329,10 +1331,33 @@ def _only_validate():
 
 
 @argh.named('version')
-def version():
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=0,
+                     action='count')
+def version(**kwargs):
     setup_console_logger()
     cfy_version = pkg_resources.require('cloudify-manager-install')[0].version
     logger.info('Cloudify {}'.format(cfy_version))
+    verbose = kwargs['verbose']
+    if not verbose:
+        return
+    with open('{}/metadata.json'.format(CLOUDIFY_HOME_DIR)) as f:
+        package_data = json.load(f)
+    package_names = ['common', 'manager', 'premium', 'agent', 'cli', 'agent',
+                     'stage', 'composer', 'manager-install']
+    logger.info('Release date: %s', package_data['@creation_date'])
+    mgr_install_info = next(r for r in package_data['repos']
+                            if r['name'] == 'cloudify-manager-install')
+    logger.info('Release branch: %s', mgr_install_info['branch_name'])
+    logger.info('')
+    logger.info('Packages commit IDs:')
+    for repo in package_data['repos']:
+        if repo['name'].replace('cloudify-', '') in package_names:
+            if verbose == 1:
+                logger.info(' * %-27s %s', repo['name'], repo['sha_id'][:7])
+            else:
+                logger.info(' * %-27s %s  [%s]',
+                            repo['name'], repo['sha_id'][:7],
+                            repo['branch_name'])
 
 
 def main():
