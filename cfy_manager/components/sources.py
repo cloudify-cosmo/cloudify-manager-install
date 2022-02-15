@@ -17,7 +17,8 @@ manager = [
     'cloudify-management-worker', 'cloudify-rest-service',
     'cloudify-cli', 'nginx',
     'python-psycopg2', 'postgresql95', 'cloudify-agents',
-    'patch', 'nodejs', 'cloudify-stage'
+    'patch', 'nodejs', 'cloudify-stage',
+    'git'  # required for installing some Terraform modules
 ]
 manager_premium = [
     'cloudify-premium', 'cloudify-composer'
