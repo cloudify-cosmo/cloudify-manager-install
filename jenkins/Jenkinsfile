@@ -132,8 +132,7 @@ pipeline {
                 """
               sh script: """
                 pushd rpms
-                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} >~/fetch_requirements.log
-                  cat ~/fetch_requirements.log
+                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME}
                 popd
                 """, label: 'fetching requirements'
               echo 'prepare to build rpm'
