@@ -506,8 +506,23 @@ class RestService(BaseComponent):
         remove_logrotate(RESTSERVICE)
         common.remove('/opt/manager')
 
+    def _validate_api_config_defaults(self):
+        if not config.get('api', {}):
+            # In case we're are upgrading from an older release
+            logger.info('Setting default values for `api` configuration')
+            config['api'] = {
+                'gunicorn': {
+                    'worker_count': 0,
+                    'cpu_ratio': 0.2,
+                    'max_worker_count': 4,
+                    'max_requests': 1000,
+                },
+                'port': 8101,
+            }
+
     def upgrade(self):
         logger.notice('Upgrading Rest Service...')
+        self._validate_api_config_defaults()
         super().upgrade()
         self._deploy_restservice_files()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
