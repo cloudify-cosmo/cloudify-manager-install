@@ -506,9 +506,9 @@ class RestService(BaseComponent):
         remove_logrotate(RESTSERVICE)
         common.remove('/opt/manager')
 
-    def _validate_api_config_defaults(self):
+    def _validate_config_defaults(self):
+        """Validate that config defaults exist."""
         if not config.get('api', {}):
-            # In case we're are upgrading from an older release
             logger.info('Setting default values for `api` configuration')
             config['api'] = {
                 'gunicorn': {
@@ -519,10 +519,12 @@ class RestService(BaseComponent):
                 },
                 'port': 8101,
             }
+        if not config['restservice']['gunicorn'].get('cpu_ratio'):
+            config['restservice']['gunicorn']['cpu_ratio'] = 2.0
 
     def upgrade(self):
         logger.notice('Upgrading Rest Service...')
-        self._validate_api_config_defaults()
+        self._validate_config_defaults()
         super().upgrade()
         self._deploy_restservice_files()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
