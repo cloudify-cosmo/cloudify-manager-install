@@ -312,7 +312,7 @@ def _update_config():
             return constants.POSTGRESQL_CA_CERT_PATH
         return ''
 
-    logger.notice('Updating Prometheus configuration...')
+    logger.notice('Updating configuration for Prometheus...')
     if POSTGRES_EXPORTER in config[PROMETHEUS]:
         if ('ip_address' not in config[PROMETHEUS][POSTGRES_EXPORTER] or
                 not config[PROMETHEUS][POSTGRES_EXPORTER]['ip_address']):
@@ -483,8 +483,9 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
             postgres_targets.append(db_ip + ':' + monitoring_port)
 
         # Monitor remote manager nodes
-        if config.get(CLUSTER_JOIN):
-            for manager in cluster_config.get('manager_nodes', []):
+        manager_nodes = cluster_config.get('manager_nodes', [])
+        if len(manager_nodes) > 1:
+            for manager in manager_nodes:
                 manager_targets.append(
                     manager + ':' + monitoring_port)
 
