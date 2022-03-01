@@ -492,7 +492,6 @@ class RestService(BaseComponent):
     def configure(self):
         logger.notice('Configuring Rest Service...')
 
-        self._make_paths()
         self.configure_service('cloudify-restservice')
         self.configure_service('cloudify-api')
         certificates.handle_ca_cert(logger)
@@ -506,6 +505,7 @@ class RestService(BaseComponent):
         logger.notice('Rest Service successfully configured')
 
     def configure_service(self, service_name, service_config=None):
+        self._make_paths()
         if service_name == 'cloudify-restservice':
             self._configure_restservice()
             service.configure('cloudify-restservice')
