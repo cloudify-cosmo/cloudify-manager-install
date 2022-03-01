@@ -37,9 +37,8 @@ RUN systemctl enable cloudify-starter.service
 
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
-RUN mkdir -p /etc/supervisord.d
 RUN chmod a+wx /var/run
-COPY supervisord.conf /etc/supervisord.conf
+COPY starter.conf /etc/supervisord.d/starter.conf
 
 STOPSIGNAL SIGRTMIN+3
 VOLUME [ "/sys/fs/cgroup" ]
