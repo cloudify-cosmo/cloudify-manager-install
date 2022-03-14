@@ -230,11 +230,15 @@ def get_package_urls_file(edition, branch, repo_destination_path,
         )
 
     package_yaml_path = 'packages-urls/manager-packages.yaml'
+    plugin_package_yaml_path = 'packages-urls/plugin-packages.yaml'
     if architecture == "aarch64":
         package_yaml_path = 'packages-urls/manager-packages-aarch.yaml'
+        plugin_package_yaml_path = 'packages-urls/plugin-packages-aarch.yaml'
 
     return {
         'manager': os.path.join(repo_destination_path, package_yaml_path),
+        'plugins': os.path.join(repo_destination_path,
+                                plugin_package_yaml_path),
     }
 
 
@@ -388,11 +392,11 @@ def retrieve_resources(edition, branch, dev_branch, architecture=None):
     if dev_branch:
         update_resources_url_on_dev_branch(
             dev_branch, package_url_files['manager'])
+        update_resources_url_on_dev_branch(
+            dev_branch, package_url_files['plugins'])
     print_status_update('Downloading resources...')
-    download_listed_resources(
-        package_url_files['manager'],
-        '.',
-    )
+    download_listed_resources(package_url_files['manager'], '.')
+    download_listed_resources(package_url_files['plugins'], '.')
 
     exit_helpfully_on_failure(
         command=[

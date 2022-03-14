@@ -171,18 +171,17 @@ class RestService(BaseComponent):
               owner=constants.CLOUDIFY_USER, group=constants.CLOUDIFY_GROUP,
               mode=0o660)
 
-    def _calculate_worker_count(self):
-        for component_name in ['restservice', 'api']:
-            server_config = config[component_name]['gunicorn']
-            worker_count = server_config['worker_count']
-            cpu_ratio = server_config['cpu_ratio']
-            max_worker_count = server_config['max_worker_count']
+    def _calculate_worker_count(self, component_name):
+        server_config = config[component_name]['gunicorn']
+        worker_count = server_config['worker_count']
+        cpu_ratio = server_config['cpu_ratio']
+        max_worker_count = server_config['max_worker_count']
 
-            if not worker_count:
-                number_of_cpus = int(subprocess.check_output('nproc'))
-                worker_count = int(number_of_cpus * cpu_ratio) + 1
+        if not worker_count:
+            number_of_cpus = int(subprocess.check_output('nproc'))
+            worker_count = int(number_of_cpus * cpu_ratio) + 1
 
-            server_config['worker_count'] = min(worker_count, max_worker_count)
+        server_config['worker_count'] = min(worker_count, max_worker_count)
 
     def _chown_resources_dir(self):
         # Pre-creating paths so permissions fix can
@@ -220,12 +219,13 @@ class RestService(BaseComponent):
 
     def _configure_restservice(self):
         flask_security_config = self._generate_flask_security_config()
-        self._calculate_worker_count()
+        self._calculate_worker_count('restservice')
         self._deploy_restservice_files()
         self._deploy_security_configuration(flask_security_config)
         self._configure_restservice_wrapper_script()
 
     def _configure_api(self):
+        self._calculate_worker_count('api')
         self._configure_api_wrapper_script()
 
     def verify_started(self):
@@ -506,8 +506,25 @@ class RestService(BaseComponent):
         remove_logrotate(RESTSERVICE)
         common.remove('/opt/manager')
 
+    def _validate_config_defaults(self):
+        """Validate that config defaults exist."""
+        if not config.get('api', {}):
+            logger.info('Setting default values for `api` configuration')
+            config['api'] = {
+                'gunicorn': {
+                    'worker_count': 0,
+                    'cpu_ratio': 0.2,
+                    'max_worker_count': 4,
+                    'max_requests': 1000,
+                },
+                'port': 8101,
+            }
+        if not config['restservice']['gunicorn'].get('cpu_ratio'):
+            config['restservice']['gunicorn']['cpu_ratio'] = 2.0
+
     def upgrade(self):
         logger.notice('Upgrading Rest Service...')
+        self._validate_config_defaults()
         super().upgrade()
         self._deploy_restservice_files()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')

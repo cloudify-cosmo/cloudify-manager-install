@@ -26,7 +26,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && rm /tmp/cloudify-manager-install.rpm \
     && cp /tmp/config.yaml /etc/cloudify/config.yaml \
     && cfy_manager install --only-install --verbose \
-    && sed -i 's/ssl_enabled: true/ssl_enabled: false/' /etc/cloudify/config.yaml \
+    && sed -i 's/ssl_enabled: true/ssl_enabled: false/' /opt/cloudify/cfy_manager/lib/python3.6/site-packages/config.yaml \
     && rm -fr /opt/cloudify/sources/*.rpm -fr \
     && rm /etc/yum.repos.d/Cloudify-Local.repo \
     && if [ "$autoremove" == "true" ]; then yum autoremove -y; fi \
@@ -37,9 +37,8 @@ RUN systemctl enable cloudify-starter.service
 
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
-RUN mkdir -p /etc/supervisord.d
 RUN chmod a+wx /var/run
-COPY supervisord.conf /etc/supervisord.conf
+COPY starter.conf /etc/supervisord.d/starter.conf
 
 STOPSIGNAL SIGRTMIN+3
 VOLUME [ "/sys/fs/cgroup" ]
