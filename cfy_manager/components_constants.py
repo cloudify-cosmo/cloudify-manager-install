@@ -46,7 +46,6 @@ SSL_INPUTS = 'ssl_inputs'
 VALIDATIONS = 'validations'
 SKIP_VALIDATIONS = 'skip_validations'
 PROVIDER_CONTEXT = 'provider_context'
-CLEAN_DB = 'clean_db'
 FLASK_SECURITY = 'flask_security'
 UNCONFIGURED_INSTALL = 'unconfigured_install'
 

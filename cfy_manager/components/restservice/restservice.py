@@ -20,7 +20,6 @@ from ...constants import (
 from ...components_constants import (
     CONFIG,
     SCRIPTS,
-    CLEAN_DB,
     SECURITY,
     SSL_INPUTS,
     CLUSTER_JOIN,
@@ -150,7 +149,7 @@ class RestService(BaseComponent):
     def _get_flask_security(self, flask_security_config):
         # If we're recreating the DB, or if there's no previous security
         # config file, just use the config that was generated
-        if config[CLEAN_DB] or not exists(REST_SECURITY_CONFIG_PATH):
+        if not exists(REST_SECURITY_CONFIG_PATH):
             return flask_security_config
 
         security_config = flask_security_config
@@ -242,9 +241,6 @@ class RestService(BaseComponent):
             'security_config': REST_SECURITY_CONFIG_PATH
         }
         config[CLUSTER_JOIN] = False
-
-        if config[CLEAN_DB]:
-            db.drop_db()
 
         if db.check_db_exists():
             db.validate_schema_version(configs)
