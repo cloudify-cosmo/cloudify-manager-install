@@ -22,7 +22,6 @@ from .components import (
     sources,
 )
 from .components_constants import (
-    CLEAN_DB,
     SECURITY,
     PUBLIC_IP,
     PRIVATE_IP,
@@ -108,12 +107,6 @@ TEST_CA_GENERATE_SAN_HELP_TEXT = (
     'Comma separated list of names or IPs that the generated certificate '
     'should be valid for. '
     'The first SAN entered will be the certificate name and used as the CN.'
-)
-CLEAN_DB_HELP_MSG = (
-    'If set to "false", the DB will not be recreated when '
-    'installing/configuring the Manager. Must be set to "true" on the first '
-    'installation. If set to "false", the hash salt and admin password '
-    'will not be generated'
 )
 ADMIN_PASSWORD_HELP_MSG = (
     'The password of the Cloudify Manager system administrator. '
@@ -510,10 +503,8 @@ sys.excepthook = _exception_handler
 
 
 def _populate_and_validate_config_values(private_ip, public_ip,
-                                         admin_password, clean_db):
+                                         admin_password):
     manager_config = config[MANAGER]
-
-    config[CLEAN_DB] = clean_db
 
     if private_ip:
         manager_config[PRIVATE_IP] = private_ip
@@ -527,7 +518,6 @@ def _prepare_execution(verbose=False,
                        private_ip=None,
                        public_ip=None,
                        admin_password=None,
-                       clean_db=False,
                        only_install=False,
                        config_file=None):
     setup_console_logger(verbose)
@@ -537,7 +527,7 @@ def _prepare_execution(verbose=False,
         # We don't validate anything that applies to the install anyway,
         # but we do populate things that are not relevant.
         _populate_and_validate_config_values(private_ip, public_ip,
-                                             admin_password, clean_db)
+                                             admin_password)
 
 
 def _print_finish_message(config_file=None):
@@ -714,7 +704,6 @@ def _filter_components(components, include_components):
 def install_args(f):
     """Apply all the args that are used by `cfy_manager install`"""
     args = [
-        argh.arg('--clean-db', help=CLEAN_DB_HELP_MSG),
         argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
         argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
         argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
@@ -731,14 +720,12 @@ def validate_command(verbose=False,
                      private_ip=None,
                      public_ip=None,
                      admin_password=None,
-                     config_file=None,
-                     clean_db=False):
+                     config_file=None):
     _prepare_execution(
         verbose,
         private_ip,
         public_ip,
         admin_password,
-        clean_db,
         config_file=config_file,
     )
     components = _get_components()
@@ -830,7 +817,6 @@ def install(verbose=False,
             private_ip=None,
             public_ip=None,
             admin_password=None,
-            clean_db=False,
             only_install=None,
             config_file=None):
     """ Install Cloudify Manager """
@@ -840,7 +826,6 @@ def install(verbose=False,
         private_ip,
         public_ip,
         admin_password,
-        clean_db,
         config_file=config_file,
         only_install=only_install,
     )
@@ -877,8 +862,7 @@ def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
-              config_file=None,
-              clean_db=False):
+              config_file=None):
     """ Configure Cloudify Manager """
 
     _prepare_execution(
@@ -886,7 +870,6 @@ def configure(verbose=False,
         private_ip,
         public_ip,
         admin_password,
-        clean_db,
         config_file=config_file,
     )
 
@@ -908,9 +891,6 @@ def configure(verbose=False,
     # This only relevant for restarting services on VM that use supervisord
     if is_supervisord_service():
         _configure_supervisord()
-    if clean_db:
-        for component in components:
-            component.stop()
 
     for component in components:
         component.configure()
@@ -1028,7 +1008,6 @@ def start(include_components,
           public_ip=None,
           admin_password=None,
           config_file=None,
-          clean_db=False,
           only_install=None):
     """ Start Cloudify Manager services """
     _prepare_execution(
@@ -1036,7 +1015,6 @@ def start(include_components,
         private_ip,
         public_ip,
         admin_password,
-        clean_db,
         config_file=config_file,
     )
     _validate_components_prepared('start', config_file)
