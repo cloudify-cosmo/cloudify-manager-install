@@ -18,9 +18,7 @@ def generate_auth_token():
     for existing in client.tokens.list(description=description):
         client.tokens.delete(existing['id'])
 
-    token = client.tokens.create(
-        description=f'Mgmtworker token for {hostname}',
-    )
+    token = client.tokens.create(description=description)
     return token.value
 
 
