@@ -11,8 +11,13 @@ AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def generate_auth_token():
-    client = get_rest_client()
     hostname = socket.gethostname()
+    description = f'Mgmtworker token for {hostname}'
+    client = get_rest_client()
+
+    for existing in client.tokens.list(description=description):
+        client.tokens.delete(existing['id'])
+
     token = client.tokens.create(
         description=f'Mgmtworker token for {hostname}',
     )
