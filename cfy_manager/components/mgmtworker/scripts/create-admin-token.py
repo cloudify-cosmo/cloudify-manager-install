@@ -3,7 +3,6 @@ import os
 import pwd
 import grp
 from stat import S_IREAD
-import socket
 
 from cloudify_cli.env import get_rest_client
 
@@ -11,8 +10,7 @@ AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def generate_auth_token():
-    hostname = socket.gethostname()
-    description = f'Mgmtworker token for {hostname}'
+    description = f'Mgmtworker'
     client = get_rest_client()
 
     for existing in client.tokens.list(description=description):
