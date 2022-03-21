@@ -4,10 +4,7 @@ import pwd
 import grp
 from stat import S_IREAD
 
-from flask_security.utils import hash_password
-
 from manager_rest import config, server, storage
-from manager_rest.rest.resources_v3_1.tokens import _random_string
 
 RESTSERVICE_CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 RESTSEC_CONFIG_PATH = '/opt/manager/rest-security.conf'
@@ -30,19 +27,10 @@ def generate_auth_token():
                                filters={'description': description}):
                 sm.delete(tok)
 
-            # Add new token
-            secret = _random_string(40)
-            token = storage.models.Token(
-                id=_random_string(),
-                description=description,
-                secret_hash=hash_password(secret),
-                _user_fk=0,
-            )
-            sm.put(token)
+            admin = sm.get(storage.models.User, 0)
+            token = admin.create_auth_token(description=description)
 
-            # Return new token value including secret
-            token._secret = secret
-            return token.to_response()['value']
+            return token.value
     finally:
         config.reset(config.Config())
 
