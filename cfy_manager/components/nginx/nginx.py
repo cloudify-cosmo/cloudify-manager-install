@@ -11,7 +11,6 @@ from ...components_constants import (
     PRIVATE_IP,
     PUBLIC_IP,
     SSL_INPUTS,
-    CLEAN_DB,
     HOSTNAME,
     SERVICES_TO_INSTALL
 )
@@ -279,11 +278,11 @@ class Nginx(BaseComponent):
 
     def _handle_certs(self):
         certs_handled = False
-        if config[CLEAN_DB] or not self._internal_certs_exist():
+        if not self._internal_certs_exist():
             certs_handled = True
             self._handle_internal_cert()
             prometheus.handle_certs()
-        if config[CLEAN_DB] or not self._external_certs_exist():
+        if not self._external_certs_exist():
             certs_handled = True
             self._handle_external_cert()
 

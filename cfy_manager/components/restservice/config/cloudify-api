@@ -2,3 +2,4 @@
 GUNICORN_PORT={{ api.port }}
 GUNICORN_WORKER_COUNT={{ api.gunicorn.worker_count }}
 GUNICORN_MAX_REQUESTS={{ api.gunicorn.max_requests }}
+HOME="/etc/cloudify"
