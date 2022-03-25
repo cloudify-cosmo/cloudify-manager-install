@@ -749,7 +749,7 @@ def sanity_check(verbose=False, private_ip=None, config_file=None):
 
 def _get_packages():
     """Yum packages to install/uninstall, based on the current config"""
-    packages = []
+    packages = ['rsyslog']
     packages_per_service_dict = {}
     # Adding premium components on all, even if we're on community, because
     # yum will return 0 (success) if any packages install successfully even if

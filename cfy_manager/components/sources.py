@@ -26,7 +26,7 @@ manager_premium = [
 manager_cluster = []
 db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
 db_cluster = [
-    'libestr', 'libfastjson', 'rsyslog', 'etcd', 'patroni'
+    'libestr', 'libfastjson', 'etcd', 'patroni'
 ]
 queue = ['rabbitmq-server-3.8.4', 'cloudify-rabbitmq']
 queue_cluster = []
