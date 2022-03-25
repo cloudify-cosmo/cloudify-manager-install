@@ -24,4 +24,4 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
 
 def using_systemd_rsyslog():
     # On more complete installs of RHEL/Centos, rsyslog may already be running
-    return service.SystemD().is_alive('rsyslog')
+    return service.SystemD().is_installed('rsyslog')
