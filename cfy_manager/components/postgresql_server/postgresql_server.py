@@ -724,7 +724,7 @@ class PostgresqlServer(BaseComponent):
         common.run(['chown', 'postgres.', POSTGRES_LOG_PATH])
 
         syslog.deploy_rsyslog_filters('db_cluster', ['etcd', 'patroni'],
-                                      self.service_type)
+                                      self.service_type, logger)
 
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()

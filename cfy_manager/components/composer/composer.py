@@ -151,7 +151,7 @@ class Composer(BaseComponent):
     def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         syslog.deploy_rsyslog_filters('composer', ['cloudify-composer'],
-                                      self.service_type)
+                                      self.service_type, logger)
         self.update_composer_config()
         external_configure_params = {}
         if service._get_service_type() == 'supervisord':

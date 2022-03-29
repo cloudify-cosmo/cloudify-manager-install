@@ -168,7 +168,7 @@ class SystemD(object):
             'is-enabled',
             service_name,
             ignore_failure=True
-        ).aggr_stderr.strip()
+        ).aggr_stdout.strip()
         # We actually have the servies installed on yum install, but what we
         # care about where we use this function is whether we're using it-
         # and in that case it'll be enabled.
