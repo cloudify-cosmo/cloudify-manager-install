@@ -83,6 +83,10 @@ class MgmtWorker(BaseComponent):
         common.run(['chgrp', const.CLOUDIFY_GROUP, '/opt/manager'])
         common.run(['chmod', 'g+rw', '/opt/manager'])
 
+    def upgrade(self):
+        self._deploy_admin_token()
+        super(MgmtWorker, self).upgrade()
+
     def configure(self):
         logger.notice('Configuring Management Worker...')
         self._deploy_hooks_config()
