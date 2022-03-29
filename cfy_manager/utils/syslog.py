@@ -1,7 +1,8 @@
 from cfy_manager.utils import files, service
+from cfy_manager.exceptions import ProcessExecutionError
 
 
-def deploy_rsyslog_filters(group, services, service_type):
+def deploy_rsyslog_filters(group, services, service_type, logger):
     template = '''template(name="{svc}-sup" type="list") {{
   property(name="msg" position.from="{trim}" droplastlf="on" )
   constant(value="\n")
@@ -17,7 +18,12 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
                     path_template.format(svc=svc))
 
     if using_systemd_rsyslog():
-        service.SystemD().restart('rsyslog')
+        try:
+            service.SystemD().restart('rsyslog')
+        except ProcessExecutionError as err:
+            # Some container setups can detect rsyslog being used with systemd
+            # but not be able to restart it.
+            logger.warning('Failed to restart rsyslog: %s', err)
     else:
         service.restart('rsyslog')
 
