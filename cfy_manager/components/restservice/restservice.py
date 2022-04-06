@@ -543,4 +543,8 @@ class RestService(BaseComponent):
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
+        run_script_on_manager_venv(
+            '/opt/mgmtworker/env/lib/python3.6/site-packages/'
+            'cloudify_system_workflows/snapshots/'
+            'populate_deployment_statuses.py')
         logger.notice('Rest Service successfully upgraded')
