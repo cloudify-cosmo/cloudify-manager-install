@@ -526,4 +526,6 @@ class RestService(BaseComponent):
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
+        run_script_on_manager_venv(
+            '/opt/manager/scripts/update_latest_executions')
         logger.notice('Rest Service successfully upgraded')
