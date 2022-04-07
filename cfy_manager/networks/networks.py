@@ -80,6 +80,23 @@ def _get_hostname():
     return config[MANAGER].get(HOSTNAME) or socket.gethostname()
 
 
+class NetworkValidationError(Exception):
+    """Raised when an invalid network is provided."""
+
+
+def _validate_networks(networks):
+    min_length = 1
+    max_length = 253
+    for network, address in networks.items():
+        address_length = len(address)
+        if address_length < min_length or address_length > max_length:
+            raise NetworkValidationError(
+                f'Error validating network {network}. '
+                f'Network address length should be between {min_length} and '
+                f'{max_length} but was {address_length}.'
+            )
+
+
 @argh.arg('--networks',
           help='A JSON string containing the new networks to be added to the'
                ' Manager. Example: \'{"<network-name>": "<ip>"}\'',
@@ -104,6 +121,7 @@ def add_networks(networks=None,
     logger.info('Trying to add new networks to Manager...')
 
     networks = json.loads(networks)
+    _validate_networks(networks)
     metadata = load_cert_metadata()
 
     _update_metadata_file(metadata, networks)
