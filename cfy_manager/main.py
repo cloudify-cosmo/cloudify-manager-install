@@ -1063,6 +1063,8 @@ def upgrade(verbose=False, config_file=None):
 
     _prepare_execution(verbose, config_file=config_file)
     _validate_components_prepared('restart', config_file)
+    components = _get_components()
+    validate(components=components, only_install=False)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
     run(['yum', 'clean', 'all'],
