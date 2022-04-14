@@ -1,11 +1,10 @@
-import json
 from os.path import join, dirname, isfile
 
 from ..utils import common
 from ..logger import get_logger
 from ..utils.files import write_to_tempfile
 from cfy_manager.exceptions import FileError
-from ..constants import REST_HOME_DIR, SCRIPTS, REST_SECURITY_CONFIG_PATH
+from ..constants import REST_HOME_DIR, SCRIPTS
 
 logger = get_logger(SCRIPTS)
 
@@ -58,17 +57,3 @@ def log_script_run_results(script_result):
         output = [line.strip() for line in output if line.strip()]
         for line in output:
             logger.error(line)
-
-
-def get_encoded_user_ids(users):
-    script_path = join(SCRIPTS_PATH, 'get_encoded_user_ids.py')
-    envvars = {'MANAGER_REST_SECURITY_CONFIG_PATH': REST_SECURITY_CONFIG_PATH}
-    result = run_script_on_manager_venv(script_path, users, envvars=envvars)
-    if not result:
-        return None
-    users = json.loads(result.aggr_stdout)
-    tokens = {
-        user['username']:
-            '{0}{1}'.format(user['encoded_id'], user['api_token_key'])
-        for user in users}
-    return tokens

@@ -1,3 +1,6 @@
+import os
+
+from cfy_manager.constants import COMPONENTS_DIR
 from cfy_manager.components.base_component import BaseComponent
 from cfy_manager.logger import get_logger
 from cfy_manager.utils import files, service, syslog
@@ -27,6 +30,14 @@ exec /usr/sbin/rsyslogd -n'''
             'rsyslog',
             config_path='config/supervisord',
         )
+
+        if not os.path.exists('/dev/log'):
+            logger.info('Configuring rsyslog for non-journald system')
+            files.deploy(
+                src=os.path.join(COMPONENTS_DIR, 'rsyslog', 'nojournald.conf'),
+                dst='/etc/rsyslog.conf',
+            )
+            service.restart('rsyslog')
 
     def remove(self):
         if syslog.using_systemd_rsyslog():

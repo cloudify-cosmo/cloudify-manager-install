@@ -28,6 +28,11 @@ Cloudify Manager installer.
 mkdir -p $(dirname %_venv)
 python3 -m venv %_venv
 %_venv/bin/pip install ${RPM_SOURCE_DIR}
+# Make sure the http.py spurious critical log is in the expected location (line 849)
+# We're doing this because the socket is already secured by filesystem permissions and
+# we don't want a meaningless log entry with a CRIT level to alarm users
+sed -n 849p %_venv/lib/python3.6/site-packages/supervisor/http.py | grep critical
+sed -i 849s/critical/debug/ %_venv/lib/python3.6/site-packages/supervisor/http.py
 
 %install
 mkdir %{buildroot}/opt

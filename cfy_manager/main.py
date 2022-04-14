@@ -159,6 +159,10 @@ INPUT_PATH_MSG = (
 
 config_arg = argh.arg('-c', '--config-file', action='append', default=None,
                       help=CONFIG_FILE_HELP_MSG)
+private_ip_arg = argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG)
+public_ip_arg = argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG)
+admin_password_arg = argh.arg('-a', '--admin-password',
+                              help=ADMIN_PASSWORD_HELP_MSG)
 
 
 @argh.decorators.arg('-s', '--sans', help=TEST_CA_GENERATE_SAN_HELP_TEXT,
@@ -704,11 +708,7 @@ def _filter_components(components, include_components):
 def install_args(f):
     """Apply all the args that are used by `cfy_manager install`"""
     args = [
-        argh.arg('--private-ip', help=PRIVATE_IP_HELP_MSG),
-        argh.arg('--public-ip', help=PUBLIC_IP_HELP_MSG),
-        argh.arg('-a', '--admin-password', help=ADMIN_PASSWORD_HELP_MSG),
-        config_arg,
-    ]
+        private_ip_arg, public_ip_arg, admin_password_arg, config_arg]
     for arg in args:
         f = arg(f)
     return f
@@ -749,7 +749,7 @@ def sanity_check(verbose=False, private_ip=None, config_file=None):
 
 def _get_packages():
     """Yum packages to install/uninstall, based on the current config"""
-    packages = []
+    packages = ['rsyslog']
     packages_per_service_dict = {}
     # Adding premium components on all, even if we're on community, because
     # yum will return 0 (success) if any packages install successfully even if
@@ -1057,12 +1057,16 @@ def restart(include_components, verbose=False, config_file=None):
     _print_time()
 
 
+@private_ip_arg
+@public_ip_arg
 @config_arg
-def upgrade(verbose=False, config_file=None):
+def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     """Update the current manager using the available yum repos."""
-
-    _prepare_execution(verbose, config_file=config_file)
+    _prepare_execution(verbose, private_ip, public_ip,
+                       config_file=config_file)
     _validate_components_prepared('restart', config_file)
+    components = _get_components()
+    validate(components=components, only_install=False)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
     run(['yum', 'clean', 'all'],
