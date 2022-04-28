@@ -196,6 +196,18 @@ class PostgresqlServer(BaseComponent):
         else:
             return self._bytes_as_mb(psutil.virtual_memory().total // 2)
 
+    def _generate_work_mem(self):
+        return self._bytes_as_mb(max(4 * 1024 * 1024,
+                                     psutil.virtual_memory().total // 256))
+
+    def _generate_maintenance_work_mem(self):
+        return self._bytes_as_mb(max(64 * 1024 * 1024,
+                                     psutil.virtual_memory().total // 16))
+
+    def _generate_wal_buffers(self):
+        """Calculate `shared_buffers` PostgreSQL parameter as 25% of RAM."""
+        return self._bytes_as_mb(psutil.virtual_memory().total // 128)
+
     def _generate_pg_params(self, overrides):
         params = {
             'log_destination': "stderr",
@@ -216,6 +228,11 @@ class PostgresqlServer(BaseComponent):
             'shared_buffers': self._generate_default_shared_buffers(),
             'effective_cache_size':
             self._generate_default_effective_cache_size(),
+            'max_connections': 250,
+            'work_mem': self._generate_work_mem(),
+            'maintenance_work_mem': self._generate_maintenance_work_mem(),
+            'wal_buffers': self._generate_wal_buffers(),
+            'checkpoint_completion_target': 0.9,
         }
         params.update(overrides)
         return params
