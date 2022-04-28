@@ -205,7 +205,6 @@ class PostgresqlServer(BaseComponent):
                                      psutil.virtual_memory().total // 16))
 
     def _generate_wal_buffers(self):
-        """Calculate `shared_buffers` PostgreSQL parameter as 25% of RAM."""
         return self._bytes_as_mb(psutil.virtual_memory().total // 128)
 
     def _generate_pg_params(self, overrides):
