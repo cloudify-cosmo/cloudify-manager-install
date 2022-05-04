@@ -8,142 +8,132 @@ imports:
   - plugin:cloudify-utilities-plugin?version= >=1.22.1
 
 inputs:
-
   aws_region_name:
     type: string
-    default: 'eu-west-1'
+    default: "eu-west-1"
 
   availability_zone:
     type: string
-    default: 'eu-west-1b'
+    default: "eu-west-1b"
 
   instance_type:
     type: string
-    default: t3.xlarge
+    default: "t3.xlarge"
 
   aws_linux_ami:
     type: string
-    default: 'ami-082ed116ae2c6d2cc'
+    default: "ami-082ed116ae2c6d2cc"
 
   aws_subnet_id:
     type: string
-    default: 'subnet-05de767ce22d776df'
+    default: "subnet-05de767ce22d776df"
 
   aws_vpc_id:
     type: string
-    default: 'vpc-058abc57fcc8fb171'
+    default: "vpc-058abc57fcc8fb171"
 
   aws_security_group_id:
     type: string
-    default: 'sg-0ecb54c91e140324c'
+    default: "sg-0ecb54c91e140324c"
+
+  aws_fleet_role:
+    type: string
+    default: "arn:aws:iam::263721492972:role/aws-ec2-spot-fleet-tagging-role"
+
+  aws_fleet_iam_instance_profile:
+    type: string
+    default: "arn:aws:iam::263721492972:instance-profile/cfyfleetprofile-jenkins-ci/cfyfleetprofile-jenkins-ci"
 
   agent_user:
     description: >
       The username of the agent running on the instance created from the image.
-    default: 'centos'
+    default: "centos"
 
   ssh_key_name:
     type: string
-    default: 'cfy-manager-install-key'
+    default: "cfy-manager-install-key"
 
   agent_key_name:
     type: string
     default: manager-install
 
-
 dsl_definitions:
-
-   client_config: &client_config
-    aws_access_key_id: { get_secret:  aws_access_key_id }
-    aws_secret_access_key: { get_secret:  aws_secret_access_key }
+  client_config: &client_config
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
     region_name: { get_input: aws_region_name }
 
 node_templates:
-
-  vm:
-    type: cloudify.nodes.aws.ec2.Instances
-    properties:
-      client_config: *client_config
-      agent_config:
-        install_method: none
-        user: { get_input: agent_user }
-        key: { get_attribute: [agent_key, private_key_export] }
-      resource_config:
-        ImageId: { get_input:  aws_linux_ami }
-        InstanceType: { get_input: instance_type }
-        kwargs:
-          Placement:
-            AvailabilityZone: { get_input:  availability_zone }
-          UserData: { get_attribute: [ cloud_init, cloud_config ] }
-          BlockDeviceMappings:
-          - DeviceName: '/dev/xvda'
-            Ebs:
-              VolumeSize: 22
-              VolumeType: standard
-              DeleteOnTermination: True
-      Tags:
-      - Key: Name  
-        Value: cfy-manager-install      
-      - Key: pipeline
-        Value: cfy-manager-install
-      use_public_ip: true
-    relationships:
-    - type: cloudify.relationships.depends_on
-      target: nic
-    - type: cloudify.relationships.depends_on
-      target: floating_ip
-    - type: cloudify.relationships.depends_on
-      target: cloud_init
-
-
-  floating_ip:
-    type: cloudify.nodes.aws.ec2.ElasticIP
-    properties:
-      client_config: *client_config
-    relationships:
-    - type: cloudify.relationships.depends_on
-      target: nic
-
-  nic:
-    type: cloudify.nodes.aws.ec2.Interface
+  fleet:
+    type: cloudify.nodes.aws.ec2.SpotFleetRequest
     properties:
       client_config: *client_config
       resource_config:
         kwargs:
-          Description: Created by cloudify-getting-started-example.
-          SubnetId: { get_attribute: [ subnet, aws_resource_id ] }
-          Groups:
-          - { get_attribute: [ security_group, aws_resource_id ] }
-    relationships:
-    - type: cloudify.relationships.depends_on
-      target: security_group
-    - type: cloudify.relationships.depends_on
-      target: subnet
+          SpotFleetRequestConfig:
+            IamFleetRole: arn:aws:iam::263721492972:role/aws-ec2-spot-fleet-tagging-role
+            AllocationStrategy: capacityOptimized
+            TargetCapacity: 1
+            TerminateInstancesWithExpiration: true
+            Type: request
+            LaunchSpecifications:
 
-  subnet:
-    type: cloudify.nodes.aws.ec2.Subnet
-    properties:
-      client_config: *client_config
-      use_external_resource: true
-      resource_id: { get_input: aws_subnet_id }
-      resource_config:
-        CidrBlock:  10.20.0.0/24
-    relationships:
-    - type: cloudify.relationships.depends_on
-      target: vpc
+              - ImageId: { get_input: aws_image_id }
+                InstanceType: t3a.large
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      SnapshotId: snap-020ee8a5f94cb76b0
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.0652"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
+                      - { get_input: aws_security_group_id }
 
-  security_group:
-    type: cloudify.nodes.aws.ec2.SecurityGroup
-    properties:
-      client_config: *client_config
-      use_external_resource: true
-      resource_id: { get_input: aws_security_group_id }
-      resource_config:
-        GroupName: cfy-manager-install
-        Description: cfy-manager-install
-    relationships:
-    - type: cloudify.relationships.depends_on
-      target: vpc
+              - ImageId: { get_input: aws_image_id }
+                InstanceType: t3.large
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      SnapshotId: snap-020ee8a5f94cb76b0
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.0729"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
+                      - { get_input: aws_security_group_id }
+
+              - ImageId: { get_input: aws_image_id }
+                InstanceType: t2.large
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      SnapshotId: snap-020ee8a5f94cb76b0
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.07"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
+                      - { get_input: aws_security_group_id }
 
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
@@ -159,11 +149,11 @@ node_templates:
     properties:
       resource_config:
         users:
-        - name: { get_input: agent_user }
-          shell: /bin/bash
-          sudo: ['ALL=(ALL) NOPASSWD:ALL']
-          ssh-authorized-keys:
-          - { get_attribute: [agent_key, public_key_export] }
+          - name: { get_input: agent_user }
+            shell: /bin/bash
+            sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+            ssh-authorized-keys:
+              - { get_attribute: [agent_key, public_key_export] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: agent_key
@@ -183,11 +173,27 @@ node_templates:
           inputs:
             store_private_key_material: true
 
-capabilities:
+  instance_details:
+    type: cloudify.nodes.aws.ec2.Instances
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      use_public_ip: true
+      resource_id: { get_attribute: [fleet, instance_ids, 0] }
+      agent_config:
+        install_method: none
+        user: { get_input: agent_user }
+        key: { get_attribute: [agent_key, private_key_export] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: fleet
+      - type: cloudify.relationships.depends_on
+        target: agent_key
 
+capabilities:
   endpoint:
     description: The external endpoint of the application.
-    value: { get_attribute: [ floating_ip, aws_resource_id ] }
+    value: { get_attribute: [instance_details, public_ip_address] }
 
   user:
     description: user ID.
@@ -195,4 +201,4 @@ capabilities:
 
   key_content:
     description: Private agent key
-    value: { get_attribute: [agent_key, private_key_export] } 
+    value: { get_attribute: [agent_key, private_key_export] }
