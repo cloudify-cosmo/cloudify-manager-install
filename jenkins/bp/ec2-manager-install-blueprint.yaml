@@ -20,7 +20,7 @@ inputs:
     type: string
     default: "t3.xlarge"
 
-  aws_linux_ami:
+  aws_image_id:
     type: string
     default: "ami-082ed116ae2c6d2cc"
 
