@@ -77,8 +77,9 @@ node_templates:
             TerminateInstancesWithExpiration: true
             Type: request
             LaunchSpecifications:
-                
-                  - ImageId: { get_input: aws_image_id }
+                  - IamInstanceProfile:
+                      Arn: { get_input: aws_fleet_iam_instance_profile }
+                    ImageId: { get_input: aws_image_id }
                     InstanceType: t3.medium
                     UserData: { get_attribute: [ cloud_init, cloud_config ] }
                     BlockDeviceMappings:
