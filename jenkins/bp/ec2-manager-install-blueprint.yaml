@@ -77,120 +77,120 @@ node_templates:
             TerminateInstancesWithExpiration: true
             Type: request
             LaunchSpecifications:
-
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3.medium
-                UserData: { get_attribute: [ cloud_init, cloud_config ] }
-                BlockDeviceMappings:
-                  - DeviceName: '/dev/xvda'
-                    Ebs: 
-                      DeleteOnTermination: true
-                      SnapshotId: snap-020ee8a5f94cb76b0
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: '0.0365'
-                NetworkInterfaces:
-                - DeviceIndex: 0
-                  AssociatePublicIpAddress: true
-                  SubnetId: { get_input: aws_subnet_id }
-                  Groups:
-                  - { get_input: aws_security_group_id }
-
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3a.medium
-                UserData: { get_attribute: [ cloud_init, cloud_config ] }
-                BlockDeviceMappings:
-                  - DeviceName: '/dev/xvda'
-                    Ebs: 
-                      DeleteOnTermination: true
-                      SnapshotId: snap-020ee8a5f94cb76b0
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: '0.0326'
-                NetworkInterfaces:
-                - DeviceIndex: 0
-                  AssociatePublicIpAddress: true
-                  SubnetId: { get_input: aws_subnet_id }
-                  Groups:
-                  - { get_input: aws_security_group_id }
-
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t2.medium
-                UserData: { get_attribute: [ cloud_init, cloud_config ] }
-                BlockDeviceMappings:
-                  - DeviceName: '/dev/xvda'
-                    Ebs: 
-                      DeleteOnTermination: true
-                      SnapshotId: snap-020ee8a5f94cb76b0
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: '0.04'
-                NetworkInterfaces:
-                - DeviceIndex: 0
-                  AssociatePublicIpAddress: true
-                  SubnetId: { get_input: aws_subnet_id }
-                  Groups:
-                  - { get_input: aws_security_group_id }
-
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3a.large
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      SnapshotId: snap-020ee8a5f94cb76b0
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.0652"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
+                
+                  - ImageId: { get_input: aws_image_id }
+                    InstanceType: t3.medium
+                    UserData: { get_attribute: [ cloud_init, cloud_config ] }
+                    BlockDeviceMappings:
+                      - DeviceName: '/dev/xvda'
+                        Ebs: 
+                          DeleteOnTermination: true
+                          SnapshotId: snap-020ee8a5f94cb76b0
+                          VolumeSize: 30
+                          Encrypted: false
+                          VolumeType: gp2
+                    SpotPrice: '0.0365'
+                    NetworkInterfaces:
+                    - DeviceIndex: 0
+                      AssociatePublicIpAddress: true
+                      SubnetId: { get_input: aws_subnet_id }
+                      Groups:
                       - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3.large
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      SnapshotId: snap-020ee8a5f94cb76b0
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.0729"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
+                  - ImageId: { get_input: aws_image_id }
+                    InstanceType: t3a.medium
+                    UserData: { get_attribute: [ cloud_init, cloud_config ] }
+                    BlockDeviceMappings:
+                      - DeviceName: '/dev/xvda'
+                        Ebs: 
+                          DeleteOnTermination: true
+                          SnapshotId: snap-020ee8a5f94cb76b0
+                          VolumeSize: 30
+                          Encrypted: false
+                          VolumeType: gp2
+                    SpotPrice: '0.0326'
+                    NetworkInterfaces:
+                    - DeviceIndex: 0
+                      AssociatePublicIpAddress: true
+                      SubnetId: { get_input: aws_subnet_id }
+                      Groups:
                       - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t2.large
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      SnapshotId: snap-020ee8a5f94cb76b0
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.07"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
+                  - ImageId: { get_input: aws_image_id }
+                    InstanceType: t2.medium
+                    UserData: { get_attribute: [ cloud_init, cloud_config ] }
+                    BlockDeviceMappings:
+                      - DeviceName: '/dev/xvda'
+                        Ebs: 
+                          DeleteOnTermination: true
+                          SnapshotId: snap-020ee8a5f94cb76b0
+                          VolumeSize: 30
+                          Encrypted: false
+                          VolumeType: gp2
+                    SpotPrice: '0.04'
+                    NetworkInterfaces:
+                    - DeviceIndex: 0
+                      AssociatePublicIpAddress: true
+                      SubnetId: { get_input: aws_subnet_id }
+                      Groups:
                       - { get_input: aws_security_group_id }
+
+                  - ImageId: { get_input: aws_image_id }
+                    InstanceType: t3a.large
+                    UserData: { get_attribute: [cloud_init, cloud_config] }
+                    BlockDeviceMappings:
+                      - DeviceName: "/dev/xvda"
+                        Ebs:
+                          DeleteOnTermination: true
+                          SnapshotId: snap-020ee8a5f94cb76b0
+                          VolumeSize: 30
+                          Encrypted: false
+                          VolumeType: gp2
+                    SpotPrice: "0.0652"
+                    NetworkInterfaces:
+                      - DeviceIndex: 0
+                        AssociatePublicIpAddress: true
+                        SubnetId: { get_input: aws_subnet_id }
+                        Groups:
+                          - { get_input: aws_security_group_id }
+
+                  - ImageId: { get_input: aws_image_id }
+                    InstanceType: t3.large
+                    UserData: { get_attribute: [cloud_init, cloud_config] }
+                    BlockDeviceMappings:
+                      - DeviceName: "/dev/xvda"
+                        Ebs:
+                          DeleteOnTermination: true
+                          SnapshotId: snap-020ee8a5f94cb76b0
+                          VolumeSize: 30
+                          Encrypted: false
+                          VolumeType: gp2
+                    SpotPrice: "0.0729"
+                    NetworkInterfaces:
+                      - DeviceIndex: 0
+                        AssociatePublicIpAddress: true
+                        SubnetId: { get_input: aws_subnet_id }
+                        Groups:
+                          - { get_input: aws_security_group_id }
+
+                  - ImageId: { get_input: aws_image_id }
+                    InstanceType: t2.large
+                    UserData: { get_attribute: [cloud_init, cloud_config] }
+                    BlockDeviceMappings:
+                      - DeviceName: "/dev/xvda"
+                        Ebs:
+                          DeleteOnTermination: true
+                          SnapshotId: snap-020ee8a5f94cb76b0
+                          VolumeSize: 30
+                          Encrypted: false
+                          VolumeType: gp2
+                    SpotPrice: "0.07"
+                    NetworkInterfaces:
+                      - DeviceIndex: 0
+                        AssociatePublicIpAddress: true
+                        SubnetId: { get_input: aws_subnet_id }
+                        Groups:
+                          - { get_input: aws_security_group_id }
     relationships:
       - type: cloudify.relationships.depends_on
         target: cloud_init
