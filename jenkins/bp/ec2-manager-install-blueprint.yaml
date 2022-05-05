@@ -134,6 +134,11 @@ node_templates:
                     SubnetId: { get_input: aws_subnet_id }
                     Groups:
                       - { get_input: aws_security_group_id }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: cloud_init
+      - type: cloudify.relationships.depends_on
+        target: vpc
 
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
