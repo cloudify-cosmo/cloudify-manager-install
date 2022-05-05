@@ -18,11 +18,11 @@ inputs:
 
   instance_type:
     type: string
-    default: "t3.xlarge"
+    default: 't3.xlarge'
 
   aws_image_id:
     type: string
-    default: "ami-082ed116ae2c6d2cc"
+    default: 'ami-0b850cf02cc00fdc8'
 
   aws_subnet_id:
     type: string
