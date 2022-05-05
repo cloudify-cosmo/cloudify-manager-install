@@ -9,51 +9,53 @@ imports:
 
 inputs:
   aws_region_name:
+    display_label: AWS region name
     type: string
     default: "eu-west-1"
 
-  availability_zone:
-    type: string
-    default: "eu-west-1b"
-
-  instance_type:
-    type: string
-    default: 't3.xlarge'
-
   aws_image_id:
+    display_label: AWS image id
     type: string
-    default: 'ami-082ed116ae2c6d2cc'
+    default: "ami-082ed116ae2c6d2cc"
 
   aws_subnet_id:
+    display_label: AWS subnet id
     type: string
     default: "subnet-05de767ce22d776df"
 
   aws_vpc_id:
+    display_label: AWS vpc id
     type: string
     default: "vpc-058abc57fcc8fb171"
 
   aws_security_group_id:
+    display_label: AWS security group id
     type: string
     default: "sg-0ecb54c91e140324c"
 
   aws_fleet_role:
+    display_label: AWS fleet role
     type: string
     default: "arn:aws:iam::263721492972:role/aws-ec2-spot-fleet-tagging-role"
 
   aws_fleet_iam_instance_profile:
+    display_label: AWS fleet IAM instance profile
     type: string
     default: "arn:aws:iam::263721492972:instance-profile/cfyfleetprofile-jenkins-ci/cfyfleetprofile-jenkins-ci"
 
   agent_user:
+    display_label: The agent username
     description: >
       The username of the agent running on the instance created from the image.
     default: "centos"
 
   ssh_key_name:
+    display_label: SSH key name
     type: string
     default: "cfy-manager-install-key"
 
   agent_key_name:
+    display_label: Agent key name
     type: string
     default: manager-install
 
@@ -77,115 +79,125 @@ node_templates:
             TerminateInstancesWithExpiration: true
             Type: request
             LaunchSpecifications:
-                  - IamInstanceProfile:
-                      Arn: { get_input: aws_fleet_iam_instance_profile }
-                    ImageId: { get_input: aws_image_id }
-                    InstanceType: t3.medium
-                    UserData: { get_attribute: [ cloud_init, cloud_config ] }
-                    BlockDeviceMappings:
-                      - DeviceName: '/dev/xvda'
-                        Ebs: 
-                          DeleteOnTermination: true
-                          VolumeSize: 30
-                          Encrypted: false
-                          VolumeType: gp2
-                    SpotPrice: '0.0365'
-                    NetworkInterfaces:
-                    - DeviceIndex: 0
-                      AssociatePublicIpAddress: true
-                      SubnetId: { get_input: aws_subnet_id }
-                      Groups:
+              - IamInstanceProfile:
+                  Arn: { get_input: aws_fleet_iam_instance_profile }
+                ImageId: { get_input: aws_image_id }
+                InstanceType: t3.medium
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.0365"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
                       - { get_input: aws_security_group_id }
 
-                  - ImageId: { get_input: aws_image_id }
-                    InstanceType: t3a.medium
-                    UserData: { get_attribute: [ cloud_init, cloud_config ] }
-                    BlockDeviceMappings:
-                      - DeviceName: '/dev/xvda'
-                        Ebs: 
-                          DeleteOnTermination: true
-                          VolumeSize: 30
-                          Encrypted: false
-                          VolumeType: gp2
-                    SpotPrice: '0.0326'
-                    NetworkInterfaces:
-                    - DeviceIndex: 0
-                      AssociatePublicIpAddress: true
-                      SubnetId: { get_input: aws_subnet_id }
-                      Groups:
+              - IamInstanceProfile:
+                  Arn: { get_input: aws_fleet_iam_instance_profile } 
+                ImageId: { get_input: aws_image_id }
+                InstanceType: t3a.medium
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.0326"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
                       - { get_input: aws_security_group_id }
 
-                  - ImageId: { get_input: aws_image_id }
-                    InstanceType: t2.medium
-                    UserData: { get_attribute: [ cloud_init, cloud_config ] }
-                    BlockDeviceMappings:
-                      - DeviceName: '/dev/xvda'
-                        Ebs: 
-                          DeleteOnTermination: true
-                          VolumeSize: 30
-                          Encrypted: false
-                          VolumeType: gp2
-                    SpotPrice: '0.04'
-                    NetworkInterfaces:
-                    - DeviceIndex: 0
-                      AssociatePublicIpAddress: true
-                      SubnetId: { get_input: aws_subnet_id }
-                      Groups:
+              - IamInstanceProfile:
+                  Arn: { get_input: aws_fleet_iam_instance_profile } 
+                ImageId: { get_input: aws_image_id }
+                InstanceType: t2.medium
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.04"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
                       - { get_input: aws_security_group_id }
 
-                  - ImageId: { get_input: aws_image_id }
-                    InstanceType: t3a.large
-                    UserData: { get_attribute: [cloud_init, cloud_config] }
-                    BlockDeviceMappings:
-                      - DeviceName: "/dev/xvda"
-                        Ebs:
-                          DeleteOnTermination: true
-                          VolumeSize: 30
-                          Encrypted: false
-                          VolumeType: gp2
-                    SpotPrice: "0.0652"
-                    NetworkInterfaces:
-                      - DeviceIndex: 0
-                        AssociatePublicIpAddress: true
-                        SubnetId: { get_input: aws_subnet_id }
-                        Groups:
-                          - { get_input: aws_security_group_id }
+              - IamInstanceProfile:
+                  Arn: { get_input: aws_fleet_iam_instance_profile } 
+                ImageId: { get_input: aws_image_id }
+                InstanceType: t3a.large
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.0652"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
+                      - { get_input: aws_security_group_id }
 
-                  - ImageId: { get_input: aws_image_id }
-                    InstanceType: t3.large
-                    UserData: { get_attribute: [cloud_init, cloud_config] }
-                    BlockDeviceMappings:
-                      - DeviceName: "/dev/xvda"
-                        Ebs:
-                          DeleteOnTermination: true
-                          VolumeSize: 30
-                          Encrypted: false
-                          VolumeType: gp2
-                    SpotPrice: "0.0729"
-                    NetworkInterfaces:
-                      - DeviceIndex: 0
-                        AssociatePublicIpAddress: true
-                        SubnetId: { get_input: aws_subnet_id }
-                        Groups:
-                          - { get_input: aws_security_group_id }
+              - IamInstanceProfile:
+                  Arn: { get_input: aws_fleet_iam_instance_profile } 
+                ImageId: { get_input: aws_image_id }
+                InstanceType: t3.large
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.0729"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
+                      - { get_input: aws_security_group_id }
 
-                  - ImageId: { get_input: aws_image_id }
-                    InstanceType: t2.large
-                    UserData: { get_attribute: [cloud_init, cloud_config] }
-                    BlockDeviceMappings:
-                      - DeviceName: "/dev/xvda"
-                        Ebs:
-                          DeleteOnTermination: true
-                          VolumeSize: 30
-                          Encrypted: false
-                          VolumeType: gp2
-                    SpotPrice: "0.07"
-                    NetworkInterfaces:
-                      - DeviceIndex: 0
-                        AssociatePublicIpAddress: true
-                        SubnetId: { get_input: aws_subnet_id }
-                        Groups:
-                          - { get_input: aws_security_group_id }
+              - IamInstanceProfile:
+                  Arn: { get_input: aws_fleet_iam_instance_profile } 
+                ImageId: { get_input: aws_image_id }
+                InstanceType: t2.large
+                UserData: { get_attribute: [cloud_init, cloud_config] }
+                BlockDeviceMappings:
+                  - DeviceName: "/dev/xvda"
+                    Ebs:
+                      DeleteOnTermination: true
+                      VolumeSize: 30
+                      Encrypted: false
+                      VolumeType: gp2
+                SpotPrice: "0.07"
+                NetworkInterfaces:
+                  - DeviceIndex: 0
+                    AssociatePublicIpAddress: true
+                    SubnetId: { get_input: aws_subnet_id }
+                    Groups:
+                      - { get_input: aws_security_group_id }
     relationships:
       - type: cloudify.relationships.depends_on
         target: cloud_init
@@ -207,11 +219,11 @@ node_templates:
       encode_base64: true
       resource_config:
         users:
-        - name: { get_input: agent_user }
-          shell: /bin/bash
-          sudo: [ALL=(ALL) NOPASSWD:ALL]
-          ssh-authorized-keys:
-          - { get_attribute: [agent_key, public_key_export] }
+          - name: { get_input: agent_user }
+            shell: /bin/bash
+            sudo: [ALL=(ALL) NOPASSWD:ALL]
+            ssh-authorized-keys:
+              - { get_attribute: [agent_key, public_key_export] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: agent_key
