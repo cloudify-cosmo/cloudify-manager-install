@@ -86,7 +86,6 @@ node_templates:
                       - DeviceName: '/dev/xvda'
                         Ebs: 
                           DeleteOnTermination: true
-                          SnapshotId: snap-020ee8a5f94cb76b0
                           VolumeSize: 30
                           Encrypted: false
                           VolumeType: gp2
@@ -105,7 +104,6 @@ node_templates:
                       - DeviceName: '/dev/xvda'
                         Ebs: 
                           DeleteOnTermination: true
-                          SnapshotId: snap-020ee8a5f94cb76b0
                           VolumeSize: 30
                           Encrypted: false
                           VolumeType: gp2
@@ -124,7 +122,6 @@ node_templates:
                       - DeviceName: '/dev/xvda'
                         Ebs: 
                           DeleteOnTermination: true
-                          SnapshotId: snap-020ee8a5f94cb76b0
                           VolumeSize: 30
                           Encrypted: false
                           VolumeType: gp2
@@ -143,7 +140,6 @@ node_templates:
                       - DeviceName: "/dev/xvda"
                         Ebs:
                           DeleteOnTermination: true
-                          SnapshotId: snap-020ee8a5f94cb76b0
                           VolumeSize: 30
                           Encrypted: false
                           VolumeType: gp2
@@ -162,7 +158,6 @@ node_templates:
                       - DeviceName: "/dev/xvda"
                         Ebs:
                           DeleteOnTermination: true
-                          SnapshotId: snap-020ee8a5f94cb76b0
                           VolumeSize: 30
                           Encrypted: false
                           VolumeType: gp2
@@ -181,7 +176,6 @@ node_templates:
                       - DeviceName: "/dev/xvda"
                         Ebs:
                           DeleteOnTermination: true
-                          SnapshotId: snap-020ee8a5f94cb76b0
                           VolumeSize: 30
                           Encrypted: false
                           VolumeType: gp2
