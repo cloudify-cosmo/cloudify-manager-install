@@ -612,7 +612,7 @@ class RabbitMQ(BaseComponent):
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
         syslog.deploy_rsyslog_filters('rabbitmq', ['cloudify-rabbitmq'],
-                                      self.service_type)
+                                      self.service_type, logger)
         self._set_erlang_cookie()
         self._set_config()
         if self.service_type == 'supervisord':

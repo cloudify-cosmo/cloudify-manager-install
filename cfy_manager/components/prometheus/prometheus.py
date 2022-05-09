@@ -185,7 +185,7 @@ class Prometheus(BaseComponent):
         services.extend([exporter + '_exporter'
                          for exporter in ['postgres', 'node', 'blackbox']])
         syslog.deploy_rsyslog_filters('prometheus', services,
-                                      self.service_type)
+                                      self.service_type, logger)
 
         logger.notice('Prometheus successfully configured')
         self.start()
