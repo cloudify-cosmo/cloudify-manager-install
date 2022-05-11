@@ -38,11 +38,6 @@ inputs:
     type: string
     default: "arn:aws:iam::263721492972:role/aws-ec2-spot-fleet-tagging-role"
 
-  aws_fleet_iam_instance_profile:
-    display_label: AWS fleet IAM instance profile
-    type: string
-    default: "arn:aws:iam::263721492972:instance-profile/cfyfleetprofile-jenkins-ci/cfyfleetprofile-jenkins-ci"
-
   agent_user:
     display_label: The agent username
     description: >
@@ -73,14 +68,14 @@ node_templates:
       resource_config:
         kwargs:
           SpotFleetRequestConfig:
-            IamFleetRole: arn:aws:iam::263721492972:role/aws-ec2-spot-fleet-tagging-role
+            IamFleetRole: { get_input: aws_fleet_role }
             AllocationStrategy: capacityOptimized
             TargetCapacity: 1
             TerminateInstancesWithExpiration: true
             Type: request
             LaunchSpecifications:
               - ImageId: { get_input: aws_image_id }
-                InstanceType: t3.medium
+                InstanceType: m6i.xlarge
                 UserData: { get_attribute: [cloud_init, cloud_config] }
                 BlockDeviceMappings:
                   - DeviceName: "/dev/xvda"
@@ -89,7 +84,7 @@ node_templates:
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.0365"
+                SpotPrice: "0.1365"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
@@ -97,95 +92,95 @@ node_templates:
                     Groups:
                       - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3a.medium
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.0326"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
-                      - { get_input: aws_security_group_id }
+              # - ImageId: { get_input: aws_image_id }
+              #   InstanceType: t3a.medium
+              #   UserData: { get_attribute: [cloud_init, cloud_config] }
+              #   BlockDeviceMappings:
+              #     - DeviceName: "/dev/xvda"
+              #       Ebs:
+              #         DeleteOnTermination: true
+              #         VolumeSize: 30
+              #         Encrypted: false
+              #         VolumeType: gp2
+              #   SpotPrice: "0.0326"
+              #   NetworkInterfaces:
+              #     - DeviceIndex: 0
+              #       AssociatePublicIpAddress: true
+              #       SubnetId: { get_input: aws_subnet_id }
+              #       Groups:
+              #         - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t2.medium
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.04"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
-                      - { get_input: aws_security_group_id }
+              # - ImageId: { get_input: aws_image_id }
+              #   InstanceType: t2.medium
+              #   UserData: { get_attribute: [cloud_init, cloud_config] }
+              #   BlockDeviceMappings:
+              #     - DeviceName: "/dev/xvda"
+              #       Ebs:
+              #         DeleteOnTermination: true
+              #         VolumeSize: 30
+              #         Encrypted: false
+              #         VolumeType: gp2
+              #   SpotPrice: "0.04"
+              #   NetworkInterfaces:
+              #     - DeviceIndex: 0
+              #       AssociatePublicIpAddress: true
+              #       SubnetId: { get_input: aws_subnet_id }
+              #       Groups:
+              #         - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3a.large
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.0652"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
-                      - { get_input: aws_security_group_id }
+              # - ImageId: { get_input: aws_image_id }
+              #   InstanceType: t3a.large
+              #   UserData: { get_attribute: [cloud_init, cloud_config] }
+              #   BlockDeviceMappings:
+              #     - DeviceName: "/dev/xvda"
+              #       Ebs:
+              #         DeleteOnTermination: true
+              #         VolumeSize: 30
+              #         Encrypted: false
+              #         VolumeType: gp2
+              #   SpotPrice: "0.0652"
+              #   NetworkInterfaces:
+              #     - DeviceIndex: 0
+              #       AssociatePublicIpAddress: true
+              #       SubnetId: { get_input: aws_subnet_id }
+              #       Groups:
+              #         - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t3.large
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.0729"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
-                      - { get_input: aws_security_group_id }
+              # - ImageId: { get_input: aws_image_id }
+              #   InstanceType: t3.large
+              #   UserData: { get_attribute: [cloud_init, cloud_config] }
+              #   BlockDeviceMappings:
+              #     - DeviceName: "/dev/xvda"
+              #       Ebs:
+              #         DeleteOnTermination: true
+              #         VolumeSize: 30
+              #         Encrypted: false
+              #         VolumeType: gp2
+              #   SpotPrice: "0.0729"
+              #   NetworkInterfaces:
+              #     - DeviceIndex: 0
+              #       AssociatePublicIpAddress: true
+              #       SubnetId: { get_input: aws_subnet_id }
+              #       Groups:
+              #         - { get_input: aws_security_group_id }
 
-              - ImageId: { get_input: aws_image_id }
-                InstanceType: t2.large
-                UserData: { get_attribute: [cloud_init, cloud_config] }
-                BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
-                    Ebs:
-                      DeleteOnTermination: true
-                      VolumeSize: 30
-                      Encrypted: false
-                      VolumeType: gp2
-                SpotPrice: "0.07"
-                NetworkInterfaces:
-                  - DeviceIndex: 0
-                    AssociatePublicIpAddress: true
-                    SubnetId: { get_input: aws_subnet_id }
-                    Groups:
-                      - { get_input: aws_security_group_id }
+              # - ImageId: { get_input: aws_image_id }
+              #   InstanceType: t2.xlarge
+              #   UserData: { get_attribute: [cloud_init, cloud_config] }
+              #   BlockDeviceMappings:
+              #     - DeviceName: "/dev/xvda"
+              #       Ebs:
+              #         DeleteOnTermination: true
+              #         VolumeSize: 30
+              #         Encrypted: false
+              #         VolumeType: gp2
+              #   SpotPrice: "0.07"
+              #   NetworkInterfaces:
+              #     - DeviceIndex: 0
+              #       AssociatePublicIpAddress: true
+              #       SubnetId: { get_input: aws_subnet_id }
+              #       Groups:
+              #         - { get_input: aws_security_group_id }
     relationships:
       - type: cloudify.relationships.depends_on
         target: cloud_init
@@ -252,6 +247,10 @@ capabilities:
   endpoint:
     description: The external endpoint of the application.
     value: { get_attribute: [instance_details, public_ip_address] }
+
+  instance_type:
+    description: The type of spot instace
+    value: { get_attribute: [instance_details, resource_config, InstanceType] }
 
   user:
     description: user ID.
