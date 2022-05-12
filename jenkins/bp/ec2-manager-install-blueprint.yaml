@@ -84,7 +84,7 @@ node_templates:
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.1365"
+                SpotPrice: "0.09"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
@@ -102,7 +102,7 @@ node_templates:
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.0326"
+                SpotPrice: "0.103"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
@@ -120,7 +120,7 @@ node_templates:
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.04"
+                SpotPrice: "0.103"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
@@ -138,7 +138,7 @@ node_templates:
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.0652"
+                SpotPrice: "0.11"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
@@ -156,7 +156,7 @@ node_templates:
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.0729"
+                SpotPrice: "0.1152"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
@@ -168,13 +168,13 @@ node_templates:
                 InstanceType: m5.xlarge
                 UserData: { get_attribute: [cloud_init, cloud_config] }
                 BlockDeviceMappings:
-                  - DeviceName: "/dev/xvda"
+                  - DeviceName: "/1dev/xvda"
                     Ebs:
                       DeleteOnTermination: true
                       VolumeSize: 30
                       Encrypted: false
                       VolumeType: gp2
-                SpotPrice: "0.07"
+                SpotPrice: "0.11"
                 NetworkInterfaces:
                   - DeviceIndex: 0
                     AssociatePublicIpAddress: true
