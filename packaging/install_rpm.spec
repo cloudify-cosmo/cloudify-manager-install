@@ -64,12 +64,16 @@ if (( $(awk 'BEGIN {print ("'$ver'"<"'$min_ver'")}') )); then
     exit 1;
 fi
 
+groupadd -fr cfylogs
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 groupadd -fr rabbitmq
 getent passwd rabbitmq >/dev/null || useradd -r -g rabbitmq -d /var/lib/rabbitmq -s /sbin/nologin rabbitmq
 usermod -aG rabbitmq cfyuser
 usermod -aG cfyuser rabbitmq
+groupadd -fr nginx
+getent passwd nginx >/dev/null || useradd -r -g nginx -d /var/cache/nginx -s /sbin/nologin nginx
+usermod -aG cfylogs nginx
 
 %post
 echo "
@@ -94,7 +98,9 @@ cfy_manager install
 /etc/yum.repos.d/Cloudify-Local.repo
 /usr/lib/systemd/system/supervisord.service
 /etc/supervisord.conf
+/etc/rsyslog.d/39-cloudify-perms.conf
 /etc/rsyslog.d/50-supervisord.conf
+/etc/rsyslog.d/51-cloudify-perms.conf
 /usr/bin/supervisorctl
 /usr/bin/supervisord
-%attr(755,cfyuser,cfyuser) /var/log/cloudify
+%attr(751,cfyuser,cfylogs) /var/log/cloudify
