@@ -249,10 +249,6 @@ capabilities:
     description: The external endpoint of the application.
     value: { get_attribute: [instance_details, public_ip_address] }
 
-  instance_type:
-    description: The type of spot instace
-    value: { get_attribute: [instance_details, resource_config, InstanceType] }
-
   user:
     description: user ID.
     value: { get_input: agent_user }
