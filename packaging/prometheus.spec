@@ -27,9 +27,16 @@ mkdir -p %{buildroot}/etc/prometheus
 cp -a %{_tmpdir}/consoles %{buildroot}/etc/prometheus
 cp -a %{_tmpdir}/console_libraries %{buildroot}/etc/prometheus
 rm -rf %{_tmpdir}
+mkdir -p %{buildroot}/var/log/cloudify/prometheus
+
+%pre
+groupadd -fr cfylogs
+groupadd -fr cfyuser
+getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
 %files
 %attr(755,root,wheel)/usr/local/bin/prometheus
 %attr(755,root,wheel)/usr/local/bin/promtool
 %attr(755,root,wheel)/etc/prometheus/consoles/
 %attr(755,root,wheel)/etc/prometheus/console_libraries/
+%attr(750,cfyuser,cfylogs) /var/log/cloudify/prometheus
