@@ -212,6 +212,7 @@ class PostgresqlServer(BaseComponent):
             'log_destination': "stderr",
             'logging_collector': "on",
             'log_filename': "'postgresql-%a.log'",
+            'log_file_mode': '0644',
             'log_truncate_on_rotation': "on",
             'log_rotation_age': "1d",
             'log_rotation_size': 0,
@@ -1040,6 +1041,7 @@ class PostgresqlServer(BaseComponent):
                 'connect_address': '{0}:5432'.format(ip_urlized),
                 'data_dir': PATRONI_DATA_DIR,
                 'pgpass': PATRONI_PGPASS_PATH,
+                'log_file_mode': '0644',
                 'authentication': {
                     'replication': {
                         'username': 'replicator',
