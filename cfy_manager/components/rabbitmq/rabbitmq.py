@@ -609,6 +609,17 @@ class RabbitMQ(BaseComponent):
             owner='rabbitmq', group='rabbitmq', mode=0o600,
         )
 
+    def _activate_crash_log_permissions_fixup(self):
+        time_string = '* * * * *'
+        command = (
+            '/usr/bin/find /var/log/cloudify/rabbitmq/log '
+            '! -group cfylogs '  # Don't update perms unneccessarily
+            '-exec /usr/bin/chgrp cfylogs {} \;'
+        )
+        comment = 'Make erlang crash log readable for cfy log download'
+        # As it is changing group we run this as root
+        common.add_cron_job(time_string, command, comment, 'root')
+
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
         syslog.deploy_rsyslog_filters('rabbitmq', ['cloudify-rabbitmq'],
@@ -629,6 +640,7 @@ class RabbitMQ(BaseComponent):
             self._write_definitions_file()
         self.start()
         self._possibly_join_cluster()
+        self._activate_crash_log_permissions_fixup()
         logger.notice('RabbitMQ successfully configured')
 
     def remove(self):

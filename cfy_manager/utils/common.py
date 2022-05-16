@@ -284,3 +284,15 @@ def get_prometheus_credentials():
         creds['username'] = rabbitmq_cfg.get('username')
         creds['password'] = rabbitmq_cfg.get('password')
     return creds
+
+
+def add_cron_job(time_string, command, comment, user):
+    job = f'{time_string} {command} # {comment}'
+
+    cmd = (
+        # Only add the job if it doesn't already exist
+        f'(crontab -u {user} -l 2>/dev/null | grep -F "{job}" || '
+        f'(crontab -u {user} -l 2>/dev/null; '
+        f'echo "{job}") | crontab -u {user} - )'
+    )
+    run([cmd], shell=True)
