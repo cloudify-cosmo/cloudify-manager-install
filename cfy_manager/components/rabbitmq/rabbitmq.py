@@ -665,17 +665,12 @@ class RabbitMQ(BaseComponent):
 
         logger.info('Creating cron job for rebalancing queues...')
         time_string = '0 */4 * * *'  # run every 4 hours
-        job_command = '{0} {1} {2} # {3}'.format(
-            time_string,
+        command = '{0} {1} {2}'.format(
             '/opt/cloudify/cfy_manager/bin/python',
-            QUEUES_REBALANCING_SCRIPT_PATH,
-            "Rebalance rabbit queues")
-
-        # Adding a new job to crontab
-        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'crontab -u {0} -'.format(constants.CLOUDIFY_USER,
-                                        job_command)
-        common.run([cmd], shell=True)
+            QUEUES_REBALANCING_SCRIPT_PATH)
+        comment = "Rebalance rabbit queues"
+        common.add_cron_job(time_string, command, comment,
+                            constants.CLOUDIFY_USER)
         logger.info('Queue rebalancing cron job successfully created')
 
 
