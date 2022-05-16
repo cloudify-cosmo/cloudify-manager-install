@@ -614,7 +614,8 @@ class RabbitMQ(BaseComponent):
         command = (
             '/usr/bin/find /var/log/cloudify/rabbitmq/log '
             '! -group cfylogs '  # Don't update perms unneccessarily
-            '-exec /usr/bin/chgrp cfylogs {} \\;'
+            '-exec /usr/bin/chgrp cfylogs {} \\; '
+            '> /dev/null'  # Don't pollute root's mail with cron
         )
         comment = 'Make erlang crash log readable for cfy log download'
         # As it is changing group we run this as root
