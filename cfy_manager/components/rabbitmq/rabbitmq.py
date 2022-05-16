@@ -665,7 +665,7 @@ class RabbitMQ(BaseComponent):
 
         logger.info('Creating cron job for rebalancing queues...')
         time_string = '0 */4 * * *'  # run every 4 hours
-        command = '{0} {1} {2}'.format(
+        command = '{} {}'.format(
             '/opt/cloudify/cfy_manager/bin/python',
             QUEUES_REBALANCING_SCRIPT_PATH)
         comment = "Rebalance rabbit queues"
