@@ -500,7 +500,7 @@ def logs_fetch(**kwargs):
         if is_all_in_one_manager():
             # We could log an error, but since we add the monitoring service
             # by default, we might as well just allow it.
-            nodes = [config[MANAGER][PRIVATE_IP]]
+            nodes = {config[MANAGER][PRIVATE_IP]}
         else:
             nodes = _get_all_nodes_from_config(config, logger,
                                                kwargs['skip_db'])
