@@ -497,8 +497,14 @@ def logs_fetch(**kwargs):
     setup_console_logger(verbose=kwargs['verbose'])
     config.load_config(kwargs.get('config_file'))
     if service_is_configured(MANAGER_SERVICE):
-        nodes = _get_all_nodes_from_config(config, logger, kwargs['skip_db'])
-        logger.debug('Checking cluster nodes: %s' % ','.join(nodes))
+        if is_all_in_one_manager():
+            # We could log an error, but since we add the monitoring service
+            # by default, we might as well just allow it.
+            nodes = [config[MANAGER][PRIVATE_IP]]
+        else:
+            nodes = _get_all_nodes_from_config(config, logger,
+                                               kwargs['skip_db'])
+        logger.debug('Checking cluster nodes: %s', ','.join(nodes))
         credentials = config['prometheus']['credentials']
         log_bundle = run(
             ['/opt/mgmtworker/scripts/fetch-logs', '-a', ','.join(nodes)],
