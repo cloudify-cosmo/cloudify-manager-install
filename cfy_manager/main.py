@@ -489,7 +489,7 @@ def db_shell(**kwargs):
 
 @argh.named('fetch')
 @config_arg
-@argh.decorators.arg('-v', '--verbose',help=VERBOSE_HELP_MSG, default=False)
+@argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
 @argh.decorators.arg('-s', '--skip-db', help=LOGS_SKIP_DB_HELP_MSG,
                      default=False)
 def logs_fetch(**kwargs):
