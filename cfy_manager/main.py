@@ -1425,24 +1425,44 @@ def main():
         upgrade
     ])
 
-    parser.add_commands([
-        replace_certificates
-    ], namespace='certificates')
+    parser.add_commands(
+        [
+            replace_certificates
+        ],
+        namespace='certificates',
+        namespace_kwargs={'title': 'Commands to manage certificates.'},
+    )
 
-    parser.add_commands([
-        brokers_add,
-        brokers_list,
-        brokers_remove
-    ], namespace='brokers')
+    parser.add_commands(
+        [
+            brokers_add,
+            brokers_list,
+            brokers_remove
+        ],
+        namespace='brokers',
+        namespace_kwargs={'title': 'Commands to manage brokers.'},
+    )
 
-    parser.add_commands([
-        db_node_list,
-        db_node_add,
-        db_node_remove,
-        db_node_reinit,
-        db_node_set_master,
-        db_shell,
-    ], namespace='dbs')
+    parser.add_commands(
+        [
+            db_node_list,
+            db_node_add,
+            db_node_remove,
+            db_node_reinit,
+            db_node_set_master,
+            db_shell,
+        ],
+        namespace='dbs',
+        namespace_kwargs={'title': 'Commands to manage DBs.'},
+    )
+
+    parser.add_commands(
+        [
+            logs_fetch,
+        ],
+        namespace='logs',
+        namespace_kwargs={'title': 'Commands to handle logs.'},
+    )
 
     parser.dispatch()
 
