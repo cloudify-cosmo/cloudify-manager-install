@@ -156,6 +156,9 @@ VALIDATE_HELP_MSG = (
 INPUT_PATH_MSG = (
     "The replace-certificates yaml configuration file path."
 )
+LOGS_SKIP_DB_HELP_MSG = (
+    'Get cluster node addresses from config instead of DB.'
+)
 
 config_arg = argh.arg('-c', '--config-file', action='append', default=None,
                       help=CONFIG_FILE_HELP_MSG)
@@ -482,6 +485,58 @@ def db_shell(**kwargs):
     else:
         logger.error(
             'DB shell is only accessible with the installed manager config.')
+
+
+@argh.named('fetch')
+@config_arg
+@argh.decorators.arg('-v', '--verbose',help=VERBOSE_HELP_MSG, default=False)
+@argh.decorators.arg('-s', '--skip-db', help=LOGS_SKIP_DB_HELP_MSG,
+                     default=False)
+def logs_fetch(**kwargs):
+    """Download logs from all cloudify managers/dbs/brokers."""
+    setup_console_logger(verbose=kwargs['verbose'])
+    config.load_config(kwargs.get('config_file'))
+    if service_is_configured(MANAGER_SERVICE):
+        nodes = _get_all_nodes_from_config(config, logger, kwargs['skip_db'])
+        logger.debug('Checking cluster nodes: %s' % ','.join(nodes))
+        credentials = config['prometheus']['credentials']
+        log_bundle = run(
+            ['/opt/mgmtworker/scripts/fetch-logs', '-a', ','.join(nodes)],
+            env={'MONITORING_USERNAME': credentials['username'],
+                 'MONITORING_PASSWORD': credentials['password']},
+        ).aggr_stdout
+        logger.notice(f'Logs downloaded to {log_bundle}')
+    else:
+        logger.error('Log fetching can only be performed with the installed '
+                     'manager config.')
+
+
+def _get_all_nodes_from_config(config, logger, skip_db=False):
+    if skip_db:
+        logger.warning('Cluster nodes will be loaded from config. '
+                       'All brokers and DBs should be included, but only '
+                       'the current manager will be included.')
+        # We naively grab all the nodes from the config here in case this is
+        # being run when the db is down.
+        manager_nodes = {config[MANAGER][PRIVATE_IP]}
+        postgres_nodes = {
+            node['ip']
+            for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
+        }
+        rabbit_nodes = {
+            node['networks']['default']
+            for node in config['rabbitmq']['cluster_members'].values()
+        }
+    else:
+        monitoring_config = components.restservice.db.get_monitoring_config()
+        manager_nodes = set(monitoring_config['manager_nodes'])
+        postgres_nodes = set(monitoring_config['db_nodes'])
+        rabbit_nodes = set(monitoring_config['rabbitmq_nodes'].values())
+    logger.debug('Found manager nodes: %s', ','.join(manager_nodes))
+    logger.debug('Found DB nodes: %s', ','.join(postgres_nodes))
+    logger.debug('Found broker nodes: %s', ','.join(rabbit_nodes))
+
+    return manager_nodes | postgres_nodes | rabbit_nodes
 
 
 def _print_time():
