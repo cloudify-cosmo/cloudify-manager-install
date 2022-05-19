@@ -504,14 +504,18 @@ def logs_fetch(**kwargs):
         else:
             nodes = _get_all_nodes_from_config(config, logger,
                                                kwargs['skip_db'])
-        logger.debug('Checking cluster nodes: %s', ','.join(nodes))
-        credentials = config['prometheus']['credentials']
-        log_bundle = run(
-            ['/opt/mgmtworker/scripts/fetch-logs', '-a', ','.join(nodes)],
-            env={'MONITORING_USERNAME': credentials['username'],
-                 'MONITORING_PASSWORD': credentials['password']},
-        ).aggr_stdout
-        logger.notice(f'Logs downloaded to {log_bundle}')
+        nodes = {node for node in nodes if node}
+        if nodes:
+            logger.debug('Checking cluster nodes: %s', ','.join(nodes))
+            credentials = config['prometheus']['credentials']
+            log_bundle = run(
+                ['/opt/mgmtworker/scripts/fetch-logs', '-a', ','.join(nodes)],
+                env={'MONITORING_USERNAME': credentials['username'],
+                     'MONITORING_PASSWORD': credentials['password']},
+            ).aggr_stdout
+            logger.notice(f'Logs downloaded to {log_bundle}')
+        else:
+            logger.error('No nodes found. Ensure the correct config is used.')
     else:
         logger.error('Log fetching can only be performed with the installed '
                      'manager config.')
