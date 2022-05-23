@@ -85,8 +85,8 @@ class Config(CommentedMap):
         for config_file in config_files:
             config_file_path = self._sanitized_config_path(config_file)
             if config_file_path:
-                logger.info('Loading configuration from %s',
-                            config_file_path)
+                logger.debug('Loading configuration from %s',
+                             config_file_path)
                 self._load_user_config(config_file_path)
             else:
                 raise ValidationError(

@@ -135,13 +135,14 @@ class RestService(BaseComponent):
         new_flask_security.update(security_config)
         return new_flask_security
 
-    def _pre_create_snapshot_paths(self):
+    def _pre_create_resources_paths(self):
         for resource_dir in (
                 'blueprints',
                 'deployments',
                 'uploaded-blueprints',
                 'snapshots',
-                'plugins'
+                'plugins',
+                'log_bundles',
         ):
             path = join(constants.MANAGER_RESOURCES_HOME, resource_dir)
             common.mkdir(path)
@@ -185,7 +186,7 @@ class RestService(BaseComponent):
     def _chown_resources_dir(self):
         # Pre-creating paths so permissions fix can
         # work correctly in mgmtworker
-        self._pre_create_snapshot_paths()
+        self._pre_create_resources_paths()
         common.chown(
             constants.CLOUDIFY_USER,
             constants.CLOUDIFY_GROUP,

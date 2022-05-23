@@ -34,4 +34,12 @@ server {
   error_log           /var/log/cloudify/nginx/monitoring.error.log;
 
   include "/etc/nginx/conf.d/redirect-to-monitoring.cloudify";
+
+  location /cfylogs {
+      alias /var/log/cloudify;
+      auth_basic "Cloudify Monitoring Service";
+      auth_basic_user_file /etc/nginx/conf.d/monitoring-htpasswd.cloudify;
+      autoindex on;
+      autoindex_format json;
+  }
 }

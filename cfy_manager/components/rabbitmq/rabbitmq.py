@@ -609,6 +609,18 @@ class RabbitMQ(BaseComponent):
             owner='rabbitmq', group='rabbitmq', mode=0o600,
         )
 
+    def _activate_crash_log_permissions_fixup(self):
+        time_string = '* * * * *'
+        command = (
+            '/usr/bin/find /var/log/cloudify/rabbitmq/log '
+            '! -group cfylogs '  # Don't update perms unneccessarily
+            '-exec /usr/bin/chgrp cfylogs {} \\; '
+            '> /dev/null'  # Don't pollute root's mail with cron
+        )
+        comment = 'Make erlang crash log readable for cfy log download'
+        # As it is changing group we run this as root
+        common.add_cron_job(time_string, command, comment, 'root')
+
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
         syslog.deploy_rsyslog_filters('rabbitmq', ['cloudify-rabbitmq'],
@@ -629,6 +641,7 @@ class RabbitMQ(BaseComponent):
             self._write_definitions_file()
         self.start()
         self._possibly_join_cluster()
+        self._activate_crash_log_permissions_fixup()
         logger.notice('RabbitMQ successfully configured')
 
     def remove(self):
@@ -653,17 +666,12 @@ class RabbitMQ(BaseComponent):
 
         logger.info('Creating cron job for rebalancing queues...')
         time_string = '0 */4 * * *'  # run every 4 hours
-        job_command = '{0} {1} {2} # {3}'.format(
-            time_string,
+        command = '{} {}'.format(
             '/opt/cloudify/cfy_manager/bin/python',
-            QUEUES_REBALANCING_SCRIPT_PATH,
-            "Rebalance rabbit queues")
-
-        # Adding a new job to crontab
-        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'crontab -u {0} -'.format(constants.CLOUDIFY_USER,
-                                        job_command)
-        common.run([cmd], shell=True)
+            QUEUES_REBALANCING_SCRIPT_PATH)
+        comment = "Rebalance rabbit queues"
+        common.add_cron_job(time_string, command, comment,
+                            constants.CLOUDIFY_USER)
         logger.info('Queue rebalancing cron job successfully created')
 
 

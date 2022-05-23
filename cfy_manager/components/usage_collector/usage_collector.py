@@ -115,17 +115,9 @@ class UsageCollector(BaseComponent):
         script_path = join(SCRIPTS_DESTINATION_PATH,
                            '{}.py'.format(script_name))
         time_string = self._get_cron_time_string(interval_type, interval)
-
-        # crontab job command
-        job = '{0} {1} {2} # {3}'.format(time_string,
-                                         MANAGER_PYTHON,
-                                         script_path,
-                                         script_name)
-
-        # Adding a new job to crontab
-        cmd = '(crontab -u {0} -l 2>/dev/null; echo "{1}") | ' \
-              'crontab -u {0} -'.format(constants.CLOUDIFY_USER, job)
-        common.run([cmd], shell=True)
+        command = f'{MANAGER_PYTHON} {script_path}'
+        common.add_cron_job(time_string, command, script_name,
+                            constants.CLOUDIFY_USER)
 
     def _get_cron_time_string(self, interval_type, interval):
         if not isinstance(interval, int):

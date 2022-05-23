@@ -145,6 +145,8 @@ class PostgresqlServer(BaseComponent):
         logger.debug('Setting PostgreSQL Server logs path...')
         ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
         common.mkdir(LOG_DIR)
+        common.chown(POSTGRES_USER, 'cfylogs', LOG_DIR)
+        common.chmod('750', LOG_DIR)
         if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
             files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
 
@@ -212,6 +214,7 @@ class PostgresqlServer(BaseComponent):
             'log_destination': "stderr",
             'logging_collector': "on",
             'log_filename': "'postgresql-%a.log'",
+            'log_file_mode': '0644',
             'log_truncate_on_rotation': "on",
             'log_rotation_age': "1d",
             'log_rotation_size': 0,
@@ -736,8 +739,10 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(PATRONI_LOG_PATH)
         common.mkdir(ETCD_LOG_PATH)
         common.mkdir(POSTGRES_LOG_PATH)
-        common.run(['chown', 'postgres.', PATRONI_LOG_PATH])
-        common.run(['chown', 'postgres.', POSTGRES_LOG_PATH])
+        common.chown('postgres', 'cfylogs', PATRONI_LOG_PATH)
+        common.chown('postgres', 'cfylogs', POSTGRES_LOG_PATH)
+        common.chmod('750', PATRONI_LOG_PATH)
+        common.chmod('750', POSTGRES_LOG_PATH)
 
         syslog.deploy_rsyslog_filters('db_cluster', ['etcd', 'patroni'],
                                       self.service_type, logger)
@@ -1040,6 +1045,7 @@ class PostgresqlServer(BaseComponent):
                 'connect_address': '{0}:5432'.format(ip_urlized),
                 'data_dir': PATRONI_DATA_DIR,
                 'pgpass': PATRONI_PGPASS_PATH,
+                'log_file_mode': '0644',
                 'authentication': {
                     'replication': {
                         'username': 'replicator',
