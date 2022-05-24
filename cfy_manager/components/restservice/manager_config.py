@@ -18,6 +18,7 @@ from ... import constants
 
 
 def make_manager_config():
+    prometheus_config = config.get('prometheus', {})
     rest_config = {
         'rest_service_log_path':
             constants.REST_LOG_DIR + '/cloudify-rest-service.log',
@@ -37,8 +38,11 @@ def make_manager_config():
         'default_page_size': config['restservice']['default_page_size'],
         'service_management': config.setdefault(
             'service_management', 'supervisord'),
-        'monitoring_timeout': config.get('prometheus', {}).get(
-            'request_timeout', 4),
+        'monitoring_timeout': prometheus_config.get('request_timeout', 4),
+        'log_fetch_username': prometheus_config.get('credentials', {}).get(
+            'username'),
+        'log_fetch_password': prometheus_config.get('credentials', {}).get(
+            'password'),
     }
     mgmtworker_config = {
         'max_workers': config['mgmtworker']['max_workers'],
