@@ -510,6 +510,8 @@ def logs_fetch(**kwargs):
         zip_path = zip_file.name
         logs_dir = '/var/log/cloudify'
 
+        # Inspired by the shutil._make_zipfile; we should use that when it
+        # supports symlinks
         with zipfile.ZipFile(zip_path, "w",
                              compression=zipfile.ZIP_DEFLATED) as zf:
             path = os.path.normpath(logs_dir)
