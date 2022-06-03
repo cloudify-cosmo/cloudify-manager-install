@@ -6,8 +6,10 @@ import re
 import sys
 import time
 import json
+import shutil
 import subprocess
 import pkg_resources
+from tempfile import NamedTemporaryFile
 from traceback import format_exception
 
 import argh
@@ -158,6 +160,9 @@ INPUT_PATH_MSG = (
 )
 LOGS_SKIP_DB_HELP_MSG = (
     'Get cluster node addresses from config instead of DB.'
+)
+LOCAL_LOGS_HELP_MSG = (
+    'Get local logs archive.'
 )
 
 config_arg = argh.arg('-c', '--config-file', action='append', default=None,
@@ -492,9 +497,22 @@ def db_shell(**kwargs):
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
 @argh.decorators.arg('-s', '--skip-db', help=LOGS_SKIP_DB_HELP_MSG,
                      default=False)
+@argh.decorators.arg('-l', '--local', help=LOCAL_LOGS_HELP_MSG, default=False)
 def logs_fetch(**kwargs):
     """Download logs from all cloudify managers/dbs/brokers."""
     setup_console_logger(verbose=kwargs['verbose'])
+
+    if kwargs['local']:
+        zip_file = NamedTemporaryFile(prefix='cfylogs_local', suffix='.zip',
+                                      delete=False)
+        zip_file.close()
+
+        zip_path = zip_file.name
+
+        shutil.make_archive(zip_path, 'zip', '/var/log/cloudify')
+        logger.notice(f'Local logs collected in {zip_path}')
+        return
+
     config.load_config(kwargs.get('config_file'))
     if service_is_configured(MANAGER_SERVICE):
         if is_all_in_one_manager():
