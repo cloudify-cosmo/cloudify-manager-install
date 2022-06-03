@@ -8,7 +8,9 @@ import time
 import json
 import subprocess
 import pkg_resources
+from tempfile import NamedTemporaryFile
 from traceback import format_exception
+import zipfile
 
 import argh
 
@@ -158,6 +160,9 @@ INPUT_PATH_MSG = (
 )
 LOGS_SKIP_DB_HELP_MSG = (
     'Get cluster node addresses from config instead of DB.'
+)
+LOCAL_LOGS_HELP_MSG = (
+    'Get local logs archive.'
 )
 
 config_arg = argh.arg('-c', '--config-file', action='append', default=None,
@@ -492,9 +497,39 @@ def db_shell(**kwargs):
 @argh.decorators.arg('-v', '--verbose', help=VERBOSE_HELP_MSG, default=False)
 @argh.decorators.arg('-s', '--skip-db', help=LOGS_SKIP_DB_HELP_MSG,
                      default=False)
+@argh.decorators.arg('-l', '--local', help=LOCAL_LOGS_HELP_MSG, default=False)
 def logs_fetch(**kwargs):
     """Download logs from all cloudify managers/dbs/brokers."""
     setup_console_logger(verbose=kwargs['verbose'])
+
+    if kwargs['local']:
+        zip_file = NamedTemporaryFile(prefix='cfylogs_local', suffix='.zip',
+                                      delete=False)
+        zip_file.close()
+
+        zip_path = zip_file.name
+        logs_dir = '/var/log/cloudify'
+
+        # Inspired by the shutil._make_zipfile; we should use that when it
+        # supports symlinks
+        with zipfile.ZipFile(zip_path, "w",
+                             compression=zipfile.ZIP_DEFLATED) as zf:
+            path = os.path.normpath(logs_dir)
+            if path != os.curdir:
+                zf.write(path, path)
+            for dirpath, dirnames, filenames in os.walk(logs_dir,
+                                                        followlinks=True):
+                for name in sorted(dirnames):
+                    path = os.path.normpath(os.path.join(dirpath, name))
+                    zf.write(path, path)
+                for name in filenames:
+                    path = os.path.normpath(os.path.join(dirpath, name))
+                    if os.path.isfile(path):
+                        zf.write(path, path)
+
+        logger.notice(f'Local logs collected in {zip_path}')
+        return
+
     config.load_config(kwargs.get('config_file'))
     if service_is_configured(MANAGER_SERVICE):
         if is_all_in_one_manager():
