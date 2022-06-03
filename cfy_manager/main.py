@@ -6,11 +6,11 @@ import re
 import sys
 import time
 import json
-import shutil
 import subprocess
 import pkg_resources
 from tempfile import NamedTemporaryFile
 from traceback import format_exception
+import zipfile
 
 import argh
 
@@ -508,8 +508,23 @@ def logs_fetch(**kwargs):
         zip_file.close()
 
         zip_path = zip_file.name
+        logs_dir = '/var/log/cloudify'
 
-        shutil.make_archive(zip_path, 'zip', '/var/log/cloudify')
+        with zipfile.ZipFile(zip_path, "w",
+                             compression=zipfile.ZIP_DEFLATED) as zf:
+            path = os.path.normpath(logs_dir)
+            if path != os.curdir:
+                zf.write(path, path)
+            for dirpath, dirnames, filenames in os.walk(logs_dir,
+                                                        followlinks=True):
+                for name in sorted(dirnames):
+                    path = os.path.normpath(os.path.join(dirpath, name))
+                    zf.write(path, path)
+                for name in filenames:
+                    path = os.path.normpath(os.path.join(dirpath, name))
+                    if os.path.isfile(path):
+                        zf.write(path, path)
+
         logger.notice(f'Local logs collected in {zip_path}')
         return
 
