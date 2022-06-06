@@ -75,6 +75,7 @@ from .utils.certificates import (
 )
 from .utils.common import (
     run,
+    chown,
     copy,
     can_lookup_hostname,
     is_all_in_one_manager,
@@ -529,7 +530,7 @@ def logs_fetch(**kwargs):
                         zf.write(path, path)
 
         if sudo_user:
-            run(['chown', sudo_user, zip_path])
+            chown(sudo_user, '', zip_path)
         logger.notice(f'Local logs collected in {zip_path}')
         return
 
@@ -552,7 +553,7 @@ def logs_fetch(**kwargs):
                      'MONITORING_PASSWORD': credentials['password']},
             ).aggr_stdout
             if sudo_user:
-                run(['chown', sudo_user, log_bundle.strip()])
+                chown(sudo_user, '', log_bundle.strip())
             logger.notice(f'Logs downloaded to {log_bundle}')
         else:
             logger.error('No nodes found. Ensure the correct config is used.')
