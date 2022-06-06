@@ -75,6 +75,7 @@ from .utils.certificates import (
 )
 from .utils.common import (
     run,
+    chown,
     copy,
     can_lookup_hostname,
     is_all_in_one_manager,
@@ -501,6 +502,7 @@ def db_shell(**kwargs):
 def logs_fetch(**kwargs):
     """Download logs from all cloudify managers/dbs/brokers."""
     setup_console_logger(verbose=kwargs['verbose'])
+    sudo_user = os.environ.get('SUDO_USER')
 
     if kwargs['local']:
         zip_file = NamedTemporaryFile(prefix='cfylogs_local', suffix='.zip',
@@ -527,6 +529,8 @@ def logs_fetch(**kwargs):
                     if os.path.isfile(path):
                         zf.write(path, path)
 
+        if sudo_user:
+            chown(sudo_user, '', zip_path)
         logger.notice(f'Local logs collected in {zip_path}')
         return
 
@@ -548,6 +552,8 @@ def logs_fetch(**kwargs):
                 env={'MONITORING_USERNAME': credentials['username'],
                      'MONITORING_PASSWORD': credentials['password']},
             ).aggr_stdout
+            if sudo_user:
+                chown(sudo_user, '', log_bundle.strip())
             logger.notice(f'Logs downloaded to {log_bundle}')
         else:
             logger.error('No nodes found. Ensure the correct config is used.')
