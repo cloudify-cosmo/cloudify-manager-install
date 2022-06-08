@@ -24,6 +24,7 @@ from ...utils import (
     service
 )
 from cfy_manager.utils.db import get_ui_db_dialect_options_and_url
+from cfy_manager.utils.scripts import run_snapshot_script
 from ...utils.network import wait_for_port, ipv6_url_compat
 from ...utils.install import is_premium_installed
 from ...constants import (
@@ -194,4 +195,6 @@ class Stage(BaseComponent):
     def upgrade(self):
         logger.notice('Upgrading Cloudify Stage...')
         self._run_db_migrate()
+        # This script must run after stage DB migration
+        run_snapshot_script('copy_icons')
         logger.notice('Cloudify Stage successfully upgraded')
