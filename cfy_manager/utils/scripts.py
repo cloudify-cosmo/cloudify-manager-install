@@ -12,6 +12,14 @@ UTIL_DIR = dirname(__file__)
 SCRIPTS_PATH = join(UTIL_DIR, 'scripts')
 
 
+def run_snapshot_script(script_name, **kwargs):
+    snapshot_script = (
+        '/opt/mgmtworker/env/lib/python3.6/site-packages/'
+        f'cloudify_system_workflows/snapshots/{script_name}.py')
+    return run_script_on_manager_venv(snapshot_script,
+                                      **kwargs)
+
+
 def run_script_on_manager_venv(script_path,
                                script_input=None,
                                script_input_arg='--input',

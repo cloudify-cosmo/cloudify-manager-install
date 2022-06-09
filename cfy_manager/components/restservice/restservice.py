@@ -49,6 +49,7 @@ from ...exceptions import BootstrapError
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.install import is_premium_installed
 from ...utils.scripts import (run_script_on_manager_venv,
+                              run_snapshot_script,
                               log_script_run_results)
 from ...utils.files import (
     chown,
@@ -527,8 +528,5 @@ class RestService(BaseComponent):
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
-        run_script_on_manager_venv(
-            '/opt/mgmtworker/env/lib/python3.6/site-packages/'
-            'cloudify_system_workflows/snapshots/'
-            'populate_deployment_statuses.py')
+        run_snapshot_script('populate_deployment_statuses')
         logger.notice('Rest Service successfully upgraded')
