@@ -67,23 +67,28 @@ INTERNAL_KEY_FILENAME = 'cloudify_internal_key.pem'
 CA_CERT_FILENAME = 'cloudify_internal_ca_cert.pem'
 CA_KEY_FILENAME = 'cloudify_internal_ca_key.pem'
 EXTERNAL_CA_CERT_FILENAME = 'cloudify_external_ca_cert.pem'
+EXTERNAL_CA_KEY_FILENAME = 'cloudify_external_ca_key.pem'
 EXTERNAL_CERT_FILENAME = 'cloudify_external_cert.pem'
 EXTERNAL_KEY_FILENAME = 'cloudify_external_key.pem'
 POSTGRESQL_CLIENT_CERT_FILENAME = 'postgresql.crt'
 POSTGRESQL_CLIENT_KEY_FILENAME = 'postgresql.key'
 POSTGRESQL_CA_CERT_FILENAME = 'postgresql_ca.crt'
+POSTGRESQL_CA_KEY_FILENAME = 'postgresql_ca.key'
 MONITORING_CA_CERT_FILENAME = 'monitoring_ca_cert.pem'
+MONITORING_CA_KEY_FILENAME = 'monitoring_ca_key.pem'
 MONITORING_CERT_FILENAME = 'monitoring_cert.pem'
 MONITORING_KEY_FILENAME = 'monitoring_key.pem'
 BROKER_CERT_LOCATION = '/etc/cloudify/ssl/rabbitmq-cert.pem'
 BROKER_KEY_LOCATION = '/etc/cloudify/ssl/rabbitmq-key.pem'
 BROKER_CA_LOCATION = '/etc/cloudify/ssl/rabbitmq-ca.pem'
+BROKER_CA_KEY_LOCATION = '/etc/cloudify/ssl/rabbitmq-ca-key.pem'
 
 INTERNAL_CERT_PATH = join(SSL_CERTS_TARGET_DIR, INTERNAL_CERT_FILENAME)
 INTERNAL_KEY_PATH = join(SSL_CERTS_TARGET_DIR, INTERNAL_KEY_FILENAME)
 CA_CERT_PATH = join(SSL_CERTS_TARGET_DIR, CA_CERT_FILENAME)
 CA_KEY_PATH = join(SSL_CERTS_TARGET_DIR, CA_KEY_FILENAME)
 EXTERNAL_CA_CERT_PATH = join(SSL_CERTS_TARGET_DIR, EXTERNAL_CA_CERT_FILENAME)
+EXTERNAL_CA_KEY_PATH = join(SSL_CERTS_TARGET_DIR, EXTERNAL_CA_KEY_FILENAME)
 EXTERNAL_CERT_PATH = join(SSL_CERTS_TARGET_DIR, EXTERNAL_CERT_FILENAME)
 EXTERNAL_KEY_PATH = join(SSL_CERTS_TARGET_DIR, EXTERNAL_KEY_FILENAME)
 POSTGRESQL_CLIENT_CERT_PATH = \
@@ -92,8 +97,12 @@ POSTGRESQL_CLIENT_KEY_PATH = \
     join(SSL_CERTS_TARGET_DIR, POSTGRESQL_CLIENT_KEY_FILENAME)
 POSTGRESQL_CA_CERT_PATH = \
     join(SSL_CERTS_TARGET_DIR, POSTGRESQL_CA_CERT_FILENAME)
+POSTGRESQL_CA_KEY_PATH = \
+    join(SSL_CERTS_TARGET_DIR, POSTGRESQL_CA_KEY_FILENAME)
 MONITORING_CA_CERT_PATH = \
     join(SSL_CERTS_TARGET_DIR, MONITORING_CA_CERT_FILENAME)
+MONITORING_CA_KEY_PATH = \
+    join(SSL_CERTS_TARGET_DIR, MONITORING_CA_KEY_FILENAME)
 MONITORING_CERT_PATH = \
     join(SSL_CERTS_TARGET_DIR, MONITORING_CERT_FILENAME)
 MONITORING_KEY_PATH = \
@@ -129,6 +138,8 @@ NEW_BROKER_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_cert.pem'
 NEW_BROKER_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_rabbitmq_key.pem'
 NEW_BROKER_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                 'new_rabbitmq_ca_cert.pem')
+NEW_BROKER_CA_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                               'new_rabbitmq_ca_key.pem')
 
 NEW_POSTGRESQL_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                  'new_postgresql_server_cert.pem')
@@ -140,15 +151,20 @@ NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                        'new_postgresql_client_key.pem')
 NEW_POSTGRESQL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                     'new_postgresql_server_ca_cert.pem')
+NEW_POSTGRESQL_CA_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                   'new_postgresql_server_ca_key.pem')
 
 NEW_INTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_cert.pem'
 NEW_INTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_internal_key.pem'
 NEW_INTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ca_cert.pem')
+NEW_INTERNAL_CA_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH + 'new_ca_key.pem')
 
 NEW_EXTERNAL_CERT_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_cert.pem'
 NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
 NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                   'new_external_ca_cert.pem')
+NEW_EXTERNAL_CA_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                  'new_external_ca_key.pem')
 
 NEW_PROMETHEUS_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                  'new_prometheus_cert.pem')
@@ -156,6 +172,8 @@ NEW_PROMETHEUS_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                 'new_prometheus_key.pem')
 NEW_PROMETHEUS_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                     'new_prometheus_ca_cert.pem')
+NEW_PROMETHEUS_CA_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
+                                   'new_prometheus_ca_key.pem')
 
 CONFIG_FILE_HELP_MSG = (
     'Specify a configuration file to be used. File path is relative to the '

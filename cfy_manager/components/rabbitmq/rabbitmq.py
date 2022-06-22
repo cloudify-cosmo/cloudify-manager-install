@@ -476,12 +476,19 @@ class RabbitMQ(BaseComponent):
         ca_destination = (constants.CA_CERT_PATH if
                           common.is_all_in_one_manager()
                           else constants.BROKER_CA_LOCATION)
+        ca_key_destination = (constants.CA_KEY_PATH if
+                              common.is_all_in_one_manager()
+                              else constants.BROKER_CA_KEY_LOCATION)
+        if not os.path.exists(ca_key_destination):
+            ca_key_destination = None
+
         cert_config = {
             'component_name': self.component_name,
             'logger': logger,
             'cert_destination': constants.BROKER_CERT_LOCATION,
             'key_destination': constants.BROKER_KEY_LOCATION,
             'ca_destination': ca_destination,
+            'ca_key_destination': ca_key_destination,
             'owner': 'cfyuser',
             'group': 'cfyuser',
             'key_perms': '440',
@@ -511,10 +518,16 @@ class RabbitMQ(BaseComponent):
             if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
                 config[RABBITMQ]['ca_path'] = \
                     constants.NEW_INTERNAL_CA_CERT_FILE_PATH
+            if os.path.exists(constants.NEW_INTERNAL_CA_KEY_FILE_PATH):
+                config[RABBITMQ]['ca_key_path'] = \
+                    constants.NEW_INTERNAL_CA_KEY_FILE_PATH
         else:
             if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
                 config[RABBITMQ]['ca_path'] = \
                     constants.NEW_BROKER_CA_CERT_FILE_PATH
+            if os.path.exists(constants.NEW_BROKER_CA_KEY_FILE_PATH):
+                config[RABBITMQ]['ca_key_path'] = \
+                    constants.NEW_BROKER_CA_KEY_FILE_PATH
 
     def validate_new_certs(self):
         if common.is_all_in_one_manager():
@@ -522,15 +535,18 @@ class RabbitMQ(BaseComponent):
                 validate_certificates(
                     cert_filename=constants.NEW_BROKER_CERT_FILE_PATH,
                     key_filename=constants.NEW_BROKER_KEY_FILE_PATH,
-                    ca_filename=constants.NEW_INTERNAL_CA_CERT_FILE_PATH)
+                    ca_filename=constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
+                    ca_key_filename=constants.NEW_INTERNAL_CA_KEY_FILE_PATH)
         else:
             certificates.get_and_validate_certs_for_replacement(
                 default_cert_location=constants.BROKER_CERT_LOCATION,
                 default_key_location=constants.BROKER_KEY_LOCATION,
                 default_ca_location=constants.BROKER_CA_LOCATION,
+                default_ca_key_location=constants.BROKER_CA_KEY_LOCATION,
                 new_cert_location=constants.NEW_BROKER_CERT_FILE_PATH,
                 new_key_location=constants.NEW_BROKER_KEY_FILE_PATH,
-                new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH
+                new_ca_location=constants.NEW_BROKER_CA_CERT_FILE_PATH,
+                new_ca_key_location=constants.NEW_BROKER_CA_KEY_FILE_PATH,
             )
 
     # Give rabbit time to finish starting

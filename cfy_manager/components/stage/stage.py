@@ -30,6 +30,7 @@ from ...utils.install import is_premium_installed
 from ...constants import (
     CLOUDIFY_USER,
     NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CA_KEY_FILE_PATH,
     NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
 )
 
@@ -46,6 +47,7 @@ CONF_DIR = join(HOME_DIR, 'conf')
 DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/stage_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/stage_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
+DB_CA_KEY_PATH = join(CONF_DIR, 'db_ca.key')
 
 
 class Stage(BaseComponent):
@@ -79,6 +81,17 @@ class Stage(BaseComponent):
         )
 
     @staticmethod
+    def _handle_ca_key_certificate():
+        certificates.use_supplied_certificates(
+            component_name=POSTGRESQL_CLIENT,
+            logger=logger,
+            ca_key_destination=DB_CA_KEY_PATH,
+            owner=STAGE_USER,
+            group=STAGE_GROUP,
+            update_config=False,
+        )
+
+    @staticmethod
     def _handle_cert_and_key():
         certificates.use_supplied_certificates(
             component_name=SSL_INPUTS,
@@ -96,14 +109,19 @@ class Stage(BaseComponent):
     def replace_certificates(self):
         # The certificates are validated in the PostgresqlClient component
         replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_ca_key = os.path.exists(NEW_POSTGRESQL_CA_KEY_FILE_PATH)
         replacing_cert_and_key = os.path.exists(
             NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
 
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
             self.stop()
+            self.stop()
             if replacing_ca:
                 self.log_replacing_certs('CA cert')
                 self._handle_ca_certificate()
+            if replacing_ca_key:
+                self.log_replacing_certs('CA key')
+                self._handle_ca_key_certificate()
 
             if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
                     replacing_cert_and_key):

@@ -342,7 +342,9 @@ def _check_cert_key_match(cert_filename, key_filename, password=None):
 
 def check_certificates(config_section, section_path,
                        cert_path='cert_path', key_path='key_path',
-                       ca_path='ca_path', key_password='key_password',
+                       ca_path='ca_path',
+                       ca_key_path='ca_key_path',
+                       key_password='key_password',
                        require_non_ca_certs=True,
                        ):
     """Check that the provided cert, key, and CA actually match"""
@@ -350,6 +352,7 @@ def check_certificates(config_section, section_path,
     key_filename = config_section.get(key_path)
 
     ca_filename = config_section.get(ca_path)
+    ca_key_filename = config_section.get(ca_key_path)
     password = config_section.get(key_password)
 
     if not cert_filename and not key_filename and require_non_ca_certs:
@@ -358,6 +361,8 @@ def check_certificates(config_section, section_path,
             failing.append('key_password')
         if ca_filename:
             failing.append('ca_path')
+        if ca_key_filename:
+            failing.append('ca_key_path')
         if failing:
             failing = ' or '.join(failing)
             raise ValidationError(
@@ -368,12 +373,14 @@ def check_certificates(config_section, section_path,
                 )
             )
 
-    validate_certificates(cert_filename, key_filename, ca_filename, password)
-    return cert_filename, key_filename, ca_filename, password
+    validate_certificates(cert_filename, key_filename, ca_filename,
+                          ca_key_filename, password)
+    return cert_filename, key_filename, ca_filename, ca_key_filename, password
 
 
 def validate_certificates(cert_filename=None, key_filename=None,
-                          ca_filename=None, password=None):
+                          ca_filename=None, ca_key_filename=None,
+                          password=None):
     if cert_filename and key_filename:
         _check_cert_key_match(cert_filename, key_filename, password)
     elif cert_filename or key_filename:
@@ -384,6 +391,8 @@ def validate_certificates(cert_filename=None, key_filename=None,
         _check_ssl_file(ca_filename, kind='Cert')
         if cert_filename:
             _check_signed_by(ca_filename, cert_filename)
+        if ca_key_filename:
+            _check_cert_key_match(ca_filename, ca_key_filename, password)
 
 
 def _check_internal_ca_cert():
@@ -447,6 +456,7 @@ def _validate_cert_inputs():
         cert_path = '{0}_cert_path'.format(ssl_input)
         key_path = '{0}_key_path'.format(ssl_input)
         ca_path = '{0}_ca_path'.format(ssl_input)
+        ca_key_path = '{0}_ca_key_path'.format(ssl_input)
         key_password = '{0}_key_password'.format(ssl_input)
         # These should all be moved to their respective components- see Rabbit
         check_certificates(
@@ -455,6 +465,7 @@ def _validate_cert_inputs():
             cert_path=cert_path,
             key_path=key_path,
             ca_path=ca_path,
+            ca_key_path=ca_key_path,
             key_password=key_password,
         )
     if config[SSL_INPUTS].get('external_ca_cert_path'):

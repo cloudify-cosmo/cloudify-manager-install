@@ -17,10 +17,12 @@ from ...constants import (
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
     POSTGRESQL_CA_CERT_PATH,
+    POSTGRESQL_CA_KEY_PATH,
     CLOUDIFY_HOME_DIR,
     CLOUDIFY_USER,
     CLOUDIFY_GROUP,
     NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CA_KEY_FILE_PATH,
     NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
     NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH
 )
@@ -103,6 +105,15 @@ class PostgresqlClient(BaseComponent):
         )
 
     @staticmethod
+    def _handle_ca_key_certificate():
+        certificates.use_supplied_certificates(
+            logger=logger,
+            ca_destination=POSTGRESQL_CA_KEY_PATH,
+            component_name=POSTGRESQL_CLIENT
+        )
+
+
+    @staticmethod
     def _handle_cert_and_key():
         certificates.use_supplied_certificates(
             logger=logger,
@@ -115,6 +126,7 @@ class PostgresqlClient(BaseComponent):
 
     def replace_certificates(self):
         replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_ca_key = os.path.exists(NEW_POSTGRESQL_CA_KEY_FILE_PATH)
         replacing_cert_and_key = os.path.exists(
             NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
         if config[POSTGRESQL_CLIENT][SSL_ENABLED]:
@@ -125,6 +137,12 @@ class PostgresqlClient(BaseComponent):
                 config[POSTGRESQL_CLIENT]['ca_path'] = \
                     NEW_POSTGRESQL_CA_CERT_FILE_PATH
                 self._handle_ca_certificate()
+            if replacing_ca_key:
+                logger.info(
+                    'Replacing CA key on postgresql_client component')
+                config[POSTGRESQL_CLIENT]['ca_key_path'] = \
+                    NEW_POSTGRESQL_CA_KEY_FILE_PATH
+                self._handle_ca_key_certificate()
             if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
                     replacing_cert_and_key):
                 logger.info(
@@ -149,8 +167,12 @@ class PostgresqlClient(BaseComponent):
             ca_filename = certificates.get_ca_filename(
                 NEW_POSTGRESQL_CA_CERT_FILE_PATH,
                 POSTGRESQL_CA_CERT_PATH)
+            ca_key_filename = certificates.get_ca_filename(
+                NEW_POSTGRESQL_CA_KEY_FILE_PATH,
+                POSTGRESQL_CA_KEY_PATH)
 
-            validate_certificates(cert_filename, key_filename, ca_filename)
+            validate_certificates(
+                cert_filename, key_filename, ca_filename, ca_key_filename)
 
     def configure(self):
         logger.notice('Configuring PostgreSQL Client...')

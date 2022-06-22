@@ -449,6 +449,7 @@ def use_supplied_certificates(component_name,
                               cert_destination=None,
                               key_destination=None,
                               ca_destination=None,
+                              ca_key_destination=None,
                               owner=CLOUDIFY_USER,
                               group=CLOUDIFY_GROUP,
                               key_perms='440',
@@ -471,6 +472,7 @@ def use_supplied_certificates(component_name,
     key_path = prefix + 'key_path'
     cert_path = prefix + 'cert_path'
     ca_path = prefix + 'ca_path'
+    ca_key_path = prefix + 'ca_key_path'
     key_password = prefix + 'key_password'
 
     # The ssl_inputs has different names for some of the certificates
@@ -492,12 +494,13 @@ def use_supplied_certificates(component_name,
         config_section = config_section[sub_component]
         section_path = section_path + '.' + sub_component
 
-    cert_src, key_src, ca_src, key_pass = check_certificates(
+    cert_src, key_src, ca_src, ca_key_src, key_pass = check_certificates(
         config_section,
         section_path,
         cert_path=cert_path,
         key_path=key_path,
         ca_path=ca_path,
+        ca_key_path=ca_key_path,
         key_password=key_password,
         require_non_ca_certs=False,
     )
@@ -523,6 +526,8 @@ def use_supplied_certificates(component_name,
             copy(ca_src, ca_destination, True)
         else:
             copy(cert_destination, ca_destination, True)
+        if ca_key_destination and ca_key_src != ca_key_destination:
+            copy(ca_key_src, ca_key_destination, True)
 
     if key_pass:
         remove_key_encryption(
@@ -552,6 +557,8 @@ def use_supplied_certificates(component_name,
             config_section[ca_path] = ca_destination
             # If there was a password, we've now removed it
             config_section[key_password] = ''
+        if ca_key_destination:
+            config_section[ca_key_path] = ca_key_destination
 
     # Supplied certificates were used
     return True
@@ -561,9 +568,11 @@ def get_and_validate_certs_for_replacement(
         default_cert_location,
         default_key_location,
         default_ca_location,
+        default_ca_key_location,
         new_cert_location,
         new_key_location,
-        new_ca_location):
+        new_ca_location,
+        new_ca_key_location):
     """Validates the new certificates for replacement.
 
     This function validates the new specified certificates for replacement,
@@ -577,9 +586,12 @@ def get_and_validate_certs_for_replacement(
         default_cert_location, default_key_location)
 
     ca_filename = get_ca_filename(new_ca_location, default_ca_location)
+    ca_key_filename = get_ca_filename(new_ca_key_location,
+                                      default_ca_key_location)
 
-    validate_certificates(cert_filename, key_filename, ca_filename)
-    return cert_filename, key_filename, ca_filename
+    validate_certificates(
+        cert_filename, key_filename, ca_filename, ca_key_filename)
+    return cert_filename, key_filename, ca_filename, ca_key_filename
 
 
 def get_cert_and_key_filenames(new_cert_location,

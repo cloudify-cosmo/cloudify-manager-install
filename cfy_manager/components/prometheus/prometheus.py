@@ -118,13 +118,15 @@ class Prometheus(BaseComponent):
         if (exists(constants.NEW_PROMETHEUS_CERT_FILE_PATH) or
                 exists(constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH)):
             certificates.get_and_validate_certs_for_replacement(
-                    default_cert_location=constants.MONITORING_CERT_PATH,
-                    default_key_location=constants.MONITORING_KEY_PATH,
-                    default_ca_location=constants.MONITORING_CA_CERT_PATH,
-                    new_cert_location=constants.NEW_PROMETHEUS_CERT_FILE_PATH,
-                    new_key_location=constants.NEW_PROMETHEUS_KEY_FILE_PATH,
-                    new_ca_location=constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH
-                )
+                default_cert_location=constants.MONITORING_CERT_PATH,
+                default_key_location=constants.MONITORING_KEY_PATH,
+                default_ca_location=constants.MONITORING_CA_CERT_PATH,
+                default_ca_key_location=constants.MONITORING_CA_KEY_PATH,
+                new_cert_location=constants.NEW_PROMETHEUS_CERT_FILE_PATH,
+                new_key_location=constants.NEW_PROMETHEUS_KEY_FILE_PATH,
+                new_ca_location=constants.NEW_PROMETHEUS_CA_CERT_FILE_PATH,
+                new_ca_key_location=constants.NEW_PROMETHEUS_CA_KEY_FILE_PATH
+            )
 
     @staticmethod
     def write_new_certs_to_config():

@@ -56,4 +56,6 @@ CLUSTER_JOIN = 'join'
 # endregion
 
 ETCD_CA_PATH = '/etc/etcd/ca.crt'
+ETCD_CA_KEY_PATH = '/etc/etcd/ca.key'
 PATRONI_DB_CA_PATH = '/var/lib/patroni/ca.crt'
+PATRONI_DB_CA_KEY_PATH = '/var/lib/patroni/ca.key'
