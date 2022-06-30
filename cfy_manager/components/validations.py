@@ -391,7 +391,7 @@ def validate_certificates(cert_filename=None, key_filename=None,
         _check_ssl_file(ca_filename, kind='Cert')
         if cert_filename:
             _check_signed_by(ca_filename, cert_filename)
-        if ca_key_filename:
+        if ca_key_filename and os.path.exists(ca_key_filename):
             _check_cert_key_match(ca_filename, ca_key_filename, password)
 
 

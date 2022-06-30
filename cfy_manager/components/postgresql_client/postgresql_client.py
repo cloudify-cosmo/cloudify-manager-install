@@ -112,7 +112,6 @@ class PostgresqlClient(BaseComponent):
             component_name=POSTGRESQL_CLIENT
         )
 
-
     @staticmethod
     def _handle_cert_and_key():
         certificates.use_supplied_certificates(

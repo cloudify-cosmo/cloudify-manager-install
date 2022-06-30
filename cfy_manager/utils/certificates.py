@@ -526,7 +526,8 @@ def use_supplied_certificates(component_name,
             copy(ca_src, ca_destination, True)
         else:
             copy(cert_destination, ca_destination, True)
-        if ca_key_destination and ca_key_src != ca_key_destination:
+        if ca_key_src and ca_key_destination and \
+                ca_key_src != ca_key_destination:
             copy(ca_key_src, ca_key_destination, True)
 
     if key_pass:
@@ -586,8 +587,10 @@ def get_and_validate_certs_for_replacement(
         default_cert_location, default_key_location)
 
     ca_filename = get_ca_filename(new_ca_location, default_ca_location)
-    ca_key_filename = get_ca_filename(new_ca_key_location,
-                                      default_ca_key_location)
+    ca_key_filename = None
+    if (os.path.exists(new_ca_key_location) and os.path.exists(
+            default_ca_key_location)):
+        ca_key_filename = new_ca_key_location
 
     validate_certificates(
         cert_filename, key_filename, ca_filename, ca_key_filename)

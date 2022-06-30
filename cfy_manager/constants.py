@@ -164,7 +164,7 @@ NEW_EXTERNAL_KEY_FILE_PATH = NEW_CERTS_TMP_DIR_PATH + 'new_external_key.pem'
 NEW_EXTERNAL_CA_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                   'new_external_ca_cert.pem')
 NEW_EXTERNAL_CA_KEY_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
-                                  'new_external_ca_key.pem')
+                                 'new_external_ca_key.pem')
 
 NEW_PROMETHEUS_CERT_FILE_PATH = (NEW_CERTS_TMP_DIR_PATH +
                                  'new_prometheus_cert.pem')

@@ -27,7 +27,6 @@ from ...components_constants import (
     ETCD_CA_PATH,
     ETCD_CA_KEY_PATH,
     PATRONI_DB_CA_PATH,
-    PATRONI_DB_CA_KEY_PATH,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
     PUBLIC_IP,
@@ -653,8 +652,8 @@ class PostgresqlServer(BaseComponent):
                     new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
                     new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
                     new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH,
-                    new_ca_key_location=
-                    constants.NEW_POSTGRESQL_CA_KEY_FILE_PATH
+                    new_ca_key_location=constants.
+                    NEW_POSTGRESQL_CA_KEY_FILE_PATH
                 )
         else:
             certificates.get_and_validate_certs_for_replacement(
