@@ -1406,10 +1406,11 @@ def _handle_replace_certs_config_path(replace_certs_config_path):
     if not replace_certs_config_path:
         return
     replace_certs_config = read_yaml_file(replace_certs_config_path)
-    for cert_name, cert_path in replace_certs_config.items():
-        new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
-        if cert_path != new_cert_local_path:
-            copy(cert_path, new_cert_local_path)
+    for _, svc in replace_certs_config.items():
+        for cert_name, cert_path in svc.items():
+            new_cert_local_path = NEW_CERTS_TMP_DIR_PATH + cert_name
+            if cert_path != new_cert_local_path:
+                copy(cert_path, new_cert_local_path)
 
 
 def _only_validate():

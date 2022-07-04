@@ -25,6 +25,7 @@ from ...components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
     ETCD_CA_PATH,
+    ETCD_CA_KEY_PATH,
     PATRONI_DB_CA_PATH,
     POSTGRES_PASSWORD,
     PRIVATE_IP,
@@ -78,6 +79,7 @@ PG_CONF_PATH = '{0}/cloudify-postgresql.conf'.format(PGSQL_DATA_DIR)
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_CA_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'root.crt')
+PG_CA_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'root.key')
 PG_SERVER_CERT_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.crt')
 PG_SERVER_KEY_PATH = os.path.join(os.path.dirname(PG_CONF_PATH), 'server.key')
 
@@ -646,18 +648,23 @@ class PostgresqlServer(BaseComponent):
                     default_cert_location=PG_SERVER_CERT_PATH,
                     default_key_location=PG_SERVER_KEY_PATH,
                     default_ca_location=PG_CA_CERT_PATH,
+                    default_ca_key_location=PG_CA_KEY_PATH,
                     new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
                     new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
-                    new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+                    new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                    new_ca_key_location=constants.
+                    NEW_POSTGRESQL_CA_KEY_FILE_PATH
                 )
         else:
             certificates.get_and_validate_certs_for_replacement(
                 default_cert_location=ETCD_SERVER_CERT_PATH,
                 default_key_location=ETCD_SERVER_KEY_PATH,
                 default_ca_location=ETCD_CA_PATH,
+                default_ca_key_location=ETCD_CA_KEY_PATH,
                 new_cert_location=constants.NEW_POSTGRESQL_CERT_FILE_PATH,
                 new_key_location=constants.NEW_POSTGRESQL_KEY_FILE_PATH,
-                new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH
+                new_ca_location=constants.NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+                new_ca_key_location=constants.NEW_POSTGRESQL_CA_KEY_FILE_PATH
             )
 
     def _configure_cluster(self):

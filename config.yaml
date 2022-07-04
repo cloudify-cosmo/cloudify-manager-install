@@ -116,6 +116,9 @@ rabbitmq:
   # Will default to cert_path if installing a broker locally.
   ca_path: ''
 
+  # Path to key for CA that signed the broker cert.
+  ca_key_path: ''
+
   # Set this to true if the cluster member hostnames should be used to refer to cluster members in the DB.
   # If this is left false, the default network address for each member will be used.
   # If these are the same (e.g. due to using a proxy) then the cluster status reporter will fail.
@@ -240,6 +243,7 @@ postgresql_server:
   cert_path: ''
   key_path: ''
   ca_path: ''
+  ca_key_path: ''
 
   cluster:
     # List of nodes that will be members of the PostgreSQL cluster.
@@ -305,6 +309,7 @@ postgresql_client:
   # The CA certificate to connect to the server with.
   # If left blank postgresql_server.ca_path will be used
   ca_path: ''
+  ca_key_path: ''
 
   # Server user name (server_username), password (server_password),
   # and DB (server_db_name) to use when connecting to the database for Cloudify
@@ -541,6 +546,7 @@ prometheus:
   cert_path: ''
   key_path: ''
   ca_path: ''
+  ca_key_path: ''
   port: 9090
   node_exporter:
     metrics_port: 9100

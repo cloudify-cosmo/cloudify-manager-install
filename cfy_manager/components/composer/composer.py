@@ -26,6 +26,7 @@ from ...utils.network import wait_for_port, ipv6_url_compat
 from ...constants import (
     CLOUDIFY_USER,
     NEW_POSTGRESQL_CA_CERT_FILE_PATH,
+    NEW_POSTGRESQL_CA_KEY_FILE_PATH,
     NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH,
 )
 
@@ -42,6 +43,7 @@ CONF_DIR = join(HOME_DIR, 'backend', 'conf')
 DB_CLIENT_KEY_PATH = '/etc/cloudify/ssl/composer_db.key'
 DB_CLIENT_CERT_PATH = '/etc/cloudify/ssl/composer_db.crt'
 DB_CA_PATH = join(CONF_DIR, 'db_ca.crt')
+DB_CA_KEY_PATH = join(CONF_DIR, 'db_ca.key')
 
 
 class Composer(BaseComponent):
@@ -73,6 +75,16 @@ class Composer(BaseComponent):
             update_config=False
         )
 
+    def _handle_ca_key_certificate(self):
+        certificates.use_supplied_certificates(
+            component_name=POSTGRESQL_CLIENT,
+            logger=logger,
+            ca_destination=DB_CA_KEY_PATH,
+            owner=COMPOSER_USER,
+            group=COMPOSER_GROUP,
+            update_config=False
+        )
+
     def _handle_cert_and_key(self):
         certificates.use_supplied_certificates(
             component_name=SSL_INPUTS,
@@ -90,6 +102,7 @@ class Composer(BaseComponent):
     def replace_certificates(self):
         # The certificates are validated in the PostgresqlClient component
         replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
+        replacing_ca_key = os.path.exists(NEW_POSTGRESQL_CA_KEY_FILE_PATH)
         replacing_cert_and_key = os.path.exists(
             NEW_POSTGRESQL_CLIENT_CERT_FILE_PATH)
 
@@ -97,6 +110,9 @@ class Composer(BaseComponent):
             if replacing_ca:
                 self.log_replacing_certs('CA cert')
                 self._handle_ca_certificate()
+            if replacing_ca_key:
+                self.log_replacing_certs('CA key')
+                self._handle_ca_key_certificate()
             if (config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] and
                     replacing_cert_and_key):
                 self.log_replacing_certs('cert and key')
