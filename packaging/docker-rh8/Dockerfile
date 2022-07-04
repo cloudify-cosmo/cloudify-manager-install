@@ -1,4 +1,4 @@
-FROM centos:7
+FROM centos:8
 
 ARG rpm_file
 ARG config=config.yaml
@@ -9,10 +9,15 @@ ARG gid=1500
 RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
-RUN yum install -y openssl-1.0.2k libselinux-utils \
-    logrotate python-setuptools python-backports \
-    python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs openssh-clients sudo
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* \
+    && sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+
+RUN yum makecache --refresh
+RUN yum install -y openssl-1.1.1k libselinux-utils \
+    logrotate python3-setuptools python2-backports \
+    python2-backports-ssl_match_hostname which cronie \
+    systemd-sysv initscripts openssh-clients sudo
+RUN yum install -y https://download-ib01.fedoraproject.org/pub/epel/8/Everything/$arch/Packages/t/tcp_wrappers-libs-7.6-96.el8.$arch.rpm
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
