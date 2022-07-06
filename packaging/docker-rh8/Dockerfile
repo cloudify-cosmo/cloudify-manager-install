@@ -14,8 +14,7 @@ RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* \
 
 RUN yum makecache --refresh
 RUN yum install -y openssl-1.1.1k libselinux-utils \
-    logrotate python3-setuptools python2-backports \
-    python2-backports-ssl_match_hostname which cronie \
+    logrotate python3-setuptools which cronie \
     systemd-sysv initscripts openssh-clients sudo
 RUN yum install -y https://download-ib01.fedoraproject.org/pub/epel/8/Everything/$arch/Packages/t/tcp_wrappers-libs-7.6-96.el8.$arch.rpm
 

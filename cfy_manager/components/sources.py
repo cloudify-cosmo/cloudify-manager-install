@@ -13,10 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+manager_rh8 = ['python3-psycopg2']
+manager_rh7 = ['python-psycopg2']
 manager = [
     'cloudify-management-worker', 'cloudify-rest-service',
-    'cloudify-cli', 'nginx',
-    'python-psycopg2', 'postgresql95', 'cloudify-agents',
+    'cloudify-cli', 'nginx', 'postgresql95', 'cloudify-agents',
     'patch', 'nodejs', 'cloudify-stage',
     'git'  # required for installing some Terraform modules
 ]

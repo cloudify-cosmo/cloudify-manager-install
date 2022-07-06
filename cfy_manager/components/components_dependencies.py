@@ -1,8 +1,10 @@
 DEPENDENCIES_ERROR_MESSAGES = {
     'sudo': 'necessary to run commands with root privileges',
     'openssl-1.0.2k': 'necessary for creating certificates',
+    'openssl-1.1.1k': 'necessary for creating certificates',
     'logrotate': 'used in Cloudify logs',
     'systemd-sysv': 'required to create Cloudify services',
+    'systemd': 'required to create Cloudify services',
     'initscripts': 'required by the RabbitMQ server',
     'sed': 'required by the CLI',
     'tar': 'required to untar packages',
@@ -10,6 +12,7 @@ DEPENDENCIES_ERROR_MESSAGES = {
     'python-setuptools': 'required by python',
     'python-backports': 'required by python',
     'python-backports-ssl_match_hostname': 'required by python',
+    'python3-setuptools': 'required by python',
 }
 
 COMPONENTS_DEPENDENCIES = {
@@ -28,6 +31,29 @@ COMPONENTS_DEPENDENCIES = {
     'RestService': ['systemd-sysv'],
     'Sanity': [],
     'Stage': ['systemd-sysv'],
+    'UsageCollector': [],
+    'Patch': [],
+    'Prometheus': [],
+    'Haveged': [],
+    'ExecutionScheduler': [],
+    'Rsyslog': [],
+}
+
+COMPONENTS_DEPENDENCIES_RH8 = {
+    'default': ['sudo', 'logrotate', 'yum', 'python3-setuptools'],
+    'Cli': ['sed'],
+    'Composer': ['systemd'],
+    'AmqpPostgres': ['systemd'],
+    'Manager': [],
+    'MgmtWorker': ['systemd'],
+    'Nginx': ['systemd', 'openssl-1.1.1k'],
+    'PostgresqlServer': ['systemd'],
+    'PostgresqlClient': [],
+    'Python': [],
+    'RabbitMQ': ['initscripts', 'systemd'],
+    'RestService': ['systemd'],
+    'Sanity': [],
+    'Stage': ['systemd'],
     'UsageCollector': [],
     'Patch': [],
     'Prometheus': [],
