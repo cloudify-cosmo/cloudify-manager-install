@@ -66,7 +66,19 @@ def main(new_manager, admin_password):
         'name': hostname,
         'host': manager.private_ip
     }, fail_silently=True)
-    for attr in ['private_ip', 'public_ip', 'networks']:
+
+    new_networks = manager.networks.copy()
+    for name, ip in new_networks.items():
+        if ip == manager.private_ip:
+            new_networks[name] = new_manager['private_ip']
+        elif ip == manager.public_ip:
+            new_networks[name] = new_manager['public_ip']
+    for name, ip in new_manager['networks'].items():
+        if name not in new_networks:
+            new_networks[name] = ip
+
+    manager.networks = new_networks
+    for attr in ['private_ip', 'public_ip']:
         setattr(manager, attr, new_manager[attr])
 
     sm.update(manager)
