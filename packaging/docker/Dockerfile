@@ -21,6 +21,8 @@ COPY $config /tmp/config.yaml
 # overhead for the image size, even smaller than `yum install $url`.
 # All of this is in a single RUN layer so that intermediate files don't
 # increase the image size.
+# In Aarch64 we don't do `yum autoremove` as it tries to remove kernel-core
+# and fails for some reason
 RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && yum install -y /tmp/cloudify-manager-install.rpm \
     && rm /tmp/cloudify-manager-install.rpm \

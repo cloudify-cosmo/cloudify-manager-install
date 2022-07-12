@@ -59,7 +59,6 @@ setup(
         'psutil==5.7.2',
         'requests>=2.18,<3.0.0',
         'retrying==1.3.3',
-        'psycopg2==2.9.3',
         'supervisor==4.2.2'
     ]
 )

@@ -15,8 +15,8 @@ RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* \
 RUN yum makecache --refresh
 RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools which cronie \
-    systemd-sysv initscripts openssh-clients sudo
-RUN yum install -y https://download-ib01.fedoraproject.org/pub/epel/8/Everything/$arch/Packages/t/tcp_wrappers-libs-7.6-96.el8.$arch.rpm
+    systemd-sysv initscripts openssh-clients sudo \
+    dbus-glib libnsl ncurses libpq compat-openssl10
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
@@ -25,6 +25,8 @@ COPY $config /tmp/config.yaml
 # overhead for the image size, even smaller than `yum install $url`.
 # All of this is in a single RUN layer so that intermediate files don't
 # increase the image size.
+# In Aarch64 we don't do `yum autoremove` as it tries to remove kernel-core
+# and fails for some reason
 RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && yum install -y /tmp/cloudify-manager-install.rpm \
     && rm /tmp/cloudify-manager-install.rpm \
