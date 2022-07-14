@@ -13,7 +13,6 @@ class Haveged(BaseComponent):
 
     def configure(self):
         if using_systemd_haveged():
-            logger.notice('Using system haveged')
             return
 
         logger.info('Configuring haveged for entropy generation.')
@@ -38,4 +37,10 @@ class Haveged(BaseComponent):
 
 def using_systemd_haveged():
     # On more complete installs of RHEL/Centos, haveged may already be running
-    return service.SystemD().is_installed('haveged')
+    if service.SystemD().is_installed(HAVEGED):
+        logger.notice('Using system haveged')
+        return True
+    if service.SystemD().is_active(HAVEGED):
+        logger.notice('System haveged active but disabled. Stopping it... ')
+        service.SystemD().stop(HAVEGED)
+    return False
