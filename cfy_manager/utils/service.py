@@ -161,7 +161,7 @@ class SystemD(object):
             'is-active',
             service_name,
             ignore_failure=True
-        ).aggr_stdout.strip()
+        ).aggr_stdout.strip().lower == 'active'
 
     def is_installed(self, service_name):
         enabled = self.systemctl(
