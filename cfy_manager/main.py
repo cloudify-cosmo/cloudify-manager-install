@@ -43,7 +43,9 @@ from .service_names import (
     STAGE,
     MAIN_SERVICES_NAMES,
 )
-from .components.validations import validate, validate_dependencies
+from .components.validations import (validate,
+                                     validate_dependencies,
+                                     _get_os_distro)
 from .config import config
 from .constants import (
     VERBOSE_HELP_MSG,
@@ -862,6 +864,12 @@ def _get_packages():
     # some of the specified packages don't exist.
     if service_is_in_config(MANAGER_SERVICE):
         manager_packages = sources.manager
+        # RedHat version-specific packages
+        _, rh_version = _get_os_distro()
+        if rh_version == "7":
+            manager_packages = manager_packages + sources.manager_rh7
+        elif rh_version == "8":
+            manager_packages = manager_packages + sources.manager_rh8
         # Premium components
         manager_packages += sources.manager_cluster + sources.manager_premium
         packages += manager_packages

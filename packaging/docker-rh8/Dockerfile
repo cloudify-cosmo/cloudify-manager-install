@@ -1,4 +1,4 @@
-FROM centos:7
+FROM registry.access.redhat.com/ubi8/ubi:8.0
 
 ARG rpm_file
 ARG config=config.yaml
@@ -9,10 +9,15 @@ ARG gid=1500
 RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
-RUN yum install -y openssl-1.0.2k libselinux-utils \
-    logrotate python-setuptools python-backports \
-    python-backports-ssl_match_hostname which cronie \
-    systemd-sysv initscripts tcp_wrappers-libs openssh-clients sudo
+RUN yum makecache --refresh
+RUN yum install -y https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/libnsl-2.28-189.5.el8_6.$arch.rpm \
+    https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/glibc-2.28-189.5.el8_6.$arch.rpm \
+    https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/glibc-common-2.28-189.5.el8_6.$arch.rpm \
+    https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/glibc-langpack-en-2.28-189.5.el8_6.$arch.rpm
+RUN yum install -y openssl-1.1.1k libselinux-utils \
+    logrotate python3-setuptools which cronie \
+    initscripts openssh-clients sudo \
+    dbus-glib ncurses libpq compat-openssl10
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml

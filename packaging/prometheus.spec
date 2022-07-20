@@ -1,5 +1,12 @@
 %define _tmpdir /tmp/prometheus
 %define _url    https://github.com/prometheus/prometheus/releases/download/v2.30.1/prometheus-2.30.1.linux-%{arch}.tar.gz
+
+# this prevents networkx<2 failure in RH8
+%if "%{dist}" != ".el7"
+%undefine __brp_mangle_shebangs
+%define _build_id_links none
+%endif
+
 Name:           prometheus
 Version:        2.30.1
 Release:        1%{?dist}
