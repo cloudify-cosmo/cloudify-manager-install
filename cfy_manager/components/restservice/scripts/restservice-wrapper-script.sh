@@ -10,7 +10,7 @@ mkdir -p /run/cloudify-restservice
 chown cfyuser. /run/cloudify-restservice
 chmod 755 /run/cloudify-restservice
 
-exec /opt/manager/env/bin/gunicorn \
+exec /opt/manager/env/bin/ddtrace-run /opt/manager/env/bin/gunicorn \
     -u cfyuser \
     -g cfyuser \
     --pid /run/cloudify-restservice/pid \
