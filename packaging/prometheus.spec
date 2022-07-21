@@ -1,9 +1,12 @@
 %define _tmpdir /tmp/prometheus
 %define _url    https://github.com/prometheus/prometheus/releases/download/v2.30.1/prometheus-2.30.1.linux-%{arch}.tar.gz
 
-# this prevents networkx<2 failure in RH8
+# Prevent mangling shebangs (RH8 build default), which fails
+#  with the test files of networkx<2 due to RH8 not having python2.
 %if "%{dist}" != ".el7"
 %undefine __brp_mangle_shebangs
+# Prevent creation of the build ids in /usr/lib, so we can still keep our RPM
+#  separate from the official RH supplied software (due to a change in RH8)
 %define _build_id_links none
 %endif
 
