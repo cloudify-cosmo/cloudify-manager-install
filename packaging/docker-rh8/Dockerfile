@@ -17,7 +17,7 @@ RUN yum install -y https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packag
 RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools which cronie \
     initscripts openssh-clients sudo \
-    dbus-glib ncurses libpq compat-openssl10
+    dbus-glib ncurses libpq compat-openssl10 iproute
 
 EXPOSE 80 443 5672 53333
 COPY $config /tmp/config.yaml
