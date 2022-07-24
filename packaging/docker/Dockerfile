@@ -35,6 +35,10 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
 COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
 RUN systemctl enable cloudify-starter.service
 
+# for CaaS image only
+RUN /opt/manager/env/bin/pip install --upgrade pip \
+    && /opt/manager/env/bin/pip install ddtrace
+
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
 RUN chmod a+wx /var/run
