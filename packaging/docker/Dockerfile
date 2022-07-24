@@ -21,6 +21,11 @@ COPY $config /tmp/config.yaml
 # overhead for the image size, even smaller than `yum install $url`.
 # All of this is in a single RUN layer so that intermediate files don't
 # increase the image size.
+
+# for CaaS image only
+RUN /opt/manager/env/bin/pip install --upgrade pip \
+    && /opt/manager/env/bin/pip install ddtrace
+
 RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && yum install -y /tmp/cloudify-manager-install.rpm \
     && rm /tmp/cloudify-manager-install.rpm \
@@ -34,10 +39,6 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
 
 COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
 RUN systemctl enable cloudify-starter.service
-
-# for CaaS image only
-RUN /opt/manager/env/bin/pip install --upgrade pip \
-    && /opt/manager/env/bin/pip install ddtrace
 
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
