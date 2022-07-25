@@ -352,11 +352,17 @@ class RestService(BaseComponent):
     def _replace_ca_certs_on_db(self):
         if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
             self._replace_manager_ca_on_db()
+            if os.path.exists(constants.NEW_INTERNAL_CA_KEY_FILE_PATH):
+                self._replace_manager_ca_key_on_db()
             if common.is_all_in_one_manager():
                 self._replace_rabbitmq_ca_on_db()
+                if os.path.exists(constants.NEW_INTERNAL_CA_KEY_FILE_PATH):
+                    self._replace_rabbitmq_ca_key_on_db()
                 return
         if os.path.exists(constants.NEW_BROKER_CA_CERT_FILE_PATH):
             self._replace_rabbitmq_ca_on_db()
+            if os.path.exists(constants.NEW_BROKER_CA_KEY_FILE_PATH):
+                self._replace_rabbitmq_ca_key_on_db()
 
     def _replace_manager_ca_on_db(self):
         cert_name = '{0}-ca'.format(config[MANAGER][HOSTNAME])
@@ -364,6 +370,15 @@ class RestService(BaseComponent):
         script_input = {
             'cert_path': constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
             'name': cert_name
+        }
+        self._run_replace_certs_on_db_script(script_input)
+
+    def _replace_manager_ca_key_on_db(self):
+        key_path = '{0}-ca-key'.format(config[MANAGER][HOSTNAME])
+        self._log_replacing_certs_on_db(key_path)
+        script_input = {
+            'cert_path': constants.NEW_INTERNAL_CA_KEY_FILE_PATH,
+            'name': key_path
         }
         self._run_replace_certs_on_db_script(script_input)
 
@@ -375,6 +390,17 @@ class RestService(BaseComponent):
         script_input = {
             'cert_path': cert_path,
             'name': 'rabbitmq-ca'
+        }
+        self._run_replace_certs_on_db_script(script_input)
+
+    def _replace_rabbitmq_ca_key_on_db(self):
+        self._log_replacing_certs_on_db('rabbitmq-ca-key')
+        key_path = (constants.NEW_INTERNAL_CA_KEY_FILE_PATH
+                    if common.is_all_in_one_manager()
+                    else constants.NEW_BROKER_CA_KEY_FILE_PATH)
+        script_input = {
+            'cert_path': key_path,
+            'name': 'rabbitmq-ca-key'
         }
         self._run_replace_certs_on_db_script(script_input)
 

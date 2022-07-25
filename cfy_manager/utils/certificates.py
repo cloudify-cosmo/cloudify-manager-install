@@ -479,9 +479,11 @@ def use_supplied_certificates(component_name,
     if component_name == SSL_INPUTS:
         if prefix == 'internal_':
             ca_path = 'ca_cert_path'
+            ca_key_path = 'ca_key_path'
             key_password = 'ca_key_password'
         elif prefix == 'external_':
             ca_path = prefix + 'ca_cert_path'
+            ca_key_path = prefix + 'ca_key_path'
 
     if just_ca_cert:
         ca_path = cert_path
