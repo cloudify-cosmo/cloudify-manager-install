@@ -14,11 +14,14 @@
 #  * limitations under the License.
 
 from ..components_dependencies import (
-    DEPENDENCIES_ERROR_MESSAGES, COMPONENTS_DEPENDENCIES)
+    DEPENDENCIES_ERROR_MESSAGES,
+    COMPONENTS_DEPENDENCIES,
+    COMPONENTS_DEPENDENCIES_RH8)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
 from ...utils import service
 from ...logger import get_logger
+from ..validations import _get_os_distro
 
 
 class BaseComponent(object):
@@ -69,6 +72,11 @@ class BaseComponent(object):
         dependencies_list = \
             COMPONENTS_DEPENDENCIES['default'] + \
             COMPONENTS_DEPENDENCIES[self.__class__.__name__]
+        _, rh_version = _get_os_distro()
+        if rh_version == "8":
+            dependencies_list = \
+                COMPONENTS_DEPENDENCIES_RH8['default'] + \
+                COMPONENTS_DEPENDENCIES_RH8[self.__class__.__name__]
         for dependency in dependencies_list:
             dependencies_dict.update({
                 dependency: DEPENDENCIES_ERROR_MESSAGES[dependency]})

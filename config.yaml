@@ -504,7 +504,7 @@ validations:
   supported_distros: [centos, redhat]
 
   # The supported versions of the above distros
-  supported_distro_versions: ['7']
+  supported_distro_versions: ['7', '8']
 
 ssl_inputs:
   external_cert_path: ''
