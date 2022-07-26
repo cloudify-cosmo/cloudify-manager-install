@@ -23,6 +23,8 @@ from ..exceptions import ValidationError
 
 logger = get_logger('Service')
 
+ACTIVE_STATES = ['running', 'active', 'activating']
+
 
 class UnixSocketHTTPConnection(httplib.HTTPConnection):
     def connect(self):
@@ -161,7 +163,7 @@ class SystemD(object):
             'is-active',
             service_name,
             ignore_failure=True
-        ).aggr_stdout.strip().lower() == 'active'
+        ).aggr_stdout.strip().lower() in ACTIVE_STATES
 
     def is_installed(self, service_name):
         enabled = self.systemctl(
@@ -258,7 +260,7 @@ class Supervisord(object):
         return self.supervisorctl(
             'status', service_name,
             ignore_failure=True
-        ).aggr_stdout.strip().split()[1].lower()
+        ).aggr_stdout.strip().split()[1].lower() in ACTIVE_STATES
 
     def is_installed(self, service_name):
         status = self.supervisorctl(
