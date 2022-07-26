@@ -973,7 +973,8 @@ class PostgresqlServer(BaseComponent):
             os.path.join(SCRIPTS_PATH, 'patroni_startup_check'),
             '/opt/patroni/bin/patroni_startup_check',
             additional_render_context={
-                'service_manager': self.service_type
+                'service_manager': self.service_type,
+                'config_files': config['config_files'],
             }
         )
         common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
