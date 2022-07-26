@@ -182,7 +182,7 @@ class Stage(BaseComponent):
             if isfile(excluded_file):
                 common.chown(STAGE_USER, STAGE_GROUP, excluded_file)
 
-    def configure(self, config_file=None):
+    def configure(self):
         logger.notice('Configuring Stage...')
         self.set_db_url()
         self._set_internal_manager_ip()

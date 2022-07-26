@@ -30,7 +30,7 @@ class UsageCollector(BaseComponent):
         self._deploy_collector_scripts()
         logger.notice('Usage Collector successfully installed')
 
-    def configure(self, config_file=None):
+    def configure(self):
         if self._validate_crontab_accessible():
             logger.notice('Configuring Usage Collector...')
             common.mkdir(LOG_DIR)

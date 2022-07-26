@@ -67,7 +67,7 @@ class Sanity(BaseComponent):
         self._clean_sanity()
         logger.notice('Sanity completed successfully')
 
-    def configure(self, config_file=None):
+    def configure(self):
         # This is start-like, but should only happen at install time, so it
         # is using configure instead
         if len(get_managers()) > 1:

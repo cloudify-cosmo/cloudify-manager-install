@@ -25,7 +25,7 @@ logger = get_logger(AMQP_POSTGRES)
 class AmqpPostgres(BaseComponent):
     services = {'cloudify-amqp-postgres': {'is_group': False}}
 
-    def configure(self, config_file=None):
+    def configure(self):
         logger.notice('Configuring AMQP-Postgres...')
         service.configure('cloudify-amqp-postgres')
         logger.notice('AMQP-Postgres successfully configured')

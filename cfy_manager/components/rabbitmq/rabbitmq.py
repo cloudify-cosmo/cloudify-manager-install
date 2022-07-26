@@ -637,7 +637,7 @@ class RabbitMQ(BaseComponent):
         # As it is changing group we run this as root
         common.add_cron_job(time_string, command, comment, 'root')
 
-    def configure(self, config_file=None):
+    def configure(self):
         logger.notice('Configuring RabbitMQ...')
         syslog.deploy_rsyslog_filters('rabbitmq', ['cloudify-rabbitmq'],
                                       self.service_type, logger)

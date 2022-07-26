@@ -164,7 +164,7 @@ class Composer(BaseComponent):
             if isfile(excluded_file):
                 common.chown(COMPOSER_USER, COMPOSER_GROUP, excluded_file)
 
-    def configure(self, config_file=None):
+    def configure(self):
         logger.notice('Configuring Cloudify Composer...')
         syslog.deploy_rsyslog_filters('composer', ['cloudify-composer'],
                                       self.service_type, logger)

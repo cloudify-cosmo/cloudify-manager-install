@@ -34,7 +34,7 @@ class BaseComponent(object):
     def install(self):
         pass
 
-    def configure(self, config_file=None):
+    def configure(self):
         pass
 
     def configure_service(self, service_name, service_config=None):

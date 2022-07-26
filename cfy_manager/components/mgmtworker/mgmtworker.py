@@ -87,7 +87,7 @@ class MgmtWorker(BaseComponent):
         self._deploy_admin_token()
         super(MgmtWorker, self).upgrade()
 
-    def configure(self, config_file=None):
+    def configure(self):
         logger.notice('Configuring Management Worker...')
         self._deploy_hooks_config()
         service.configure('cloudify-mgmtworker')

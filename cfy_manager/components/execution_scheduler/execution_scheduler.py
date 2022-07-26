@@ -10,7 +10,7 @@ logger = get_logger(EXECUTION_SCHEDULER)
 class ExecutionScheduler(BaseComponent):
     services = {'cloudify-execution-scheduler': {'is_group': False}}
 
-    def configure(self, config_file=None, upgrade=False):
+    def configure(self, upgrade=False):
         logger.notice('Configuring execution scheduler...')
         service.configure('cloudify-execution-scheduler')
         logger.notice('Execution scheduler successfully configured')

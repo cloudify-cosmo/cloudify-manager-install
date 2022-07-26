@@ -160,7 +160,7 @@ class Prometheus(BaseComponent):
             logger.notice(
                 'Successfully removed Prometheus and exporters files')
 
-    def configure(self, config_file=None):
+    def configure(self):
         logger.notice('Configuring Prometheus Service...')
         handle_certs()
         _create_prometheus_directories()
