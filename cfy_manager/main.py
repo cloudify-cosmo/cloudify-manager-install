@@ -962,7 +962,7 @@ def install(verbose=False,
 
     if not only_install:
         for component in components:
-            component.configure()
+            component.configure(config_file=config_file or USER_CONFIG_PATH)
 
     config[UNCONFIGURED_INSTALL] = only_install
     logger.notice('Installation finished successfully!')
@@ -1007,7 +1007,7 @@ def configure(verbose=False,
         _configure_supervisord()
 
     for component in components:
-        component.configure()
+        component.configure(config_file=config_file)
 
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')

@@ -11,7 +11,7 @@ class Haveged(BaseComponent):
     component_name = HAVEGED
     services = {'haveged': {'is_group': False}}
 
-    def configure(self):
+    def configure(self, config_file=None):
         if using_systemd_haveged():
             return
 

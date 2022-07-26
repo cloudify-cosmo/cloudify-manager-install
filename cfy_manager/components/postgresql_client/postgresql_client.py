@@ -173,7 +173,7 @@ class PostgresqlClient(BaseComponent):
             validate_certificates(
                 cert_filename, key_filename, ca_filename, ca_key_filename)
 
-    def configure(self):
+    def configure(self, config_file=None):
         logger.notice('Configuring PostgreSQL Client...')
         self.create_postgres_pgpass_files()
         self._configure_ssl()

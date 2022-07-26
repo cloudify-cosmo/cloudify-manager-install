@@ -468,7 +468,7 @@ class Nginx(BaseComponent):
         set_logrotate(NGINX)
         logger.notice('NGINX successfully installed')
 
-    def configure(self):
+    def configure(self, config_file=None):
         logger.notice('Configuring NGINX...')
         if self.service_type == 'supervisord':
             self._configure_wait_on_restart_wrapper_service()

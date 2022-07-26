@@ -13,7 +13,7 @@ logger = get_logger('rsyslog')
 class Rsyslog(BaseComponent):
     component_name = 'rsyslog'
 
-    def configure(self):
+    def configure(self, config_file=None):
         if syslog.using_systemd_rsyslog():
             logger.notice('Using system rsyslog')
             return

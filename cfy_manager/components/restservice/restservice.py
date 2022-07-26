@@ -501,7 +501,7 @@ class RestService(BaseComponent):
                     config[MANAGER][HOSTNAME]))
         self._run_cluster_configuration_script(not to_join)
 
-    def configure(self):
+    def configure(self, config_file=None):
         logger.notice('Configuring Rest Service...')
 
         self.configure_service('cloudify-restservice')

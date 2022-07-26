@@ -104,7 +104,7 @@ class Manager(BaseComponent):
         self._create_manager_resources_dirs()
         logger.notice('Cloudify Manager resources successfully installed!')
 
-    def configure(self):
+    def configure(self, config_file=None):
         logger.notice('Configuring Cloudify Manager resources...')
         self._prepare_certificates()
         logger.notice('Cloudify Manager resources successfully configured!')

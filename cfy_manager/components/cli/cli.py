@@ -49,7 +49,7 @@ class Cli(BaseComponent):
 
         common.run([cmd], shell=True)
 
-    def configure(self):
+    def configure(self, config_file=None):
         logger.notice('Configuring Cloudify CLI...')
         username = config[MANAGER][SECURITY]['admin_username']
         password = config[MANAGER][SECURITY]['admin_password']

@@ -665,7 +665,7 @@ class PostgresqlServer(BaseComponent):
                 new_ca_key_location=constants.NEW_POSTGRESQL_CA_KEY_FILE_PATH
             )
 
-    def _configure_cluster(self):
+    def _configure_cluster(self, config_file):
         logger.info('Disabling postgres (will be managed by patroni)')
         service.stop(POSTGRES_SERVICE_NAME)
         service.disable(POSTGRES_SERVICE_NAME)
@@ -678,7 +678,7 @@ class PostgresqlServer(BaseComponent):
         common.chmod('a-x', '/var/lib/patroni')
 
         logger.info('Deploying patroni initial startup monitor.')
-        self._deploy_patroni_startup_check()
+        self._deploy_patroni_startup_check(config_file)
 
         logger.info('Deploying cluster config files.')
         self._create_patroni_config(PATRONI_CONFIG_PATH)
@@ -968,12 +968,13 @@ class PostgresqlServer(BaseComponent):
 
         return etcd_members
 
-    def _deploy_patroni_startup_check(self):
+    def _deploy_patroni_startup_check(self, config_file):
         files.deploy(
             os.path.join(SCRIPTS_PATH, 'patroni_startup_check'),
             '/opt/patroni/bin/patroni_startup_check',
             additional_render_context={
-                'service_manager': self.service_type
+                'service_manager': self.service_type,
+                'config_file': ','.join(config_file),
             }
         )
         common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
@@ -1686,11 +1687,11 @@ class PostgresqlServer(BaseComponent):
                 )
             )
 
-    def configure(self):
+    def configure(self, config_file=None):
         logger.notice('Configuring PostgreSQL Server...')
         self._configure_postgresql_server_service()
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
-            self._configure_cluster()
+            self._configure_cluster(config_file)
             service.remove(POSTGRES_SERVICE_NAME)
         else:
             self._init_postgresql_server()
