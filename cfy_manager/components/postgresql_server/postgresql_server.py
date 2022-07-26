@@ -407,9 +407,7 @@ class PostgresqlServer(BaseComponent):
         return delim
 
     def _etcd_is_running(self):
-        status = service.is_active('etcd')
-        # Add new status 'running' for supervisord
-        return status in ('running', 'active', 'activating')
+        return service.is_active('etcd')
 
     def _start_etcd(self):
         # On the first node, etcd start via systemd will fail because of the
