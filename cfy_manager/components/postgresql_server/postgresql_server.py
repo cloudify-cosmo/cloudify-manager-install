@@ -974,7 +974,7 @@ class PostgresqlServer(BaseComponent):
             '/opt/patroni/bin/patroni_startup_check',
             additional_render_context={
                 'service_manager': self.service_type,
-                'config_file': ','.join(config['config_files']),
+                'config_files': config['config_files'],
             }
         )
         common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
