@@ -10,7 +10,7 @@ mkdir -p /run/cloudify-api
 chown cfyuser. /run/cloudify-api
 chmod 755 /run/cloudify-api
 
-exec /opt/manager/env/bin/gunicorn \
+exec /opt/manager/env/bin/ddtrace-run /opt/manager/env/bin/gunicorn \
     -k uvicorn.workers.UvicornWorker \
     -u cfyuser \
     -g cfyuser \
