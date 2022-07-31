@@ -92,6 +92,7 @@ class Config(CommentedMap):
                 raise ValidationError(
                     'Expected configuration files to be in {0}, but '
                     'got: {1}'.format(CLOUDIFY_HOME_DIR, config_file))
+        self['config_files'] = config_files
 
     def _sanitized_config_path(self, file_path):
         """Returns a file path in the CLOUDIFY_HOME_DIR or None."""

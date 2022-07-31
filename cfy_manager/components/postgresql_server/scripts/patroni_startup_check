@@ -30,7 +30,7 @@ check_and_maybe_fix_patroni() {
     echo "$(date): Initial startup is unhealthy, restarting and reinitializing." >> /var/log/cloudify/db_cluster/patroni/startup_check.log
     # ...so we will restart it and then ensure this node is properly repaired.
     run_service_command restart patroni
-    cfy_manager dbs reinit -a ${NODE_IP}
+    cfy_manager dbs reinit {% for config_file in config_files %} -c {{ config_file }}{% endfor %} -a ${NODE_IP}
   fi
 }
 
