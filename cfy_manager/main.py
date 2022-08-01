@@ -765,17 +765,16 @@ def _get_components(include_components=None,
             components.Cli(),
             components.AmqpPostgres(),
             components.MgmtWorker(),
-            components.Stage(),
-            components.ExecutionScheduler(),
         ]
+        if not config[STAGE]['skip_installation']:
+            _components += [components.Stage()]
         if (
             is_premium_installed()
             and not config[COMPOSER]['skip_installation']
         ):
-            _components += [
-                components.Composer(),
-            ]
+            _components += [components.Composer()]
         _components += [
+            components.ExecutionScheduler(),
             components.UsageCollector(),
         ]
 
