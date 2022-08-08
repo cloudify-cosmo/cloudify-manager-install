@@ -34,6 +34,7 @@ from .components_constants import (
 from .components.globals import set_globals
 from cfy_manager.utils.common import output_table
 from .service_names import (
+    CLI,
     COMPOSER,
     MANAGER,
     POSTGRESQL_SERVER,
@@ -762,7 +763,6 @@ def _get_components(include_components=None,
             components.PostgresqlClient(),
             components.RestService(),
             components.Nginx(),
-            components.Cli(),
             components.AmqpPostgres(),
             components.MgmtWorker(),
         ]
@@ -777,6 +777,8 @@ def _get_components(include_components=None,
             components.ExecutionScheduler(),
             components.UsageCollector(),
         ]
+        if not config[CLI]['skip_installation']:
+            _components += [components.Cli()]
 
     if check(MONITORING_SERVICE):
         _components += [components.Prometheus()]
