@@ -11,10 +11,6 @@ manager:
   # If no hostname is supplied it will be read from /etc/hostname
   hostname: ''
 
-  # Provide an IP or hostname to be used in the local CLI profile on the manager.
-  # This might be useful when providing an external certificate.
-  cli_local_profile_host_name: ''
-
   ######################################################################################
   #
   # As long as you have set the config entries above, you can install the manager with:
@@ -35,6 +31,16 @@ manager:
   # A path to a Cloudify license to be uploaded on the Manager during installation
   # For clusters this must be supplied, and will only be used, on the first manager
   cloudify_license_path: ''
+
+
+cli:
+  # If set to true, Cloudify CLI will not be installed
+  skip_installation: false
+
+  # Provide an IP or hostname to be used in the local CLI profile on the manager.
+  # This might be useful when providing an external certificate.
+  local_profile_host_name: ''
+
 
 provider_context:
   policy_engine:
