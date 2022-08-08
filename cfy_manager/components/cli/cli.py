@@ -56,7 +56,7 @@ class Cli(BaseComponent):
 
         current_user = getuser()
 
-        manager = config[MANAGER]['cli_local_profile_host_name']
+        manager = _local_profile_host_name()
         if not manager:
             manager = config[MANAGER]['private_ip']
 
@@ -103,7 +103,7 @@ class Cli(BaseComponent):
                            proc.returncode)
 
     def remove(self, silent=False):
-        profile_name = config[MANAGER]['cli_local_profile_host_name']
+        profile_name = _local_profile_host_name()
         try:
             logger.notice('Removing CLI profile for root user...')
             self._remove_profile(profile_name)
@@ -120,3 +120,9 @@ class Cli(BaseComponent):
                                'installed due to an error; skipping')
             else:
                 raise
+
+
+def _local_profile_host_name():
+    if 'local_profile_host_name' in config.get(CLI, {}):
+        return config[CLI]['local_profile_host_name']
+    return config[MANAGER]['cli_local_profile_host_name']
