@@ -123,6 +123,8 @@ class Cli(BaseComponent):
 
 
 def _local_profile_host_name():
-    if 'local_profile_host_name' in config.get(CLI, {}):
-        return config[CLI]['local_profile_host_name']
-    return config[MANAGER]['cli_local_profile_host_name']
+    try:
+        hostname = config[CLI]['local_profile_host_name']
+    except KeyError:
+        hostname = None
+    return hostname or config[MANAGER].get('cli_local_profile_host_name')
