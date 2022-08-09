@@ -127,4 +127,4 @@ def _local_profile_host_name():
         hostname = config[CLI]['local_profile_host_name']
     except KeyError:
         hostname = None
-    return hostname or config[MANAGER]['cli_local_profile_host_name']
+    return hostname or config[MANAGER].get('cli_local_profile_host_name')
