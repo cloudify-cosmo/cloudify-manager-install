@@ -5,7 +5,7 @@ SERVICE_MANAGER="{{service_manager}}"
 check_patroni_log() {
   patroni_message=${1}
   if [[ "${SERVICE_MANAGER}" == "supervisord" ]]; then
-       tail /var/log/cloudify/db_cluster/patroni.log | grep "${patroni_message}"
+       tail /var/log/cloudify/db_cluster/patroni/patroni.log | grep "${patroni_message}"
   else
        journalctl -u patroni | tail | grep "${patroni_message}"
   fi
