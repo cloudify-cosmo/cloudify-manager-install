@@ -96,7 +96,7 @@ class RestService(BaseComponent):
     def _deploy_rest_conf(self):
         client_conf = config[POSTGRESQL_CLIENT]
         rest_conf = {
-            'postgresql_bin_path': '/usr/pgsql-9.5/bin/',
+            'postgresql_bin_path': '/usr/pgsql-14/bin/',
             'postgresql_db_name': client_conf['cloudify_db_name'],
             'postgresql_host': get_postgres_host(),
             'postgresql_username': client_conf['cloudify_username'],

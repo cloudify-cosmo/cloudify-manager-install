@@ -59,7 +59,7 @@ from ...utils import (
 POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
-POSTGRES_SERVICE_NAME = 'postgresql-9.5'
+POSTGRES_SERVICE_NAME = 'postgresql-14'
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 
 # Etcd used only in clusters
@@ -71,8 +71,8 @@ LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL_SERVER)
 
 PGSQL_SOCK_DIR = '/var/run/postgresql'
 PGSQL_LIB_DIR = '/var/lib/pgsql'
-PGSQL_USR_DIR = '/usr/pgsql-9.5'
-PGSQL_DATA_DIR = '/var/lib/pgsql/9.5/data'
+PGSQL_USR_DIR = '/usr/pgsql-14'
+PGSQL_DATA_DIR = '/var/lib/pgsql/14/data'
 PG_HBA_CONF = '{0}/pg_hba.conf'.format(PGSQL_DATA_DIR)
 PG_BASE_CONF_PATH = '{0}/postgresql.conf'.format(PGSQL_DATA_DIR)
 PG_CONF_PATH = '{0}/cloudify-postgresql.conf'.format(PGSQL_DATA_DIR)
@@ -100,19 +100,19 @@ PATRONI_DATA_DIR = '/var/lib/patroni/data'
 PATRONI_CONFIG_PATH = '/etc/patroni.conf'
 PATRONI_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/patroni')
 POSTGRES_LOG_PATH = join(constants.BASE_LOG_DIR, 'db_cluster/postgres')
-POSTGRES_PATRONI_CONFIG_PATH = '/var/lib/pgsql/9.5/data/pg_patroni_base.conf'
+POSTGRES_PATRONI_CONFIG_PATH = '/var/lib/pgsql/14/data/pg_patroni_base.conf'
 
 # Postgres bin files needing symlinking for patroni
-PG_BIN_DIR = '/usr/pgsql-9.5/bin'
+PG_BIN_DIR = '/usr/pgsql-14/bin'
 PG_BINS = [
-    'clusterdb', 'createdb', 'createlang', 'createuser', 'dropdb', 'droplang',
-    'dropuser', 'pg_archivecleanup', 'pg_basebackup', 'pg_config', 'pg_dump',
-    'pg_dumpall', 'pg_isready', 'pg_receivexlog', 'pg_restore', 'pg_rewind',
-    'pg_test_fsync', 'pg_test_timing', 'pg_upgrade', 'pg_xlogdump', 'pgbench',
-    'psql', 'reindexdb', 'vacuumdb', 'oid2name', 'pg_recvlogical',
-    'pg_standby', 'vacuumlo', 'initdb', 'pg_controldata', 'pg_ctl',
-    'pg_resetxlog', 'postgres', 'postgresql95-check-db-dir',
-    'postgresql95-setup', 'postmaster', 'ecpg'
+    'clusterdb', 'createdb', 'createuser', 'dropdb', 'dropuser',
+    'pg_amcheck', 'pg_archivecleanup', 'pg_basebackup', 'pg_checksums',
+    'pg_config', 'pg_controldata', 'pg_ctl', 'pg_dump', 'pg_dumpall',
+    'pg_isready', 'pg_receivewal', 'pg_recvlogical', 'pg_resetwal',
+    'pg_restore', 'pg_rewind', 'pg_test_fsync', 'pg_test_timing', 'pg_upgrade',
+    'pg_verifybackup', 'pg_waldump', 'pgbench', 'postgres',
+    'postgresql-14-check-db-dir', 'postgresql-14-setup', 'postmaster', 'psql',
+    'reindexdb', 'vacuumdb', 'vacuumlo',
 ]
 
 PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
@@ -145,12 +145,12 @@ class PostgresqlServer(BaseComponent):
             logger.debug('PostreSQL Server DATA folder already initialized...')
 
         logger.debug('Setting PostgreSQL Server logs path...')
-        ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
+        pg_14_logs_path = join(PGSQL_LIB_DIR, '14', 'data', 'pg_log')
         common.mkdir(LOG_DIR)
         common.chown(POSTGRES_USER, 'cfylogs', LOG_DIR)
         common.chmod('750', LOG_DIR)
-        if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
-            files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
+        if not isdir(pg_14_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
+            files.ln(source=pg_14_logs_path, target=LOG_DIR, params='-s')
 
         common.mkdir(PGSQL_SOCK_DIR)
         common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
@@ -1720,8 +1720,8 @@ class PostgresqlServer(BaseComponent):
             ])
         logger.notice('Removing PostgreSQL...')
         files.remove_files([
-            '/var/lib/pgsql/9.5/data',
-            '/var/lib/pgsql/9.5/backups'  # might be missing
+            '/var/lib/pgsql/14/data',
+            '/var/lib/pgsql/14/backups'  # might be missing
         ], ignore_failure=True)
         files.remove_notice(POSTGRESQL_SERVER)
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
