@@ -17,7 +17,7 @@ manager_rh8 = ['python3-psycopg2']
 manager_rh7 = ['python-psycopg2']
 manager = [
     'cloudify-management-worker', 'cloudify-rest-service',
-    'cloudify-cli', 'nginx', 'postgresql95', 'cloudify-agents',
+    'cloudify-cli', 'nginx', 'postgresql14', 'cloudify-agents',
     'patch', 'nodejs', 'cloudify-stage',
     'git'  # required for installing some Terraform modules
 ]
@@ -25,7 +25,10 @@ manager_premium = [
     'cloudify-premium', 'cloudify-composer'
 ]
 manager_cluster = []
-db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
+db = [
+    'postgresql14', 'postgresql14-server', 'postgresql14-contrib',
+    'libxslt', 'libicu',
+]
 db_cluster = [
     'libestr', 'libfastjson', 'etcd', 'patroni'
 ]
