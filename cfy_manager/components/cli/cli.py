@@ -103,16 +103,15 @@ class Cli(BaseComponent):
                            proc.returncode)
 
     def remove(self, silent=False):
-        profile_name = _local_profile_host_name()
         try:
             logger.notice('Removing CLI profile for root user...')
-            self._remove_profile(profile_name)
+            self._remove_profile(PROFILE_NAME)
 
             current_user = getuser()
             if current_user != 'root':
                 logger.notice('Removing CLI profile for %s user...',
                               current_user)
-                self._remove_profile(profile_name, as_user=current_user)
+                self._remove_profile(PROFILE_NAME, as_user=current_user)
         except OSError as ex:
             if ex.errno == errno.ENOENT:
                 logger.warning('Could not find the `cfy` executable; it has '
