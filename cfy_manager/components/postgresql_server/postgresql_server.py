@@ -474,6 +474,7 @@ class PostgresqlServer(BaseComponent):
             pg_conf = config[POSTGRESQL_SERVER]
             password = pg_conf['cluster']['etcd'][username + '_password']
             env['ETCDCTL_USERNAME'] = username + ':' + password
+        env['ETCDCTL_API'] = '2'
         return common.run(
             etcdctl_base_command + command,
             ignore_failures=ignore_failures,
