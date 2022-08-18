@@ -628,7 +628,7 @@ class RabbitMQ(BaseComponent):
     def _activate_crash_log_permissions_fixup(self):
         time_string = '* * * * *'
         command = (
-            '/usr/bin/find /var/log/cloudify/rabbitmq/log '
+            '/usr/bin/find /var/log/cloudify/rabbitmq '
             '! -group cfylogs '  # Don't update perms unneccessarily
             '-exec /usr/bin/chgrp cfylogs {} \\; '
             '> /dev/null'  # Don't pollute root's mail with cron
