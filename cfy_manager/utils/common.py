@@ -13,7 +13,6 @@ from datetime import datetime
 
 import argh
 
-from .._compat import text_type
 from ..config import config
 from ..logger import get_logger
 from ..exceptions import ProcessExecutionError
@@ -42,7 +41,7 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
         command = shlex.split(command)
     stderr = stderr or subprocess.PIPE
     stdout = stdout or subprocess.PIPE
-    if isinstance(stdin, text_type):
+    if isinstance(stdin, str):
         stdin = stdin.encode('utf-8')
     if env:
         env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}

@@ -1,9 +1,10 @@
-import os
-import shutil
-import re
 import json
-from tempfile import mkstemp
+import os
+import re
+import shutil
+from io import StringIO
 from os.path import join
+from tempfile import mkstemp
 
 from jinja2 import Environment, FileSystemLoader
 from ruamel.yaml import YAML
@@ -11,9 +12,7 @@ from ruamel.yaml.error import YAMLError
 
 from .common import (run, copy, remove, chown,
                      ensure_destination_dir_exists)
-
 from .. import constants
-from .._compat import StringIO
 from ..config import config
 from ..logger import get_logger
 

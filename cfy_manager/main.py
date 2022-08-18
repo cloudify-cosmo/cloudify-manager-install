@@ -99,7 +99,7 @@ from cfy_manager.utils.install_state import (
     get_configured_services,
     get_installed_services,
 )
-from ._compat import xmlrpclib
+import xmlrpc.client
 
 logger = get_logger('Main')
 
@@ -1223,12 +1223,12 @@ def _is_unit_finished(unit_name='cloudify-starter.service'):
 
 
 def _get_starter_service_response():
-    server = xmlrpclib.Server(
+    server = xmlrpc.client.Server(
         'http://',
         transport=service.UnixSocketTransport("/var/run/supervisord.sock"))
     try:
         status_response = server.supervisor.getProcessInfo(STARTER_SERVICE)
-    except xmlrpclib.Fault as e:
+    except xmlrpc.client.Fault as e:
         raise BootstrapError(
             'Error {0} while trying to lookup {1}'.format(e, STARTER_SERVICE)
         )
