@@ -19,8 +19,10 @@ import base64
 from time import sleep
 from tempfile import mkstemp
 from ipaddress import ip_address
+from urllib.error import HTTPError
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
-from .._compat import HTTPError, Request, urlopen, urlparse
 from ..exceptions import NetworkError
 from ..service_names import MANAGER
 

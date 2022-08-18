@@ -8,8 +8,7 @@ import shutil
 import tarfile
 import requests
 from ruamel.yaml import YAML
-
-from cfy_manager._compat import urlopen
+from urllib.request import urlopen
 
 PLUGINS_TO_BUNDLE = ['vSphere',
                      'OpenStack',

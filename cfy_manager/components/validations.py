@@ -29,7 +29,6 @@ from ..service_names import (
     MANAGER_SERVICE
 )
 
-from .._compat import PY2
 from ..config import config
 from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
@@ -104,11 +103,7 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
     logger.info('Validating IP address...')
 
     try:
-        if PY2:
-            # ip_address() requires a unicode string
-            ip_address(u'{0}'.format(ip_to_validate))
-        else:
-            ip_address(ip_to_validate)
+        ip_address(ip_to_validate)
     except ValueError:
         logger.debug('Failed creating an IP address from "{}"'.format(
             ip_to_validate), exc_info=True)
@@ -508,7 +503,7 @@ def _validate_postgres_azure_configuration():
     ]
     if any(condition) and not all(condition):
         raise ValidationError(
-            'It appears you are tyring to connect to Azure DBaaS.\n'
+            'It appears you are trying to connect to Azure DBaaS.\n'
             'When doing so, make sure both "server_username" and "username" '
             'under "postgresql_client" are set with the relevant Azure domain'
         )

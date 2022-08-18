@@ -1,38 +1,38 @@
+import http.client
 import socket
-from os.path import exists, join
+import xmlrpc.client
 from functools import partial
+from os.path import exists, join
 
 from retrying import retry
 
-from .files import deploy
 from .common import (
     chown,
     remove as remove_file,
     run,
 )
-
+from .files import deploy
 from ..config import config
-from .._compat import httplib, xmlrpclib
-from ..logger import get_logger
 from ..constants import (
     COMPONENTS_DIR,
     CLOUDIFY_USER,
     CLOUDIFY_GROUP
 )
 from ..exceptions import ValidationError
+from ..logger import get_logger
 
 logger = get_logger('Service')
 
 ACTIVE_STATES = ['running', 'active', 'activating']
 
 
-class UnixSocketHTTPConnection(httplib.HTTPConnection):
+class UnixSocketHTTPConnection(http.client.HTTPConnection):
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(self.host)
 
 
-class UnixSocketTransport(xmlrpclib.Transport, object):
+class UnixSocketTransport(xmlrpc.client.Transport, object):
     def __init__(self, path):
         super(UnixSocketTransport, self).__init__()
         self._path = path
@@ -171,7 +171,7 @@ class SystemD(object):
             service_name,
             ignore_failure=True
         ).aggr_stdout.strip()
-        # We actually have the servies installed on yum install, but what we
+        # We actually have the services installed on yum install, but what we
         # care about where we use this function is whether we're using it-
         # and in that case it'll be enabled.
         return enabled.strip().lower() == 'enabled'
