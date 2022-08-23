@@ -303,8 +303,10 @@ class PostgresqlServer(BaseComponent):
                 ) + '\n')
                 # This will require the client to supply a certificate as well
                 if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
-                    f.write('hostssl all all 0.0.0.0/0 md5 clientcert=1\n')
-                    f.write('hostssl all all ::0/0 md5 clientcert=1\n')
+                    f.write('hostssl all all 0.0.0.0/0 md5 '
+                            'clientcert=verify-full\n')
+                    f.write('hostssl all all ::0/0 md5 '
+                            'clientcert=verify-full\n')
                 else:
                     f.write('hostssl all all 0.0.0.0/0 md5\n')
                     f.write('hostssl all all ::0/0 md5\n')
@@ -998,10 +1000,12 @@ class PostgresqlServer(BaseComponent):
                 self._get_monitoring_user_hba_entry(node['ip']))
         hba_entries.extend([
             'hostssl all all 0.0.0.0/0 md5{0}'.format(
-                ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
+                ' clientcert=verify-full'
+                if pgsrv['ssl_client_verification'] else '',
             ),
             'hostssl all all ::0/0 md5{0}'.format(
-                ' clientcert=1' if pgsrv['ssl_client_verification'] else '',
+                ' clientcert=verify-full'
+                if pgsrv['ssl_client_verification'] else '',
             ),
         ])
 
