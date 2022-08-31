@@ -247,9 +247,12 @@ ls -la .
 pushd packaging/docker
   docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm --tag ${env.IMAGE_NAME} .
 popd
+pushd jenkins/Dockerfiles/test
+  docker build -t test-manager-image .
+popd
 echo 'Run manager container'
 set -eux
-docker run --name ${env.CONTAINER_NAME} -d ${env.IMAGE_NAME}
+docker run --name ${env.CONTAINER_NAME} -d test-manager-image
 echo "Waiting for ${env.CONTAINER_NAME} to start"
 docker exec ${env.CONTAINER_NAME} cfy_manager wait-for-starter
 echo 'Check Manager status'
