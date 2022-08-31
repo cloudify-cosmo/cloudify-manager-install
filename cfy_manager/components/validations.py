@@ -243,7 +243,7 @@ def _validate_user_has_sudo_permissions():
     logger.info('Validating user `{0}` has sudo permissions...'.format(
         current_user
     ))
-    result = run(['/usr/bin/sudo', '-n', 'true'])
+    result = run(['/usr/bin/sudo', '-n', '/bin/true'])
     if result.returncode != 0:
         _errors.append(
             "Failed executing 'sudo'. Please ensure that the "
