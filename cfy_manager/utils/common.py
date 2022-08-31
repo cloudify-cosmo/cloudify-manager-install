@@ -84,7 +84,7 @@ def cfy(*command, **kwargs):
     if as_user:
         base = ['sudo', '-E', '-u', as_user]
 
-    base.append('cfy')
+    base.append('/usr/bin/cfy')
     try:
         return run(base + list(command), env=env, **kwargs)
     except ProcessExecutionError as e:
