@@ -240,10 +240,8 @@ def _validate_inputs():
 
 def _validate_user_has_sudo_permissions():
     current_user = getuser()
-    logger.info('Validating user `{0}` has sudo permissions...'.format(
-        current_user
-    ))
-    result = run(['/usr/bin/sudo', '-n', '/bin/true'])
+    logger.info('Validating user `%s` has sudo permissions...', current_user)
+    result = run(['/usr/bin/sudo', '--validate'])
     if result.returncode != 0:
         _errors.append(
             "Failed executing 'sudo'. Please ensure that the "
