@@ -54,14 +54,12 @@ class Composer(BaseComponent):
             logger.debug('Joining cluster - not creating the composer db')
             return
         backend_dir = join(HOME_DIR, 'backend')
-        npm_path = join('/usr', 'bin', 'npm')
         common.run(
             [
-                '/usr/bin/sudo', '-u', COMPOSER_USER, 'bash', '-c',
-                'cd {path}; {npm} run db-migrate'.format(
-                    path=backend_dir,
-                    npm=npm_path,
-                ),
+                '/usr/bin/sudo', '-u', COMPOSER_USER, '/usr/bin/bash', '-c',
+                # PATH can be empty, but npm internally requires /usr/bin
+                'cd {path}; PATH=/usr/bin npm run db-migrate'
+                .format(path=backend_dir),
             ],
         )
 
