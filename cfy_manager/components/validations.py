@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import platform
 import netifaces
@@ -241,6 +242,32 @@ def _validate_inputs():
                     flag=inp.flag
                 )
             )
+
+
+def _validate_env():
+    """Check that the process env is as expected by the validations config.
+
+    In the config, validations.expected_env is a dict of envvar names to
+    patterns, or to lists of patterns. Check that each envvar's value
+    contains that pattern, or in case of a list: all the patterns.
+    """
+    expected_env = config[VALIDATIONS].get('expected_env') or {}
+    mismatch = []
+    for envvar, patterns in expected_env.items():
+        if not isinstance(patterns, list):
+            patterns = [patterns]
+        envvar_value = os.environ.get(envvar, '')
+        for pattern in patterns:
+            if not re.search(pattern, envvar_value):
+                mismatch.append((envvar, pattern))
+    if mismatch:
+        mismatch_message = ', '.join(
+            '{0} must match {1}'.format(value, pattern)
+            for value, pattern in mismatch
+        )
+        raise ValidationError(
+            'Environment variables mismatch: ' + mismatch_message,
+        )
 
 
 def _validate_user_has_sudo_permissions():
@@ -679,6 +706,7 @@ def validate(components, skip_validations=False, only_install=False):
         _validate_ip(ip_to_validate=config[MANAGER][PUBLIC_IP])
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
+        _validate_env()
         _validate_python_version()
         _validate_sufficient_memory()
         _validate_postgres_inputs()
