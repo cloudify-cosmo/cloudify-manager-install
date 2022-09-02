@@ -512,6 +512,18 @@ validations:
   # The supported versions of the above distros
   supported_distro_versions: ['7', '8']
 
+  # Environment variables that must be set. Values are regexps that the
+  # environment variable must contain, or a list of regexps.
+  expected_env:
+    PATH:
+      - "(^|:)/usr/local/sbin($|:)"
+      - "(^|:)/usr/local/bin($|:)"
+      - "(^|:)/usr/sbin($|:)"
+      - "(^|:)/usr/sbin($|:)"
+      - "(^|:)/usr/bin($|:)"
+      - "(^|:)/sbin($|:)"
+      - "(^|:)/bin($|:)"
+
 ssl_inputs:
   external_cert_path: ''
   external_key_path: ''
