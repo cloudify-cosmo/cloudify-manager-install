@@ -238,6 +238,7 @@ def _validate_inputs():
                 )
             )
 
+
 def _validate_env():
     """Check that the process env is as expected by the validations config.
 
