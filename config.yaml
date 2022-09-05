@@ -516,9 +516,6 @@ validations:
   # environment variable must contain, or a list of regexps.
   expected_env:
     PATH:
-      - "(^|:)/usr/local/sbin($|:)"
-      - "(^|:)/usr/local/bin($|:)"
-      - "(^|:)/usr/sbin($|:)"
       - "(^|:)/usr/sbin($|:)"
       - "(^|:)/usr/bin($|:)"
       - "(^|:)/sbin($|:)"
