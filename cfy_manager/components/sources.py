@@ -26,7 +26,7 @@ manager_premium = [
 ]
 manager_cluster = []
 db = [
-    'postgresql14', 'postgresql14-server', 'postgresql14-contrib',
+    'postgresql14', 'postgresql14-server',
     'libxslt', 'libicu',
 ]
 db_cluster = [
