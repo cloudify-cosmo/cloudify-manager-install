@@ -28,6 +28,7 @@ Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  createrepo, gcc, postgresql-devel
 Requires(pre):  shadow-utils
+Requires:       python3 >= 3.6
 
 %description
 Cloudify Manager installer.
