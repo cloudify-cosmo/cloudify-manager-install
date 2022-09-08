@@ -10,7 +10,10 @@ from cloudify.decorators import operation
 def install_agent(ctx, **_):
     install_agent_script = ctx.agent.init_script({
         'user': 'cfyuser',
-        'basedir': '/etc/cloudify'
+        'basedir': '/etc/cloudify',
+        # TODO these must not be hardcoded
+        'distro': 'centos',
+        'distro_codename': 'core',
     })
     with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write(install_agent_script)
