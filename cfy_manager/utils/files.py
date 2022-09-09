@@ -84,8 +84,14 @@ def remove(paths, ignore_failure=False):
     if not isinstance(paths, list):
         paths = [paths]
     for path in paths:
-        logger.debug('Removing {0}...'.format(path))
-        run(['rm', '-rf', path], ignore_failures=ignore_failure)
+        logger.debug('Removing %s...', path)
+        if os.path.ismount(path):
+            logger.debug('Mount point found in %s, deleting contents', path)
+            remove(
+                [os.path.join(path, subpath) for subpath in os.listdir(path)],
+                ignore_failure=ignore_failure)
+        else:
+            run(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
 def deploy(src, dst, render=True, additional_render_context=None):
