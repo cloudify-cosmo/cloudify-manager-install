@@ -664,8 +664,7 @@ class RabbitMQ(BaseComponent):
         run(['epmd', '-kill'], ignore_failures=True)
         service.remove('cloudify-rabbitmq')
         logger.info('Removing rabbit data...')
-        run(['rm', '-rf', '/var/lib/rabbitmq'])
-        run(['rm', '-rf', '/etc/rabbitmq'])
+        files.remove(['/var/lib/rabbitmq', '/etc/rabbitmq'])
 
     def _deploy_rebalancer_script_and_create_cronjob(self):
         logger.info('Deploying queue rebalancing script...')
