@@ -89,7 +89,7 @@ from .utils.common import (
 from cfy_manager.utils.db import get_psql_env_and_base_command
 from .utils.install import is_premium_installed, yum_install, yum_remove
 from .utils.files import (
-    remove as _remove,
+    remove as remove_files,
     remove_temp_files,
     touch,
     read_yaml_file,
@@ -1029,11 +1029,10 @@ def _remove_installation_files():
         for installed_service in get_main_services_from_config():
             service_file_path = os.path.join(dir_path, installed_service)
             if os.path.exists(service_file_path):
-                _remove(service_file_path)
+                remove_files(service_file_path)
 
     if _all_main_services_removed():
-        _remove(INITIAL_INSTALL_DIR)
-        _remove(INITIAL_CONFIGURE_DIR)
+        remove_files([INITIAL_INSTALL_DIR, INITIAL_CONFIGURE_DIR])
 
 
 def _get_items_to_remove(items_file):
@@ -1106,7 +1105,7 @@ def remove(verbose=False, config_file=None):
     _remove_installation_files()
 
     if is_supervisord_service() and _all_main_services_removed():
-        _remove(SUPERVISORD_CONFIG_DIR)
+        remove_files(SUPERVISORD_CONFIG_DIR)
 
     clean_certs()
 

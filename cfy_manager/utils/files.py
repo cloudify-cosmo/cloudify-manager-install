@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from .common import (run, copy, remove, chown,
+from .common import (run, copy, chown,
                      ensure_destination_dir_exists)
 from .. import constants
 from ..config import config
@@ -76,15 +76,22 @@ def write(contents, destination, json_dump=False,
 
 def remove_temp_files():
     logger.debug('Cleaning temporary files...')
-    for path in config.get('temp_paths_to_remove', []):
-        remove(path)
+    remove(config.get('temp_paths_to_remove', []))
     logger.debug('Cleaned temporary files')
 
 
-def remove_files(file_list, ignore_failure=False):
-    for path in file_list:
-        logger.debug('Removing {0}...'.format(path))
-        run(['rm', '-rf', path], ignore_failures=ignore_failure)
+def remove(paths, ignore_failure=False):
+    if not isinstance(paths, list):
+        paths = [paths]
+    for path in paths:
+        logger.debug('Removing %s...', path)
+        if os.path.ismount(path):
+            logger.debug('Mount point found in %s, deleting contents', path)
+            remove(
+                [os.path.join(path, subpath) for subpath in os.listdir(path)],
+                ignore_failure=ignore_failure)
+        else:
+            run(['rm', '-rf', path], ignore_failures=ignore_failure)
 
 
 def deploy(src, dst, render=True, additional_render_context=None):

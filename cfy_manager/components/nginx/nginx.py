@@ -25,7 +25,7 @@ from ...utils import (
     certificates,
     service
 )
-from ...utils.files import remove_files, deploy, copy_notice, remove_notice
+from ...utils.files import remove, deploy, copy_notice, remove_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import lo_has_ipv6_addr
 
@@ -367,7 +367,7 @@ class Nginx(BaseComponent):
 
         # remove the default configuration which reserves localhost:80 for a
         # nginx default landing page
-        common.remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
+        remove('/etc/nginx/conf.d/default.conf', ignore_failure=True)
 
     def _create_htpasswd_file(self, credentials):
         username = credentials.get('username')
@@ -488,7 +488,7 @@ class Nginx(BaseComponent):
         service.remove('nginx')
         if self.service_type == 'supervisord':
             service.remove('wait_on_restart')
-        remove_files([
+        remove([
             join('/var/cache', NGINX),
             LOG_DIR,
             UNIT_OVERRIDE_PATH,

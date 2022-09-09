@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 from os.path import join
 from tempfile import gettempdir
@@ -26,8 +11,7 @@ from ...config import config
 from ...logger import get_logger
 from ...utils import common, service
 from ...utils.certificates import use_supplied_certificates
-from ...utils.files import (remove_files,
-                            touch)
+from ...utils.files import remove, touch
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers, allow_user_to_sudo_command
 
@@ -49,7 +33,7 @@ class Manager(BaseComponent):
                gettempdir()
 
     def _create_sudoers_file_and_disable_sudo_requiretty(self):
-        common.remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
+        remove(constants.CLOUDIFY_SUDOERS_FILE, ignore_failure=True)
         touch(constants.CLOUDIFY_SUDOERS_FILE)
         common.chmod('440', constants.CLOUDIFY_SUDOERS_FILE)
         entry = 'Defaults:{user} !requiretty'\
@@ -112,12 +96,8 @@ class Manager(BaseComponent):
 
     def remove(self):
         logger.notice('Removing Cloudify Manager resources...')
-        remove_files([
-            join(self._get_exec_tempdir(), 'cloudify-ctx'),
-        ])
         # Remove syncthing so a reinstall of a cluster node can work
         service.remove('cloudify-syncthing')
-        remove_files([
-            '/opt/syncthing',
-        ])
+        remove([join(self._get_exec_tempdir(), 'cloudify-ctx'),
+                '/opt/syncthing'])
         logger.notice('Cloudify Manager resources successfully removed!')

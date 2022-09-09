@@ -59,8 +59,7 @@ class UsageCollector(BaseComponent):
         if self._validate_crontab_accessible():
             self._remove_cron_jobs()
         remove_logrotate(USAGE_COLLECTOR)
-        common.remove(SCRIPTS_DESTINATION_PATH)
-        common.remove(MANAGER_ID_PATH)
+        files.remove([SCRIPTS_DESTINATION_PATH, MANAGER_ID_PATH])
         logger.notice('Usage Collector successfully removed')
 
     def _validate_crontab_accessible(self):

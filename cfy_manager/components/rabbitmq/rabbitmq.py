@@ -34,8 +34,8 @@ from ...exceptions import (
 )
 from ...utils import service, syslog
 from ...utils.network import wait_for_port, is_port_open, lo_has_ipv6_addr
-from ...utils.common import run, can_lookup_hostname, remove as remove_file
-from ...utils.files import write, deploy
+from ...utils.common import run, can_lookup_hostname
+from ...utils.files import write, deploy, remove
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
@@ -92,8 +92,7 @@ class RabbitMQ(BaseComponent):
         rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
 
         # Delete old mnesia node
-        remove_file('/var/lib/rabbitmq/mnesia')
-        remove_file(rabbit_config_path)
+        remove(['/var/lib/rabbitmq/mnesia', rabbit_config_path])
         self._deploy_configuration()
         self._deploy_env()
         service.reload('cloudify-rabbitmq', ignore_failure=True)
@@ -665,8 +664,7 @@ class RabbitMQ(BaseComponent):
         run(['epmd', '-kill'], ignore_failures=True)
         service.remove('cloudify-rabbitmq')
         logger.info('Removing rabbit data...')
-        run(['rm', '-rf', '/var/lib/rabbitmq'])
-        run(['rm', '-rf', '/etc/rabbitmq'])
+        files.remove(['/var/lib/rabbitmq', '/etc/rabbitmq'])
 
     def _deploy_rebalancer_script_and_create_cronjob(self):
         logger.info('Deploying queue rebalancing script...')

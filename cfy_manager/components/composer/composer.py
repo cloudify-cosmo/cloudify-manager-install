@@ -186,7 +186,7 @@ class Composer(BaseComponent):
         logger.notice('Removing Cloudify Composer...')
         service.remove('cloudify-composer')
         logger.notice('Removing Composer data....')
-        common.run(['rm', '-rf', '/opt/cloudify-composer'])
+        files.remove('/opt/cloudify-composer')
         logger.notice('Cloudify Composer successfully removed')
 
     def upgrade(self):
