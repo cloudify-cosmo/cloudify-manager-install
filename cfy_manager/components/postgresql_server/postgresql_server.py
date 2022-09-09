@@ -823,7 +823,7 @@ class PostgresqlServer(BaseComponent):
                         "ETCD_INITIAL_CLUSTER_STATE='existing'/",
                         ETCD_CONFIG_PATH,
                     ])
-                    common.remove(ETCD_DATA_DIR)
+                    files.remove(ETCD_DATA_DIR)
                     common.mkdir(ETCD_DATA_DIR)
                     common.chown('etcd', 'etcd', ETCD_DATA_DIR)
                     service.restart('etcd')
@@ -1712,14 +1712,14 @@ class PostgresqlServer(BaseComponent):
 
     def remove(self):
         if MANAGER_SERVICE not in config[SERVICES_TO_INSTALL]:
-            files.remove_files([
+            files.remove([
                 '/var/lib/patroni',
                 '/var/lib/etcd',
                 '/etc/patroni.conf',
                 '/etc/etcd',
             ])
         logger.notice('Removing PostgreSQL...')
-        files.remove_files([
+        files.remove([
             '/var/lib/pgsql/9.5/data',
             '/var/lib/pgsql/9.5/backups'  # might be missing
         ], ignore_failure=True)
@@ -1730,7 +1730,7 @@ class PostgresqlServer(BaseComponent):
         else:
             service.remove(POSTGRES_SERVICE_NAME)
         logger.info('Removing postgres bin links')
-        files.remove_files(
+        files.remove(
             [os.path.join('/usr/sbin', pg_bin) for pg_bin in PG_BINS],
             ignore_failure=True)
 

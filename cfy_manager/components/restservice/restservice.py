@@ -528,7 +528,7 @@ class RestService(BaseComponent):
         service.remove('cloudify-restservice')
         service.remove('cloudify-api')
         remove_logrotate(RESTSERVICE)
-        common.remove('/opt/manager')
+        remove('/opt/manager')
 
     def _validate_config_defaults(self):
         """Validate that config defaults exist."""

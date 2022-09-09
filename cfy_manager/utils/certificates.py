@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from . import network
-from .common import remove, chown, chmod, copy, move, run
+from .common import chown, chmod, copy, move, run
 from ..components_constants import SSL_INPUTS
 from ..config import config
 from ..constants import (
@@ -17,7 +17,7 @@ from ..constants import (
     SSL_CERTS_TARGET_DIR,
 )
 from ..exceptions import ProcessExecutionError
-from .files import write, write_to_tempfile
+from .files import write, write_to_tempfile, remove
 from ..components.validations import check_certificates, validate_certificates
 
 from ..logger import get_logger, setup_console_logger
