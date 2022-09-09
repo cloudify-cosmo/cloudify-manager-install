@@ -44,7 +44,7 @@ exec /usr/sbin/rsyslogd -n'''
             # We don't manage this
             return
         logger.notice('Removing Rsyslog...')
-        files.remove_files([SYSLOG_WRAPPER_PATH])
+        files.remove([SYSLOG_WRAPPER_PATH])
         service.remove('rsyslog')
 
     # Logic to stop the logger is deliberately not included

@@ -117,11 +117,6 @@ def chown(user, group, path):
     run(['chown', '-R', '{0}:{1}'.format(user, group), path])
 
 
-def remove(path, ignore_failure=False):
-    logger.debug('Removing {0}...'.format(path))
-    run(['rm', '-rf', path], ignore_failures=ignore_failure)
-
-
 def ensure_destination_dir_exists(destination):
     destination_dir = os.path.dirname(destination)
     if not os.path.exists(destination_dir):

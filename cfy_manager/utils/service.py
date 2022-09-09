@@ -4,10 +4,9 @@ from functools import partial
 
 from retrying import retry
 
-from .files import deploy
+from .files import deploy, remove as remove_file
 from .common import (
     chown,
-    remove as remove_file,
     run,
 )
 
