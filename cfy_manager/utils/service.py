@@ -8,10 +8,9 @@ from retrying import retry
 
 from .common import (
     chown,
-    remove as remove_file,
     run,
 )
-from .files import deploy
+from .files import deploy, remove as remove_file
 from ..config import config
 from ..constants import (
     COMPONENTS_DIR,

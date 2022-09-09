@@ -10,7 +10,7 @@ from ...service_names import SANITY
 from ...logger import get_logger
 from ...constants import CLOUDIFY_USER, CLOUDIFY_GROUP
 from ...utils import common
-from ...utils.files import write, remove_files
+from ...utils.files import write, remove
 
 
 logger = get_logger(SANITY)
@@ -84,4 +84,4 @@ class Sanity(BaseComponent):
                   owner=CLOUDIFY_USER, group=CLOUDIFY_GROUP)
             yield
         finally:
-            remove_files([marker_file])
+            remove([marker_file])

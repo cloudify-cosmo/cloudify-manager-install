@@ -10,7 +10,7 @@ from ...utils import (
     sudoers,
     service
 )
-from ...utils.files import deploy
+from ...utils.files import deploy, remove
 
 
 CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
@@ -98,5 +98,5 @@ class MgmtWorker(BaseComponent):
 
     def remove(self):
         service.remove('cloudify-mgmtworker')
-        common.remove('/opt/mgmtworker')
-        common.remove(join(const.BASE_RESOURCES_PATH, MGMTWORKER))
+        remove(['/opt/mgmtworker',
+                join(const.BASE_RESOURCES_PATH, MGMTWORKER)])
