@@ -488,7 +488,7 @@ mgmtworker:
 sanity:
   # If set to true, the sanity blueprint install/uninstall will not be
   # performed during Cloudify Manager installation
-  skip_sanity: true   # TODO: until we have py3.10 agents
+  skip_sanity: false
 
 validations:
   # If set to true, install/configuration validations will not be performed
@@ -507,7 +507,7 @@ validations:
 
   # The only Linux distros fully supported, on which a Cloudify Manager can
   # be installed
-  supported_distros: [centos, redhat]
+  supported_distros: [centos, rhel, redhat]
 
   # The supported versions of the above distros
   supported_distro_versions: ['7', '8']
