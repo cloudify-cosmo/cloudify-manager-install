@@ -205,7 +205,7 @@ class Stage(BaseComponent):
         logger.notice('Removing Stage...')
         service.remove('cloudify-stage')
         logger.notice('Removing Stage data....')
-        common.run(['rm', '-rf', '/opt/cloudify-stage'])
+        files.remove('/opt/cloudify-stage')
         logger.notice('Stage successfully removed')
 
     def upgrade(self):

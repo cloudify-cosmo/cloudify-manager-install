@@ -503,11 +503,11 @@ validations:
   minimum_required_available_disk_space_in_gb: 1
 
   # Python version expected to be found on the machine
-  expected_python_version: '3.6'
+  expected_python_version: '3.10'
 
   # The only Linux distros fully supported, on which a Cloudify Manager can
   # be installed
-  supported_distros: [centos, redhat]
+  supported_distros: [centos, rhel, redhat]
 
   # The supported versions of the above distros
   supported_distro_versions: ['7', '8']

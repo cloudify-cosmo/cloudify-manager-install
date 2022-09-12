@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-import platform
+import distro
 import netifaces
 from getpass import getuser
 from collections import namedtuple
@@ -44,9 +44,9 @@ _errors = []
 
 
 def _get_os_distro():
-    distro, version, _ = \
-        platform.linux_distribution(full_distribution_name=False)
-    return distro.lower(), version.split('.')[0]
+    distribution, version, _ = \
+        distro.linux_distribution(full_distribution_name=False)
+    return distribution.lower(), version.split('.')[0]
 
 
 def _get_host_total_memory():

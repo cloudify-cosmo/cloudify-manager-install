@@ -52,13 +52,15 @@ setup(
     package_data={'': extra_files},
     install_requires=[
         'ruamel.yaml==0.16.10',
-        'Jinja2==2.10.1',
+        'markupsafe==2.0.1',
+        'jinja2>3,<4',
         'argh==0.26.2',
         'netifaces==0.10.9',
         'ipaddress==1.0.23',
         'psutil==5.7.2',
         'requests>=2.18,<3.0.0',
         'retrying==1.3.3',
-        'supervisor==4.2.2'
+        'supervisor==4.2.2',
+        'distro'    # replacing deprecated platform.linux_distribution
     ]
 )

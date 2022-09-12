@@ -26,25 +26,47 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager-install
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.6, python3-devel >= 3.6, createrepo, gcc, postgresql-devel
-Requires:       python3 >= 3.6
+BuildRequires:  createrepo, gcc, postgresql-devel
 Requires(pre):  shadow-utils
+Requires:       python3 >= 3.6
 
 %description
 Cloudify Manager installer.
 
 %build
+
+# First let's build Python 3.10 in a custom location
+mkdir -p /opt/python3.10
+
+mkdir -p /tmp/BUILD_SOURCES
+cd /tmp/BUILD_SOURCES
+
+# -- build & install OpenSSL 1.1.1, required for Python 3.10
+curl https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz -o openssl-1.1.1k.tar.gz
+tar -xzvf openssl-1.1.1k.tar.gz
+cd openssl-1.1.1k && ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && make && make install
+# -- build & install Python 3.10
+cd ..
+curl https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tgz -o Python-3.10.6.tgz
+tar xvf Python-3.10.6.tgz
+cd Python-3.10.6 && sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' configure && ./configure --prefix=/opt/python3.10 && sudo make altinstall
+
+# Create the venv with the custom Python symlinked in
 mkdir -p $(dirname %_venv)
-python3 -m venv %_venv
+/opt/python3.10/bin/python3.10 -m venv %_venv
 %_venv/bin/pip install ${RPM_SOURCE_DIR}
 # Make sure the http.py spurious critical log is in the expected location (line 849)
 # We're doing this because the socket is already secured by filesystem permissions and
 # we don't want a meaningless log entry with a CRIT level to alarm users
-sed -n 849p %_venv/lib/python3.6/site-packages/supervisor/http.py | grep critical
-sed -i 849s/critical/debug/ %_venv/lib/python3.6/site-packages/supervisor/http.py
+sed -n 849p %_venv/lib/python3.10/site-packages/supervisor/http.py | grep critical
+sed -i 849s/critical/debug/ %_venv/lib/python3.10/site-packages/supervisor/http.py
 
 %install
-mkdir %{buildroot}/opt
+
+# Copy our custom Python to build root
+mkdir -p %{buildroot}/opt/python3.10
+cp -R /opt/python3.10 %{buildroot}/opt
+
 mkdir -p %{buildroot}/usr/bin
 mkdir -p %{buildroot}/etc/cloudify
 mkdir -p %{buildroot}/opt/cloudify
@@ -99,6 +121,8 @@ cfy_manager install
 "
 
 %files
+%attr(0755,cfyuser,cfyuser)     /opt/python3.10
+
 /usr/bin/cfy_manager
 /opt/cloudify
 /etc/supervisord.d

@@ -152,8 +152,7 @@ class Prometheus(BaseComponent):
             logger.info('To remove prometheus, remove remaining components.')
         else:
             logger.notice('Removing Prometheus and exporters...')
-            remove_files_list = [PROMETHEUS_DATA_DIR, PROMETHEUS_CONFIG_DIR]
-            files.remove_files(remove_files_list)
+            files.remove([PROMETHEUS_DATA_DIR, PROMETHEUS_CONFIG_DIR])
             for exporter in _prometheus_exporters():
                 service.remove(exporter['name'])
             service.remove(PROMETHEUS)
