@@ -16,6 +16,20 @@ def secrets = [
 
 @Library('pipeline-shared-library') _
 
+def doGetVersion(){
+  sh(script: '''#!/bin/sh -e
+    . cloudify-manager-install/packaging/version_info
+    echo ${CLOUDIFY_VERSION}
+  ''', label: 'get package version', returnStdout: true).trim()
+}
+
+def doGetPreRelease(){
+  sh(script: '''#!/bin/sh -e
+    . cloudify-manager-install/packaging/version_info
+    echo ${CLOUDIFY_PACKAGE_RELEASE}
+  ''', label: 'get package release', returnStdout: true).trim()
+}
+
 pipeline {
   agent {
     kubernetes {
@@ -34,8 +48,8 @@ pipeline {
   environment {
     PROJECT = "cloudify-manager-install"
     PATH = "/root/.local/bin:$PATH"
-    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
-    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    VERSION = doGetVersion()
+    PRERELEASE = doGetPreRelease()
     CLOUDIFY_VERSION = "${env.VERSION}"
     CLOUDIFY_PACKAGE_RELEASE = "${env.PRERELEASE}"
     CONTAINER_NAME = "cfy"
