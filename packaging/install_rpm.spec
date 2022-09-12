@@ -30,14 +30,13 @@ BuildRequires:  createrepo, gcc, postgresql-devel
 Requires(pre):  shadow-utils
 Requires:       python3 >= 3.6
 
+Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10.tgz
+
 %description
 Cloudify Manager installer.
 
 %prep
-
-# Download and untar our python3.10 package
-curl https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10.tgz -o cfy-python3.10.tgz
-sudo tar zxvf cfy-python3.10.tgz -C /
+sudo tar xf %{S:0} -C /
 
 %build
 
