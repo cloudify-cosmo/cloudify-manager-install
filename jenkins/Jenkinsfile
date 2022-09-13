@@ -16,6 +16,20 @@ def secrets = [
 
 @Library('pipeline-shared-library') _
 
+def doGetVersion(){
+  sh(script: '''#!/bin/sh -e
+    . cloudify-manager-install/packaging/version_info
+    echo ${CLOUDIFY_VERSION}
+  ''', label: 'get package version', returnStdout: true).trim()
+}
+
+def doGetPreRelease(){
+  sh(script: '''#!/bin/sh -e
+    . cloudify-manager-install/packaging/version_info
+    echo ${CLOUDIFY_PACKAGE_RELEASE}
+  ''', label: 'get package release', returnStdout: true).trim()
+}
+
 pipeline {
   agent {
     kubernetes {
@@ -34,8 +48,8 @@ pipeline {
   environment {
     PROJECT = "cloudify-manager-install"
     PATH = "/root/.local/bin:$PATH"
-    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
-    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    VERSION = doGetVersion()
+    PRERELEASE = doGetPreRelease()
     CLOUDIFY_VERSION = "${env.VERSION}"
     CLOUDIFY_PACKAGE_RELEASE = "${env.PRERELEASE}"
     CONTAINER_NAME = "cfy"
@@ -143,13 +157,19 @@ pipeline {
               sh 'yum-builddep -y /root/rpmbuild/SOURCES/packaging/install_rpm.spec'
               echo 'set premium_edition in the packaged config.yaml'
               sh 'sed -i "s/set_by_installer_builder/premium/" /root/rpmbuild/SOURCES/config.yaml'
-              echo 'Build RPM'
-              sh """
+              sh script: '''
                 cd /root/rpmbuild/SOURCES/
+
+                spectool \
+                  -d "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+                  -d "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+                  -P packaging/install_rpm.spec \
+                  -S -g
+
                 rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
                 -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
                 -bb packaging/install_rpm.spec
-                """
+              ''', label: 'Build RPM'
               sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
             }
           }

@@ -62,6 +62,10 @@ openstack-docker/.cloudify
 # Vagrant
 .vagrant
 
+# IDE settings
+.idea
+.DS_Store
+
 # Cloudify
 .cloudify
 
