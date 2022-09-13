@@ -159,6 +159,13 @@ pipeline {
               sh 'sed -i "s/set_by_installer_builder/premium/" /root/rpmbuild/SOURCES/config.yaml'
               sh script: '''
                 cd /root/rpmbuild/SOURCES/
+
+                spectool \
+                  -d "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+                  -d "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+                  -P packaging/install_rpm.spec \
+                  -S -g
+
                 rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
                 -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
                 -bb packaging/install_rpm.spec
