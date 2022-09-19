@@ -44,9 +44,7 @@ _errors = []
 
 
 def _get_os_distro():
-    distribution, version, _ = \
-        distro.linux_distribution(full_distribution_name=False)
-    return distribution.lower(), version.split('.')[0]
+    return distro.id().lower(), distro.version().split('.')[0]
 
 
 def _get_host_total_memory():
