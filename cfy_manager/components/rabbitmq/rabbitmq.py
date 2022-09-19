@@ -22,7 +22,7 @@ from ..base_component import BaseComponent
 from ..validations import validate_certificates
 from ...service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
-from ...utils import certificates, common, network, files
+from ...utils import certificates, common, network
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import (
@@ -36,6 +36,7 @@ from ...utils import service, syslog
 from ...utils.network import wait_for_port, is_port_open, lo_has_ipv6_addr
 from ...utils.common import run, can_lookup_hostname
 from ...utils.files import write, deploy, remove
+from cfy_manager.utils.install_state import get_configured_services
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
@@ -88,6 +89,10 @@ class RabbitMQ(BaseComponent):
             common.chown('rabbitmq', 'rabbitmq', RABBITMQ_ERL_INETRC)
 
     def _init_service(self):
+        if 'queue_service' in get_configured_services():
+            logger.info('RabbitMQ previously initialized.')
+            return
+
         logger.info('Initializing RabbitMQ...')
         rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
 
@@ -96,6 +101,8 @@ class RabbitMQ(BaseComponent):
         self._deploy_configuration()
         self._deploy_env()
         service.reload('cloudify-rabbitmq', ignore_failure=True)
+        if not config[RABBITMQ]['join_cluster']:
+            self._write_definitions_file()
 
     def _rabbitmqctl(self, command, **kwargs):
         base_command = [RABBITMQ_CTL]
@@ -652,8 +659,6 @@ class RabbitMQ(BaseComponent):
         if self._installing_manager():
             config[RABBITMQ]['ca_path'] = constants.CA_CERT_PATH
         self._init_service()
-        if not config[RABBITMQ]['join_cluster']:
-            self._write_definitions_file()
         self.start()
         self._possibly_join_cluster()
         self._activate_crash_log_permissions_fixup()
@@ -664,7 +669,7 @@ class RabbitMQ(BaseComponent):
         run(['epmd', '-kill'], ignore_failures=True)
         service.remove('cloudify-rabbitmq')
         logger.info('Removing rabbit data...')
-        files.remove(['/var/lib/rabbitmq', '/etc/rabbitmq'])
+        remove(['/var/lib/rabbitmq', '/etc/rabbitmq'])
 
     def _deploy_rebalancer_script_and_create_cronjob(self):
         logger.info('Deploying queue rebalancing script...')
@@ -672,7 +677,7 @@ class RabbitMQ(BaseComponent):
                            RABBITMQ,
                            SCRIPTS,
                            'rebalance_queues.py')
-        files.deploy(source_path, QUEUES_REBALANCING_SCRIPT_PATH)
+        deploy(source_path, QUEUES_REBALANCING_SCRIPT_PATH)
         common.chmod('+x', QUEUES_REBALANCING_SCRIPT_PATH)
         common.chown(constants.CLOUDIFY_USER,
                      constants.CLOUDIFY_GROUP,
