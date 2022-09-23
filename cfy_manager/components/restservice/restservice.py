@@ -492,6 +492,9 @@ class RestService(BaseComponent):
         if not common.is_only_manager_service_in_config():
             return
 
+        if not common.filesystem_replication_enabled():
+            return
+
         # this flag is set inside of restservice._configure_db
         to_join = config[CLUSTER_JOIN]
         if to_join:

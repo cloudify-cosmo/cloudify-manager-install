@@ -544,6 +544,7 @@ def _deploy_alerts_configuration(number_of_http_probes, cluster_config,
         'all_in_one': common.is_all_in_one_manager(),
         'alert_for': _calculate_alert_for(
             config.get(PROMETHEUS, {}).get('scrape_interval')),
+        'fs_replication': common.filesystem_replication_enabled(),
     }
     manager_hosts = []
     rabbitmq_hosts = []

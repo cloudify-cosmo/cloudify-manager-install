@@ -36,6 +36,12 @@ manager:
   # For clusters this must be supplied, and will only be used, on the first manager
   cloudify_license_path: ''
 
+  # Whether to replicate the data stored on filesystem between worker nodes in
+  # a cluster. Disable this if the data is replicated using other means,
+  # eg. a shared volume.
+  # When not using a cluster, this setting is ignored.
+  cluster_filesystem_replication: true
+
 provider_context:
   policy_engine:
     start_timeout: 30
