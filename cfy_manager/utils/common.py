@@ -186,6 +186,10 @@ def is_only_manager_service_in_config():
             not service_is_in_config(QUEUE_SERVICE))
 
 
+def filesystem_replication_enabled():
+    return config[MANAGER].get('cluster_filesystem_replication')
+
+
 def allows_json_format():
     """Decorator for Argparse commands that allow a JSON format. This silences
     the given logger and outputs only at least at the ERROR level. Any inner

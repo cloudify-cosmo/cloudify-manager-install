@@ -170,6 +170,9 @@ class Stage(BaseComponent):
         wait_for_port(8088)
 
     def _chown_for_syncthing(self):
+        if not common.filesystem_replication_enabled():
+            logger.debug('FS replication disabled - skip stage chown')
+            return
         logger.info('Applying permissions changes for syncthing')
         config_path = os.path.join(HOME_DIR, 'conf')
         common.chown(CLOUDIFY_USER, STAGE_GROUP, config_path)
