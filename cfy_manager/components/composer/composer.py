@@ -153,6 +153,9 @@ class Composer(BaseComponent):
         wait_for_port(3000)
 
     def _chown_for_syncthing(self):
+        if not common.filesystem_replication_enabled():
+            logger.debug('FS replication disabled - skip composer chown')
+            return
         logger.info('Applying permissions changes for syncthing')
         common.chown(CLOUDIFY_USER, COMPOSER_GROUP, CONF_DIR)
         for excluded_file in ['db_ca.crt', 'prod.json']:
