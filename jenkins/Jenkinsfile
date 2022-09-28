@@ -163,11 +163,13 @@ pipeline {
                 spectool \
                   -d "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
                   -d "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+                  -d "ARCHITECTURE x86_64" \
                   -P packaging/install_rpm.spec \
                   -S -g
 
                 rpmbuild -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
                 -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+                -D "ARCHITECTURE x86_64" \
                 -bb packaging/install_rpm.spec
               ''', label: 'Build RPM'
               sh script:("mkdir -p ${env.WORKSPACE}/manager-rpm && cp -rf /root/rpmbuild/RPMS/x86_64/*-manager-*.x86_64.rpm ${env.WORKSPACE}/manager-rpm"), label:'Copy RPMS to rpms folder'
