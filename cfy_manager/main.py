@@ -8,6 +8,7 @@ import time
 import json
 import subprocess
 import pkg_resources
+from platform import architecture
 from tempfile import NamedTemporaryFile
 from traceback import format_exception
 import zipfile
@@ -863,14 +864,14 @@ def _get_packages():
     # Adding premium components on all, even if we're on community, because
     # yum will return 0 (success) if any packages install successfully even if
     # some of the specified packages don't exist.
+    _, rh_version = _get_os_distro()
     if service_is_in_config(MANAGER_SERVICE):
         manager_packages = sources.manager
         # RedHat version-specific packages
-        _, rh_version = _get_os_distro()
         if rh_version == "7":
-            manager_packages = manager_packages + sources.manager_rh7
+            manager_packages += sources.manager_rh7
         elif rh_version == "8":
-            manager_packages = manager_packages + sources.manager_rh8
+            manager_packages += sources.manager_rh8
         # Premium components
         manager_packages += sources.manager_cluster + sources.manager_premium
         packages += manager_packages
@@ -885,6 +886,10 @@ def _get_packages():
 
     if service_is_in_config(QUEUE_SERVICE):
         queue_packages = sources.queue
+        if rh_version == "8" and architecture() == "x86_64":
+            queue_packages += sources.queue_rh8_x86
+        else:
+            queue_packages += sources.queue_other
         # Premium components
         queue_packages += sources.queue_cluster
         packages += queue_packages

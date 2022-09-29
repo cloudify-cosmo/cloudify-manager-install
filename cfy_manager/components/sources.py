@@ -32,7 +32,9 @@ db = [
 db_cluster = [
     'libestr', 'libfastjson', 'etcd', 'patroni'
 ]
-queue = ['libtool-ltdl', 'unixODBC', 'esl-erlang',
+queue_rh8_x86 = ['erlang']
+queue_other = ['esl-erlang']
+queue = ['libtool-ltdl', 'unixODBC',
          'rabbitmq-server', 'cloudify-rabbitmq']
 queue_cluster = []
 prometheus = [
