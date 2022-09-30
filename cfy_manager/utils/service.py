@@ -165,6 +165,14 @@ class SystemD(object):
         ).aggr_stdout.strip().lower() in ACTIVE_STATES
 
     def is_installed(self, service_name):
+        if self.systemctl(
+            'is-system-running',
+            ignore_failure=True,
+        ).aggr_stdout.strip() != 'running':
+            logger.debug('Systemd system is not running, assuming no '
+                         'services are installed.')
+            return False
+
         enabled = self.systemctl(
             'is-enabled',
             service_name,
