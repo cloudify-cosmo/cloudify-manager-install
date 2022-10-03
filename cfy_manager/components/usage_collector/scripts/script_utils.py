@@ -56,7 +56,7 @@ def collect_metadata(data):
         'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
-        'image_info': 'docker' if _is_inside_docker() else 'kubernetes' if _is_inside_kubernetes() else 'rpm'
+        'image_info': 'docker' if _is_inside_docker() else ('kubernetes' if _is_inside_kubernetes() else 'rpm')
     }
 
 
