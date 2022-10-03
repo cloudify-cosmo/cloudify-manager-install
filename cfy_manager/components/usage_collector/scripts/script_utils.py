@@ -58,9 +58,9 @@ def collect_metadata(data):
         'version': manager_version,
         'image_info': 'rpm'
     }
-    if _is_inside_docker(): 
+    if _is_inside_docker():
         data['metadata']['image_info'] = 'docker'
-    elif _is_inside_kubernetes(): 
+    elif _is_inside_kubernetes():
         data['metadata']['image_info'] = 'kubernetes'
 
 
