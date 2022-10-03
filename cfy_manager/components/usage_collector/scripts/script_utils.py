@@ -56,8 +56,12 @@ def collect_metadata(data):
         'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
-        'image_info': 'docker' if _is_inside_docker() else 'rpm'
+        'image_info': 'rpm'
     }
+    if _is_inside_docker():
+        data['metadata']['image_info'] = 'docker'
+    elif _is_inside_kubernetes():
+        data['metadata']['image_info'] = 'kubernetes'
 
 
 def send_data(data, url, interval_type):
@@ -128,3 +132,9 @@ def _is_inside_docker():
     """ Check whether running inside a docker container"""
     with open('/proc/1/cgroup', 'rt') as f:
         return 'docker' in f.read()
+
+
+def _is_inside_kubernetes():
+    """ Check whether running inside a docker container"""
+    with open('/proc/1/cgroup', 'rt') as f:
+        return 'kubepods' in f.read()
