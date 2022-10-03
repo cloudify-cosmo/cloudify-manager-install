@@ -56,7 +56,8 @@ def collect_metadata(data):
         'customer_id': customer_id,
         'premium_edition': premium_enabled,
         'version': manager_version,
-        'image_info': 'docker' if _is_inside_docker() else ('kubernetes' if _is_inside_kubernetes() else 'rpm')
+        'image_info': 'docker' if _is_inside_docker() else \
+            ('kubernetes' if _is_inside_kubernetes() else 'rpm')
     }
 
 
@@ -128,6 +129,7 @@ def _is_inside_docker():
     """ Check whether running inside a docker container"""
     with open('/proc/1/cgroup', 'rt') as f:
         return 'docker' in f.read()
+
 
 def _is_inside_kubernetes():
     """ Check whether running inside a docker container"""
