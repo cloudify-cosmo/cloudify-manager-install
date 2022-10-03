@@ -7,15 +7,21 @@ def deploy_rsyslog_filters(group, services, service_type, logger):
   property(name="msg" position.from="{trim}" droplastlf="on" )
   constant(value="\n")
   }}
+template(name="{svc}-supdock" type="list") {{
+  property(name="msg" position.from="{spacetrim}" droplastlf="on" )
+  constant(value="\n")
+  }}
 if $syslogtag == '/supervisord:' and $rawmsg startswith '{svc}' then /var/log/cloudify/{group}/{svc}.log;{svc}-sup
+& stop
+if $syslogtag == '/supervisord:' and $msg startswith ' {svc}' then /var/log/cloudify/{group}/{svc}.log;{svc}-supdock
 & stop
 if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
 & stop'''  # noqa
     path_template = '/etc/rsyslog.d/40-{svc}.conf'
     for svc in services:
         trim = len(svc) + 2
-        files.write(template.format(svc=svc, trim=trim, group=group),
-                    path_template.format(svc=svc))
+        files.write(template.format(svc=svc, trim=trim, spacetrim=trim+1,
+                    group=group), path_template.format(svc=svc))
 
     if using_systemd_rsyslog():
         try:
