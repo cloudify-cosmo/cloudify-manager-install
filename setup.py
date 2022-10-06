@@ -52,7 +52,7 @@ setup(
     package_data={'': extra_files},
     install_requires=[
         'ruamel.yaml==0.16.10',
-        'markupsafe==2.0.1',
+        'markupsafe==2.1.1',
         'jinja2>3,<4',
         'argh==0.26.2',
         'netifaces==0.10.9',
