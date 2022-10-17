@@ -127,8 +127,6 @@ def _create_populate_db_args_dict():
     script that creates and populates the DB to run
     """
     args_dict = {
-        'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
-        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
         'provider_context': _get_provider_context(),
         'permissions': _get_permissions(),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
@@ -240,6 +238,14 @@ def populate_db(configs):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
+    if (
+        config[MANAGER][SECURITY][ADMIN_USERNAME] and
+        config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    ):
+        args = ['manager_rest.configure_manager']
+        for path in config['config_files']:
+            args += ['--config-file-path', path]
+        run_script_on_manager_venv('-m', script_args=args)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
