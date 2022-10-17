@@ -27,7 +27,7 @@ db = ['postgresql95', 'postgresql95-server', 'postgresql95-contrib', 'libxslt']
 db_cluster = [
     'libestr', 'libfastjson', 'etcd', 'patroni'
 ]
-queue = ['rabbitmq-server-3.8.4', 'cloudify-rabbitmq']
+queue = ['rabbitmq-server', 'cloudify-rabbitmq']
 queue_cluster = []
 prometheus = [
     'prometheus', 'node_exporter', 'blackbox_exporter', 'postgres_exporter',
