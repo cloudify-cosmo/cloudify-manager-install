@@ -82,22 +82,25 @@ class Config(CommentedMap):
         self._load_defaults_config()
         if not config_files:
             config_files = [DEFAULT_CONFIG_FILE_NAME]
+        cleaned_config_files = []
         for config_file in config_files:
             config_file_path = self._sanitized_config_path(config_file)
             if config_file_path:
                 logger.debug('Loading configuration from %s',
                              config_file_path)
                 self._load_user_config(config_file_path)
+                cleaned_config_files.append(config_file_path)
             else:
                 raise ValidationError(
                     'Expected configuration files to be in {0}, but '
                     'got: {1}'.format(CLOUDIFY_HOME_DIR, config_file))
-        self['config_files'] = config_files
+        self['config_files'] = cleaned_config_files
 
     def _sanitized_config_path(self, file_path):
         """Returns a file path in the CLOUDIFY_HOME_DIR or None."""
-        sanitized = abspath(join(CLOUDIFY_HOME_DIR, file_path))
-        return sanitized if sanitized.startswith(CLOUDIFY_HOME_DIR) else None
+        if not isabs(file_path):
+            file_path = abspath(join(CLOUDIFY_HOME_DIR, file_path))
+        return file_path if file_path.startswith(CLOUDIFY_HOME_DIR) else None
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault(self.TEMP_PATHS, [])
