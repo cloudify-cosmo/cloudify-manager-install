@@ -1,7 +1,7 @@
-import collections
 import logging
 
-from os.path import isfile, join, abspath
+from collections.abc import MutableMapping
+from os.path import isabs, isfile, join, abspath
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -18,22 +18,29 @@ yaml = YAML()
 logger = logging.getLogger('[CONFIG]')
 
 
-def dict_merge(dct, merge_dct):
-    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
-    updating only top-level keys, dict_merge recurses down into dicts nested
-    to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
-    ``dct``.
-    Taken from: https://gist.github.com/angstwad/bf22d1822c38a92ec0a9
-    :param dct: dict onto which the merge is executed
-    :param merge_dct: dct merged into dct
-    :return: None
+def dict_merge(target, source):
+    """Merge source into target (like dict.update, but deep)
+
+    Returns the merged-into dict.
     """
-    for k, _ in merge_dct.items():
-        if (k in dct and isinstance(dct[k], dict)
-                and isinstance(merge_dct[k], collections.abc.Mapping)):
-            dict_merge(dct[k], merge_dct[k])
-        else:
-            dct[k] = merge_dct[k]
+    to_merge = [(target, source)]
+    while to_merge:
+        left, right = to_merge.pop()
+        overrides = {}
+        for k in left.keys() | right.keys():
+            if k not in right:
+                continue
+            original = left.get(k)
+            updated = right[k]
+            if (
+                isinstance(original, MutableMapping) and
+                isinstance(updated, MutableMapping)
+            ):
+                to_merge.append((original, updated))
+            else:
+                overrides[k] = updated
+        left.update(overrides)
+    return target
 
 
 class Config(CommentedMap):
