@@ -57,6 +57,7 @@ from ...utils.files import (
     read,
     remove,
     write,
+    write_to_tempfile,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
@@ -261,7 +262,23 @@ class RestService(BaseComponent):
         logger.info('DB not initialized, creating DB...')
         self._generate_admin_password_if_empty()
         db.prepare_db()
-        db.populate_db(configs)
+
+        additional_config = []
+        if config[MANAGER][SECURITY][ADMIN_PASSWORD]:
+            # we might have generated the admin password, so in case it's not
+            # in the config file, pass it to the configure script separately
+            password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+            filepath = write_to_tempfile({
+                MANAGER: {
+                    SECURITY: {ADMIN_PASSWORD: password}
+                }
+            }, json_dump=True)
+            additional_config.append(filepath)
+        db.populate_db(configs, additional_config_files=additional_config)
+        if additional_config:
+            for filepath in additional_config:
+                remove(filepath)
+
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
 

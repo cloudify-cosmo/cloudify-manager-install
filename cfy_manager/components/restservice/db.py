@@ -234,7 +234,7 @@ def run_script(script_name, script_input=None, configs=None):
     return _get_script_stdout(proc_result)
 
 
-def populate_db(configs):
+def populate_db(configs, additional_config_files=None):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = _create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
@@ -245,6 +245,9 @@ def populate_db(configs):
         args = ['manager_rest.configure_manager']
         for path in config['config_files']:
             args += ['--config-file-path', path]
+        if additional_config_files:
+            for path in additional_config_files:
+                args += ['--config-file-path', path]
         run_script_on_manager_venv('-m', script_args=args)
     logger.notice('DB populated and AMQP resources successfully created')
 
