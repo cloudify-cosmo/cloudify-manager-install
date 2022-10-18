@@ -14,10 +14,9 @@ from datetime import datetime
 from flask_migrate import upgrade
 
 from manager_rest import config, version
-from manager_rest.storage import storage_utils
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import db, models, get_storage_manager  # NOQA
+from manager_rest.storage import db, models, get_storage_manager
 
 logging.basicConfig(
     stream=sys.stderr, level=logging.INFO, format='%(message)s')
@@ -54,15 +53,6 @@ def _populate_roles(data):
                 name=permission
             ))
     db.session.commit()
-
-
-def _add_default_user_and_tenant(amqp_manager, script_config):
-    logger.info('Creating bootstrap admin, default tenant and security roles')
-    storage_utils.create_default_user_tenant_and_roles(
-        admin_username=script_config['admin_username'],
-        admin_password=script_config['admin_password'],
-        amqp_manager=amqp_manager
-    )
 
 
 def _get_amqp_manager(script_config):
@@ -155,7 +145,6 @@ def _insert_cert(cert, name):
         name=name,
         value=cert,
         updated_at=datetime.now(),
-        _updater_id=0,
     )
     sm.put(inst)
     return inst.id
@@ -202,10 +191,6 @@ if __name__ == '__main__':
     if script_config.get('db_migrate_dir'):
         _init_db_tables(script_config['db_migrate_dir'])
         _populate_roles(script_config['permissions'])
-    if (script_config.get('admin_username')
-            and script_config.get('admin_password')):
-        amqp_manager = _get_amqp_manager(script_config)
-        _add_default_user_and_tenant(amqp_manager, script_config)
     if script_config.get('config'):
         _insert_config(script_config['config'])
     if script_config.get('rabbitmq_brokers'):
