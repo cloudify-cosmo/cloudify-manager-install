@@ -6,19 +6,6 @@ manager:
     ssl_enabled: true
     admin_password: admin
 
-rabbitmq:
-  ca_path: /etc/cloudify/ca.pem
-  cluster_members:
-    rabbit1:
-      networks:
-        default: QUEUE1_IP
-    rabbit2:
-      networks:
-        default: QUEUE2_IP
-    rabbit3:
-      networks:
-        default: QUEUE3_IP
-
 postgresql_server:
   ssl_enabled: true
   ca_path: /etc/cloudify/ca.pem
