@@ -34,6 +34,9 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \
     && yum clean all
 
+# ensure locale
+RUN echo -e "LANG=en_US.utf-8\nLC_ALL=C" > /etc/environment
+
 COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
 RUN systemctl enable cloudify-starter.service
 
