@@ -34,7 +34,8 @@ from ...service_names import (
     RESTSERVICE,
     POSTGRESQL_CLIENT,
     MANAGER_SERVICE,
-    MONITORING_SERVICE
+    MONITORING_SERVICE,
+    RABBITMQ,
 )
 from ... import constants
 from ...config import config
@@ -274,6 +275,14 @@ class RestService(BaseComponent):
                 }
             }, json_dump=True)
             additional_config.append(filepath)
+
+        # pass through rabbitmq config separately too, because we might have
+        # defaulted all kinds of things about rabbitmq
+        # (eg. the default localhost broker)
+        additional_config.append(write_to_tempfile({
+            RABBITMQ: config[RABBITMQ],
+        }, json_dump=True))
+
         db.populate_db(configs, additional_config_files=additional_config)
         if additional_config:
             for filepath in additional_config:
