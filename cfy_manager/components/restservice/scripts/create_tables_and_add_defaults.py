@@ -4,9 +4,7 @@ from __future__ import print_function
 import os
 import sys
 import json
-import atexit
 import logging
-import tempfile
 import argparse
 import subprocess
 from datetime import datetime
@@ -14,7 +12,6 @@ from datetime import datetime
 from flask_migrate import upgrade
 
 from manager_rest import config, version
-from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import db, models, get_storage_manager
 
@@ -55,19 +52,6 @@ def _populate_roles(data):
     db.session.commit()
 
 
-def _get_amqp_manager(script_config):
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
-        f.write(script_config['rabbitmq_ca_cert'])
-    broker = script_config['rabbitmq_brokers'][0]
-    atexit.register(os.unlink, f.name)
-    return AMQPManager(
-        host=broker['management_host'],
-        username=broker['username'],
-        password=broker['password'],
-        verify=f.name
-    )
-
-
 def _insert_config(config):
     sm = get_storage_manager()
     for scope, entries in config:
@@ -76,16 +60,6 @@ def _insert_config(config):
                           filters={'name': name, 'scope': scope})
             inst.value = value
             sm.update(inst)
-
-
-def _insert_rabbitmq_broker(brokers, ca_id):
-    sm = get_storage_manager()
-    for broker in brokers:
-        inst = models.RabbitMQBroker(
-            _ca_cert_id=ca_id,
-            **broker
-        )
-        sm.put(inst)
 
 
 def _insert_db_nodes(db_nodes):
@@ -193,11 +167,6 @@ if __name__ == '__main__':
         _populate_roles(script_config['permissions'])
     if script_config.get('config'):
         _insert_config(script_config['config'])
-    if script_config.get('rabbitmq_brokers'):
-        rabbitmq_ca_id = _insert_cert(script_config['rabbitmq_ca_cert'],
-                                      'rabbitmq-ca')
-        _insert_rabbitmq_broker(
-            script_config['rabbitmq_brokers'], rabbitmq_ca_id)
     if script_config.get('manager'):
         _insert_manager(script_config['manager'])
     if script_config.get('provider_context'):

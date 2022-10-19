@@ -20,7 +20,6 @@ from ...service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
-    RABBITMQ,
     RESTSERVICE,
 )
 
@@ -133,35 +132,10 @@ def _create_populate_db_args_dict():
                                'migrations'),
         'config': make_manager_config(),
         'premium': 'premium' if is_premium_installed() else 'community',
-        'rabbitmq_brokers': _create_rabbitmq_info(),
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info(),
     }
-    rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
-    if rabbitmq_ca_cert_path:
-        with open(rabbitmq_ca_cert_path) as f:
-            args_dict['rabbitmq_ca_cert'] = f.read()
     return args_dict
-
-
-def _create_rabbitmq_info():
-    use_hostnames = config[RABBITMQ]['use_hostnames_in_db']
-    is_external = config[RABBITMQ].get('is_external', False)
-    return [
-        {
-            'name': name,
-            'host': name if use_hostnames else broker[NETWORKS]['default'],
-            'management_host': (
-                name if use_hostnames else broker[NETWORKS]['default']
-            ),
-            'username': config[RABBITMQ]['username'],
-            'password': config[RABBITMQ]['password'],
-            'params': None,
-            'networks': broker[NETWORKS],
-            'is_external': is_external,
-        }
-        for name, broker in config[RABBITMQ]['cluster_members'].items()
-    ]
 
 
 def _create_db_nodes_info():
