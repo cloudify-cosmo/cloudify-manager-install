@@ -118,7 +118,6 @@ cfy_manager install
 %attr(755,cfyuser,cfyuser) /etc/cloudify
 %attr(660,root,wheel) %config(noreplace) /etc/cloudify/config.yaml
 /etc/yum.repos.d/Cloudify-Local.repo
-/usr/lib/systemd/system/supervisord.service
 /etc/supervisord.conf
 /etc/rsyslog.d/39-cloudify-perms.conf
 /etc/rsyslog.d/50-supervisord.conf
