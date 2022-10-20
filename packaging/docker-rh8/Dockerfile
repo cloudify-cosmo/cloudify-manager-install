@@ -39,17 +39,11 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \
     && yum clean all
 
-# Ensure locale
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-
-COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
-RUN systemctl enable cloudify-starter.service
 
 RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
 RUN chmod a+wx /var/run
 COPY starter.conf /etc/supervisord.d/starter.conf
 
-STOPSIGNAL SIGRTMIN+3
-VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/usr/bin/cfy_manager", "run-init"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
