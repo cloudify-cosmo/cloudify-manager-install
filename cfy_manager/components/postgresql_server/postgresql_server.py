@@ -137,8 +137,9 @@ class PostgresqlServer(BaseComponent):
     def _init_postgresql_server(self):
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
-        cmd = '\"{0} -D {1} initdb\"'.format(pg_ctl, PGSQL_DATA_DIR)
-        initdb = 'su - postgres -c {0}'.format(cmd)
+        initdb = [
+            'sudo', '-u', 'postgres', pg_ctl, '-D', PGSQL_DATA_DIR, 'initdb'
+        ]
         try:
             common.run(initdb)
         except Exception:
