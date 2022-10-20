@@ -269,3 +269,35 @@ def _strip_prefix(service_name):
     if service_name.startswith(legacy_prefix):
         return service_name[len(legacy_prefix):]
     return service_name
+
+
+def using_systemd_service(service_name):
+    """Check if a service is already running under systemd
+
+    Some services (eg. haveged or rsyslog) can already be running on this
+    machine. In that case, we're not going to bring our own.
+    """
+    try:
+        # first, check if we have systemd at all
+        is_running = subprocess.run(
+            ['/bin/systemctl', 'is-system-running'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        ).stdout.strip()
+        if not is_running:
+            # systemctl always gives SOME stdout ("active", "degraded") only if
+            # systemd exists
+            return False
+    except FileNotFoundError:
+        # no systemctl at all, so there for sure won't be systemd services
+        return False
+
+    if subprocess.run(
+        ['/bin/systemctl', 'is-enabled', service_name],
+        stdout=subprocess.PIPE(),
+        stderr=subprocess.DEVNULL,
+    ).stdout.strip().lower() == 'enabled':
+        logger.notice('Using system %s', service_name)
+        return True
+
+    return False

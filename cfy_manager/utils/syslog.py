@@ -34,20 +34,3 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
             logger.warning('Failed to restart rsyslog: %s', err)
     else:
         service.restart('rsyslog')
-
-
-def using_systemd_rsyslog(logger):
-    """On RHEL/Centos installs, rsyslog might already be present"""
-    try:
-        if subprocess.check_output([
-            'systemctl', 'is-system-running',
-        ]).strip().lower() != 'running':
-            logger.debug('Systemd system is not running, assuming no '
-                         'services are installed.')
-            return False
-        return subprocess.check_output([
-            'systemctl', 'is-enabled', 'rsyslog',
-        ]).strip() == 'enabled'
-    except subprocess.CalledProcessError as e:
-        logger.debug('Error checking if rsyslog is installed: %s', e)
-    return False
