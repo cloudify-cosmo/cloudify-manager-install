@@ -36,7 +36,6 @@ SCRIPTS_PATH = join(
     NGINX,
     SCRIPTS
 )
-UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 HTPASSWD_FILE = '/etc/nginx/conf.d/monitoring-htpasswd.cloudify'
 
 logger = get_logger(NGINX)
@@ -44,15 +43,6 @@ logger = get_logger(NGINX)
 
 class Nginx(BaseComponent):
     services = {'nginx': {'is_group': False}}
-
-    def _deploy_unit_override(self):
-        logger.debug('Creating systemd unit override...')
-        unit_override_path = '/etc/systemd/system/nginx.service.d'
-        common.mkdir(unit_override_path)
-        deploy(
-            src=join(CONFIG_PATH, 'overrides.conf'),
-            dst=join(unit_override_path, 'overrides.conf')
-        )
 
     def _generate_internal_certs(self):
         logger.info('Generating internal certificate...')
@@ -462,23 +452,17 @@ class Nginx(BaseComponent):
         logger.notice('Installing NGINX...')
         common.mkdir(LOG_DIR)
         copy_notice(NGINX)
-        if config.get('service_management') != 'supervisord':
-            self._deploy_unit_override()
         self._set_selinux_policies()
         set_logrotate(NGINX)
         logger.notice('NGINX successfully installed')
 
     def configure(self):
         logger.notice('Configuring NGINX...')
-        if self.service_type == 'supervisord':
-            self._configure_wait_on_restart_wrapper_service()
+        self._configure_wait_on_restart_wrapper_service()
         self._deploy_nginx_config_files()
-        if self.service_type != 'supervisord':
-            service.enable(NGINX)
         if MANAGER_SERVICE in config[SERVICES_TO_INSTALL]:
             self._handle_certs()
-        if self.service_type == 'supervisord':
-            service.configure(NGINX)
+        service.configure(NGINX)
         logger.notice('NGINX successfully configured')
         self.start()
 
@@ -486,12 +470,10 @@ class Nginx(BaseComponent):
         remove_notice(NGINX)
         remove_logrotate(NGINX)
         service.remove('nginx')
-        if self.service_type == 'supervisord':
-            service.remove('wait_on_restart')
+        service.remove('wait_on_restart')
         remove([
             join('/var/cache', NGINX),
             LOG_DIR,
-            UNIT_OVERRIDE_PATH,
             HTPASSWD_FILE,
             '/etc/nginx',
         ])

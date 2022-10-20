@@ -47,8 +47,6 @@ from ...utils.network import ipv6_url_compat
 CONFIG_DIR = join(constants.COMPONENTS_DIR, PROMETHEUS, CONFIG)
 LOG_DIR = join(constants.BASE_LOG_DIR, PROMETHEUS)
 BIN_DIR = join(sep, 'usr', 'local', 'bin')
-SYSTEMD_CONFIG_DIR = join(sep, 'etc', 'systemd', 'system')
-SUPERVISORD_CONFIG_DIR = join(sep, 'etc', 'supervisord.d')
 PROMETHEUS_DATA_DIR = join(sep, 'var', 'lib', 'prometheus')
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_ALERTS_DIR = join(PROMETHEUS_CONFIG_DIR, 'alerts')
@@ -186,8 +184,7 @@ class Prometheus(BaseComponent):
         services = ['prometheus']
         services.extend([exporter + '_exporter'
                          for exporter in ['postgres', 'node', 'blackbox']])
-        syslog.deploy_rsyslog_filters('prometheus', services,
-                                      self.service_type, logger)
+        syslog.deploy_rsyslog_filters('prometheus', services, logger)
 
         logger.notice('Prometheus successfully configured')
         self.start()

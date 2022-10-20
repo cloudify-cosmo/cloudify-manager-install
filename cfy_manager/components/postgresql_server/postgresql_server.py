@@ -157,29 +157,28 @@ class PostgresqlServer(BaseComponent):
         common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
     def _configure_postgresql_server_service(self):
-        if self.service_type == 'supervisord':
-            service.configure(
-                POSTGRES_SERVICE_NAME,
-                src_dir='postgresql_server',
-                config_path='config/supervisord'
-            )
-            files.deploy(
-                join(
-                    SCRIPTS_PATH,
-                    'postgresql_server_wrapper_script.sh'
-                ),
-                '/var/lib/pgsql/',
-                render=False
-            )
-            common.chown(
-                'postgres',
-                'postgres',
-                '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
-            )
-            common.chmod(
-                '755',
-                '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
-            )
+        service.configure(
+            POSTGRES_SERVICE_NAME,
+            src_dir='postgresql_server',
+            config_path='config/supervisord'
+        )
+        files.deploy(
+            join(
+                SCRIPTS_PATH,
+                'postgresql_server_wrapper_script.sh'
+            ),
+            '/var/lib/pgsql/',
+            render=False
+        )
+        common.chown(
+            'postgres',
+            'postgres',
+            '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
+        )
+        common.chmod(
+            '755',
+            '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
+        )
 
     def _bytes_as_mb(self, value_in_bytes):
         return '{}MB'.format(value_in_bytes // 1024 // 1024)
@@ -413,19 +412,13 @@ class PostgresqlServer(BaseComponent):
         return service.is_active('etcd')
 
     def _start_etcd(self):
-        # On the first node, etcd start via systemd will fail because of the
-        # other nodes not being up, so we use this approach instead
         logger.info('Starting etcd')
-        # Systemd only support adding "--no-block"
-        options = ['--no-block']
-        ignore_failure = False
-        if self.service_type == 'supervisord':
-            options = []
-            ignore_failure = True
-
-        service.start('etcd', options=options, ignore_failure=ignore_failure)
-        if self.service_type == 'systemd':
-            self._wait_for_etcd()
+        service.start(
+            'etcd',
+            # On the first node, etcd start will fail because of the
+            # other nodes not being up
+            ignore_failure=True,
+        )
         logger.info('etcd has started')
 
     def _restart_etcd(self):
@@ -545,18 +538,11 @@ class PostgresqlServer(BaseComponent):
 
     def _configure_patroni(self):
         logger.info('Starting patroni')
-        if self.service_type == 'supervisord':
-            service.configure(
-                'patroni',
-                src_dir='postgresql_server',
-                render=False
-            )
-        else:
-            service.configure(
-                'patroni',
-                src_dir='postgresql_server',
-                render=False,
-            )
+        service.configure(
+            'patroni',
+            src_dir='postgresql_server',
+            render=False
+        )
 
     def handle_cluster_certificates(self):
         # We currently use the same certificates for etcd, patroni,
@@ -754,7 +740,7 @@ class PostgresqlServer(BaseComponent):
         common.chmod('750', POSTGRES_LOG_PATH)
 
         syslog.deploy_rsyslog_filters('db_cluster', ['etcd', 'patroni'],
-                                      self.service_type, logger)
+                                      logger)
 
         # create custom postgresql conf file with log settings
         fd, tmp_path = mkstemp()
@@ -769,21 +755,18 @@ class PostgresqlServer(BaseComponent):
         common.run(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
         logger.info('Configuring etcd')
-        if self.service_type == 'supervisord':
-            service.configure(
-                'etcd',
-                user='etcd',
-                group='etcd',
-                src_dir='postgresql_server',
-                config_path='config/supervisord',
-                external_configure_params={
-                    'ip': ip_urlized,
-                    'manager_private_ip': network.ipv6_url_compat(private_ip),
-                    'postgresql_server_cluster_nodes': cluster_nodes,
-                }
-            )
-        else:
-            service.enable('etcd')
+        service.configure(
+            'etcd',
+            user='etcd',
+            group='etcd',
+            src_dir='postgresql_server',
+            config_path='config/supervisord',
+            external_configure_params={
+                'ip': ip_urlized,
+                'manager_private_ip': network.ipv6_url_compat(private_ip),
+                'postgresql_server_cluster_nodes': cluster_nodes,
+            }
+        )
         self._start_etcd()
 
         try:
@@ -977,7 +960,6 @@ class PostgresqlServer(BaseComponent):
             os.path.join(SCRIPTS_PATH, 'patroni_startup_check'),
             '/opt/patroni/bin/patroni_startup_check',
             additional_render_context={
-                'service_manager': self.service_type,
                 'config_files': config['config_files'],
             }
         )
