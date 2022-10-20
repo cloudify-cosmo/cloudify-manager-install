@@ -1,25 +1,15 @@
 #! /usr/bin/env bash
 
-SERVICE_MANAGER="{{service_manager}}"
-
 check_patroni_log() {
   patroni_message=${1}
-  if [[ "${SERVICE_MANAGER}" == "supervisord" ]]; then
-       tail /var/log/cloudify/db_cluster/patroni/patroni.log | grep "${patroni_message}"
-  else
-       journalctl -u patroni | tail | grep "${patroni_message}"
-  fi
+  tail /var/log/cloudify/db_cluster/patroni/patroni.log | grep "${patroni_message}"
 }
 
 run_service_command() {
   action=$1
   service_name=$2
 
-  if [[ "${SERVICE_MANAGER}" == "supervisord" ]]; then
-       supervisorctl -c /etc/supervisord.conf "${action}" "${service_name}"
-  else
-       systemctl "${action}" "${service_name}"
-  fi
+  supervisorctl -c /etc/supervisord.conf "${action}" "${service_name}"
 }
 
 check_and_maybe_fix_patroni() {

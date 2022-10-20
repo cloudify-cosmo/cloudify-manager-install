@@ -24,15 +24,12 @@ from manager_rest.storage import models, get_storage_manager
 from cloudify_premium.ha import controller, syncthing
 
 
-def run_syncthing_configuration(
-        hostname,
-        bootstrap_cluster,
-        service_management):
+def run_syncthing_configuration(hostname, bootstrap_cluster):
     syncthing.configure(
         bootstrap_cluster,
-        service_management=service_management
+        service_management='supervisord',
     )
-    syncthing.start(hostname, service_management=service_management)
+    syncthing.start(hostname, service_management='supervisord')
 
     if not bootstrap_cluster:
         sm = get_storage_manager()
@@ -41,7 +38,7 @@ def run_syncthing_configuration(
         # will also take care of upgrading Prometheus federation configuration
         controller.add_manager(managers_list)
         syncthing.wait_for_replication()
-    syncthing.finish(service_management=service_management)
+    syncthing.finish(service_management='supervisord')
 
 
 def file_path(path):
@@ -75,5 +72,4 @@ if __name__ == '__main__':
     run_syncthing_configuration(
         args_dict['hostname'],
         args_dict['bootstrap_syncthing'],
-        args_dict['service_management']
     )

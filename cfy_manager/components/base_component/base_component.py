@@ -29,7 +29,6 @@ class BaseComponent(object):
 
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
-        self.service_type = service._get_service_type()
 
     def install(self):
         pass

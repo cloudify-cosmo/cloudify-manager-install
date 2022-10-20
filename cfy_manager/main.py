@@ -672,10 +672,6 @@ def _all_services_configured():
                for service_name in config[SERVICES_TO_INSTALL])
 
 
-def is_supervisord_service():
-    return service._get_service_type() == 'supervisord'
-
-
 def _create_initial_install_files():
     """
     If the installation finished successfully for the first time,
@@ -955,8 +951,7 @@ def install(verbose=False,
     update_yaml_file(INSTALLED_PACKAGES, packages_per_service_dict)
     yum_install(packages_to_install)
 
-    if is_supervisord_service():
-        _configure_supervisord()
+    _configure_supervisord()
 
     components = _get_components()
     validate(components=components, only_install=only_install)
@@ -1008,9 +1003,8 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
-    # This only relevant for restarting services on VM that use supervisord
-    if is_supervisord_service():
-        _configure_supervisord()
+
+    _configure_supervisord()
 
     for component in components:
         component.configure()
@@ -1109,7 +1103,7 @@ def remove(verbose=False, config_file=None):
 
     _remove_installation_files()
 
-    if is_supervisord_service() and _all_main_services_removed():
+    if _all_main_services_removed():
         remove_files(SUPERVISORD_CONFIG_DIR)
 
     clean_certs()
@@ -1202,30 +1196,6 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
         component.start()
 
 
-def _is_unit_finished(unit_name='cloudify-starter.service'):
-    try:
-        unit_details = subprocess.check_output(
-            ['/bin/systemctl', 'show', unit_name],
-            stderr=subprocess.STDOUT
-        ).splitlines()
-    except subprocess.CalledProcessError:
-        # systemd is not ready yet
-        return False
-    for line in unit_details:
-        name, _, value = line.strip().partition(b'=')
-        if name == b'ExecMainExitTimestampMonotonic':
-            rv = int(value) > 0
-        if name == b'ExecMainStatus':
-            try:
-                value = int(value)
-            except ValueError:
-                continue
-            if value > 0:
-                raise BootstrapError(
-                    'Starter service exited with code {0}'.format(value))
-    return rv
-
-
 def _get_starter_service_response():
     server = xmlrpc.client.Server(
         'http://',
@@ -1307,12 +1277,10 @@ def wait_for_starter(timeout=600, config_file=None):
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
     _follow.seek_to_end()
 
-    is_started = _is_supervisord_service_finished \
-        if is_supervisord_service() else _is_unit_finished
     deadline = time.time() + timeout
     while time.time() < deadline:
         _follow.poll()
-        if is_started():
+        if _is_supervisord_service_finished():
             break
         time.sleep(0.5)
     else:
@@ -1360,26 +1328,6 @@ def image_starter(verbose=False, config_file=None):
             and not _all_services_configured():
         command += ['--admin-password', 'admin']
     os.execv(executable, command)
-
-
-@argh.decorators.named('run-init')
-@config_arg
-def run_init(config_file=None):
-    """Run the configured init system/service management system.
-
-    Based on the configuration, run either systemd or supervisord.
-    This is to be used for the docker image. Full OS images should run
-    systemd on their own.
-    """
-    config.load_config(config_file)
-    if is_supervisord_service():
-        os.execv(
-            "/usr/bin/supervisord",
-            ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
-    else:
-        os.execv(
-            "/bin/bash",
-            ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
 
 
 @argh.named('replace')
@@ -1462,6 +1410,16 @@ def version(**kwargs):
                             repo['branch_name'])
 
 
+@argh.decorators.named('run-init')
+@config_arg
+def run_init(config_file=None):
+    """Run the service management system."""
+    # this function is left here for build-related reasons. To be removed ASAP
+    os.execv(
+        "/usr/bin/supervisord",
+        ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
+
+
 def main():
     _ensure_root()
     # Set the umask to 0022; restore it later.
@@ -1485,9 +1443,9 @@ def main():
         reset_admin_password,
         image_starter,
         wait_for_starter,
-        run_init,
         version,
-        upgrade
+        upgrade,
+        run_init,
     ])
 
     parser.add_commands(
