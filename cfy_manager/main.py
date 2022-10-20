@@ -1330,26 +1330,6 @@ def image_starter(verbose=False, config_file=None):
     os.execv(executable, command)
 
 
-@argh.decorators.named('run-init')
-@config_arg
-def run_init(config_file=None):
-    """Run the configured init system/service management system.
-
-    Based on the configuration, run either systemd or supervisord.
-    This is to be used for the docker image. Full OS images should run
-    systemd on their own.
-    """
-    config.load_config(config_file)
-    if is_supervisord_service():
-        os.execv(
-            "/usr/bin/supervisord",
-            ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
-    else:
-        os.execv(
-            "/bin/bash",
-            ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
-
-
 @argh.named('replace')
 @argh.arg('--only-validate', help=VALIDATE_HELP_MSG)
 @argh.arg('-i', '--input-path', help=INPUT_PATH_MSG)
@@ -1430,6 +1410,16 @@ def version(**kwargs):
                             repo['branch_name'])
 
 
+@argh.decorators.named('run-init')
+@config_arg
+def run_init(config_file=None):
+    """Run the service management system."""
+    # this function is left here for build-related reasons. To be removed ASAP
+    os.execv(
+        "/usr/bin/supervisord",
+        ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
+
+
 def main():
     _ensure_root()
     # Set the umask to 0022; restore it later.
@@ -1453,9 +1443,9 @@ def main():
         reset_admin_password,
         image_starter,
         wait_for_starter,
-        run_init,
         version,
-        upgrade
+        upgrade,
+        run_init,
     ])
 
     parser.add_commands(
