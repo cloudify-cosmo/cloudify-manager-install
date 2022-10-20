@@ -27,8 +27,8 @@ if $programname == '{svc}' then /var/log/cloudify/{group}/{svc}.log
 
     if using_systemd_rsyslog(logger):
         try:
-            service.SystemD().restart('rsyslog')
-        except ProcessExecutionError as err:
+            subprocess.check_call(['/bin/systemctl', 'restart', 'rsyslog'])
+        except subprocess.CalledProcessError as err:
             # Some container setups can detect rsyslog being used with systemd
             # but not be able to restart it.
             logger.warning('Failed to restart rsyslog: %s', err)
