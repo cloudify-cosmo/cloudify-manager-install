@@ -165,10 +165,13 @@ class SystemD(object):
         ).aggr_stdout.strip().lower() in ACTIVE_STATES
 
     def is_installed(self, service_name):
-        if self.systemctl(
+        if not self.systemctl(
             'is-system-running',
             ignore_failure=True,
-        ).aggr_stdout.strip() != 'running':
+        ).aggr_stdout.strip():
+            # Any output at all means systemd is running. No output means
+            # it isn't. The actual output (if there is any) varies depending
+            # on whether any services (at all) failed to start.
             logger.debug('Systemd system is not running, assuming no '
                          'services are installed.')
             return False
