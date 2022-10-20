@@ -1,3 +1,5 @@
+import subprocess
+
 from ..base_component import BaseComponent
 from ...service_names import HAVEGED
 from ...logger import get_logger
@@ -16,8 +18,7 @@ class Haveged(BaseComponent):
             return
 
         logger.info('Configuring haveged for entropy generation.')
-        if self.service_type == 'supervisord':
-            service.configure(HAVEGED)
+        service.configure(HAVEGED)
         service.enable(HAVEGED)
         logger.info('Successfully configured haveged.')
         self.start()
@@ -36,11 +37,27 @@ class Haveged(BaseComponent):
 
 
 def using_systemd_haveged():
-    # On more complete installs of RHEL/Centos, haveged may already be running
-    if service.SystemD().is_installed(HAVEGED):
-        logger.notice('Using system haveged')
-        return True
-    if service.SystemD().is_active(HAVEGED):
-        logger.notice('System haveged active but disabled. Stopping it... ')
-        service.SystemD().stop(HAVEGED)
+    """On RHEL/Centos installs, haveged might already be present"""
+    try:
+        if subprocess.check_output([
+            'systemctl', 'is-system-running',
+        ]).strip().lower() != 'running':
+            logger.debug('Systemd system is not running, assuming no '
+                         'services are installed.')
+            return False
+
+        if subprocess.check_output([
+            'systemctl', 'is-enabled', HAVEGED,
+        ]).strip().lower() == 'enabled':
+            logger.notice('Using system haveged')
+            return True
+
+        if subprocess.check_output([
+            'systemctl', 'is-active', HAVEGED
+        ]).strip().lower() in ['running', 'active', 'activating']:
+            logger.notice('System haveged active but disabled. Stopping it...')
+            subprocess.run(['systemctl', 'stop', HAVEGED])
+
+    except subprocess.CalledProcessError as e:
+        logger.debug('Error checking if rsyslog is installed: %s', e)
     return False

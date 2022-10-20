@@ -14,7 +14,7 @@ class Rsyslog(BaseComponent):
     component_name = 'rsyslog'
 
     def configure(self):
-        if syslog.using_systemd_rsyslog():
+        if syslog.using_systemd_rsyslog(logger):
             logger.notice('Using system rsyslog')
             return
         logger.notice('Configuring Rsyslog...')
@@ -40,7 +40,7 @@ exec /usr/sbin/rsyslogd -n'''
             service.restart('rsyslog')
 
     def remove(self):
-        if syslog.using_systemd_rsyslog():
+        if syslog.using_systemd_rsyslog(logger):
             # We don't manage this
             return
         logger.notice('Removing Rsyslog...')
@@ -49,7 +49,7 @@ exec /usr/sbin/rsyslogd -n'''
 
     # Logic to stop the logger is deliberately not included
     def start(self):
-        if syslog.using_systemd_rsyslog():
+        if syslog.using_systemd_rsyslog(logger):
             # We don't manage this
             return
         logger.notice('Ensuring Rsyslog is running')
