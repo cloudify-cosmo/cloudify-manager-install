@@ -43,8 +43,16 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     stdout = stdout or subprocess.PIPE
     if isinstance(stdin, str):
         stdin = stdin.encode('utf-8')
-    if env:
-        env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}
+
+    if not env:
+        env = {}
+        env.update(os.environ)
+    env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}
+    if 'LANG' not in env:
+        env['LANG'] = 'en_US.utf-8'
+    if 'LC_ALL' not in env:
+        env['LC_ALL'] = 'C'
+
     if globx:
         glob_command = []
         for arg in command:
