@@ -135,15 +135,14 @@ class PostgresqlServer(BaseComponent):
     DOWN = 2
 
     def _init_postgresql_server(self):
+        if os.path.exists(PG_HBA_CONF):
+            logger.info('PostreSQL Server DATA folder already initialized...')
+            return
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
-        initdb = [
+        common.run([
             'sudo', '-u', 'postgres', pg_ctl, '-D', PGSQL_DATA_DIR, 'initdb'
-        ]
-        try:
-            common.run(initdb)
-        except Exception:
-            logger.debug('PostreSQL Server DATA folder already initialized...')
+        ])
 
         logger.debug('Setting PostgreSQL Server logs path...')
         pg_14_logs_path = join(PGSQL_LIB_DIR, '14', 'data', 'pg_log')
