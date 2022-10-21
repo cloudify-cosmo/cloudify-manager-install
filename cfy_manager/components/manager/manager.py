@@ -82,8 +82,7 @@ class Manager(BaseComponent):
     def install(self):
         logger.notice('Installing Cloudify Manager resources...')
         self._create_sudoers_file_and_disable_sudo_requiretty()
-        if self.service_type == 'supervisord':
-            self._allow_run_supervisorctl_command()
+        self._allow_run_supervisorctl_command()
         setup_logrotate()
         self._create_manager_resources_dirs()
         logger.notice('Cloudify Manager resources successfully installed!')

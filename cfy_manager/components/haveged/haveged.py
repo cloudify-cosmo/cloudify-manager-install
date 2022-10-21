@@ -11,36 +11,33 @@ class Haveged(BaseComponent):
     component_name = HAVEGED
     services = {'haveged': {'is_group': False}}
 
+    def __init__(self, *args, **kwargs):
+        self._systemd_check = None
+        super().__init__(*args, **kwargs)
+
+    def _using_systemd_haveged(self):
+        if self._systemd_check is None:
+            self._systemd_check = service.using_systemd_service(HAVEGED)
+        return self._systemd_check
+
     def configure(self):
-        if using_systemd_haveged():
+        if self._using_systemd_haveged():
             return
 
         logger.info('Configuring haveged for entropy generation.')
-        if self.service_type == 'supervisord':
-            service.configure(HAVEGED)
+        service.configure(HAVEGED)
         service.enable(HAVEGED)
         logger.info('Successfully configured haveged.')
         self.start()
 
     def remove(self):
-        if using_systemd_haveged():
+        if self._using_systemd_haveged():
             # We don't manage this
             return
         super().remove()
 
     def start(self):
-        if using_systemd_haveged():
+        if self._using_systemd_haveged():
             # We don't manage this
             return
         super().start()
-
-
-def using_systemd_haveged():
-    # On more complete installs of RHEL/Centos, haveged may already be running
-    if service.SystemD().is_installed(HAVEGED):
-        logger.notice('Using system haveged')
-        return True
-    if service.SystemD().is_active(HAVEGED):
-        logger.notice('System haveged active but disabled. Stopping it... ')
-        service.SystemD().stop(HAVEGED)
-    return False

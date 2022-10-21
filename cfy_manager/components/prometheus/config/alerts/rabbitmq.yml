@@ -5,16 +5,12 @@ groups:
       # Recording rules
       - record: rabbitmq_healthy
         expr: sum by(host, instance, job, monitor) (up{job="rabbitmq"}) == 1
-      - record: rabbitmq_service_systemd
-        expr: sum by (host, name) (node_systemd_unit_state{name=~"(node_exporter|prometheus|cloudify-rabbitmq|nginx).service", state="active"})
-        labels:
-          process_manager: systemd
       - record: rabbitmq_service_supervisord
         expr: sum by (host, name) (node_supervisord_up{name=~"(node_exporter|prometheus|cloudify-rabbitmq|nginx)"})
         labels:
           process_manager: supervisord
       - record: rabbitmq_service
-        expr: rabbitmq_service_systemd or rabbitmq_service_supervisord
+        expr: rabbitmq_service_supervisord
 
       # Alerting rules
       - alert: rabbitmq_down

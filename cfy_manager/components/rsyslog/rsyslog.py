@@ -3,7 +3,7 @@ import os
 from cfy_manager.constants import COMPONENTS_DIR
 from cfy_manager.components.base_component import BaseComponent
 from cfy_manager.logger import get_logger
-from cfy_manager.utils import files, service, syslog
+from cfy_manager.utils import files, service
 
 SYSLOG_WRAPPER_PATH = '/opt/cloudify/syslog_wrapper_script.sh'
 
@@ -13,8 +13,17 @@ logger = get_logger('rsyslog')
 class Rsyslog(BaseComponent):
     component_name = 'rsyslog'
 
+    def __init__(self, *args, **kwargs):
+        self._systemd_check = None
+        super().__init__(*args, **kwargs)
+
+    def _using_systemd_rsyslog(self):
+        if self._systemd_check is None:
+            self._systemd_check = service.using_systemd_service('rsyslog')
+        return self._systemd_check
+
     def configure(self):
-        if syslog.using_systemd_rsyslog():
+        if self._using_systemd_rsyslog():
             logger.notice('Using system rsyslog')
             return
         logger.notice('Configuring Rsyslog...')
@@ -40,7 +49,7 @@ exec /usr/sbin/rsyslogd -n'''
             service.restart('rsyslog')
 
     def remove(self):
-        if syslog.using_systemd_rsyslog():
+        if self._using_systemd_rsyslog():
             # We don't manage this
             return
         logger.notice('Removing Rsyslog...')
@@ -49,7 +58,7 @@ exec /usr/sbin/rsyslogd -n'''
 
     # Logic to stop the logger is deliberately not included
     def start(self):
-        if syslog.using_systemd_rsyslog():
+        if self._using_systemd_rsyslog():
             # We don't manage this
             return
         logger.notice('Ensuring Rsyslog is running')

@@ -197,28 +197,26 @@ class RestService(BaseComponent):
         )
 
     def _configure_restservice_wrapper_script(self):
-        if self.service_type == 'supervisord':
-            deploy(
-                join(
-                    SCRIPTS_PATH,
-                    'restservice-wrapper-script.sh'
-                ),
-                '/etc/cloudify',
-                render=False
-            )
-            common.chmod('755', '/etc/cloudify/restservice-wrapper-script.sh')
+        deploy(
+            join(
+                SCRIPTS_PATH,
+                'restservice-wrapper-script.sh'
+            ),
+            '/etc/cloudify',
+            render=False
+        )
+        common.chmod('755', '/etc/cloudify/restservice-wrapper-script.sh')
 
     def _configure_api_wrapper_script(self):
-        if self.service_type == 'supervisord':
-            deploy(
-                join(
-                    SCRIPTS_PATH,
-                    'api-wrapper-script.sh'
-                ),
-                '/etc/cloudify',
-                render=False
-            )
-            common.chmod('755', '/etc/cloudify/api-wrapper-script.sh')
+        deploy(
+            join(
+                SCRIPTS_PATH,
+                'api-wrapper-script.sh'
+            ),
+            '/etc/cloudify',
+            render=False
+        )
+        common.chmod('755', '/etc/cloudify/api-wrapper-script.sh')
 
     def _configure_restservice(self):
         flask_security_config = self._generate_flask_security_config()
@@ -490,7 +488,6 @@ class RestService(BaseComponent):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
             'bootstrap_syncthing': bootstrap_syncthing,
-            'service_management': self.service_type
         }
         script_path = join(SCRIPTS_PATH, 'configure_cluster_script.py')
         result = run_script_on_manager_venv(script_path,

@@ -28,5 +28,3 @@ prometheus:
 services_to_install:
  - queue_service
  - monitoring_service
-
-service_management: supervisord
