@@ -559,6 +559,10 @@ class RabbitMQ(BaseComponent):
     @retry(stop_max_attempt_number=20, wait_fixed=3000)
     def verify_started(self):
         logger.info('Making sure RabbitMQ is live...')
+        # If a previous start attempt failed because an old instance was
+        # running then this should recover. As it's a start, it shouldn't
+        # interrupt if the data is still being loaded by the new instance
+        service.start('cloudify-rabbitmq')
         wait_for_port(SECURE_PORT)
 
         result = self._rabbitmqctl(['status'])
@@ -691,6 +695,27 @@ class RabbitMQ(BaseComponent):
         common.add_cron_job(time_string, command, comment,
                             constants.CLOUDIFY_USER)
         logger.info('Queue rebalancing cron job successfully created')
+
+    def upgrade(self):
+        # On upgrade, the rabbit rpm may have started the systemd service.
+        # If we leave it running, later upgrade steps may be unhappy.
+        common.run(['systemctl', 'stop', 'rabbitmq-server'],
+                   ignore_failures=True)  # In case there is no systemd
+
+        logger.info('Waiting for rabbitmq to stop')
+        check_num = 0
+        max_checks = 60
+        delay = 2
+        # If we were using supervisord, 5672 will be open
+        while is_port_open(5671) or is_port_open(5672):
+            logger.info('...rabbit is still listening.')
+            if check_num == max_checks:
+                raise RuntimeError(
+                    'Old rabbit is still listening.'
+                )
+            check_num += 1
+            time.sleep(delay)
+        super(RabbitMQ, self).upgrade()
 
 
 def _is_ipv6_enabled():
