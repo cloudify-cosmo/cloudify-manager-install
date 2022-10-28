@@ -1,6 +1,5 @@
 import os
 
-from ..validations import validate_certificates
 from ...components_constants import (
     SERVICES_TO_INSTALL,
     SSL_CLIENT_VERIFICATION,
@@ -170,7 +169,7 @@ class PostgresqlClient(BaseComponent):
                 NEW_POSTGRESQL_CA_KEY_FILE_PATH,
                 POSTGRESQL_CA_KEY_PATH)
 
-            validate_certificates(
+            certificates.validate_certificates(
                 cert_filename, key_filename, ca_filename, ca_key_filename)
 
     def configure(self):

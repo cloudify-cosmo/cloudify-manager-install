@@ -3,14 +3,16 @@ from os.path import join
 from tempfile import gettempdir
 
 from ..base_component import BaseComponent
-from ..validations import validate_certificates
 from ...service_names import MANAGER, RABBITMQ, QUEUE_SERVICE
 from ...components_constants import CONFIG, SERVICES_TO_INSTALL
 from ... import constants
 from ...config import config
 from ...logger import get_logger
 from ...utils import common, service
-from ...utils.certificates import use_supplied_certificates
+from ...utils.certificates import (
+    use_supplied_certificates,
+    validate_certificates,
+)
 from ...utils.files import remove, touch
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers, allow_user_to_sudo_command

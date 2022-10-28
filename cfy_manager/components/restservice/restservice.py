@@ -10,7 +10,6 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ..validations import validate_certificates
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
@@ -371,7 +370,8 @@ class RestService(BaseComponent):
     def validate_new_certs(self):
         # All other certs are validated in other components
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
-            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
+            certificates.validate_certificates(
+                ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
 
     def _replace_ca_certs_on_db(self):
         if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
