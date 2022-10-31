@@ -31,10 +31,6 @@ function generate_certs(){
 
     # Client cert requires DB user as its CN
     generate_test_cert cloudify
-    for i in {1..3}; do
-        cp cloudify.crt db_client_${i}_cert.pem
-        cp cloudify.key db_client_${i}_key.pem
-    done
 
     generate_test_cert $MANAGER1_IP
     mv $MANAGER1_IP.crt external_cert_1.pem
