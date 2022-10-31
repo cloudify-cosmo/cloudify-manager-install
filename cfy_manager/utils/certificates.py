@@ -26,9 +26,6 @@ from cfy_manager.exceptions import ValidationError
 logger = get_logger('Certificates')
 
 
-
-_subject, _, sections = raw.partition('='
-
 def get_cert_cn(cert_path):
     raw = run(
         ['openssl', 'x509', '-noout', '-subject', '-in', cert_path]
