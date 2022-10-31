@@ -26,17 +26,17 @@ from cfy_manager.exceptions import ValidationError
 logger = get_logger('Certificates')
 
 
+
+_subject, _, sections = raw.partition('='
+
 def get_cert_cn(cert_path):
     raw = run(
         ['openssl', 'x509', '-noout', '-subject', '-in', cert_path]
     ).aggr_stdout
     # The raw value will be something like "subject=CN = *.cloudify.co"
     # or "subject=C = US, O = DigiCert Inc, OU = www.digicert.com, CN = DigiCert Global Root CA"  # noqa
-    subject = [
-        section.strip()
-        for section in raw.split('=', 1)[-1].split(',')
-    ]
-    for section in subject:
+    _subject, _, sections = raw.partition('=')
+    for section in  sections.split(',')
         section_type, section_value = section.split('=', 1)
         if section_type.strip().lower() == 'cn':
             return section_value.strip()
