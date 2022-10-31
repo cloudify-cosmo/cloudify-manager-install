@@ -168,8 +168,8 @@ function run_manager2(){
   sudo docker cp ${TMPDIR}/rendered_manager2_config.yaml ${NODE2_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp ${TMPDIR}/manager_2_key.pem ${NODE2_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp ${TMPDIR}/manager_2_cert.pem ${NODE2_NAME}:/etc/cloudify/manager_cert.pem
-  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
-  sudo docker cp ${TMPDIR}/cloudify.key ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE2_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
+  sudo docker cp ${TMPDIR}/cloudify.key ${NODE2_NAME}:/etc/cloudify/manager_postgres_client_key.pem
   sudo docker cp ${TMPDIR}/external_key_2.pem ${NODE2_NAME}:/etc/cloudify/manager_external_key.pem
   sudo docker cp ${TMPDIR}/external_cert_2.pem ${NODE2_NAME}:/etc/cloudify/manager_external_cert.pem
   sudo docker cp ${TMPDIR}/prometheus_key_2.pem ${NODE2_NAME}:/etc/cloudify/manager_prometheus_key.pem
@@ -192,8 +192,8 @@ function run_manager3(){
   sudo docker cp ${TMPDIR}/rendered_manager3_config.yaml ${NODE3_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp ${TMPDIR}/manager_3_key.pem ${NODE3_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp ${TMPDIR}/manager_3_cert.pem ${NODE3_NAME}:/etc/cloudify/manager_cert.pem
-  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
-  sudo docker cp ${TMPDIR}/cloudify.key ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE3_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
+  sudo docker cp ${TMPDIR}/cloudify.key ${NODE3_NAME}:/etc/cloudify/manager_postgres_client_key.pem
   sudo docker cp ${TMPDIR}/external_key_3.pem ${NODE3_NAME}:/etc/cloudify/manager_external_key.pem
   sudo docker cp ${TMPDIR}/external_cert_3.pem ${NODE3_NAME}:/etc/cloudify/manager_external_cert.pem
   sudo docker cp ${TMPDIR}/prometheus_key_3.pem ${NODE3_NAME}:/etc/cloudify/manager_prometheus_key.pem
