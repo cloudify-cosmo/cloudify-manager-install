@@ -35,7 +35,11 @@ def get_cert_cn(cert_path):
     _subject, _, sections = raw.partition('=')
     for section in sections.split(','):
         section_type, section_value = section.split('=', 1)
-        if section_type.strip().lower() == 'cn':
+        # In some cases we see a leading slash on the subject
+        # e.g. "subject = /CN=cloudify"
+        # It can also have surrounding spaces.
+        section_type = section_type.strip().lstrip('/').lower()
+        if section_type == 'cn':
             return section_value.strip()
     return None
 
