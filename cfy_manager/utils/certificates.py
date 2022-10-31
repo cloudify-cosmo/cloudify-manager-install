@@ -33,7 +33,7 @@ def get_cert_cn(cert_path):
     # The raw value will be something like "subject=CN = *.cloudify.co"
     # or "subject=C = US, O = DigiCert Inc, OU = www.digicert.com, CN = DigiCert Global Root CA"  # noqa
     _subject, _, sections = raw.partition('=')
-    for section in  sections.split(',')
+    for section in sections.split(','):
         section_type, section_value = section.split('=', 1)
         if section_type.strip().lower() == 'cn':
             return section_value.strip()
