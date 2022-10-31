@@ -463,14 +463,25 @@ def _validate_postgres_inputs():
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             _validate_postgres_cluster_configuration()
 
-    if (
-        config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]
-        and not config[POSTGRESQL_SERVER]['ssl_only_connections']
-    ):
-        raise ValidationError(
-            'When using ssl_client_verification, ssl_only_connections '
-            'must be enabled to ensure client verification takes place.'
-        )
+    if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
+        if not config[POSTGRESQL_SERVER]['ssl_only_connections']:
+            raise ValidationError(
+                'When using ssl_client_verification, ssl_only_connections '
+                'must be enabled to ensure client verification takes place.'
+            )
+        ssl_inputs = config[SSL_INPUTS]
+        required_certs = [
+            'postgresql_client_cert_path',
+            'postgresql_client_key_path',
+            'postgresql_superuser_client_cert_path',
+            'postgresql_superuser_client_key_path',
+        ]
+        if not all(ssl_inputs[entry] for entry in required_certs):
+            certs = ', '.join(required_certs)
+            raise ValidationError(
+                'When using ssl_client_verification, the following certs '
+                f'must be provided in the config under {SSL_INPUTS}: {certs}'
+            )
     _validate_postgres_azure_configuration()
     _validate_postgres_server_and_cloudify_input_difference()
 
@@ -573,6 +584,15 @@ def _validate_postgres_client_certs():
                 'Client certificates require their CN to be set to '
                 '"cloudify" (without quotes). Provided client cert '
                 f'has CN: {client_cert_cn}'
+            )
+        client_su_cert_cn = get_cert_cn(
+            config[SSL_INPUTS]['postgresql_superuser_client_cert_path'])
+        client_su_name = config[POSTGRESQL_CLIENT]['server_username']
+        if client_su_cert_cn != client_su_name:
+            raise ValidationError(
+                'Client superuser certificates require their CN to be set to '
+                f'"{client_su_name}" (without quotes). Provided client cert '
+                f'has CN: {client_su_cert_cn}'
             )
 
 
