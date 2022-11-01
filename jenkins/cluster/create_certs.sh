@@ -29,17 +29,11 @@ function generate_certs(){
     mv $DB3_IP.crt db3_cert.pem
     mv $DB3_IP.key db3_key.pem
 
-    generate_test_cert $MANAGER1_IP
-    mv $MANAGER1_IP.crt db_client_1_cert.pem
-    mv $MANAGER1_IP.key db_client_1_key.pem
+    # Client cert requires DB user as its CN
+    generate_test_cert cloudify
 
-    generate_test_cert $MANAGER2_IP
-    mv $MANAGER2_IP.crt db_client_2_cert.pem
-    mv $MANAGER2_IP.key db_client_2_key.pem
-
-    generate_test_cert $MANAGER3_IP
-    mv $MANAGER3_IP.crt db_client_3_cert.pem
-    mv $MANAGER3_IP.key db_client_3_key.pem
+    # Client superuser cert requires DB superuser as its CN
+    generate_test_cert postgres
 
     generate_test_cert $MANAGER1_IP
     mv $MANAGER1_IP.crt external_cert_1.pem

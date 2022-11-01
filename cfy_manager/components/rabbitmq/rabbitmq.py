@@ -19,7 +19,6 @@ from ...components_constants import (
     SERVICES_TO_INSTALL,
 )
 from ..base_component import BaseComponent
-from ..validations import validate_certificates
 from ...service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
 from ...utils import certificates, common, network
@@ -538,7 +537,7 @@ class RabbitMQ(BaseComponent):
     def validate_new_certs(self):
         if common.is_all_in_one_manager():
             if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
-                validate_certificates(
+                certificates.validate_certificates(
                     cert_filename=constants.NEW_BROKER_CERT_FILE_PATH,
                     key_filename=constants.NEW_BROKER_KEY_FILE_PATH,
                     ca_filename=constants.NEW_INTERNAL_CA_CERT_FILE_PATH,

@@ -13,6 +13,8 @@ from cfy_manager.constants import (
     POSTGRESQL_CA_CERT_PATH,
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
+    POSTGRESQL_CLIENT_SU_CERT_PATH,
+    POSTGRESQL_CLIENT_SU_KEY_PATH,
 )
 
 from cfy_manager.service_names import (
@@ -105,8 +107,12 @@ def generate_db_env(database, logger, username=None, password=None):
 
         # This only makes sense if SSL is used
         if pg_config[SSL_CLIENT_VERIFICATION]:
-            db_env['PGSSLCERT'] = POSTGRESQL_CLIENT_CERT_PATH
-            db_env['PGSSLKEY'] = POSTGRESQL_CLIENT_KEY_PATH
+            if db_env['PGUSER'] == pg_config['server_username']:
+                db_env['PGSSLCERT'] = POSTGRESQL_CLIENT_SU_CERT_PATH
+                db_env['PGSSLKEY'] = POSTGRESQL_CLIENT_SU_KEY_PATH
+            else:
+                db_env['PGSSLCERT'] = POSTGRESQL_CLIENT_CERT_PATH
+                db_env['PGSSLKEY'] = POSTGRESQL_CLIENT_KEY_PATH
     else:
         # If we're not using SSL then we should fail if we try to talk to an
         # ssl-enabled server, rather than leaking credentials on an untrusted
