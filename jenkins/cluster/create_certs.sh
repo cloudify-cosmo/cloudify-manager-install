@@ -32,6 +32,9 @@ function generate_certs(){
     # Client cert requires DB user as its CN
     generate_test_cert cloudify
 
+    # Client superuser cert requires DB superuser as its CN
+    generate_test_cert postgres
+
     generate_test_cert $MANAGER1_IP
     mv $MANAGER1_IP.crt external_cert_1.pem
     mv $MANAGER1_IP.key external_key_1.pem
