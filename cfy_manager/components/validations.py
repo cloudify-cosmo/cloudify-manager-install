@@ -454,6 +454,23 @@ def _validate_postgres_inputs():
                                   'enable_remote_connections and '
                                   'postgres_password must be set')
 
+    if manager_service_in_config:
+        if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
+            ssl_inputs = config[SSL_INPUTS]
+            required_certs = [
+                'postgresql_client_cert_path',
+                'postgresql_client_key_path',
+                'postgresql_superuser_client_cert_path',
+                'postgresql_superuser_client_key_path',
+            ]
+            if not all(ssl_inputs[entry] for entry in required_certs):
+                certs = ', '.join(required_certs)
+                raise ValidationError(
+                    'When using ssl_client_verification, the following certs '
+                    f'must be provided in the config under {SSL_INPUTS}: '
+                    f'{certs}'
+                )
+
     if manager_service_in_config and not db_service_in_config:
         postgres_host = config[POSTGRESQL_CLIENT]['host'].rsplit(':', 1)[0]
         if postgres_host in ('localhost', '127.0.0.1', '::1') and \
@@ -468,19 +485,6 @@ def _validate_postgres_inputs():
             raise ValidationError(
                 'When using ssl_client_verification, ssl_only_connections '
                 'must be enabled to ensure client verification takes place.'
-            )
-        ssl_inputs = config[SSL_INPUTS]
-        required_certs = [
-            'postgresql_client_cert_path',
-            'postgresql_client_key_path',
-            'postgresql_superuser_client_cert_path',
-            'postgresql_superuser_client_key_path',
-        ]
-        if not all(ssl_inputs[entry] for entry in required_certs):
-            certs = ', '.join(required_certs)
-            raise ValidationError(
-                'When using ssl_client_verification, the following certs '
-                f'must be provided in the config under {SSL_INPUTS}: {certs}'
             )
     _validate_postgres_azure_configuration()
     _validate_postgres_server_and_cloudify_input_difference()
@@ -501,16 +505,6 @@ def _validate_postgres_ssl_certificates_provided():
                     'postgresql_server.cert_path, '
                     'postgresql_server.key_path, '
                     'and postgresql_server.ca_path'))
-        elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
-                  config[SSL_INPUTS]['postgresql_client_key_path'] and
-                  config['postgresql_server']['ca_path']):
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                raise ValidationError(error_msg.format(
-                    'with client verification, a CA certificate, '
-                    'a certificate and a key ',
-                    'ssl_inputs.postgresql_client_cert_path, '
-                    'ssl_inputs.postgresql_client_key_path, '
-                    'and postgresql_server.ca_path'))
     elif service_is_in_config(MANAGER_SERVICE):
         if not config['postgresql_server']['ca_path'] and not \
                 config['postgresql_client']['ca_path']:
@@ -520,6 +514,20 @@ def _validate_postgres_ssl_certificates_provided():
                                  'postgresql_server.ca_path or '
                                  'postgresql_client.ca_path')
             )
+        if not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
+                config[SSL_INPUTS]['postgresql_client_key_path'] and
+                config[SSL_INPUTS]['postgresql_superuser_client_key_path'] and
+                config[SSL_INPUTS]['postgresql_superuser_client_key_path'] and
+                config['postgresql_server']['ca_path']):
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                raise ValidationError(error_msg.format(
+                    'with client verification, a CA certificate, '
+                    'a certificate and a key ',
+                    'ssl_inputs.postgresql_client_cert_path, '
+                    'ssl_inputs.postgresql_client_key_path, '
+                    'ssl_inputs.postgresql_superuser_client_cert_path, '
+                    'ssl_inputs.postgresql_superuser_client_key_path, '
+                    'and postgresql_server.ca_path'))
 
 
 def _validate_external_postgres():
