@@ -35,7 +35,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \
     && yum clean all
 
-# RUN if [ "$arch" == "aarch64" ]; then pushd /opt/cloudify-stage && npm install sharp --build-from-source --prefix backend && popd ; fi
+RUN if [ "$arch" == "aarch64" ]; then pushd /opt/cloudify-stage && chown -R `whoami` . && npm install sharp --build-from-source --prefix backend && popd ; fi
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
