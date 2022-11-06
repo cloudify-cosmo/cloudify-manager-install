@@ -38,6 +38,9 @@ Cloudify Manager installer.
 %prep
 sudo tar xf %{S:0} -C /
 
+npm install -g node-gyp
+npm install sharp --build-from-source --prefix backend
+
 %build
 
 # Create the venv with the custom Python symlinked in
