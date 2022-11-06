@@ -38,7 +38,7 @@ Cloudify Manager installer.
 %prep
 sudo tar xf %{S:0} -C /
 
-npm install -g node-gyp
+npm install node-gyp --location=global
 npm install sharp --build-from-source --prefix backend
 
 %build
