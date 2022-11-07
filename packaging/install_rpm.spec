@@ -38,9 +38,6 @@ Cloudify Manager installer.
 %prep
 sudo tar xf %{S:0} -C /
 
-npm install node-gyp --location=global && npm config set node_gyp /usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js
-npm install sharp --build-from-source --prefix backend
-
 %build
 
 # Create the venv with the custom Python symlinked in
