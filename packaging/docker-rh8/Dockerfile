@@ -19,7 +19,7 @@ RUN yum install -y openssl-1.1.1k libselinux-utils \
     initscripts openssh-clients sudo \
     dbus-glib ncurses libpq compat-openssl10 iproute
 
-EXPOSE 80 443 5672 53333
+EXPOSE 80 443 5671 53333
 COPY $config /tmp/config.yaml
 
 # `curl && yum install && rm` is the method that results in the lowest

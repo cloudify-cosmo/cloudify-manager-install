@@ -15,7 +15,7 @@ RUN yum update -y && yum install -y openssl-1.0.2k libselinux-utils \
     initscripts tcp_wrappers-libs openssh-clients sudo \
     systemd-sysv  # systemd-sysv is required by postgres
 
-EXPOSE 80 443 5672 53333
+EXPOSE 80 443 5671 53333
 COPY $config /tmp/config.yaml
 
 # `curl && yum install && rm` is the method that results in the lowest
