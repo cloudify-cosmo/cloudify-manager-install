@@ -8,3 +8,26 @@ location /api/ {
 location /api {
     return 404;
 }
+
+location /monitoring {
+    auth_request /monitoring-auth;
+    auth_basic "Cloudify Monitoring Service";
+    proxy_pass         http://cloudify-monitoring;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+
+    gzip on;
+    gzip_types application/json;
+    gzip_min_length 1000;
+    gzip_proxied any;
+}
+
+location /monitoring-auth {
+    internal;
+    proxy_pass http://cloudify-rest/api/v3.1/monitoring-auth;
+}
