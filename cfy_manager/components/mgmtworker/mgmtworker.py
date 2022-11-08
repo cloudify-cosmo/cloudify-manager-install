@@ -118,7 +118,7 @@ class MgmtWorker(BaseComponent):
         self._deploy_hooks_config()
         service.configure(
             'cloudify-mgmtworker',
-            additional_render_context=self._mgmtworker_render_context(),
+            external_configure_params=self._mgmtworker_render_context(),
         )
         self._prepare_snapshot_permissions()
         self._deploy_admin_token()
