@@ -96,7 +96,7 @@ class MgmtWorker(BaseComponent):
         config_path = (
             extra_env.pop('PATH', None)
             or extra_env.pop('path', None)
-            or '$PATH'
+            or '%(ENV_PATH)s'
         )
         mgmtworker_paths = [
             # python-version specific virtualenvs are included in the
