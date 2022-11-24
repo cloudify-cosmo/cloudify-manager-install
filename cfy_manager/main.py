@@ -91,7 +91,12 @@ from .utils.common import (
     service_is_in_config,
 )
 from cfy_manager.utils.db import get_psql_env_and_base_command
-from .utils.install import is_premium_installed, yum_install, yum_remove
+from .utils.install import (
+    is_package_installed,
+    is_premium_installed,
+    yum_install,
+    yum_remove
+)
 from .utils.files import (
     remove as remove_files,
     remove_temp_files,
@@ -1211,6 +1216,17 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     packages_to_update, _ = _get_packages()
     run(['yum', 'clean', 'all'],
         stdout=sys.stdout, stderr=sys.stderr)
+
+    # handle possible erlang package change:
+    if 'esl_erlang' in packages_to_update and is_package_installed('erlang'):
+        packages_to_update.remove('esl_erlang')
+        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout
+        run(['rpm', '-e', '--nodeps', erlang_pkg],
+            stdout=sys.stdout, stderr=sys.stderr)
+        run(['yum', 'install', '-y', '--disablerepo=*',
+             '--enablerepo=cloudify', 'esl_erlang'],
+            stdout=sys.stdout, stderr=sys.stderr)
+
     run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
