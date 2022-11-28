@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import distro
 import netifaces
 from getpass import getuser

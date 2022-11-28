@@ -75,6 +75,8 @@ PGSQL_SOCK_DIR = '/var/run/postgresql'
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-14'
 PGSQL_DATA_DIR = '/var/lib/pgsql/14/data'
+OLD_PGSQL_USR_DIR = '/usr/pgsql-9.5'
+OLD_PGSQL_DATA_DIR = '/var/lib/pgsql/9.5/data'
 PG_HBA_CONF = '{0}/pg_hba.conf'.format(PGSQL_DATA_DIR)
 PG_BASE_CONF_PATH = '{0}/postgresql.conf'.format(PGSQL_DATA_DIR)
 PG_CONF_PATH = '{0}/cloudify-postgresql.conf'.format(PGSQL_DATA_DIR)
@@ -137,16 +139,17 @@ class PostgresqlServer(BaseComponent):
     DOWN = 2
 
     upgrading_psql = False
+    encoding = None
+    locale = None
 
     def _init_postgresql_server(self):
         if os.path.exists(PG_HBA_CONF):
             logger.info('PostreSQL Server DATA folder already initialized...')
             return
         logger.debug('Initializing PostgreSQL Server DATA folder...')
-        pg_ctl = join(PGSQL_USR_DIR, 'bin', 'pg_ctl')
-        common.run([
-            'sudo', '-u', 'postgres', pg_ctl, '-D', PGSQL_DATA_DIR, 'initdb'
-        ])
+        common.run(['sudo', '-u', 'postgres',
+                    join(PGSQL_USR_DIR, 'bin', 'initdb'),
+                    '-D', PGSQL_DATA_DIR])
 
         logger.debug('Setting PostgreSQL Server logs path...')
         pg_14_logs_path = join(PGSQL_LIB_DIR, '14', 'data', 'pg_log')
@@ -1736,7 +1739,19 @@ class PostgresqlServer(BaseComponent):
             service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
+    def _save_encoding_and_locale(self):
+        self.encoding = subprocess.run(
+            ['psql', '-U', 'postgres', '-c', 'SHOW SERVER_ENCODING', '-t'],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        ).stdout.decode('utf-8').strip()
+
+        self.locale = subprocess.run(
+            ['psql', '-U', 'postgres', '-c', 'SHOW LC_CTYPE', '-t'],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        ).stdout.decode('utf-8').strip()
+
     def stop(self, force=True):
+        self._save_encoding_and_locale()
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')
@@ -1747,8 +1762,66 @@ class PostgresqlServer(BaseComponent):
                 self.upgrading_psql = False
             except ProcessExecutionError:
                 service.stop(OLD_POSTGRES_SERVICE_NAME)
+                service.remove(OLD_POSTGRES_SERVICE_NAME)
                 self.upgrading_psql = True
         logger.notice('PostgreSQL Server successfully stopped')
+
+    def upgrade(self):
+        if self.upgrading_psql:
+            logger.notice("Upgrading PostgreSQL database version...")
+            logger.debug('Configuring and initializing new PostgreSQL '
+                         'service...')
+            self._configure_postgresql_server_service()
+            service.reload(POSTGRES_SERVICE_NAME)
+
+            # wait for postgresql service to exit after reload,
+            # since initdb needs it down.
+            # The service stops since "/var/lib/pgsql/14/data/postgresql.conf"
+            #   doesn't exist yet
+            self._verify_postgres_stopped()
+
+            res = common.run(
+                ['sudo', '-u', 'postgres',
+                 join(PGSQL_USR_DIR, 'bin', 'initdb'),
+                 '-D', PGSQL_DATA_DIR,
+                 '--locale', self.locale, '-E', self.encoding],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                ignore_failures=True
+            )
+            if 'Success' not in res.aggr_stdout:
+                raise ProcessExecutionError(
+                    f"Error initializing {POSTGRES_SERVICE_NAME} "
+                    f"database:\n{res.aggr_stdout}\n{res.aggr_stderr}")
+            logger.debug(f'Success initializing '
+                         f'{POSTGRES_SERVICE_NAME} database!')
+
+            logger.debug('Upgrading PostgreSQL...')
+            bindir = join(PGSQL_USR_DIR, 'bin')
+            old_bindir = join(OLD_PGSQL_USR_DIR, 'bin')
+            pg_upgrade = join(bindir, 'pg_upgrade')
+
+            # `cwd=/tmp` because otherwise I get:
+            #  could not open log file "pg_upgrade_internal.log":
+            #  Permission denied
+            res = common.run(
+                ['sudo', '-u', 'postgres', pg_upgrade,
+                 '--old-bindir', old_bindir, '--new-bindir', bindir,
+                 '--old-datadir', OLD_PGSQL_DATA_DIR,
+                 '--new-datadir', PGSQL_DATA_DIR,
+                 '--link'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                ignore_failures=True, cwd='/tmp'
+            )
+            if 'Upgrade Complete' not in res.aggr_stdout:
+                raise ProcessExecutionError(
+                    f"Error upgrading PostgreSQL database:\n"
+                    f"{res.aggr_stdout}\n{res.aggr_stderr}")
+            logger.info('PostgreSQL database upgrade complete!')
+            self.upgrading_psql = False
+
+    @retry(stop_max_attempt_number=60, wait_fixed=1000)
+    def _verify_postgres_stopped(self):
+        assert not service.is_active(POSTGRES_SERVICE_NAME)
 
     def validate_dependencies(self):
         super(PostgresqlServer, self).validate_dependencies()
