@@ -1218,13 +1218,13 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
         stdout=sys.stdout, stderr=sys.stderr)
 
     # handle possible erlang package change:
-    if 'esl_erlang' in packages_to_update and is_package_installed('erlang'):
-        packages_to_update.remove('esl_erlang')
-        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout
+    if 'esl-erlang' in packages_to_update and is_package_installed('erlang'):
+        packages_to_update.remove('esl-erlang')
+        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout.strip()
         run(['rpm', '-e', '--nodeps', erlang_pkg],
             stdout=sys.stdout, stderr=sys.stderr)
         run(['yum', 'install', '-y', '--disablerepo=*',
-             '--enablerepo=cloudify', 'esl_erlang'],
+             '--enablerepo=cloudify', 'esl-erlang'],
             stdout=sys.stdout, stderr=sys.stderr)
 
     run([
