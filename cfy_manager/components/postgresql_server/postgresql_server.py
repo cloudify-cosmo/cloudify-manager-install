@@ -20,6 +20,7 @@ from cfy_manager.exceptions import (
     ClusteringError,
     DBNodeListError,
     DBManagementError,
+    ProcessExecutionError,
 )
 from ...components_constants import (
     CONFIG,
@@ -60,6 +61,7 @@ POSTGRESQL_SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER,
                                SCRIPTS)
 
 POSTGRES_SERVICE_NAME = 'postgresql-14'
+OLD_POSTGRES_SERVICE_NAME = 'postgresql-9.5'
 POSTGRES_USER = POSTGRES_GROUP = 'postgres'
 
 # Etcd used only in clusters
@@ -133,6 +135,8 @@ class PostgresqlServer(BaseComponent):
     HEALTHY = 0
     DEGRADED = 1
     DOWN = 2
+
+    upgrading_psql = False
 
     def _init_postgresql_server(self):
         if os.path.exists(PG_HBA_CONF):
@@ -1738,7 +1742,12 @@ class PostgresqlServer(BaseComponent):
             service.stop('etcd')
             service.stop('patroni')
         else:
-            service.stop(POSTGRES_SERVICE_NAME)
+            try:
+                service.stop(POSTGRES_SERVICE_NAME)
+                self.upgrading_psql = False
+            except ProcessExecutionError:
+                service.stop(OLD_POSTGRES_SERVICE_NAME)
+                self.upgrading_psql = True
         logger.notice('PostgreSQL Server successfully stopped')
 
     def validate_dependencies(self):
