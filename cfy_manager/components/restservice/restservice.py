@@ -581,4 +581,5 @@ class RestService(BaseComponent):
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
         run_snapshot_script('populate_deployment_statuses')
+        run_snapshot_script('migrate_pickle_to_json')
         logger.notice('Rest Service successfully upgraded')
