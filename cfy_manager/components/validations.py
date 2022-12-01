@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import distro
 import netifaces
 from getpass import getuser
@@ -157,17 +156,6 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
                     ip=ip_to_validate,
                     addresses=', '.join(all_addresses),
                     param=SKIP_VALIDATIONS))
-
-
-def _validate_python_version():
-    logger.info('Validating Python version...')
-    major_version, minor_version = sys.version_info[0], sys.version_info[1]
-    python_version = '{0}.{1}'.format(major_version, minor_version)
-    expected_version = config[VALIDATIONS]['expected_python_version']
-    if python_version != expected_version:
-        error = 'Local python version (`{0}`) does not match expected ' \
-                'version (`{1}`)'.format(python_version, expected_version)
-        _errors.append(error)
 
 
 def _validate_sufficient_memory():
@@ -621,7 +609,6 @@ def validate(components, skip_validations=False, only_install=False):
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
         _validate_env()
-        _validate_python_version()
         _validate_sufficient_memory()
         _validate_postgres_inputs()
         _validate_external_postgres()

@@ -91,7 +91,12 @@ from .utils.common import (
     service_is_in_config,
 )
 from cfy_manager.utils.db import get_psql_env_and_base_command
-from .utils.install import is_premium_installed, yum_install, yum_remove
+from .utils.install import (
+    is_package_installed,
+    is_premium_installed,
+    yum_install,
+    yum_remove
+)
 from .utils.files import (
     remove as remove_files,
     remove_temp_files,
@@ -1211,6 +1216,9 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     packages_to_update, _ = _get_packages()
     run(['yum', 'clean', 'all'],
         stdout=sys.stdout, stderr=sys.stderr)
+
+    _handle_erlang_package_change(packages_to_update)
+
     run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
@@ -1221,6 +1229,21 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     for component in upgrade_components:
         component.upgrade()
         component.start()
+
+
+def _handle_erlang_package_change(packages_to_update):
+    """
+    In CM 7.0 for RedHat/Centos 7 we started using esl-erlang rather than
+    just erlang. In that case, we uninstall the existing erlang package using
+    `rpm -e` (`yum remove` also uninstalls dependencies, which we don't want),
+    otherwise we get a dependency conflict when trying to install esl-erlang.
+    """
+    if 'esl-erlang' in packages_to_update and is_package_installed('erlang'):
+        packages_to_update.remove('esl-erlang')
+        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout.strip()
+        run(['rpm', '-e', '--nodeps', erlang_pkg],
+            stdout=sys.stdout, stderr=sys.stderr)
+        yum_install(['esl-erlang'])
 
 
 def _get_starter_service_response():

@@ -296,7 +296,7 @@ def using_systemd_service(service_name):
         ['/bin/systemctl', 'is-enabled', service_name],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-    ).stdout.strip().lower() == 'enabled':
+    ).stdout.decode('utf-8').strip().lower() == 'enabled':
         logger.notice('Using system %s', service_name)
         return True
 

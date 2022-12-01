@@ -35,7 +35,8 @@ logger = get_logger('utils')
 
 
 def run(command, retries=0, stdin=u'', ignore_failures=False,
-        globx=False, shell=False, env=None, stdout=None, stderr=None):
+        globx=False, shell=False, env=None, stdout=None, stderr=None,
+        cwd=None):
     # TODO: add ability to *log* output, instead of just printing to stdout
     if isinstance(command, str) and not shell:
         command = shlex.split(command)
@@ -61,7 +62,7 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     logger.debug('Running: {0}'.format(command))
     proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
                             stderr=stderr, shell=shell, env=env,
-                            preexec_fn=subprocess_preexec)
+                            preexec_fn=subprocess_preexec, cwd=cwd)
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
     if proc.aggr_stdout is not None:
         proc.aggr_stdout = proc.aggr_stdout.decode('utf-8')
