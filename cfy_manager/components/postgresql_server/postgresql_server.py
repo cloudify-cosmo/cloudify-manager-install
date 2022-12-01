@@ -138,31 +138,35 @@ class PostgresqlServer(BaseComponent):
     DEGRADED = 1
     DOWN = 2
 
-    upgrading_psql = False
-    encoding = None
-    locale = None
+    old_postgresql_settings = None
 
     def _init_postgresql_server(self):
         if os.path.exists(PG_HBA_CONF):
             logger.info('PostreSQL Server DATA folder already initialized...')
             return
         logger.debug('Initializing PostgreSQL Server DATA folder...')
-        common.run(['sudo', '-u', 'postgres',
-                    join(PGSQL_USR_DIR, 'bin', 'initdb'),
-                    '-D', PGSQL_DATA_DIR])
+        initdb_cmd = ['sudo', '-u', 'postgres',
+                      join(PGSQL_USR_DIR, 'bin', 'initdb'),
+                      '-D', PGSQL_DATA_DIR]
+        # preserve encoding and locale when upgrading postgresql version
+        if self.old_postgresql_settings:
+            encoding, locale = self.old_postgresql_settings
+            initdb_cmd += ['-E', encoding, '--locale', locale]
+        common.run(initdb_cmd)
 
         logger.debug('Setting PostgreSQL Server logs path...')
-        pg_14_logs_path = join(PGSQL_LIB_DIR, '14', 'data', 'pg_log')
+        pg_14_logs_path = join(PGSQL_LIB_DIR, '14', 'data', 'log')
         common.mkdir(LOG_DIR)
         common.chown(POSTGRES_USER, 'cfylogs', LOG_DIR)
         common.chmod('750', LOG_DIR)
-        if not isdir(pg_14_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
+        if not isdir(pg_14_logs_path) and not islink(join(LOG_DIR, 'log')):
             files.ln(source=pg_14_logs_path, target=LOG_DIR, params='-s')
 
         common.mkdir(PGSQL_SOCK_DIR)
         common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
-    def _configure_postgresql_server_service(self):
+    @staticmethod
+    def _configure_postgresql_server_service():
         service.configure(
             POSTGRES_SERVICE_NAME,
             src_dir='postgresql_server',
@@ -186,7 +190,8 @@ class PostgresqlServer(BaseComponent):
             '/var/lib/pgsql/postgresql_server_wrapper_script.sh'
         )
 
-    def _bytes_as_mb(self, value_in_bytes):
+    @staticmethod
+    def _bytes_as_mb(value_in_bytes):
         return '{}MB'.format(value_in_bytes // 1024 // 1024)
 
     def _generate_default_shared_buffers(self):
@@ -273,7 +278,8 @@ class PostgresqlServer(BaseComponent):
 
         return temp_pgconfig_path
 
-    def _get_monitoring_user_hba_entry(self, host):
+    @staticmethod
+    def _get_monitoring_user_hba_entry(host):
         try:
             host = ipaddress.ip_address(host)
             suffix = '/{}'.format(host.max_prefixlen)
@@ -407,17 +413,20 @@ class PostgresqlServer(BaseComponent):
         )
         logger.notice('db_monitoring account successfully created')
 
-    def _delimiter_for(self, text):
+    @staticmethod
+    def _delimiter_for(text):
         delim = '$password$'
         while delim in text:
             delim = delim.rstrip('$')
             delim = delim + 'a$'
         return delim
 
-    def _etcd_is_running(self):
+    @staticmethod
+    def _etcd_is_running():
         return service.is_active('etcd')
 
-    def _start_etcd(self):
+    @staticmethod
+    def _start_etcd():
         logger.info('Starting etcd')
         service.start(
             'etcd',
@@ -438,14 +447,16 @@ class PostgresqlServer(BaseComponent):
             logger.info('Waiting for etcd to start...')
             time.sleep(1)
 
-    def _patronictl_command(self, command):
+    @staticmethod
+    def _patronictl_command(command):
         """Execute a patronictl command."""
         patronictl_base_command = [
             '/opt/patroni/bin/patronictl', '-c', PATRONI_CONFIG_PATH,
         ]
         return common.run(patronictl_base_command + command)
 
-    def _etcd_command(self, command, ignore_failures=False, stdin=None,
+    @staticmethod
+    def _etcd_command(command, ignore_failures=False, stdin=None,
                       local_only=False, username=None):
         """Execute an etcdctl command."""
         supported_etcd_users = ['root', 'patroni']
@@ -502,10 +513,12 @@ class PostgresqlServer(BaseComponent):
             local_only=local_only,
         ).aggr_stdout)
 
-    def _get_etcd_id(self, ip):
+    @staticmethod
+    def _get_etcd_id(ip):
         return 'etcd' + _ip_to_identifier(ip)
 
-    def _get_patroni_id(self, address):
+    @staticmethod
+    def _get_patroni_id(address):
         return 'pg' + _ip_to_identifier(address)
 
     def _etcd_requires_auth(self):
@@ -542,7 +555,8 @@ class PostgresqlServer(BaseComponent):
             'Etcd not up yet, this is likely the first node.'
         )
 
-    def _configure_patroni(self):
+    @staticmethod
+    def _configure_patroni():
         logger.info('Starting patroni')
         service.configure(
             'patroni',
@@ -972,7 +986,8 @@ class PostgresqlServer(BaseComponent):
         common.chown('root', '', '/opt/patroni/bin/patroni_startup_check')
         common.chmod('500', '/opt/patroni/bin/patroni_startup_check')
 
-    def _activate_patroni_startup_check(self):
+    @staticmethod
+    def _activate_patroni_startup_check():
         # Similarly to the current snapshot post restore commands, this will
         # continue to run after the installer finishes, until its task is
         # complete (patroni starts healthily)
@@ -1095,7 +1110,8 @@ class PostgresqlServer(BaseComponent):
         with open(patroni_config_path, 'w') as f:
             yaml.dump(patroni_conf, f)
 
-    def _format_pg_hba_address(self, address):
+    @staticmethod
+    def _format_pg_hba_address(address):
         """Format the address for use in pg_hba
 
         Postgresql expects the following in pg_hba:
@@ -1162,7 +1178,8 @@ class PostgresqlServer(BaseComponent):
             )
         return master, replicas
 
-    def _get_raw_node_status(self, address, target_type):
+    @staticmethod
+    def _get_raw_node_status(address, target_type):
         if address is None:
             return
 
@@ -1243,7 +1260,8 @@ class PostgresqlServer(BaseComponent):
 
         return node
 
-    def _get_sync_replicas(self, master_status):
+    @staticmethod
+    def _get_sync_replicas(master_status):
         sync_nodes = []
         master_replication = master_status.get('replication', [])
         if master_replication:
@@ -1383,7 +1401,8 @@ class PostgresqlServer(BaseComponent):
 
         return status, db_nodes
 
-    def _db_user_exists(self, user):
+    @staticmethod
+    def _db_user_exists(user):
         result = db.run_psql_command(
             "SELECT COUNT(*) FROM pg_catalog.pg_roles "
             "WHERE rolname = '{user}';".format(
@@ -1396,7 +1415,8 @@ class PostgresqlServer(BaseComponent):
         # There can only be 0 or 1 of a particular named user
         return int(result) == 1
 
-    def _node_is_in_db(self, host):
+    @staticmethod
+    def _node_is_in_db(host):
         result = db.run_psql_command(
             "SELECT COUNT(*) FROM db_nodes where host='{0}';".format(
                 host,
@@ -1409,7 +1429,8 @@ class PostgresqlServer(BaseComponent):
         # with the expected name
         return int(result) == 1
 
-    def _add_node_to_db(self, host):
+    @staticmethod
+    def _add_node_to_db(host):
         db.run_psql_command(
             "INSERT INTO db_nodes (name, host) VALUES ('{0}', '{1}');".format(
                 host, host
@@ -1418,7 +1439,8 @@ class PostgresqlServer(BaseComponent):
             logger,
         )
 
-    def _remove_node_from_db(self, host):
+    @staticmethod
+    def _remove_node_from_db(host):
         db.run_psql_command(
             "DELETE FROM db_nodes WHERE host = '{0}';".format(host),
             'cloudify_db_name',
@@ -1739,19 +1761,18 @@ class PostgresqlServer(BaseComponent):
             service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
-    def _save_encoding_and_locale(self):
-        self.encoding = subprocess.run(
+    @staticmethod
+    def _get_encoding_and_locale():
+        encoding = common.run(
             ['psql', '-U', 'postgres', '-c', 'SHOW SERVER_ENCODING', '-t'],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-        ).stdout.decode('utf-8').strip()
+        ).aggr_stdout.strip()
 
-        self.locale = subprocess.run(
+        locale = common.run(
             ['psql', '-U', 'postgres', '-c', 'SHOW LC_CTYPE', '-t'],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-        ).stdout.decode('utf-8').strip()
+        ).aggr_stdout.strip()
+        return encoding, locale
 
     def stop(self, force=True):
-        self._save_encoding_and_locale()
         logger.notice('Stopping PostgreSQL Server...')
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')
@@ -1761,63 +1782,45 @@ class PostgresqlServer(BaseComponent):
                 service.stop(POSTGRES_SERVICE_NAME)
                 self.upgrading_psql = False
             except ProcessExecutionError:
+                self.old_postgresql_settings = self._get_encoding_and_locale()
                 service.stop(OLD_POSTGRES_SERVICE_NAME)
                 service.remove(OLD_POSTGRES_SERVICE_NAME)
-                self.upgrading_psql = True
         logger.notice('PostgreSQL Server successfully stopped')
 
     def upgrade(self):
-        if self.upgrading_psql:
-            logger.notice("Upgrading PostgreSQL database version...")
-            logger.debug('Configuring and initializing new PostgreSQL '
-                         'service...')
-            self._configure_postgresql_server_service()
-            service.reload(POSTGRES_SERVICE_NAME)
+        if not self.old_postgresql_settings:  # not upgrading PostgreSQL ver.
+            return
 
-            # wait for postgresql service to exit after reload,
-            # since initdb needs it down.
-            # The service stops since "/var/lib/pgsql/14/data/postgresql.conf"
-            #   doesn't exist yet
-            self._verify_postgres_stopped()
+        logger.notice("Upgrading PostgreSQL database version...")
+        logger.debug('Configuring and initializing new PostgreSQL '
+                     'service...')
+        self._configure_postgresql_server_service()
+        service.reread()
+        self._init_postgresql_server()
 
-            res = common.run(
-                ['sudo', '-u', 'postgres',
-                 join(PGSQL_USR_DIR, 'bin', 'initdb'),
-                 '-D', PGSQL_DATA_DIR,
-                 '--locale', self.locale, '-E', self.encoding],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                ignore_failures=True
-            )
-            if 'Success' not in res.aggr_stdout:
-                raise ProcessExecutionError(
-                    f"Error initializing {POSTGRES_SERVICE_NAME} "
-                    f"database:\n{res.aggr_stdout}\n{res.aggr_stderr}")
-            logger.debug(f'Success initializing '
-                         f'{POSTGRES_SERVICE_NAME} database!')
+        logger.debug('Upgrading PostgreSQL...')
+        bindir = join(PGSQL_USR_DIR, 'bin')
+        old_bindir = join(OLD_PGSQL_USR_DIR, 'bin')
+        pg_upgrade = join(bindir, 'pg_upgrade')
 
-            logger.debug('Upgrading PostgreSQL...')
-            bindir = join(PGSQL_USR_DIR, 'bin')
-            old_bindir = join(OLD_PGSQL_USR_DIR, 'bin')
-            pg_upgrade = join(bindir, 'pg_upgrade')
+        # `cwd=/tmp` because otherwise I get:
+        #  could not open log file "pg_upgrade_internal.log": Permission denied
+        res = common.run(
+            ['sudo', '-u', 'postgres', pg_upgrade,
+             '--old-bindir', old_bindir, '--new-bindir', bindir,
+             '--old-datadir', OLD_PGSQL_DATA_DIR,
+             '--new-datadir', PGSQL_DATA_DIR,
+             '--link'],
+            ignore_failures=True, cwd='/tmp'
+        )
+        if 'Upgrade Complete' not in res.aggr_stdout:
+            raise ProcessExecutionError(
+                f"Error upgrading PostgreSQL database:\n"
+                f"{res.aggr_stdout}\n{res.aggr_stderr}")
+        logger.info('PostgreSQL database upgrade complete!')
 
-            # `cwd=/tmp` because otherwise I get:
-            #  could not open log file "pg_upgrade_internal.log":
-            #  Permission denied
-            res = common.run(
-                ['sudo', '-u', 'postgres', pg_upgrade,
-                 '--old-bindir', old_bindir, '--new-bindir', bindir,
-                 '--old-datadir', OLD_PGSQL_DATA_DIR,
-                 '--new-datadir', PGSQL_DATA_DIR,
-                 '--link'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                ignore_failures=True, cwd='/tmp'
-            )
-            if 'Upgrade Complete' not in res.aggr_stdout:
-                raise ProcessExecutionError(
-                    f"Error upgrading PostgreSQL database:\n"
-                    f"{res.aggr_stdout}\n{res.aggr_stderr}")
-            logger.info('PostgreSQL database upgrade complete!')
-            self.upgrading_psql = False
+        service.enable(POSTGRES_SERVICE_NAME)
+        self.old_postgresql_settings = None
 
     @retry(stop_max_attempt_number=60, wait_fixed=1000)
     def _verify_postgres_stopped(self):

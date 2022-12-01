@@ -292,14 +292,11 @@ def using_systemd_service(service_name):
         # no systemctl at all, so there for sure won't be systemd services
         return False
 
-    is_enabled = subprocess.run(
+    if subprocess.run(
         ['/bin/systemctl', 'is-enabled', service_name],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-    ).stdout.strip().lower()
-    if isinstance(is_enabled, bytes):
-        is_enabled = is_enabled.decode('utf-8')
-    if is_enabled == 'enabled':
+    ).stdout.decode('utf-8').strip().lower() == 'enabled':
         logger.notice('Using system %s', service_name)
         return True
 

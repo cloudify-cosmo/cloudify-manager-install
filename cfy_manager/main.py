@@ -1217,15 +1217,7 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     run(['yum', 'clean', 'all'],
         stdout=sys.stdout, stderr=sys.stderr)
 
-    # handle possible erlang package change:
-    if 'esl-erlang' in packages_to_update and is_package_installed('erlang'):
-        packages_to_update.remove('esl-erlang')
-        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout.strip()
-        run(['rpm', '-e', '--nodeps', erlang_pkg],
-            stdout=sys.stdout, stderr=sys.stderr)
-        run(['yum', 'install', '-y', '--disablerepo=*',
-             '--enablerepo=cloudify', 'esl-erlang'],
-            stdout=sys.stdout, stderr=sys.stderr)
+    _handle_erlang_package_change(packages_to_update)
 
     run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
@@ -1237,6 +1229,21 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     for component in upgrade_components:
         component.upgrade()
         component.start()
+
+
+def _handle_erlang_package_change(packages_to_update):
+    """
+    In CM 7.0 for RedHat/Centos 7 we started using esl-erlang rather than
+    just erlang. In that case, we uninstall the existing erlang package using
+    `rpm -e` (`yum remove` also uninstalls dependencies, which we don't want),
+    otherwise we get a dependency conflict when trying to install esl-erlang.
+    """
+    if 'esl-erlang' in packages_to_update and is_package_installed('erlang'):
+        packages_to_update.remove('esl-erlang')
+        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout.strip()
+        run(['rpm', '-e', '--nodeps', erlang_pkg],
+            stdout=sys.stdout, stderr=sys.stderr)
+        yum_install(['esl-erlang'])
 
 
 def _get_starter_service_response():
