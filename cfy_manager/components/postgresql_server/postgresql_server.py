@@ -1780,7 +1780,6 @@ class PostgresqlServer(BaseComponent):
         else:
             try:
                 service.stop(POSTGRES_SERVICE_NAME)
-                self.upgrading_psql = False
             except ProcessExecutionError:
                 self.old_postgresql_settings = self._get_encoding_and_locale()
                 service.stop(OLD_POSTGRES_SERVICE_NAME)
