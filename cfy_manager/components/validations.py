@@ -79,11 +79,16 @@ def _validate_supported_distros():
     logger.info('Validating supported distributions...')
     distro, version = _get_os_distro()
     supported_distros = config[VALIDATIONS]['supported_distros']
+
+    # `platform` lib. has "redhat"; since 7.0 we use `distro` that has "rhel"
+    if 'redhat' in supported_distros:
+        supported_distros.append('rhel')
+
     supported_distro_versions = \
         config[VALIDATIONS]['supported_distro_versions']
     if distro not in supported_distros:
         _errors.append(
-            'Cloudify manager does not support the current distro (`{0}`),'
+            'Cloudify manager does not support the current distro (`{0}`), '
             'supported distros are: {1}'.format(distro, supported_distros)
         )
     if version not in supported_distro_versions:
