@@ -32,26 +32,6 @@ def _init_db_tables(db_migrate_dir):
     upgrade(directory=db_migrate_dir)
 
 
-def _populate_roles(data):
-    for role in data['roles']:
-        db.session.add(models.Role(
-            name=role['name'],
-            type=role['type'],
-            description=role['description']
-        ))
-    roles = {r.name: r.id for r in
-             db.session.query(models.Role.name, models.Role.id)}
-    for permission, permission_roles in data['permissions'].items():
-        for role_name in permission_roles:
-            if role_name not in roles:
-                continue
-            db.session.add(models.Permission(
-                role_id=roles[role_name],
-                name=permission
-            ))
-    db.session.commit()
-
-
 def _insert_config(config):
     sm = get_storage_manager()
     for scope, entries in config:
@@ -164,7 +144,6 @@ if __name__ == '__main__':
 
     if script_config.get('db_migrate_dir'):
         _init_db_tables(script_config['db_migrate_dir'])
-        _populate_roles(script_config['permissions'])
     if script_config.get('config'):
         _insert_config(script_config['config'])
     if script_config.get('manager'):
