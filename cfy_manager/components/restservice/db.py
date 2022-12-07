@@ -109,7 +109,7 @@ def _create_database(db_name, user):
         'server_db_name', logger)
 
 
-def _get_provider_context():
+def get_provider_context():
     context = {'cloudify': config[PROVIDER_CONTEXT]}
     context['cloudify']['cloudify_agent'] = config[AGENT]
     return context
@@ -121,7 +121,6 @@ def _create_populate_db_args_dict():
     script that creates and populates the DB to run
     """
     args_dict = {
-        'provider_context': _get_provider_context(),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
