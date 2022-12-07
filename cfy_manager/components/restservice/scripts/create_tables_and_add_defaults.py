@@ -104,16 +104,6 @@ def _insert_cert(cert, name):
     return inst.id
 
 
-def _add_provider_context(context):
-    sm = get_storage_manager()
-    provider_context = models.ProviderContext(
-        id='CONTEXT',
-        name='provider',
-        context=context
-    )
-    sm.put(provider_context)
-
-
 def file_path(path):
     if os.path.exists(path):
         return path
@@ -148,8 +138,6 @@ if __name__ == '__main__':
         _insert_config(script_config['config'])
     if script_config.get('manager'):
         _insert_manager(script_config['manager'])
-    if script_config.get('provider_context'):
-        _add_provider_context(script_config['provider_context'])
     if script_config.get('db_nodes'):
         _insert_db_nodes(script_config['db_nodes'])
     if script_config.get('usage_collector'):

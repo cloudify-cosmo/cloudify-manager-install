@@ -17,15 +17,16 @@ from ...constants import (
     REST_AUTHORIZATION_CONFIG_PATH
 )
 from ...components_constants import (
+    ADMIN_PASSWORD,
+    CLUSTER_JOIN,
     CONFIG,
+    FLASK_SECURITY,
+    HOSTNAME,
+    PROVIDER_CONTEXT,
     SCRIPTS,
     SECURITY,
-    SSL_INPUTS,
-    CLUSTER_JOIN,
-    ADMIN_PASSWORD,
-    FLASK_SECURITY,
     SERVICES_TO_INSTALL,
-    HOSTNAME
+    SSL_INPUTS,
 )
 from ..base_component import BaseComponent
 from ...service_names import (
@@ -261,24 +262,26 @@ class RestService(BaseComponent):
         self._generate_admin_password_if_empty()
         db.prepare_db()
 
-        additional_config = []
+        # values passed through to manager_rest.configure_manager:
+        configure_manager_settings = {
+            PROVIDER_CONTEXT: db.get_provider_context(),
+        }
+
         if config[MANAGER][SECURITY][ADMIN_PASSWORD]:
             # we might have generated the admin password, so in case it's not
             # in the config file, pass it to the configure script separately
             password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-            filepath = write_to_tempfile({
-                MANAGER: {
-                    SECURITY: {ADMIN_PASSWORD: password}
-                }
-            }, json_dump=True)
-            additional_config.append(filepath)
+            configure_manager_settings[MANAGER] = {
+                SECURITY: {ADMIN_PASSWORD: password},
+            }
 
         # pass through rabbitmq config separately too, because we might have
         # defaulted all kinds of things about rabbitmq
         # (eg. the default localhost broker)
-        additional_config.append(write_to_tempfile({
-            RABBITMQ: config[RABBITMQ],
-        }, json_dump=True))
+        configure_manager_settings[RABBITMQ] = config[RABBITMQ]
+        additional_config = [
+            write_to_tempfile(configure_manager_settings, json_dump=True)
+        ]
 
         db.populate_db(configs, additional_config_files=additional_config)
         if additional_config:
