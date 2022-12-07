@@ -31,7 +31,6 @@ from ...exceptions import ValidationError
 from ...utils import common
 from ...utils.db import run_psql_command
 from ...utils.install import is_premium_installed
-from ...utils.files import read_yaml_file
 from ...utils.scripts import run_script_on_manager_venv
 
 logger = get_logger('DB')
@@ -116,10 +115,6 @@ def _get_provider_context():
     return context
 
 
-def _get_permissions():
-    return read_yaml_file(join(CONFIG_PATH, 'authorization.conf'))
-
-
 def _create_populate_db_args_dict():
     """
     Create and return a dictionary with all the information necessary for the
@@ -127,7 +122,6 @@ def _create_populate_db_args_dict():
     """
     args_dict = {
         'provider_context': _get_provider_context(),
-        'permissions': _get_permissions(),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
@@ -217,6 +211,7 @@ def populate_db(configs, additional_config_files=None):
         config[MANAGER][SECURITY][ADMIN_PASSWORD]
     ):
         args = ['manager_rest.configure_manager']
+        args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
         for path in config['config_files']:
             args += ['--config-file-path', path]
         if additional_config_files:
