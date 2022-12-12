@@ -67,7 +67,6 @@ def main(new_manager):
             hostname=hostname,
             networks={},
         )
-        db.session.add(manager)
 
     new_networks = manager.networks.copy()
     for name, ip in new_networks.items():
@@ -109,6 +108,7 @@ def main(new_manager):
     if db_node:
         db_node.host = manager.private_ip
 
+    db.session.add(manager)
     if new_manager.get('ca_cert'):
         _update_cert(manager, broker, new_manager['ca_cert'])
 
