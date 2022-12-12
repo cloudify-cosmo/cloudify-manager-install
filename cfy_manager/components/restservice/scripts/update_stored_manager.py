@@ -33,7 +33,7 @@ def _get_amqp_manager():
 
 def _update_cert(manager, broker, new_cert_value):
     old_cert = manager.ca_cert
-    if old_cert.value == new_cert_value:
+    if old_cert and old_cert.value == new_cert_value:
         return
 
     new_cert = models.Certificate(
@@ -45,6 +45,8 @@ def _update_cert(manager, broker, new_cert_value):
     manager.ca_cert = new_cert
     if broker:
         broker.ca_cert = new_cert
+    if not old_cert:
+        return
     if not old_cert.managers and not old_cert.rabbitmq_brokers:
         db.session.delete(old_cert)
 
