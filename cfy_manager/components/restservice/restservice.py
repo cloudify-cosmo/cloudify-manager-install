@@ -244,41 +244,38 @@ class RestService(BaseComponent):
         }
         config[CLUSTER_JOIN] = False
 
-        if db.check_db_exists():
-            db.validate_schema_version(configs)
-        else:
+        if not db.check_db_exists():
+            db.prepare_db()
             self._initialize_db(configs)
+            return
 
+        # the db did exist beforehand, so we're either joining a cluster,
+        # or re-configuring a single manager
+        db.validate_schema_version(configs)
         managers = db.get_managers()
         if config[MANAGER][HOSTNAME] in managers:
+            # we're already in this db! we're just reconfiguring.
             db.update_stored_manager(configs)
         else:
             db.insert_manager(configs)
             if len(managers) > 0:
+                config[CLUSTER_JOIN] = True
                 self._join_cluster(configs)
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
-        self._generate_admin_password_if_empty()
-        db.prepare_db()
 
+        self._generate_admin_password_if_empty()
         # values passed through to manager_rest.configure_manager:
         configure_manager_settings = {
             PROVIDER_CONTEXT: db.get_provider_context(),
+            MANAGER: db.get_manager(),
+            # pass through rabbitmq config separately too, because we might
+            # have defaulted all kinds of things about rabbitmq
+            # (eg. the default localhost broker)
+            RABBITMQ: config[RABBITMQ],
         }
 
-        if config[MANAGER][SECURITY][ADMIN_PASSWORD]:
-            # we might have generated the admin password, so in case it's not
-            # in the config file, pass it to the configure script separately
-            password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
-            configure_manager_settings[MANAGER] = {
-                SECURITY: {ADMIN_PASSWORD: password},
-            }
-
-        # pass through rabbitmq config separately too, because we might have
-        # defaulted all kinds of things about rabbitmq
-        # (eg. the default localhost broker)
-        configure_manager_settings[RABBITMQ] = config[RABBITMQ]
         additional_config = [
             write_to_tempfile(configure_manager_settings, json_dump=True)
         ]
