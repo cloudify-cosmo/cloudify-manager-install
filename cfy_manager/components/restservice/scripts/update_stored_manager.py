@@ -121,12 +121,6 @@ def main(new_manager):
         controller.add_manager(models.Manager.query.all())
     if agents:
         agents.update_agents(get_storage_manager())
-    try:
-        admin_password = new_manager['security']['admin_password']
-    except KeyError:
-        admin_password = None
-    if admin_password:
-        _update_admin_password(admin_password)
 
 
 if __name__ == '__main__':
