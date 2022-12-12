@@ -117,10 +117,6 @@ def main(new_manager):
     db.session.commit()
 
     config.instance.load_configuration()
-    amqp_manager = _get_amqp_manager()
-    default_tenant = models.Tenant.query.filter_by(name='default_tenant').one()
-    amqp_manager.create_tenant_vhost_and_user(default_tenant)
-    amqp_manager.sync_metadata()
     if controller:
         controller.add_manager(models.Manager.query.all())
     if agents:
