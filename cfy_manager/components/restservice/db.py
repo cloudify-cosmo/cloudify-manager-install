@@ -115,7 +115,7 @@ def get_provider_context():
     return context
 
 
-def _create_populate_db_args_dict():
+def create_populate_db_args_dict():
     """
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
@@ -203,7 +203,7 @@ def run_script(script_name, script_input=None, configs=None):
 
 def populate_db(configs, additional_config_files=None):
     logger.notice('Populating DB and creating AMQP resources...')
-    args_dict = _create_populate_db_args_dict()
+    args_dict = create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
     if (
         config[MANAGER][SECURITY][ADMIN_USERNAME] and
@@ -220,7 +220,7 @@ def populate_db(configs, additional_config_files=None):
     logger.notice('DB populated and AMQP resources successfully created')
 
 
-def _get_manager():
+def get_manager():
     try:
         with open(constants.CA_CERT_PATH) as f:
             ca_cert = f.read()
@@ -232,22 +232,22 @@ def _get_manager():
         'private_ip': config['manager']['private_ip'],
         'networks': config[NETWORKS],
         'last_seen': common.get_formatted_timestamp(),
-        'ca_cert': ca_cert
+        'ca_cert': ca_cert,
+        SECURITY: {
+            ADMIN_PASSWORD: config[MANAGER][SECURITY][ADMIN_PASSWORD],
+        },
     }
 
 
 def insert_manager(configs):
     logger.notice('Registering manager in the DB...')
-    args = {'manager': _get_manager()}
-    run_script('create_tables_and_add_defaults.py', args, configs)
+    args = {'manager': get_manager()}
+    run_script('update_stored_manager.py', args, configs)
 
 
 def update_stored_manager(configs=None):
     logger.notice('Updating stored manager...')
-    args = {
-        'manager': _get_manager(),
-        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-    }
+    args = {'manager': get_manager()}
 
     run_script('update_stored_manager.py', args, configs=configs)
     logger.notice('AMQP resources successfully created')
