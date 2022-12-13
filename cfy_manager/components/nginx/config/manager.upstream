@@ -41,9 +41,9 @@ server {
 # REST and UI external server
 server {
   # server listening for external requests
-  listen              {{ nginx.port | default('443', true) }} ssl;
+  listen              {{ nginx.port | default('443', true) }} ssl http2;
   {% if ipv6_enabled -%}
-  listen              [::]:{{ nginx.port | default('443', true) }} ssl;
+  listen              [::]:{{ nginx.port | default('443', true) }} ssl http2;
   {%- endif %}
   server_name         {{ manager.public_ip }};
 
@@ -98,9 +98,9 @@ server {
 # REST and UI internal server - always SSL enabled
 server {
   # server listening for internal requests
-  listen              {{ constants.INTERNAL_REST_PORT }} ssl default_server;
+  listen              {{ constants.INTERNAL_REST_PORT }} ssl default_server http2;
   {% if ipv6_enabled -%}
-  listen              [::]:{{ constants.INTERNAL_REST_PORT }} ssl default_server;
+  listen              [::]:{{ constants.INTERNAL_REST_PORT }} ssl default_server http2;
   {%- endif %}
 
   server_name         _;
