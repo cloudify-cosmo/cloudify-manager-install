@@ -41,6 +41,8 @@ RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
 RUN chmod a+wx /var/run
 COPY starter.conf /etc/supervisord.d/starter.conf
+RUN echo 'DefaultEnvironment="LD_LIBRARY_PATH"=/usr/local/lib64:${LD_LIBRARY_PATH}' >> /etc/systemd/system.conf
+RUN echo 'LD_LIBRARY_PATH=/usr/local/lib64:${LD_LIBRARY_PATH}' > /etc/environment
 
 STOPSIGNAL SIGRTMIN+3
 VOLUME [ "/sys/fs/cgroup" ]
