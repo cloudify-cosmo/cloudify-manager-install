@@ -1,5 +1,5 @@
 ARG base_image=centos:7
-FROM base_image
+FROM $base_image
 
 ARG rpm_file
 ARG config=config.yaml
