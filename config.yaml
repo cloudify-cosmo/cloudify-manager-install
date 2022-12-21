@@ -507,9 +507,6 @@ validations:
   # Minimum required disk space on Manager host in GB.
   minimum_required_available_disk_space_in_gb: 1
 
-  # Python version expected to be found on the machine
-  expected_python_version: '3.10'
-
   # The only Linux distros fully supported, on which a Cloudify Manager can
   # be installed
   supported_distros: [centos, rhel, redhat]
@@ -533,6 +530,8 @@ ssl_inputs:
   internal_key_path: ''
   postgresql_client_cert_path: ''
   postgresql_client_key_path: ''
+  postgresql_superuser_client_cert_path: ''
+  postgresql_superuser_client_key_path: ''
   ca_cert_path: ''
   ca_key_path: ''
   ca_key_password: ''
@@ -590,9 +589,6 @@ prometheus:
   scrape_interval: 15s
   # How long should status reporter wait for Prometheus response (in seconds).
   request_timeout: 4
-
-# Set this to supervisord to use supervisord. Only systemd and supervisord are supported.
-service_management: supervisord
 
 flask_security: {}
 

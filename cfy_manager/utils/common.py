@@ -35,7 +35,8 @@ logger = get_logger('utils')
 
 
 def run(command, retries=0, stdin=u'', ignore_failures=False,
-        globx=False, shell=False, env=None, stdout=None, stderr=None):
+        globx=False, shell=False, env=None, stdout=None, stderr=None,
+        cwd=None):
     # TODO: add ability to *log* output, instead of just printing to stdout
     if isinstance(command, str) and not shell:
         command = shlex.split(command)
@@ -43,8 +44,16 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     stdout = stdout or subprocess.PIPE
     if isinstance(stdin, str):
         stdin = stdin.encode('utf-8')
-    if env:
-        env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}
+
+    if not env:
+        env = {}
+        env.update(os.environ)
+    env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}
+    if 'LANG' not in env:
+        env['LANG'] = 'en_US.utf-8'
+    if 'LC_ALL' not in env:
+        env['LC_ALL'] = 'C'
+
     if globx:
         glob_command = []
         for arg in command:
@@ -53,7 +62,7 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     logger.debug('Running: {0}'.format(command))
     proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=stdout,
                             stderr=stderr, shell=shell, env=env,
-                            preexec_fn=subprocess_preexec)
+                            preexec_fn=subprocess_preexec, cwd=cwd)
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate(input=stdin)
     if proc.aggr_stdout is not None:
         proc.aggr_stdout = proc.aggr_stdout.decode('utf-8')

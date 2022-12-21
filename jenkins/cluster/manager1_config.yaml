@@ -47,6 +47,8 @@ prometheus:
 ssl_inputs:
   postgresql_client_cert_path: /etc/cloudify/manager_postgres_client_cert.pem
   postgresql_client_key_path: /etc/cloudify/manager_postgres_client_key.pem
+  postgresql_superuser_client_cert_path: /etc/cloudify/manager_postgres_su_client_cert.pem
+  postgresql_superuser_client_key_path: /etc/cloudify/manager_postgres_su_client_key.pem
   ca_cert_path: '/etc/cloudify/ca.pem'
   ca_key_path: '/etc/cloudify/ca_key.pem'
   ca_key_password: 'secret_ca_password'
@@ -59,5 +61,3 @@ ssl_inputs:
 services_to_install:
 - manager_service
 - monitoring_service
-
-service_management: supervisord

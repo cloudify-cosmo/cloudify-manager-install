@@ -18,12 +18,30 @@ from ..constants import (
 )
 from ..exceptions import ProcessExecutionError
 from .files import write, write_to_tempfile, remove
-from ..components.validations import check_certificates, validate_certificates
 
 from ..logger import get_logger, setup_console_logger
 from .. import constants as const
+from cfy_manager.exceptions import ValidationError
 
 logger = get_logger('Certificates')
+
+
+def get_cert_cn(cert_path):
+    raw = run(
+        ['openssl', 'x509', '-noout', '-subject', '-in', cert_path]
+    ).aggr_stdout
+    # The raw value will be something like "subject=CN = *.cloudify.co"
+    # or "subject=C = US, O = DigiCert Inc, OU = www.digicert.com, CN = DigiCert Global Root CA"  # noqa
+    _subject, _, sections = raw.partition('=')
+    for section in sections.split(','):
+        section_type, section_value = section.split('=', 1)
+        # In some cases we see a leading slash on the subject
+        # e.g. "subject = /CN=cloudify"
+        # It can also have surrounding spaces.
+        section_type = section_type.strip().lstrip('/').lower()
+        if section_type == 'cn':
+            return section_value.strip()
+    return None
 
 
 def handle_ca_cert(logger, generate_if_missing=True):
@@ -635,3 +653,128 @@ def clean_certs():
         cert_path = os.path.join(SSL_CERTS_TARGET_DIR, cert)
         new_path = os.path.join(SSL_CERTS_TARGET_DIR, new_name)
         move(cert_path, new_path)
+
+
+def check_certificates(config_section, section_path,
+                       cert_path='cert_path', key_path='key_path',
+                       ca_path='ca_path',
+                       ca_key_path='ca_key_path',
+                       key_password='key_password',
+                       require_non_ca_certs=True,
+                       ):
+    """Check that the provided cert, key, and CA actually match"""
+    cert_filename = config_section.get(cert_path)
+    key_filename = config_section.get(key_path)
+
+    ca_filename = config_section.get(ca_path)
+    ca_key_filename = config_section.get(ca_key_path)
+    password = config_section.get(key_password)
+
+    if not cert_filename and not key_filename and require_non_ca_certs:
+        failing = []
+        if password:
+            failing.append('key_password')
+        if ca_filename:
+            failing.append('ca_path')
+        if ca_key_filename:
+            failing.append('ca_key_path')
+        if failing:
+            failing = ' or '.join(failing)
+            raise ValidationError(
+                'If {failing} was provided, both cert_path and key_path '
+                'must be provided in {component}'.format(
+                    failing=failing,
+                    component=section_path,
+                )
+            )
+
+    validate_certificates(cert_filename, key_filename, ca_filename,
+                          ca_key_filename, password)
+    return cert_filename, key_filename, ca_filename, ca_key_filename, password
+
+
+def validate_certificates(cert_filename=None, key_filename=None,
+                          ca_filename=None, ca_key_filename=None,
+                          password=None):
+    if cert_filename and key_filename:
+        check_cert_key_match(cert_filename, key_filename, password)
+    elif cert_filename or key_filename:
+        raise ValidationError('Either both cert_path and key_path must be '
+                              'provided, or neither.')
+
+    if ca_filename:
+        check_ssl_file(ca_filename, kind='Cert')
+        if cert_filename:
+            _check_signed_by(ca_filename, cert_filename)
+        if ca_key_filename and os.path.exists(ca_key_filename):
+            check_cert_key_match(ca_filename, ca_key_filename, password)
+
+
+def check_cert_key_match(cert_filename, key_filename, password=None):
+    check_ssl_file(key_filename, kind='Key', password=password)
+    check_ssl_file(cert_filename, kind='Cert')
+    key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
+                           '-in', key_filename]
+    if password:
+        key_modulus_command += [
+            '-passin',
+            u'pass:{0}'.format(password).encode('utf-8')
+        ]
+    cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
+                            '-in', cert_filename]
+    key_modulus = run(key_modulus_command).aggr_stdout.strip()
+    cert_modulus = run(cert_modulus_command).aggr_stdout.strip()
+    if cert_modulus != key_modulus:
+        raise ValidationError(
+            'Key {key_path} does not match the cert {cert_path}'.format(
+                key_path=key_filename,
+                cert_path=cert_filename,
+            )
+        )
+
+
+def check_ssl_file(filename, kind='Key', password=None):
+    """Does the cert/key file exist and is it valid?"""
+    if not os.path.isfile(filename):
+        raise ValidationError(
+            '{0} file {1} does not exist'
+            .format(kind, filename))
+    if kind == 'Key':
+        check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
+        if password:
+            check_command += [
+                '-passin',
+                u'pass:{0}'.format(password).encode('utf-8')
+            ]
+    elif kind == 'Cert':
+        check_command = ['openssl', 'x509', '-in', filename, '-noout']
+    else:
+        raise ValueError('Unknown kind: {0}'.format(kind))
+    proc = run(check_command, ignore_failures=True)
+    if proc.returncode != 0:
+        password_err = ''
+        if password:
+            password_err = ' (or the provided password is incorrect)'
+        raise ValidationError('{0} file {1} is invalid{2}'
+                              .format(kind, filename, password_err))
+
+
+def _check_signed_by(ca_filename, cert_filename):
+    ca_check_command = [
+        'openssl', 'verify',
+        '-CAfile', ca_filename,
+        # also give openssl the cert itself so that it can look up
+        # intermediaries, if any
+        '-untrusted', cert_filename,
+        cert_filename
+    ]
+    try:
+        run(ca_check_command)
+    except ProcessExecutionError:
+        raise ValidationError(
+            'Provided certificate {cert} was not signed by provided '
+            'CA {ca}'.format(
+                cert=cert_filename,
+                ca=ca_filename,
+            )
+        )

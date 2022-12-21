@@ -5,16 +5,12 @@ groups:
       # Recording rules
       - record: manager_healthy
         expr: count by (host, monitor) (sum by (host, monitor) (probe_success) == {{ number_of_http_probes }})
-      - record: manager_service_systemd
-        expr: sum by (host, name) (node_systemd_unit_state{name=~"(cloudify-amqp-postgres|blackbox_exporter|cloudify-composer|cloudify-stage|haproxy|cloudify-mgmtworker|cloudify-restservice|node_exporter|prometheus|{% if fs_replication %}cloudify-syncthing|{% endif %}cloudify-execution-scheduler|nginx|cloudify-api|cloudify-execution-scheduler).service", state="active"})
-        labels:
-          process_manager: systemd
       - record: manager_service_supervisord
         expr: sum by (host, name) (node_supervisord_up{name=~"(cloudify-amqp-postgres|blackbox_exporter|cloudify-composer|cloudify-stage|haproxy|cloudify-mgmtworker|cloudify-restservice|node_exporter|prometheus|{% if fs_replication %}cloudify-syncthing|{% endif %}cloudify-execution-scheduler|nginx|cloudify-api|cloudify-execution-scheduler)"})
         labels:
           process_manager: supervisord
       - record: manager_service
-        expr: manager_service_systemd or manager_service_supervisord
+        expr: manager_service_supervisord
 
       # Alerting rules
       - alert: manager_down

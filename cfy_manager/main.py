@@ -60,6 +60,9 @@ from .constants import (
     INSTALLED_COMPONENTS,
     INSTALLED_PACKAGES,
     USER_CONFIG_PATH,
+    CA_CERT_FILENAME,
+    EXTERNAL_CA_CERT_FILENAME,
+    EXTERNAL_CA_CERT_PATH,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -88,7 +91,12 @@ from .utils.common import (
     service_is_in_config,
 )
 from cfy_manager.utils.db import get_psql_env_and_base_command
-from .utils.install import is_premium_installed, yum_install, yum_remove
+from .utils.install import (
+    is_package_installed,
+    is_premium_installed,
+    yum_install,
+    yum_remove
+)
 from .utils.files import (
     remove as remove_files,
     remove_temp_files,
@@ -647,16 +655,37 @@ def _prepare_execution(verbose=False,
 def _print_finish_message(config_file=None):
     if service_is_in_config(MANAGER_SERVICE):
         manager_config = config[MANAGER]
+        public_ip = manager_config[PUBLIC_IP] or manager_config[PRIVATE_IP]
         protocol = \
             'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
-        logger.notice(
-            'Manager is up at {protocol}://{ip}'.format(
-                protocol=protocol,
-                ip=manager_config[PUBLIC_IP])
+        public_ip_message = 'Manager is up at {protocol}://{ip}'.format(
+            protocol=protocol,
+            ip=public_ip,
         )
         password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+        use_message = (
+            'cfy profiles use {ip} -u admin -p {password} -t default_tenant'
+            .format(
+                ip=public_ip,
+                password=password,
+            )
+        )
+        if protocol == 'https':
+            if os.path.exists(EXTERNAL_CA_CERT_PATH):
+                cert_filename = EXTERNAL_CA_CERT_FILENAME
+            else:
+                cert_filename = CA_CERT_FILENAME
+            use_message += ' -ssl -c path/to/' + cert_filename
+
+        print('#' * 50)
+        if public_ip:
+            print(public_ip_message)
         print('Admin password: {0}'.format(password))
         print('#' * 50)
+        if public_ip:
+            print('To connect to the manager, use:')
+            print(use_message)
+            print('#' * 50)
         print("To install the default plugins bundle run:")
         print("'cfy plugins bundle-upload'")
         print('#' * 50)
@@ -670,10 +699,6 @@ def _all_services_installed():
 def _all_services_configured():
     return all(service_name in get_configured_services()
                for service_name in config[SERVICES_TO_INSTALL])
-
-
-def is_supervisord_service():
-    return service._get_service_type() == 'supervisord'
 
 
 def _create_initial_install_files():
@@ -955,8 +980,7 @@ def install(verbose=False,
     update_yaml_file(INSTALLED_PACKAGES, packages_per_service_dict)
     yum_install(packages_to_install)
 
-    if is_supervisord_service():
-        _configure_supervisord()
+    _configure_supervisord()
 
     components = _get_components()
     validate(components=components, only_install=only_install)
@@ -982,7 +1006,8 @@ def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
-              config_file=None):
+              config_file=None,
+              print_finish_message=False):
     """ Configure Cloudify Manager """
 
     _prepare_execution(
@@ -1008,9 +1033,8 @@ def configure(verbose=False,
     components = _get_components()
     validate(components=components)
     set_globals()
-    # This only relevant for restarting services on VM that use supervisord
-    if is_supervisord_service():
-        _configure_supervisord()
+
+    _configure_supervisord()
 
     for component in components:
         component.configure()
@@ -1018,6 +1042,8 @@ def configure(verbose=False,
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
     _finish_configuration(only_install=False)
+    if print_finish_message:
+        _print_finish_message(config_file=config_file)
 
 
 def _all_main_services_removed():
@@ -1109,7 +1135,7 @@ def remove(verbose=False, config_file=None):
 
     _remove_installation_files()
 
-    if is_supervisord_service() and _all_main_services_removed():
+    if _all_main_services_removed():
         remove_files(SUPERVISORD_CONFIG_DIR)
 
     clean_certs()
@@ -1190,6 +1216,9 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     packages_to_update, _ = _get_packages()
     run(['yum', 'clean', 'all'],
         stdout=sys.stdout, stderr=sys.stderr)
+
+    _handle_erlang_package_change(packages_to_update)
+
     run([
         'yum', 'update', '-y', '--disablerepo=*', '--enablerepo=cloudify'
     ] + packages_to_update, stdout=sys.stdout, stderr=sys.stderr)
@@ -1202,28 +1231,19 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
         component.start()
 
 
-def _is_unit_finished(unit_name='cloudify-starter.service'):
-    try:
-        unit_details = subprocess.check_output(
-            ['/bin/systemctl', 'show', unit_name],
-            stderr=subprocess.STDOUT
-        ).splitlines()
-    except subprocess.CalledProcessError:
-        # systemd is not ready yet
-        return False
-    for line in unit_details:
-        name, _, value = line.strip().partition(b'=')
-        if name == b'ExecMainExitTimestampMonotonic':
-            rv = int(value) > 0
-        if name == b'ExecMainStatus':
-            try:
-                value = int(value)
-            except ValueError:
-                continue
-            if value > 0:
-                raise BootstrapError(
-                    'Starter service exited with code {0}'.format(value))
-    return rv
+def _handle_erlang_package_change(packages_to_update):
+    """
+    In CM 7.0 for RedHat/Centos 7 we started using esl-erlang rather than
+    just erlang. In that case, we uninstall the existing erlang package using
+    `rpm -e` (`yum remove` also uninstalls dependencies, which we don't want),
+    otherwise we get a dependency conflict when trying to install esl-erlang.
+    """
+    if 'esl-erlang' in packages_to_update and is_package_installed('erlang'):
+        packages_to_update.remove('esl-erlang')
+        erlang_pkg = run(['rpm', '-q', 'erlang']).aggr_stdout.strip()
+        run(['rpm', '-e', '--nodeps', erlang_pkg],
+            stdout=sys.stdout, stderr=sys.stderr)
+        yum_install(['esl-erlang'])
 
 
 def _get_starter_service_response():
@@ -1307,12 +1327,10 @@ def wait_for_starter(timeout=600, config_file=None):
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
     _follow.seek_to_end()
 
-    is_started = _is_supervisord_service_finished \
-        if is_supervisord_service() else _is_unit_finished
     deadline = time.time() + timeout
     while time.time() < deadline:
         _follow.poll()
-        if is_started():
+        if _is_supervisord_service_finished():
             break
         time.sleep(0.5)
     else:
@@ -1348,7 +1366,7 @@ def image_starter(verbose=False, config_file=None):
     )
     config.load_config(config_file)
     executable = os.path.join(os.path.dirname(sys.executable), 'cfy_manager')
-    command = [executable, 'configure']
+    command = [executable, 'configure', '--print-finish-message']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()
@@ -1360,26 +1378,6 @@ def image_starter(verbose=False, config_file=None):
             and not _all_services_configured():
         command += ['--admin-password', 'admin']
     os.execv(executable, command)
-
-
-@argh.decorators.named('run-init')
-@config_arg
-def run_init(config_file=None):
-    """Run the configured init system/service management system.
-
-    Based on the configuration, run either systemd or supervisord.
-    This is to be used for the docker image. Full OS images should run
-    systemd on their own.
-    """
-    config.load_config(config_file)
-    if is_supervisord_service():
-        os.execv(
-            "/usr/bin/supervisord",
-            ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
-    else:
-        os.execv(
-            "/bin/bash",
-            ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"])
 
 
 @argh.named('replace')
@@ -1462,6 +1460,16 @@ def version(**kwargs):
                             repo['branch_name'])
 
 
+@argh.decorators.named('run-init')
+@config_arg
+def run_init(config_file=None):
+    """Run the service management system."""
+    # this function is left here for build-related reasons. To be removed ASAP
+    os.execv(
+        "/usr/bin/supervisord",
+        ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"])
+
+
 def main():
     _ensure_root()
     # Set the umask to 0022; restore it later.
@@ -1485,9 +1493,9 @@ def main():
         reset_admin_password,
         image_starter,
         wait_for_starter,
-        run_init,
         version,
-        upgrade
+        upgrade,
+        run_init,
     ])
 
     parser.add_commands(

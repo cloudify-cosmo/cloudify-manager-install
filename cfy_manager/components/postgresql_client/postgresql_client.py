@@ -1,6 +1,5 @@
 import os
 
-from ..validations import validate_certificates
 from ...components_constants import (
     SERVICES_TO_INSTALL,
     SSL_CLIENT_VERIFICATION,
@@ -16,6 +15,8 @@ from ...service_names import (
 from ...constants import (
     POSTGRESQL_CLIENT_CERT_PATH,
     POSTGRESQL_CLIENT_KEY_PATH,
+    POSTGRESQL_CLIENT_SU_CERT_PATH,
+    POSTGRESQL_CLIENT_SU_KEY_PATH,
     POSTGRESQL_CA_CERT_PATH,
     POSTGRESQL_CA_KEY_PATH,
     CLOUDIFY_HOME_DIR,
@@ -122,6 +123,14 @@ class PostgresqlClient(BaseComponent):
             component_name=SSL_INPUTS,
             prefix='postgresql_client_'
         )
+        certificates.use_supplied_certificates(
+            logger=logger,
+            cert_destination=POSTGRESQL_CLIENT_SU_CERT_PATH,
+            key_destination=POSTGRESQL_CLIENT_SU_KEY_PATH,
+            key_perms='400',
+            component_name=SSL_INPUTS,
+            prefix='postgresql_superuser_client_'
+        )
 
     def replace_certificates(self):
         replacing_ca = os.path.exists(NEW_POSTGRESQL_CA_CERT_FILE_PATH)
@@ -162,6 +171,8 @@ class PostgresqlClient(BaseComponent):
                         NEW_POSTGRESQL_CLIENT_KEY_FILE_PATH,
                         POSTGRESQL_CLIENT_CERT_PATH,
                         POSTGRESQL_CLIENT_KEY_PATH)
+                # We don't handle superuser certs as they're only used at
+                # install time.
 
             ca_filename = certificates.get_ca_filename(
                 NEW_POSTGRESQL_CA_CERT_FILE_PATH,
@@ -170,7 +181,7 @@ class PostgresqlClient(BaseComponent):
                 NEW_POSTGRESQL_CA_KEY_FILE_PATH,
                 POSTGRESQL_CA_KEY_PATH)
 
-            validate_certificates(
+            certificates.validate_certificates(
                 cert_filename, key_filename, ca_filename, ca_key_filename)
 
     def configure(self):

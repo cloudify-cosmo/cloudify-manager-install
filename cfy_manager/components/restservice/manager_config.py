@@ -36,8 +36,6 @@ def make_manager_config():
         'account_lock_period': config['restservice']['account_lock_period'],
         'public_ip': config['manager']['public_ip'],
         'default_page_size': config['restservice']['default_page_size'],
-        'service_management': config.setdefault(
-            'service_management', 'supervisord'),
         'monitoring_timeout': prometheus_config.get('request_timeout', 4),
         'log_fetch_username': prometheus_config.get('credentials', {}).get(
             'username'),

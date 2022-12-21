@@ -10,7 +10,6 @@ from collections import namedtuple
 import requests
 
 from . import db
-from ..validations import validate_certificates
 from ...constants import (
     REST_HOME_DIR,
     REST_CONFIG_PATH,
@@ -18,15 +17,16 @@ from ...constants import (
     REST_AUTHORIZATION_CONFIG_PATH
 )
 from ...components_constants import (
+    ADMIN_PASSWORD,
+    CLUSTER_JOIN,
     CONFIG,
+    FLASK_SECURITY,
+    HOSTNAME,
+    PROVIDER_CONTEXT,
     SCRIPTS,
     SECURITY,
-    SSL_INPUTS,
-    CLUSTER_JOIN,
-    ADMIN_PASSWORD,
-    FLASK_SECURITY,
     SERVICES_TO_INSTALL,
-    HOSTNAME
+    SSL_INPUTS,
 )
 from ..base_component import BaseComponent
 from ...service_names import (
@@ -34,7 +34,8 @@ from ...service_names import (
     RESTSERVICE,
     POSTGRESQL_CLIENT,
     MANAGER_SERVICE,
-    MONITORING_SERVICE
+    MONITORING_SERVICE,
+    RABBITMQ,
 )
 from ... import constants
 from ...config import config
@@ -57,6 +58,7 @@ from ...utils.files import (
     read,
     remove,
     write,
+    write_to_tempfile,
 )
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
@@ -195,28 +197,26 @@ class RestService(BaseComponent):
         )
 
     def _configure_restservice_wrapper_script(self):
-        if self.service_type == 'supervisord':
-            deploy(
-                join(
-                    SCRIPTS_PATH,
-                    'restservice-wrapper-script.sh'
-                ),
-                '/etc/cloudify',
-                render=False
-            )
-            common.chmod('755', '/etc/cloudify/restservice-wrapper-script.sh')
+        deploy(
+            join(
+                SCRIPTS_PATH,
+                'restservice-wrapper-script.sh'
+            ),
+            '/etc/cloudify',
+            render=False
+        )
+        common.chmod('755', '/etc/cloudify/restservice-wrapper-script.sh')
 
     def _configure_api_wrapper_script(self):
-        if self.service_type == 'supervisord':
-            deploy(
-                join(
-                    SCRIPTS_PATH,
-                    'api-wrapper-script.sh'
-                ),
-                '/etc/cloudify',
-                render=False
-            )
-            common.chmod('755', '/etc/cloudify/api-wrapper-script.sh')
+        deploy(
+            join(
+                SCRIPTS_PATH,
+                'api-wrapper-script.sh'
+            ),
+            '/etc/cloudify',
+            render=False
+        )
+        common.chmod('755', '/etc/cloudify/api-wrapper-script.sh')
 
     def _configure_restservice(self):
         flask_security_config = self._generate_flask_security_config()
@@ -244,24 +244,47 @@ class RestService(BaseComponent):
         }
         config[CLUSTER_JOIN] = False
 
-        if db.check_db_exists():
-            db.validate_schema_version(configs)
-        else:
+        if not db.check_db_exists():
+            db.prepare_db()
             self._initialize_db(configs)
+            return
 
+        # the db did exist beforehand, so we're either joining a cluster,
+        # or re-configuring a single manager
+        db.validate_schema_version(configs)
         managers = db.get_managers()
         if config[MANAGER][HOSTNAME] in managers:
+            # we're already in this db! we're just reconfiguring.
             db.update_stored_manager(configs)
         else:
             db.insert_manager(configs)
             if len(managers) > 0:
+                config[CLUSTER_JOIN] = True
                 self._join_cluster(configs)
 
     def _initialize_db(self, configs):
         logger.info('DB not initialized, creating DB...')
+
         self._generate_admin_password_if_empty()
-        db.prepare_db()
-        db.populate_db(configs)
+        # values passed through to manager_rest.configure_manager:
+        configure_manager_settings = {
+            PROVIDER_CONTEXT: db.get_provider_context(),
+            MANAGER: db.get_manager(),
+            # pass through rabbitmq config separately too, because we might
+            # have defaulted all kinds of things about rabbitmq
+            # (eg. the default localhost broker)
+            RABBITMQ: config[RABBITMQ],
+        }
+
+        additional_config = [
+            write_to_tempfile(configure_manager_settings, json_dump=True)
+        ]
+
+        db.populate_db(configs, additional_config_files=additional_config)
+        if additional_config:
+            for filepath in additional_config:
+                remove(filepath)
+
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
 
@@ -347,7 +370,8 @@ class RestService(BaseComponent):
     def validate_new_certs(self):
         # All other certs are validated in other components
         if os.path.exists(constants.NEW_LDAP_CA_CERT_PATH):
-            validate_certificates(ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
+            certificates.validate_certificates(
+                ca_filename=constants.NEW_LDAP_CA_CERT_PATH)
 
     def _replace_ca_certs_on_db(self):
         if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
@@ -464,7 +488,6 @@ class RestService(BaseComponent):
         args_dict = {
             'hostname': config[MANAGER][HOSTNAME],
             'bootstrap_syncthing': bootstrap_syncthing,
-            'service_management': self.service_type
         }
         script_path = join(SCRIPTS_PATH, 'configure_cluster_script.py')
         result = run_script_on_manager_venv(script_path,
@@ -558,4 +581,5 @@ class RestService(BaseComponent):
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
         run_snapshot_script('populate_deployment_statuses')
+        run_snapshot_script('migrate_pickle_to_json')
         logger.notice('Rest Service successfully upgraded')

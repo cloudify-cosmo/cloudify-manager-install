@@ -20,7 +20,6 @@ from ...service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
     POSTGRESQL_SERVER,
-    RABBITMQ,
     RESTSERVICE,
 )
 
@@ -32,7 +31,6 @@ from ...exceptions import ValidationError
 from ...utils import common
 from ...utils.db import run_psql_command
 from ...utils.install import is_premium_installed
-from ...utils.files import read_yaml_file
 from ...utils.scripts import run_script_on_manager_venv
 
 logger = get_logger('DB')
@@ -111,59 +109,26 @@ def _create_database(db_name, user):
         'server_db_name', logger)
 
 
-def _get_provider_context():
+def get_provider_context():
     context = {'cloudify': config[PROVIDER_CONTEXT]}
     context['cloudify']['cloudify_agent'] = config[AGENT]
     return context
 
 
-def _get_permissions():
-    return read_yaml_file(join(CONFIG_PATH, 'authorization.conf'))
-
-
-def _create_populate_db_args_dict():
+def create_populate_db_args_dict():
     """
     Create and return a dictionary with all the information necessary for the
     script that creates and populates the DB to run
     """
     args_dict = {
-        'admin_username': config[MANAGER][SECURITY][ADMIN_USERNAME],
-        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-        'provider_context': _get_provider_context(),
-        'permissions': _get_permissions(),
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
         'config': make_manager_config(),
         'premium': 'premium' if is_premium_installed() else 'community',
-        'rabbitmq_brokers': _create_rabbitmq_info(),
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info(),
     }
-    rabbitmq_ca_cert_path = config['rabbitmq'].get('ca_path')
-    if rabbitmq_ca_cert_path:
-        with open(rabbitmq_ca_cert_path) as f:
-            args_dict['rabbitmq_ca_cert'] = f.read()
     return args_dict
-
-
-def _create_rabbitmq_info():
-    use_hostnames = config[RABBITMQ]['use_hostnames_in_db']
-    is_external = config[RABBITMQ].get('is_external', False)
-    return [
-        {
-            'name': name,
-            'host': name if use_hostnames else broker[NETWORKS]['default'],
-            'management_host': (
-                name if use_hostnames else broker[NETWORKS]['default']
-            ),
-            'username': config[RABBITMQ]['username'],
-            'password': config[RABBITMQ]['password'],
-            'params': None,
-            'networks': broker[NETWORKS],
-            'is_external': is_external,
-        }
-        for name, broker in config[RABBITMQ]['cluster_members'].items()
-    ]
 
 
 def _create_db_nodes_info():
@@ -236,14 +201,26 @@ def run_script(script_name, script_input=None, configs=None):
     return _get_script_stdout(proc_result)
 
 
-def populate_db(configs):
+def populate_db(configs, additional_config_files=None):
     logger.notice('Populating DB and creating AMQP resources...')
-    args_dict = _create_populate_db_args_dict()
+    args_dict = create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
+    if (
+        config[MANAGER][SECURITY][ADMIN_USERNAME] and
+        config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    ):
+        args = ['manager_rest.configure_manager']
+        args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
+        for path in config['config_files']:
+            args += ['--config-file-path', path]
+        if additional_config_files:
+            for path in additional_config_files:
+                args += ['--config-file-path', path]
+        run_script_on_manager_venv('-m', script_args=args)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
-def _get_manager():
+def get_manager():
     try:
         with open(constants.CA_CERT_PATH) as f:
             ca_cert = f.read()
@@ -255,22 +232,22 @@ def _get_manager():
         'private_ip': config['manager']['private_ip'],
         'networks': config[NETWORKS],
         'last_seen': common.get_formatted_timestamp(),
-        'ca_cert': ca_cert
+        'ca_cert': ca_cert,
+        SECURITY: {
+            ADMIN_PASSWORD: config[MANAGER][SECURITY][ADMIN_PASSWORD],
+        },
     }
 
 
 def insert_manager(configs):
     logger.notice('Registering manager in the DB...')
-    args = {'manager': _get_manager()}
-    run_script('create_tables_and_add_defaults.py', args, configs)
+    args = {'manager': get_manager()}
+    run_script('update_stored_manager.py', args, configs)
 
 
 def update_stored_manager(configs=None):
     logger.notice('Updating stored manager...')
-    args = {
-        'manager': _get_manager(),
-        'admin_password': config[MANAGER][SECURITY][ADMIN_PASSWORD],
-    }
+    args = {'manager': get_manager()}
 
     run_script('update_stored_manager.py', args, configs=configs)
     logger.notice('AMQP resources successfully created')

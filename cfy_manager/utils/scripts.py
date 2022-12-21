@@ -28,7 +28,7 @@ def run_script_on_manager_venv(script_path,
                                json_dump=True):
     """Runs a script in a separate process inside the Cloudify Manager's venv.
 
-    :param script_path: script absolute path.
+    :param script_path: script absolute path (or -m to run a module)
     :param script_input: script configuration to pass to the script. The path
      will be passed with the script_conf_arg param as an argument of the
      script - unless not provided.
@@ -38,7 +38,7 @@ def run_script_on_manager_venv(script_path,
     :param json_dump: if to json.dump the script_input.
     :return: process result of the run script.
     """
-    if not isfile(script_path):
+    if script_path != '-m' and not isfile(script_path):
         raise FileError('Provided script path "{0}" isn\'t a file or doesn\'t '
                         'exist.'.format(script_path))
     python_path = join(REST_HOME_DIR, 'env', 'bin', 'python')

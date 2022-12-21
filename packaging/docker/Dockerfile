@@ -16,7 +16,7 @@ RUN yum update -y && yum install -y openssl-1.0.2k libselinux-utils \
     initscripts tcp_wrappers-libs openssh-clients sudo \
     systemd-sysv  # systemd-sysv is required by postgres
 
-EXPOSE 80 443 5672 53333
+EXPOSE 80 443 5671 53333
 COPY $config /tmp/config.yaml
 
 # `curl && yum install && rm` is the method that results in the lowest
@@ -36,8 +36,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \
     && yum clean all
 
-COPY starter.service /usr/lib/systemd/system/cloudify-starter.service
-RUN systemctl enable cloudify-starter.service
+RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
@@ -48,6 +47,4 @@ COPY starter.conf /etc/supervisord.d/starter.conf
 RUN if [ "$arch" = "aarch64" ]; then echo 'DefaultEnvironment="LD_LIBRARY_PATH"=/usr/local/lib64:${LD_LIBRARY_PATH}' >> /etc/systemd/system.conf; fi
 RUN if [ "$arch" = "aarch64" ]; then echo 'LD_LIBRARY_PATH=/usr/local/lib64:${LD_LIBRARY_PATH}' > /etc/environment; fi
 
-STOPSIGNAL SIGRTMIN+3
-VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/usr/bin/cfy_manager", "run-init"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]

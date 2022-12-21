@@ -146,8 +146,10 @@ function run_manager1(){
   sudo docker cp ${TMPDIR}/rendered_manager1_config.yaml ${NODE1_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp ${TMPDIR}/manager_1_key.pem ${NODE1_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp ${TMPDIR}/manager_1_cert.pem ${NODE1_NAME}:/etc/cloudify/manager_cert.pem
-  sudo docker cp ${TMPDIR}/db_client_1_cert.pem ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
-  sudo docker cp ${TMPDIR}/db_client_1_key.pem ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
+  sudo docker cp ${TMPDIR}/cloudify.key ${NODE1_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/postgres.crt ${NODE1_NAME}:/etc/cloudify/manager_postgres_su_client_cert.pem
+  sudo docker cp ${TMPDIR}/postgres.key ${NODE1_NAME}:/etc/cloudify/manager_postgres_su_client_key.pem
   sudo docker cp ${TMPDIR}/external_key_1.pem ${NODE1_NAME}:/etc/cloudify/manager_external_key.pem
   sudo docker cp ${TMPDIR}/external_cert_1.pem ${NODE1_NAME}:/etc/cloudify/manager_external_cert.pem
   sudo docker cp ${TMPDIR}/ca.encrypted.key ${NODE1_NAME}:/etc/cloudify/ca_key.pem
@@ -168,8 +170,10 @@ function run_manager2(){
   sudo docker cp ${TMPDIR}/rendered_manager2_config.yaml ${NODE2_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp ${TMPDIR}/manager_2_key.pem ${NODE2_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp ${TMPDIR}/manager_2_cert.pem ${NODE2_NAME}:/etc/cloudify/manager_cert.pem
-  sudo docker cp ${TMPDIR}/db_client_2_cert.pem ${NODE2_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
-  sudo docker cp ${TMPDIR}/db_client_2_key.pem ${NODE2_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE2_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
+  sudo docker cp ${TMPDIR}/cloudify.key ${NODE2_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/postgres.crt ${NODE2_NAME}:/etc/cloudify/manager_postgres_su_client_cert.pem
+  sudo docker cp ${TMPDIR}/postgres.key ${NODE2_NAME}:/etc/cloudify/manager_postgres_su_client_key.pem
   sudo docker cp ${TMPDIR}/external_key_2.pem ${NODE2_NAME}:/etc/cloudify/manager_external_key.pem
   sudo docker cp ${TMPDIR}/external_cert_2.pem ${NODE2_NAME}:/etc/cloudify/manager_external_cert.pem
   sudo docker cp ${TMPDIR}/prometheus_key_2.pem ${NODE2_NAME}:/etc/cloudify/manager_prometheus_key.pem
@@ -192,8 +196,10 @@ function run_manager3(){
   sudo docker cp ${TMPDIR}/rendered_manager3_config.yaml ${NODE3_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp ${TMPDIR}/manager_3_key.pem ${NODE3_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp ${TMPDIR}/manager_3_cert.pem ${NODE3_NAME}:/etc/cloudify/manager_cert.pem
-  sudo docker cp ${TMPDIR}/db_client_3_cert.pem ${NODE3_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
-  sudo docker cp ${TMPDIR}/db_client_3_key.pem ${NODE3_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/cloudify.crt ${NODE3_NAME}:/etc/cloudify/manager_postgres_client_cert.pem
+  sudo docker cp ${TMPDIR}/cloudify.key ${NODE3_NAME}:/etc/cloudify/manager_postgres_client_key.pem
+  sudo docker cp ${TMPDIR}/postgres.crt ${NODE3_NAME}:/etc/cloudify/manager_postgres_su_client_cert.pem
+  sudo docker cp ${TMPDIR}/postgres.key ${NODE3_NAME}:/etc/cloudify/manager_postgres_su_client_key.pem
   sudo docker cp ${TMPDIR}/external_key_3.pem ${NODE3_NAME}:/etc/cloudify/manager_external_key.pem
   sudo docker cp ${TMPDIR}/external_cert_3.pem ${NODE3_NAME}:/etc/cloudify/manager_external_cert.pem
   sudo docker cp ${TMPDIR}/prometheus_key_3.pem ${NODE3_NAME}:/etc/cloudify/manager_prometheus_key.pem

@@ -5,7 +5,8 @@ manager:
 postgresql_server:
   enable_remote_connections: true
   ssl_enabled: true
-  ssl_client_verification: false
+  ssl_client_verification: true
+  ssl_only_connections: true
 
   cert_path: /etc/cloudify/db_cert.pem
   key_path: /etc/cloudify/db_key.pem
@@ -41,5 +42,3 @@ prometheus:
 services_to_install:
 - database_service
 - monitoring_service
-
-service_management: supervisord

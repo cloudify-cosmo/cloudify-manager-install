@@ -188,11 +188,10 @@ class Stage(BaseComponent):
         self.set_db_url()
         self._set_internal_manager_ip()
         external_configure_params = {
+            'service_user': STAGE_USER,
+            'service_group': STAGE_GROUP,
             'community_mode': '' if is_premium_installed else '-mode community'
         }
-        if self.service_type == 'supervisord':
-            external_configure_params['service_user'] = STAGE_USER
-            external_configure_params['service_group'] = STAGE_GROUP
         service.configure(
             'cloudify-stage',
             user=STAGE_USER,

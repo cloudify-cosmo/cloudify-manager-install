@@ -19,7 +19,6 @@ from ...components_constants import (
     SERVICES_TO_INSTALL,
 )
 from ..base_component import BaseComponent
-from ..validations import validate_certificates
 from ...service_names import RABBITMQ, MANAGER, MANAGER_SERVICE
 from ... import constants
 from ...utils import certificates, common, network
@@ -538,7 +537,7 @@ class RabbitMQ(BaseComponent):
     def validate_new_certs(self):
         if common.is_all_in_one_manager():
             if os.path.exists(constants.NEW_INTERNAL_CA_CERT_FILE_PATH):
-                validate_certificates(
+                certificates.validate_certificates(
                     cert_filename=constants.NEW_BROKER_CERT_FILE_PATH,
                     key_filename=constants.NEW_BROKER_KEY_FILE_PATH,
                     ca_filename=constants.NEW_INTERNAL_CA_CERT_FILE_PATH,
@@ -559,6 +558,10 @@ class RabbitMQ(BaseComponent):
     @retry(stop_max_attempt_number=20, wait_fixed=3000)
     def verify_started(self):
         logger.info('Making sure RabbitMQ is live...')
+        # If a previous start attempt failed because an old instance was
+        # running then this should recover. As it's a start, it shouldn't
+        # interrupt if the data is still being loaded by the new instance
+        service.start('cloudify-rabbitmq')
         wait_for_port(SECURE_PORT)
 
         result = self._rabbitmqctl(['status'])
@@ -646,11 +649,10 @@ class RabbitMQ(BaseComponent):
     def configure(self):
         logger.notice('Configuring RabbitMQ...')
         syslog.deploy_rsyslog_filters('rabbitmq', ['cloudify-rabbitmq'],
-                                      self.service_type, logger)
+                                      logger)
         self._set_erlang_cookie()
         self._set_config()
-        if self.service_type == 'supervisord':
-            self._configure_rabbitmq_wrapper_script()
+        self._configure_rabbitmq_wrapper_script()
         if not common.is_all_in_one_manager():
             self._possibly_add_hosts_entries()
         service.configure('cloudify-rabbitmq',
@@ -692,6 +694,27 @@ class RabbitMQ(BaseComponent):
         common.add_cron_job(time_string, command, comment,
                             constants.CLOUDIFY_USER)
         logger.info('Queue rebalancing cron job successfully created')
+
+    def upgrade(self):
+        # On upgrade, the rabbit rpm may have started the systemd service.
+        # If we leave it running, later upgrade steps may be unhappy.
+        common.run(['systemctl', 'stop', 'rabbitmq-server'],
+                   ignore_failures=True)  # In case there is no systemd
+
+        logger.info('Waiting for rabbitmq to stop')
+        check_num = 0
+        max_checks = 60
+        delay = 2
+        # If we were using supervisord, 5672 will be open
+        while is_port_open(5671) or is_port_open(5672):
+            logger.info('...rabbit is still listening.')
+            if check_num == max_checks:
+                raise RuntimeError(
+                    'Old rabbit is still listening.'
+                )
+            check_num += 1
+            time.sleep(delay)
+        super(RabbitMQ, self).upgrade()
 
 
 def _is_ipv6_enabled():

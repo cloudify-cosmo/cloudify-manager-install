@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import distro
 import netifaces
 from getpass import getuser
@@ -35,7 +34,13 @@ from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
-from ..utils.common import run, ProcessExecutionError
+from ..utils.common import run
+from ..utils.certificates import (
+    check_cert_key_match,
+    check_certificates,
+    check_ssl_file,
+    get_cert_cn,
+)
 from ..utils.network import is_ipv6
 
 logger = get_logger(VALIDATIONS)
@@ -74,11 +79,16 @@ def _validate_supported_distros():
     logger.info('Validating supported distributions...')
     distro, version = _get_os_distro()
     supported_distros = config[VALIDATIONS]['supported_distros']
+
+    # `platform` lib. has "redhat"; since 7.0 we use `distro` that has "rhel"
+    if 'redhat' in supported_distros:
+        supported_distros.append('rhel')
+
     supported_distro_versions = \
         config[VALIDATIONS]['supported_distro_versions']
     if distro not in supported_distros:
         _errors.append(
-            'Cloudify manager does not support the current distro (`{0}`),'
+            'Cloudify manager does not support the current distro (`{0}`), '
             'supported distros are: {1}'.format(distro, supported_distros)
         )
     if version not in supported_distro_versions:
@@ -151,17 +161,6 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
                     ip=ip_to_validate,
                     addresses=', '.join(all_addresses),
                     param=SKIP_VALIDATIONS))
-
-
-def _validate_python_version():
-    logger.info('Validating Python version...')
-    major_version, minor_version = sys.version_info[0], sys.version_info[1]
-    python_version = '{0}.{1}'.format(major_version, minor_version)
-    expected_version = config[VALIDATIONS]['expected_python_version']
-    if python_version != expected_version:
-        error = 'Local python version (`{0}`) does not match expected ' \
-                'version (`{1}`)'.format(python_version, expected_version)
-        _errors.append(error)
 
 
 def _validate_sufficient_memory():
@@ -288,137 +287,12 @@ def validate_dependencies(components):
         component.validate_dependencies()
 
 
-def _check_ssl_file(filename, kind='Key', password=None):
-    """Does the cert/key file exist and is it valid?"""
-    if not os.path.isfile(filename):
-        raise ValidationError(
-            '{0} file {1} does not exist'
-            .format(kind, filename))
-    if kind == 'Key':
-        check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
-        if password:
-            check_command += [
-                '-passin',
-                u'pass:{0}'.format(password).encode('utf-8')
-            ]
-    elif kind == 'Cert':
-        check_command = ['openssl', 'x509', '-in', filename, '-noout']
-    else:
-        raise ValueError('Unknown kind: {0}'.format(kind))
-    proc = run(check_command, ignore_failures=True)
-    if proc.returncode != 0:
-        password_err = ''
-        if password:
-            password_err = ' (or the provided password is incorrect)'
-        raise ValidationError('{0} file {1} is invalid{2}'
-                              .format(kind, filename, password_err))
-
-
-def _check_signed_by(ca_filename, cert_filename):
-    ca_check_command = [
-        'openssl', 'verify',
-        '-CAfile', ca_filename,
-        # also give openssl the cert itself so that it can look up
-        # intermediaries, if any
-        '-untrusted', cert_filename,
-        cert_filename
-    ]
-    try:
-        run(ca_check_command)
-    except ProcessExecutionError:
-        raise ValidationError(
-            'Provided certificate {cert} was not signed by provided '
-            'CA {ca}'.format(
-                cert=cert_filename,
-                ca=ca_filename,
-            )
-        )
-
-
-def _check_cert_key_match(cert_filename, key_filename, password=None):
-    _check_ssl_file(key_filename, kind='Key', password=password)
-    _check_ssl_file(cert_filename, kind='Cert')
-    key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
-                           '-in', key_filename]
-    if password:
-        key_modulus_command += [
-            '-passin',
-            u'pass:{0}'.format(password).encode('utf-8')
-        ]
-    cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
-                            '-in', cert_filename]
-    key_modulus = run(key_modulus_command).aggr_stdout.strip()
-    cert_modulus = run(cert_modulus_command).aggr_stdout.strip()
-    if cert_modulus != key_modulus:
-        raise ValidationError(
-            'Key {key_path} does not match the cert {cert_path}'.format(
-                key_path=key_filename,
-                cert_path=cert_filename,
-            )
-        )
-
-
-def check_certificates(config_section, section_path,
-                       cert_path='cert_path', key_path='key_path',
-                       ca_path='ca_path',
-                       ca_key_path='ca_key_path',
-                       key_password='key_password',
-                       require_non_ca_certs=True,
-                       ):
-    """Check that the provided cert, key, and CA actually match"""
-    cert_filename = config_section.get(cert_path)
-    key_filename = config_section.get(key_path)
-
-    ca_filename = config_section.get(ca_path)
-    ca_key_filename = config_section.get(ca_key_path)
-    password = config_section.get(key_password)
-
-    if not cert_filename and not key_filename and require_non_ca_certs:
-        failing = []
-        if password:
-            failing.append('key_password')
-        if ca_filename:
-            failing.append('ca_path')
-        if ca_key_filename:
-            failing.append('ca_key_path')
-        if failing:
-            failing = ' or '.join(failing)
-            raise ValidationError(
-                'If {failing} was provided, both cert_path and key_path '
-                'must be provided in {component}'.format(
-                    failing=failing,
-                    component=section_path,
-                )
-            )
-
-    validate_certificates(cert_filename, key_filename, ca_filename,
-                          ca_key_filename, password)
-    return cert_filename, key_filename, ca_filename, ca_key_filename, password
-
-
-def validate_certificates(cert_filename=None, key_filename=None,
-                          ca_filename=None, ca_key_filename=None,
-                          password=None):
-    if cert_filename and key_filename:
-        _check_cert_key_match(cert_filename, key_filename, password)
-    elif cert_filename or key_filename:
-        raise ValidationError('Either both cert_path and key_path must be '
-                              'provided, or neither.')
-
-    if ca_filename:
-        _check_ssl_file(ca_filename, kind='Cert')
-        if cert_filename:
-            _check_signed_by(ca_filename, cert_filename)
-        if ca_key_filename and os.path.exists(ca_key_filename):
-            _check_cert_key_match(ca_filename, ca_key_filename, password)
-
-
 def _check_internal_ca_cert():
     ssl_inputs = config[SSL_INPUTS]
     if ssl_inputs['ca_key_path'] and ssl_inputs['ca_cert_path']:
-        _check_ssl_file(ssl_inputs['ca_key_path'],
-                        password=ssl_inputs['ca_key_password'])
-        _check_ssl_file(ssl_inputs['ca_cert_path'], kind='Cert')
+        check_ssl_file(ssl_inputs['ca_key_path'],
+                       password=ssl_inputs['ca_key_password'])
+        check_ssl_file(ssl_inputs['ca_cert_path'], kind='Cert')
     elif ssl_inputs['ca_key_path'] and not ssl_inputs['ca_cert_path']:
         raise ValidationError('Internal CA key provided, but the internal '
                               'CA cert was not')
@@ -488,22 +362,22 @@ def _validate_cert_inputs():
         )
     if config[SSL_INPUTS].get('external_ca_cert_path'):
         if config[SSL_INPUTS].get('external_ca_key_path'):
-            _check_cert_key_match(
+            check_cert_key_match(
                 config[SSL_INPUTS]['external_ca_cert_path'],
                 config[SSL_INPUTS]['external_ca_key_path'],
                 config[SSL_INPUTS].get('external_ca_key_password')
             )
         else:
-            _check_ssl_file(config[SSL_INPUTS]['external_ca_cert_path'],
-                            kind='Cert')
+            check_ssl_file(config[SSL_INPUTS]['external_ca_cert_path'],
+                           kind='Cert')
     if config[POSTGRESQL_SERVER]['ca_path']:
-        _check_ssl_file(config[POSTGRESQL_SERVER]['ca_path'],
-                        kind='Cert')
+        check_ssl_file(config[POSTGRESQL_SERVER]['ca_path'],
+                       kind='Cert')
         config[POSTGRESQL_CLIENT]['ca_path'] = \
             config[POSTGRESQL_SERVER]['ca_path']
     elif config[POSTGRESQL_CLIENT]['ca_path']:
-        _check_ssl_file(config[POSTGRESQL_CLIENT]['ca_path'],
-                        kind='Cert')
+        check_ssl_file(config[POSTGRESQL_CLIENT]['ca_path'],
+                       kind='Cert')
 
 
 def _validate_postgres_server_and_cloudify_input_difference():
@@ -573,6 +447,23 @@ def _validate_postgres_inputs():
                                   'enable_remote_connections and '
                                   'postgres_password must be set')
 
+    if manager_service_in_config:
+        if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
+            ssl_inputs = config[SSL_INPUTS]
+            required_certs = [
+                'postgresql_client_cert_path',
+                'postgresql_client_key_path',
+                'postgresql_superuser_client_cert_path',
+                'postgresql_superuser_client_key_path',
+            ]
+            if not all(ssl_inputs[entry] for entry in required_certs):
+                certs = ', '.join(required_certs)
+                raise ValidationError(
+                    'When using ssl_client_verification, the following certs '
+                    f'must be provided in the config under {SSL_INPUTS}: '
+                    f'{certs}'
+                )
+
     if manager_service_in_config and not db_service_in_config:
         postgres_host = config[POSTGRESQL_CLIENT]['host'].rsplit(':', 1)[0]
         if postgres_host in ('localhost', '127.0.0.1', '::1') and \
@@ -582,14 +473,12 @@ def _validate_postgres_inputs():
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             _validate_postgres_cluster_configuration()
 
-    if (
-        config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]
-        and not config[POSTGRESQL_SERVER]['ssl_only_connections']
-    ):
-        raise ValidationError(
-            'When using ssl_client_verification, ssl_only_connections '
-            'must be enabled to ensure client verification takes place.'
-        )
+    if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
+        if not config[POSTGRESQL_SERVER]['ssl_only_connections']:
+            raise ValidationError(
+                'When using ssl_client_verification, ssl_only_connections '
+                'must be enabled to ensure client verification takes place.'
+            )
     _validate_postgres_azure_configuration()
     _validate_postgres_server_and_cloudify_input_difference()
 
@@ -609,16 +498,6 @@ def _validate_postgres_ssl_certificates_provided():
                     'postgresql_server.cert_path, '
                     'postgresql_server.key_path, '
                     'and postgresql_server.ca_path'))
-        elif not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
-                  config[SSL_INPUTS]['postgresql_client_key_path'] and
-                  config['postgresql_server']['ca_path']):
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-                raise ValidationError(error_msg.format(
-                    'with client verification, a CA certificate, '
-                    'a certificate and a key ',
-                    'ssl_inputs.postgresql_client_cert_path, '
-                    'ssl_inputs.postgresql_client_key_path, '
-                    'and postgresql_server.ca_path'))
     elif service_is_in_config(MANAGER_SERVICE):
         if not config['postgresql_server']['ca_path'] and not \
                 config['postgresql_client']['ca_path']:
@@ -628,6 +507,20 @@ def _validate_postgres_ssl_certificates_provided():
                                  'postgresql_server.ca_path or '
                                  'postgresql_client.ca_path')
             )
+        if not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
+                config[SSL_INPUTS]['postgresql_client_key_path'] and
+                config[SSL_INPUTS]['postgresql_superuser_client_key_path'] and
+                config[SSL_INPUTS]['postgresql_superuser_client_key_path'] and
+                config['postgresql_server']['ca_path']):
+            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+                raise ValidationError(error_msg.format(
+                    'with client verification, a CA certificate, '
+                    'a certificate and a key ',
+                    'ssl_inputs.postgresql_client_cert_path, '
+                    'ssl_inputs.postgresql_client_key_path, '
+                    'ssl_inputs.postgresql_superuser_client_cert_path, '
+                    'ssl_inputs.postgresql_superuser_client_key_path, '
+                    'and postgresql_server.ca_path'))
 
 
 def _validate_external_postgres():
@@ -683,6 +576,27 @@ def _validate_external_postgres():
                 )
 
 
+def _validate_postgres_client_certs():
+    if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+        client_cert_cn = get_cert_cn(
+            config[SSL_INPUTS]['postgresql_client_cert_path'])
+        if client_cert_cn != 'cloudify':
+            raise ValidationError(
+                'Client certificates require their CN to be set to '
+                '"cloudify" (without quotes). Provided client cert '
+                f'has CN: {client_cert_cn}'
+            )
+        client_su_cert_cn = get_cert_cn(
+            config[SSL_INPUTS]['postgresql_superuser_client_cert_path'])
+        client_su_name = config[POSTGRESQL_CLIENT]['server_username']
+        if client_su_cert_cn != client_su_name:
+            raise ValidationError(
+                'Client superuser certificates require their CN to be set to '
+                f'"{client_su_name}" (without quotes). Provided client cert '
+                f'has CN: {client_su_cert_cn}'
+            )
+
+
 def validate(components, skip_validations=False, only_install=False):
     if not only_install:
         # Inputs always need to be validated, otherwise the install won't work
@@ -700,11 +614,11 @@ def validate(components, skip_validations=False, only_install=False):
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
         _validate_env()
-        _validate_python_version()
         _validate_sufficient_memory()
         _validate_postgres_inputs()
         _validate_external_postgres()
         _validate_postgres_ssl_certificates_provided()
+        _validate_postgres_client_certs()
         _validate_ssl_and_external_certificates_match()
         _validate_external_ssl_cert_and_ca()
         _validate_cert_inputs()

@@ -5,16 +5,12 @@ groups:
       # Recording rules
       - record: postgres_healthy
         expr: pg_up{job="postgresql"} == 1 and up{job="postgresql"} == 1
-      - record: postgres_service_systemd
-        expr: sum by (host, name) (node_systemd_unit_state{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter{% if all_in_one %}|postgresql-14{% endif %}|nginx).service", state="active"})
-        labels:
-          process_manager: systemd
       - record: postgres_service_supervisord
         expr: sum by (host, name) (node_supervisord_up{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter{% if all_in_one %}|postgresql-14{% endif %}|nginx)"})
         labels:
           process_manager: supervisord
       - record: postgres_service
-        expr: postgres_service_systemd or postgres_service_supervisord
+        expr: postgres_service_supervisord
 
       # Alerting rules
       - alert: postgres_down
