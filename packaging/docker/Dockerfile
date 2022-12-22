@@ -1,4 +1,5 @@
-FROM centos:7
+ARG base_image=centos:7
+FROM $base_image
 
 ARG rpm_file
 ARG config=config.yaml
@@ -41,5 +42,7 @@ RUN usermod -aG cfyuser rabbitmq || true
 RUN chmod g+rx /etc/cloudify
 RUN chmod a+wx /var/run
 COPY starter.conf /etc/supervisord.d/starter.conf
+RUN if [ "$arch" = "aarch64" ]; then echo 'DefaultEnvironment="LD_LIBRARY_PATH"=/usr/local/lib64:${LD_LIBRARY_PATH}' >> /etc/systemd/system.conf; fi
+RUN if [ "$arch" = "aarch64" ]; then echo 'LD_LIBRARY_PATH=/usr/local/lib64:${LD_LIBRARY_PATH}' > /etc/environment; fi
 
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
