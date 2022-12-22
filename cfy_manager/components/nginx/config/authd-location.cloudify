@@ -7,7 +7,7 @@ location /resources {
 }
 
 location /resources-local {
-    auth_request /resources-auth;
+    internal;
 
     alias {{ manager.file_server_root }};
 
