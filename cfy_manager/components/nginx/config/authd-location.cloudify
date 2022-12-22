@@ -1,12 +1,23 @@
 location /resources {
-    alias {{ manager.file_server_root }};
     auth_request /resources-auth;
+
+    proxy_pass http://cloudify-rest/api/v3.1/file-server-proxy;
+    proxy_set_header X-Original-URI $request_uri;
+    proxy_set_header X-Original-Method $request_method;
 
     # A special location that doesn't require authentication for agents upgrade
     location /resources/cloudify_agent {
+        alias {{ manager.file_server_root }}/cloudify_agent;
         auth_request off;
     }
-    index index.html /resources/.get-index;
+}
+
+location /resources-local {
+    internal;
+
+    alias {{ manager.file_server_root }};
+
+    index index.html /resources-local/.get-index;
 }
 
 location /api/v3.1/audit {
