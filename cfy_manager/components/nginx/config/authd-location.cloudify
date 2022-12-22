@@ -11,10 +11,6 @@ location /resources-local {
 
     alias {{ manager.file_server_root }};
 
-    # A special location that doesn't require authentication for agents upgrade
-    location /resources-local/cloudify_agent {
-        auth_request off;
-    }
     index index.html /resources-local/.get-index;
 }
 
