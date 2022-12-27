@@ -490,6 +490,9 @@ mgmtworker:
     # Sets the interval between retry attempts in seconds.
     task_retry_interval: 15
 
+  # A local copy of Cloudify resources (e.g. deployment working directories)
+  resources_root: /tmp/resources
+
 sanity:
   # If set to true, the sanity blueprint install/uninstall will not be
   # performed during Cloudify Manager installation
