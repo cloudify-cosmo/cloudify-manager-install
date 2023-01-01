@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import distro
 import netifaces
 from getpass import getuser
@@ -80,11 +79,16 @@ def _validate_supported_distros():
     logger.info('Validating supported distributions...')
     distro, version = _get_os_distro()
     supported_distros = config[VALIDATIONS]['supported_distros']
+
+    # `platform` lib. has "redhat"; since 7.0 we use `distro` that has "rhel"
+    if 'redhat' in supported_distros:
+        supported_distros.append('rhel')
+
     supported_distro_versions = \
         config[VALIDATIONS]['supported_distro_versions']
     if distro not in supported_distros:
         _errors.append(
-            'Cloudify manager does not support the current distro (`{0}`),'
+            'Cloudify manager does not support the current distro (`{0}`), '
             'supported distros are: {1}'.format(distro, supported_distros)
         )
     if version not in supported_distro_versions:
@@ -157,17 +161,6 @@ def _validate_ip(ip_to_validate, check_local_interfaces=False):
                     ip=ip_to_validate,
                     addresses=', '.join(all_addresses),
                     param=SKIP_VALIDATIONS))
-
-
-def _validate_python_version():
-    logger.info('Validating Python version...')
-    major_version, minor_version = sys.version_info[0], sys.version_info[1]
-    python_version = '{0}.{1}'.format(major_version, minor_version)
-    expected_version = config[VALIDATIONS]['expected_python_version']
-    if python_version != expected_version:
-        error = 'Local python version (`{0}`) does not match expected ' \
-                'version (`{1}`)'.format(python_version, expected_version)
-        _errors.append(error)
 
 
 def _validate_sufficient_memory():
@@ -621,7 +614,6 @@ def validate(components, skip_validations=False, only_install=False):
         if config[POSTGRESQL_CLIENT]['host'] not in ('localhost', '127.0.0.1'):
             _validate_ip(ip_to_validate=config[POSTGRESQL_CLIENT]['host'])
         _validate_env()
-        _validate_python_version()
         _validate_sufficient_memory()
         _validate_postgres_inputs()
         _validate_external_postgres()
