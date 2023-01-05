@@ -309,7 +309,6 @@ class Supervisord(object):
         src_dir = src_dir.replace('-', '_')
         srv_src = join(COMPONENTS_DIR, src_dir, config_path)
         srv_src = join(srv_src, '{0}.conf'.format(service_name))
-        logger.info('srv %s', srv_src)
         if exists(srv_src):
             logger.debug('Deploying supervisord service file...')
             deploy(srv_src, dst, render=render,

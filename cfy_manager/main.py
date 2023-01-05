@@ -57,6 +57,9 @@ from .constants import (
     INSTALLED_COMPONENTS,
     INSTALLED_PACKAGES,
     USER_CONFIG_PATH,
+    CA_CERT_FILENAME,
+    EXTERNAL_CA_CERT_FILENAME,
+    EXTERNAL_CA_CERT_PATH,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -644,16 +647,37 @@ def _prepare_execution(verbose=False,
 def _print_finish_message(config_file=None):
     if service_is_in_config(MANAGER_SERVICE):
         manager_config = config[MANAGER]
+        public_ip = manager_config[PUBLIC_IP] or manager_config[PRIVATE_IP]
         protocol = \
             'https' if config[MANAGER][SECURITY]['ssl_enabled'] else 'http'
-        logger.notice(
-            'Manager is up at {protocol}://{ip}'.format(
-                protocol=protocol,
-                ip=manager_config[PUBLIC_IP])
+        public_ip_message = 'Manager is up at {protocol}://{ip}'.format(
+            protocol=protocol,
+            ip=public_ip,
         )
         password = config[MANAGER][SECURITY][ADMIN_PASSWORD]
+        use_message = (
+            'cfy profiles use {ip} -u admin -p {password} -t default_tenant'
+            .format(
+                ip=public_ip,
+                password=password,
+            )
+        )
+        if protocol == 'https':
+            if os.path.exists(EXTERNAL_CA_CERT_PATH):
+                cert_filename = EXTERNAL_CA_CERT_FILENAME
+            else:
+                cert_filename = CA_CERT_FILENAME
+            use_message += ' -ssl -c path/to/' + cert_filename
+
+        print('#' * 50)
+        if public_ip:
+            print(public_ip_message)
         print('Admin password: {0}'.format(password))
         print('#' * 50)
+        if public_ip:
+            print('To connect to the manager, use:')
+            print(use_message)
+            print('#' * 50)
         print("To install the default plugins bundle run:")
         print("'cfy plugins bundle-upload'")
         print('#' * 50)
@@ -969,7 +993,8 @@ def configure(verbose=False,
               private_ip=None,
               public_ip=None,
               admin_password=None,
-              config_file=None):
+              config_file=None,
+              print_finish_message=False):
     """ Configure Cloudify Manager """
 
     _prepare_execution(
@@ -1005,6 +1030,8 @@ def configure(verbose=False,
     config[UNCONFIGURED_INSTALL] = False
     logger.notice('Configuration finished successfully!')
     _finish_configuration(only_install=False)
+    if print_finish_message:
+        _print_finish_message(config_file=config_file)
 
 
 def _all_main_services_removed():
@@ -1335,7 +1362,7 @@ def image_starter(verbose=False, config_file=None):
     )
     config.load_config(config_file)
     executable = os.path.join(os.path.dirname(sys.executable), 'cfy_manager')
-    command = [executable, 'configure']
+    command = [executable, 'configure', '--print-finish-message']
     private_ip = config[MANAGER].get(PRIVATE_IP)
     if not private_ip:
         private_ip = _guess_private_ip()
