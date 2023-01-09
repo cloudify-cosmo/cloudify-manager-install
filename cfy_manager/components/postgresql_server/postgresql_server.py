@@ -788,11 +788,6 @@ class PostgresqlServer(BaseComponent):
                 'postgresql_server_cluster_nodes': cluster_nodes,
             }
         )
-
-        if self.old_postgresql_settings:  # if upgrading postgresql
-            self._copy_cluster_config_for_upgrade()
-            self._upgrade_postgresql_database(is_cluster=True)
-
         self._start_etcd()
 
         try:
@@ -1758,7 +1753,9 @@ class PostgresqlServer(BaseComponent):
 
     def start(self):
         logger.notice('Starting PostgreSQL Server...')
+        import pdb; pdb.set_trace
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+
             self._start_etcd()
             service.start('patroni')
             service.verify_alive('patroni')
@@ -1794,7 +1791,9 @@ class PostgresqlServer(BaseComponent):
                 self.old_postgresql_settings = self._get_encoding_and_locale()
 
             service.stop('etcd')
-            service.stop('patroni')
+
+            if not self.old_postgresql_settings:
+                service.stop('patroni')  # already removed if upgrading
         else:
             try:
                 service.stop(POSTGRES_SERVICE_NAME)
@@ -1809,9 +1808,9 @@ class PostgresqlServer(BaseComponent):
             return
 
         is_cluster = config[POSTGRESQL_SERVER]['cluster']['nodes']
-        if is_cluster:
-            logger.debug('Moving patroni data dir to data.old...')
-            common.run(['sudo', 'mv', PATRONI_DATA_DIR, OLD_PATRONI_DATA_DIR])
+        # if is_cluster:
+        #     logger.debug('Moving patroni data dir to data.old...')
+        #     common.run(['sudo', 'mv', PATRONI_DATA_DIR, OLD_PATRONI_DATA_DIR])
 
         logger.notice("Upgrading PostgreSQL database version...")
         logger.debug('Configuring and initializing new PostgreSQL '
@@ -1820,18 +1819,23 @@ class PostgresqlServer(BaseComponent):
         service.reread()
 
         if is_cluster:
+            self._configure_cluster()
+            import pdb; pdb.set_trace();
+
             encoding, locale = self.old_postgresql_settings
             common.run(['sudo', '-u', 'postgres',
                         join(PGSQL_USR_DIR, 'bin', 'initdb'),
                         '-D', PATRONI_DATA_DIR,
                         '-E', encoding, '--locale', locale, '-k'])
             # -k = enable checksums in new cluster, since the older one does
-            self._configure_cluster()
+
+            self._copy_cluster_config_for_upgrade()
+            self._upgrade_postgresql_database(is_cluster=True)
 
             # TODO: find a way to preserve cluster identifier
             #  For now (that's super hacky):
-            common.run(['sudo', 'sed', '-i',
-                        's/data$/data\.old/', PATRONI_CONFIG_PATH])
+            # common.run(['sudo', 'sed', '-i',
+            #             's/data$/data\.old/', PATRONI_CONFIG_PATH])
         else:
             self._init_postgresql_server()
             self._upgrade_postgresql_database()
@@ -1852,6 +1856,7 @@ class PostgresqlServer(BaseComponent):
 
         # Applying changes for new pSQL
         common.run(['sudo', 'sed', '-i', 's/9.5/14/', new_pg_base])
+        common.run(['sudo', 'sed', '-i', 's/9.5/14/', PATRONI_CONFIG_PATH])
         # -- wal_keep_segments no longer supported in PG 14
         common.run(['sudo', 'sed', '-i', '/wal_keep_segments/d', new_pg_base])
         # -- created by default in PG 14 for local communication
@@ -1860,6 +1865,8 @@ class PostgresqlServer(BaseComponent):
         # -- temporarily stop requiring client cretification
         common.run(['sudo', 'sed', '-i', 's/clientcert=1//g',
                     new_pg_hba])
+        common.run(['sudo', 'sed',
+                    '-i', 's/clientcert=1//g', PATRONI_CONFIG_PATH])
 
     @staticmethod
     def _upgrade_postgresql_database(is_cluster=False):
