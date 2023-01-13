@@ -1260,10 +1260,6 @@ def _get_starter_service_response():
 
 
 def _is_supervisord_service_finished():
-    if not os.path.exists('/var/run/supervisord.sock'):
-        # supervisord did not start yet
-        return False
-
     status_response = _get_starter_service_response()
     service_status = status_response['statename']
     exit_status = status_response['exitstatus']
@@ -1319,15 +1315,25 @@ class _FileFollow(object):
             pass
 
 
+def _wait_for_supervisord_start(deadline):
+    while time.time() < deadline:
+        if os.path.exists('/var/run/supervisord.sock'):
+            return
+        time.sleep(0.5)
+    raise BootstrapError(
+        'supervisord never started: /var/run/supervisord.sock missing')
+
+
 @argh.decorators.named('wait-for-starter')
 @config_arg
 def wait_for_starter(timeout=600, config_file=None):
     config.load_config(config_file)
+    deadline = time.time() + timeout
 
+    _wait_for_supervisord_start(deadline)
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
     _follow.seek_to_end()
 
-    deadline = time.time() + timeout
     while time.time() < deadline:
         _follow.poll()
         if _is_supervisord_service_finished():
