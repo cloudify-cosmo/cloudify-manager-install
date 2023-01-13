@@ -1374,7 +1374,6 @@ def _is_systemd_starter_service_finished():
 
 def _choose_starter_service_poller(deadline):
     while time.time() < deadline:
-
         if _has_supervisord_starter_service():
             return _is_supervisord_service_finished
         elif _has_systemd_starter_service():
@@ -1396,7 +1395,7 @@ def wait_for_starter(timeout=600, config_file=None):
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
     _follow.seek_to_end()
 
-    is_started = _choose_starter_service_poller()
+    is_started = _choose_starter_service_poller(deadline)
     while time.time() < deadline:
         _follow.poll()
         if is_started():
