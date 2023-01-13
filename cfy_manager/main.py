@@ -1348,6 +1348,30 @@ def _has_systemd_starter_service():
     return False
 
 
+def _is_systemd_starter_service_finished():
+    try:
+        unit_details = subprocess.check_output(
+            ['/bin/systemctl', 'show', f'{STARTER_SERVICE}.service'],
+            stderr=subprocess.STDOUT
+        ).splitlines()
+    except subprocess.CalledProcessError:
+        # systemd is not ready yet
+        return False
+    for line in unit_details:
+        name, _, value = line.strip().partition(b'=')
+        if name == b'ExecMainExitTimestampMonotonic':
+            rv = int(value) > 0
+        if name == b'ExecMainStatus':
+            try:
+                value = int(value)
+            except ValueError:
+                continue
+            if value > 0:
+                raise BootstrapError(
+                    'Starter service exited with code {0}'.format(value))
+    return rv
+
+
 def _choose_starter_service_poller(deadline):
     while time.time() < deadline:
 
