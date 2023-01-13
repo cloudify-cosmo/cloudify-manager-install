@@ -1344,7 +1344,7 @@ def _has_systemd_starter_service():
     for line in unit_details:
         name, _, value = line.strip().partition(b'=')
         if name == b'LoadState':
-            return value != 'not-found'
+            return value != b'not-found'
     return False
 
 
