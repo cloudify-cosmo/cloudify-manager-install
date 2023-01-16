@@ -61,8 +61,8 @@ pipeline {
       parallel{
         stage('flake8') {
           steps{
-            sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
-            container('py310'){
+            sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to separate workspace"
+            container('py311'){
               dir("${env.WORKSPACE}/flake8") {
                 echo 'install flake 8'
                 sh 'pip install flake8 --user'
@@ -92,7 +92,7 @@ pipeline {
         }
         stage('build_prometheus_rpms') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to seperate workspace"
+            sh script: "mkdir -p ${env.WORKSPACE}/prometheus && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/prometheus", label: "copying repo to separate workspace"
             container('rpmbuild') {
               dir("${env.WORKSPACE}/prometheus") {
                 echo 'Link items from workspace under rpm sources dir'
@@ -187,7 +187,7 @@ pipeline {
             script {
               buildState = 'FAILURE'
               catchError(message: 'Failure on: manager-install EC2 Creation', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                container('py310') {
+                container('py311') {
                   echo 'Setup Github SSH key'
                   setupGithubSSHKey()
                   dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
@@ -225,7 +225,7 @@ pipeline {
         script {
           buildState = 'FAILURE'
           catchError(message: 'Failure on: manager-install install manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-            container('py310') {
+            container('py311') {
               dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                   sh script: """#!/bin/bash
@@ -257,7 +257,7 @@ pipeline {
             script{
               buildState = 'FAILURE'
               catchError(message: 'Failure on: manager-install install manager', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                container('py310') {
+                container('py311') {
                   dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                     withVault([configuration: configuration, vaultSecrets: secrets]){
                       sh script: """#!/bin/bash
@@ -305,7 +305,7 @@ sudo docker exec ${env.CONTAINER_NAME} cfy_manager sanity-check
            script{
             buildState = 'FAILURE'
             catchError(message: 'Failure on: manager-install install_cluster', buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-              container('py310') {
+              container('py311') {
                 dir("${env.WORKSPACE}/${env.PROJECT}/jenkins") {
                   withVault([configuration: configuration, vaultSecrets: secrets]) {
                     sh script: """#!/bin/bash
@@ -340,7 +340,7 @@ sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh "${env.CONTAINER_NAM
       steps{
         script{
           catchError(message: 'Failure on: Tearing down EC2 instance of manager-install ', buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            container('py310') {
+            container('py311') {
               dir("${env.WORKSPACE}/${env.PROJECT}/jenkins"){
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                   echo 'Uninstall and delete blueprint from manager'

@@ -30,7 +30,7 @@ BuildRequires:  createrepo, gcc, postgresql-devel
 Requires(pre):  shadow-utils
 Requires:       python3 >= 3.6
 
-Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10-%{ARCHITECTURE}.tgz
+Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
 
 %description
 Cloudify Manager installer.
@@ -42,19 +42,19 @@ sudo tar xf %{S:0} -C /
 
 # Create the venv with the custom Python symlinked in
 mkdir -p $(dirname %_venv)
-/opt/python3.10/bin/python3.10 -m venv %_venv
+/opt/python3.11/bin/python3.11 -m venv %_venv
 %_venv/bin/pip install ${RPM_SOURCE_DIR}
 # Make sure the http.py spurious critical log is in the expected location (line 849)
 # We're doing this because the socket is already secured by filesystem permissions and
 # we don't want a meaningless log entry with a CRIT level to alarm users
-sed -n 849p %_venv/lib/python3.10/site-packages/supervisor/http.py | grep critical
-sed -i 849s/critical/debug/ %_venv/lib/python3.10/site-packages/supervisor/http.py
+sed -n 849p %_venv/lib/python3.11/site-packages/supervisor/http.py | grep critical
+sed -i 849s/critical/debug/ %_venv/lib/python3.11/site-packages/supervisor/http.py
 
 %install
 
 # Copy our custom Python to build root
-mkdir -p %{buildroot}/opt/python3.10
-cp -R /opt/python3.10 %{buildroot}/opt
+mkdir -p %{buildroot}/opt/python3.11
+cp -R /opt/python3.11 %{buildroot}/opt
 
 mkdir -p %{buildroot}/usr/bin
 mkdir -p %{buildroot}/etc/cloudify
@@ -110,7 +110,7 @@ cfy_manager install
 "
 
 %files
-%attr(0755,cfyuser,cfyuser)     /opt/python3.10
+%attr(0755,cfyuser,cfyuser)     /opt/python3.11
 
 /usr/bin/cfy_manager
 /opt/cloudify
