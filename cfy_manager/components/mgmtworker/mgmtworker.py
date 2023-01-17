@@ -101,6 +101,7 @@ class MgmtWorker(BaseComponent):
         mgmtworker_paths = [
             # python-version specific virtualenvs are included in the
             # mgmtworker
+            '/opt/plugins-common-3.10/bin',
             '/opt/plugins-common-3.6/bin',
             config_path,
         ]
