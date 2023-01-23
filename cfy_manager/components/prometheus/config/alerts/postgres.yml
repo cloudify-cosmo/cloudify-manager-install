@@ -6,7 +6,7 @@ groups:
       - record: postgres_healthy
         expr: pg_up{job="postgresql"} == 1 and up{job="postgresql"} == 1
       - record: postgres_service_supervisord
-        expr: sum by (host, name) (node_supervisord_up{name=~"(etcd|patroni|node_exporter|prometheus|postgres_exporter{% if all_in_one %}|postgresql-14{% endif %}|nginx)"})
+        expr: sum by (host, name) (node_supervisord_up{name=~"(etcd|patroni|node_exporter|postgres_exporter{% if all_in_one %}|postgresql-14{% endif %})"})
         labels:
           process_manager: supervisord
       - record: postgres_service
