@@ -1292,7 +1292,7 @@ class _FileFollow(object):
 def _has_supervisord_starter_service():
     try:
         return _get_starter_service_response()
-    except BootstrapError:
+    except (BootstrapError, OSError):
         return False
 
 
@@ -1302,7 +1302,7 @@ def _has_systemd_starter_service():
             ['/bin/systemctl', 'show', f'{STARTER_SERVICE}.service'],
             stderr=subprocess.STDOUT
         ).splitlines()
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
         return False
     for line in unit_details:
         name, _, value = line.strip().partition(b'=')
@@ -1317,7 +1317,7 @@ def _is_systemd_starter_service_finished():
             ['/bin/systemctl', 'show', f'{STARTER_SERVICE}.service'],
             stderr=subprocess.STDOUT
         ).splitlines()
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
         # systemd is not ready yet
         return False
     for line in unit_details:
