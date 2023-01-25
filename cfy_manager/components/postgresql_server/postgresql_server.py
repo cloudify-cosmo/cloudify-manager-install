@@ -1647,9 +1647,8 @@ class PostgresqlServer(BaseComponent):
             )
 
         if address == master_address:
-            raise DBManagementError(
-                'The selected node is the current master.'
-            )
+            logger.info('The selected node is the current master.')
+            return
 
         if address not in [master_address] + replicas:
             raise DBManagementError(
