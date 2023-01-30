@@ -142,20 +142,15 @@ class PostgresqlServer(BaseComponent):
     DEGRADED = 1
     DOWN = 2
 
-    old_postgresql_settings = None
-
-    def _init_postgresql_server(self):
+    def _init_postgresql_server(self, encoding='UTF8', locale='en_GB.UTF-8'):
         if os.path.exists(PG_HBA_CONF):
             logger.info('PostreSQL Server DATA folder already initialized...')
             return
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         initdb_cmd = ['sudo', '-u', 'postgres',
                       join(PGSQL_USR_DIR, 'bin', 'initdb'),
-                      '-D', PGSQL_DATA_DIR]
-        # preserve encoding and locale when upgrading postgresql version
-        if self.old_postgresql_settings:
-            encoding, locale = self.old_postgresql_settings
-            initdb_cmd += ['-E', encoding, '--locale', locale]
+                      '-D', PGSQL_DATA_DIR, '-E', encoding,
+                      '--locale', locale]
         common.run(initdb_cmd)
 
         logger.debug('Setting PostgreSQL Server logs path...')
@@ -1781,6 +1776,7 @@ class PostgresqlServer(BaseComponent):
 
     def stop(self, force=True):
         logger.notice('Stopping PostgreSQL Server...')
+
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')
             service.stop('patroni')
@@ -1788,21 +1784,17 @@ class PostgresqlServer(BaseComponent):
             try:
                 service.stop(POSTGRES_SERVICE_NAME)
             except ProcessExecutionError:
-                self.old_postgresql_settings = self._get_encoding_and_locale()
                 service.stop(OLD_POSTGRES_SERVICE_NAME)
-                service.remove(OLD_POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully stopped')
 
-    def upgrade(self):
-        if not self.old_postgresql_settings:  # not upgrading PostgreSQL ver.
-            return
-
-        logger.notice("Upgrading PostgreSQL database version...")
+    def _upgrade_single_db(self):
         logger.debug('Configuring and initializing new PostgreSQL '
                      'service...')
+        service.remove(OLD_POSTGRES_SERVICE_NAME)
         self._configure_postgresql_server_service()
         service.reread()
-        self._init_postgresql_server()
+        self._init_postgresql_server(encoding=self.orig_encoding,
+                                     locale=self.orig_locale)
 
         logger.debug('Upgrading PostgreSQL...')
         bindir = join(PGSQL_USR_DIR, 'bin')
@@ -1826,7 +1818,43 @@ class PostgresqlServer(BaseComponent):
         logger.info('PostgreSQL database upgrade complete!')
 
         service.enable(POSTGRES_SERVICE_NAME)
-        self.old_postgresql_settings = None
+
+    def _upgrade_cluster_node(self):
+        logger.notice('THIS WILL BE WHERE THINGS HAPPEN')
+
+    def _get_pg_control_version(self, data_dir: str) -> str:
+        result = common.run(
+            ['/usr/sbin/pg_controldata', '-D', data_dir]
+        ).aggr_stdout.strip()
+        for line in result.splitlines():
+            param, _, value = line.partition(':')
+            if param == 'pg_control version number':
+                return value.strip()
+        raise ProcessExecutionError(
+            'Could not detect postgres version.')
+
+    def _postgres_needs_upgrade(self) -> bool:
+        data_dir = '/var/lib/pgsql/9.5/data'
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            data_dir = '/var/lib/patroni/data'
+
+        if not os.path.exists(data_dir):
+            return False
+
+        expected_pg_control_version = '1300'
+        current_pg_control_version = self._get_pg_control_version(data_dir)
+        return expected_pg_control_version != current_pg_control_version
+
+    def upgrade(self):
+        if not self._postgres_needs_upgrade():
+            logger.notice('Postgres version is up to date.')
+            return
+
+        logger.notice("Upgrading PostgreSQL database version...")
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            self._upgrade_cluster_node()
+        else:
+            self._upgrade_single_db()
 
     @retry(stop_max_attempt_number=60, wait_fixed=1000)
     def _verify_postgres_stopped(self):
