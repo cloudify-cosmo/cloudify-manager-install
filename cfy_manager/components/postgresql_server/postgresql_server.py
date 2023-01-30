@@ -1807,8 +1807,7 @@ class PostgresqlServer(BaseComponent):
             ['sudo', '-u', 'postgres', pg_upgrade,
              '--old-bindir', old_bindir, '--new-bindir', bindir,
              '--old-datadir', OLD_PGSQL_DATA_DIR,
-             '--new-datadir', PGSQL_DATA_DIR,
-             '--link'],
+             '--new-datadir', PGSQL_DATA_DIR],
             ignore_failures=True, cwd='/tmp'
         )
         if 'Upgrade Complete' not in res.aggr_stdout:
