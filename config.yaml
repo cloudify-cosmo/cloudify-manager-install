@@ -38,6 +38,8 @@ manager:
   # When not using a cluster, this setting is ignored.
   cluster_filesystem_replication: true
 
+  listeners: []
+
 cli:
   # If set to true, Cloudify CLI will not be installed
   skip_installation: false

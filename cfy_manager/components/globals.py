@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import socket
+from typing import TypedDict
 
 from .. import constants
 from ..config import config
@@ -33,7 +34,8 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
     HOSTNAME,
-    ENABLE_REMOTE_CONNECTIONS
+    ENABLE_REMOTE_CONNECTIONS,
+    LISTENERS,
 )
 
 
@@ -91,6 +93,80 @@ def _apply_forced_settings():
         config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
 
 
+class Listener(TypedDict, total=False):
+    host: str
+    port: int
+    server_name: str
+    ssl: bool
+    cert_path: str
+    key_path: str
+
+
+def _format_listener(listener) -> Listener:
+    if not listener:
+        listener = {'host': 'localhost'}
+    elif isinstance(listener, str):
+        listener = {'host': listener}
+
+    formatted = listener.copy()
+    if not formatted.get('port'):
+        formatted['port'] = config[MANAGER]['external_rest_port']
+    if not formatted.get('ssl'):
+        formatted['ssl'] = config[MANAGER][SECURITY]['ssl_enabled']
+    return formatted
+
+
+def _format_listeners(listeners) -> list[Listener]:
+    """Format user-provided listeners, applying defaults."""
+    if not isinstance(listeners, list):
+        listeners = [listeners]
+    listeners = [_format_listener(listener) for listener in listeners]
+    return listeners
+
+
+def _default_internal_listener() -> Listener:
+    """Default "internal" listener, using private_ip"""
+    return {
+        'host': config[MANAGER]['private_ip'],
+        'port': constants.INTERNAL_REST_PORT,
+        'server_name': '_',
+        'ssl': True,
+        'cert_path': constants.INTERNAL_CERT_PATH,
+        'key_path': constants.INTERNAL_KEY_PATH,
+    }
+
+
+def _default_external_listener() -> Listener:
+    """Default "external" listener, using public_ip"""
+    return {
+        'host': config[MANAGER]['public_ip'],
+        'port': (
+            config['nginx'].get('port')
+            or config[MANAGER]['external_rest_port']
+        ),
+        'server_name': '_',
+        'ssl': config[MANAGER][SECURITY]['ssl_enabled'],
+        'cert_path': constants.EXTERNAL_CERT_PATH,
+        'key_path': constants.EXTERNAL_KEY_PATH,
+    }
+
+
+def _set_listeners():
+    """Default & format the config.manager.listeners entries
+
+    Listeners describe the endpoints on which nginx is listening.
+    They are dicts of shape Listener
+    """
+    if config[MANAGER].get(LISTENERS):
+        listeners = _format_listeners(config[MANAGER][LISTENERS])
+    else:
+        listeners = [
+            _default_internal_listener(),
+            _default_external_listener(),
+        ]
+    config[MANAGER][LISTENERS] = listeners
+
+
 def set_globals(only_install=False):
     if only_install:
         return
@@ -98,3 +174,4 @@ def set_globals(only_install=False):
     _set_ip_config()
     _set_external_port_and_protocol()
     _set_hostname()
+    _set_listeners()
