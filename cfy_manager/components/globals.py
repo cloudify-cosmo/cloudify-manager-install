@@ -151,6 +151,36 @@ def _default_external_listener() -> Listener:
     }
 
 
+def _networks_to_listeners():
+    networks = config['networks']
+    listeners = config[MANAGER][LISTENERS]
+    new_listeners = []
+    already_listeners = {listener['host'] for listener in listeners}
+    for network_name, network_addr in networks.items():
+        new_listener = _default_internal_listener()
+        if network_addr not in already_listeners:
+            new_listener.update(
+                host=network_addr,
+                server_name=network_name,
+            )
+            new_listeners.append(new_listener)
+
+    return new_listeners
+
+
+def _listeners_to_networks():
+    networks = config['networks']
+    listeners = config[MANAGER][LISTENERS]
+    new_networks = {}
+    already_networks = set(networks.values())
+    for listener in listeners:
+        host = listener['host']
+        name = listener['server_name']
+        if host not in already_networks:
+            new_networks[name] = host
+    return new_networks
+
+
 def _set_listeners():
     """Default & format the config.manager.listeners entries
 
@@ -165,6 +195,11 @@ def _set_listeners():
             _default_external_listener(),
         ]
     config[MANAGER][LISTENERS] = listeners
+
+    # reconcile listeners and networks, so that both places have entries
+    # describing the same endpoints
+    listeners += _networks_to_listeners()
+    config['networks'].update(_listeners_to_networks())
 
 
 def set_globals(only_install=False):
