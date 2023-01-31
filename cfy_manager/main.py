@@ -1260,10 +1260,6 @@ def _get_starter_service_response():
 
 
 def _is_supervisord_service_finished():
-    if not os.path.exists('/var/run/supervisord.sock'):
-        # supervisord did not start yet
-        return False
-
     status_response = _get_starter_service_response()
     service_status = status_response['statename']
     exit_status = status_response['exitstatus']
@@ -1319,18 +1315,90 @@ class _FileFollow(object):
             pass
 
 
+def _wait_for_supervisord_start(deadline):
+    while time.time() < deadline:
+        if os.path.exists('/var/run/supervisord.sock'):
+            return
+        time.sleep(0.5)
+    raise BootstrapError(
+        'supervisord never started: /var/run/supervisord.sock missing')
+
+
+def _has_supervisord_starter_service():
+    try:
+        _get_starter_service_response()
+    except BootstrapError:
+        return False
+    else:
+        return True
+
+
+def _has_systemd_starter_service():
+    try:
+        unit_details = subprocess.check_output(
+            ['/bin/systemctl', 'show', f'{STARTER_SERVICE}.service'],
+            stderr=subprocess.STDOUT
+        ).splitlines()
+    except subprocess.CalledProcessError:
+        return False
+    for line in unit_details:
+        name, _, value = line.strip().partition(b'=')
+        if name == b'LoadState':
+            return value != b'not-found'
+    return False
+
+
+def _is_systemd_starter_service_finished():
+    try:
+        unit_details = subprocess.check_output(
+            ['/bin/systemctl', 'show', f'{STARTER_SERVICE}.service'],
+            stderr=subprocess.STDOUT
+        ).splitlines()
+    except subprocess.CalledProcessError:
+        # systemd is not ready yet
+        return False
+    for line in unit_details:
+        name, _, value = line.strip().partition(b'=')
+        if name == b'ExecMainExitTimestampMonotonic':
+            rv = int(value) > 0
+        if name == b'ExecMainStatus':
+            try:
+                value = int(value)
+            except ValueError:
+                continue
+            if value > 0:
+                raise BootstrapError(
+                    'Starter service exited with code {0}'.format(value))
+    return rv
+
+
+def _choose_starter_service_poller(deadline):
+    while time.time() < deadline:
+        if _has_supervisord_starter_service():
+            return _is_supervisord_service_finished
+        elif _has_systemd_starter_service():
+            return _is_systemd_starter_service_finished
+        time.sleep(0.5)
+    raise BootstrapError(
+        'Neither a supervisord starter service, nor a systemd starter '
+        'service exists'
+    )
+
+
 @argh.decorators.named('wait-for-starter')
 @config_arg
 def wait_for_starter(timeout=600, config_file=None):
     config.load_config(config_file)
+    deadline = time.time() + timeout
 
+    _wait_for_supervisord_start(deadline)
     _follow = _FileFollow('/var/log/cloudify/manager/cfy_manager.log')
     _follow.seek_to_end()
 
-    deadline = time.time() + timeout
+    is_started = _choose_starter_service_poller(deadline)
     while time.time() < deadline:
         _follow.poll()
-        if _is_supervisord_service_finished():
+        if is_started():
             break
         time.sleep(0.5)
     else:

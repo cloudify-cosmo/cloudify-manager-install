@@ -30,7 +30,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && rm /tmp/cloudify-manager-install.rpm \
     && cp /tmp/config.yaml /etc/cloudify/config.yaml \
     && cfy_manager install --only-install --verbose \
-    && sed -i 's/ssl_enabled: true/ssl_enabled: false/' /opt/cloudify/cfy_manager/lib/python3.10/site-packages/config.yaml \
+    && sed -i 's/ssl_enabled: true/ssl_enabled: false/' /opt/cloudify/cfy_manager/lib/python3.11/site-packages/config.yaml \
     && rm -fr /opt/cloudify/sources/*.rpm -fr \
     && rm /etc/yum.repos.d/Cloudify-Local.repo \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \

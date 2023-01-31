@@ -104,7 +104,7 @@ def main(new_manager):
     db_node = (
         models.DBNodes.query
         .filter_by(name=hostname, host=manager.private_ip)
-        .all()
+        .first()
     )
 
     if db_node:

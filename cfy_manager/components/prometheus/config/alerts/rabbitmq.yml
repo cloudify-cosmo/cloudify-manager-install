@@ -6,7 +6,7 @@ groups:
       - record: rabbitmq_healthy
         expr: sum by(host, instance, job, monitor) (up{job="rabbitmq"}) == 1
       - record: rabbitmq_service_supervisord
-        expr: sum by (host, name) (node_supervisord_up{name=~"(node_exporter|prometheus|cloudify-rabbitmq|nginx)"})
+        expr: sum by (host, name) (node_supervisord_up{name=~"(node_exporter|cloudify-rabbitmq)"})
         labels:
           process_manager: supervisord
       - record: rabbitmq_service

@@ -128,6 +128,10 @@ PG_PORT = 5432
 CONFIG_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER, CONFIG)
 SCRIPTS_PATH = join(constants.COMPONENTS_DIR, POSTGRESQL_SERVER, 'scripts')
 
+POSTGRESQL_WORK_MEM_MIN_BYTES = 4 * 1024 * 1024
+POSTGRESQL_MAINTENANCE_WORK_MEM_MIN_BYTES = 64 * 1024 * 1024
+POSTGRESQL_WAL_BUFFERS_MAX_BYTES = 2047 * 1024 * 1024
+
 logger = get_logger(POSTGRESQL_SERVER)
 
 
@@ -212,15 +216,16 @@ class PostgresqlServer(BaseComponent):
             return self._bytes_as_mb(psutil.virtual_memory().total // 2)
 
     def _generate_work_mem(self):
-        return self._bytes_as_mb(max(4 * 1024 * 1024,
+        return self._bytes_as_mb(max(POSTGRESQL_WORK_MEM_MIN_BYTES,
                                      psutil.virtual_memory().total // 256))
 
     def _generate_maintenance_work_mem(self):
-        return self._bytes_as_mb(max(64 * 1024 * 1024,
+        return self._bytes_as_mb(max(POSTGRESQL_MAINTENANCE_WORK_MEM_MIN_BYTES,
                                      psutil.virtual_memory().total // 16))
 
     def _generate_wal_buffers(self):
-        return self._bytes_as_mb(psutil.virtual_memory().total // 128)
+        return self._bytes_as_mb(min(POSTGRESQL_WAL_BUFFERS_MAX_BYTES,
+                                     psutil.virtual_memory().total // 128))
 
     def _generate_pg_params(self, overrides):
         params = {
@@ -1642,9 +1647,8 @@ class PostgresqlServer(BaseComponent):
             )
 
         if address == master_address:
-            raise DBManagementError(
-                'The selected node is the current master.'
-            )
+            logger.info('The selected node is the current master.')
+            return
 
         if address not in [master_address] + replicas:
             raise DBManagementError(

@@ -16,8 +16,6 @@ location /resources-local {
     internal;
 
     alias {{ manager.file_server_root }};
-
-    index index.html /resources-local/.get-index;
 }
 
 location /api/v3.1/audit {
@@ -30,10 +28,4 @@ location /resources-auth {
     proxy_pass http://cloudify-rest/api/v3.1/file-server-auth;
     proxy_set_header X-Original-URI $request_uri;
     proxy_set_header X-Original-Method $request_method;
-}
-
-location /resources/.get-index {
-    proxy_set_header X-Original-URI $request_uri;
-    proxy_pass http://cloudify-rest/api/v3.1/file-server-index;
-    internal;
 }
