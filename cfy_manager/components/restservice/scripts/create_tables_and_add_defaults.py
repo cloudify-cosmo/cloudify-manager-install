@@ -30,16 +30,6 @@ def _init_db_tables(db_migrate_dir):
     upgrade(directory=db_migrate_dir)
 
 
-def _insert_config(config):
-    sm = get_storage_manager()
-    for scope, entries in config:
-        for name, value in entries.items():
-            inst = sm.get(models.Config, None,
-                          filters={'name': name, 'scope': scope})
-            inst.value = value
-            sm.update(inst)
-
-
 def _insert_db_nodes(db_nodes):
     sm = get_storage_manager()
     for node in db_nodes:
@@ -81,8 +71,6 @@ if __name__ == '__main__':
 
     if script_config.get('db_migrate_dir'):
         _init_db_tables(script_config['db_migrate_dir'])
-    if script_config.get('config'):
-        _insert_config(script_config['config'])
     if script_config.get('db_nodes'):
         _insert_db_nodes(script_config['db_nodes'])
     if script_config.get('usage_collector'):

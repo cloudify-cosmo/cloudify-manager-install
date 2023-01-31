@@ -4,7 +4,6 @@ import time
 import uuid
 from os.path import join
 
-from .manager_config import make_manager_config
 from ...components_constants import (
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
@@ -123,7 +122,6 @@ def create_populate_db_args_dict():
     args_dict = {
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
-        'config': make_manager_config(),
         'premium': 'premium' if is_premium_installed() else 'community',
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info(),
@@ -188,7 +186,7 @@ def run_script(script_name, script_input=None, configs=None):
 
     :param script_name: script name inside the SCRIPTS_PATH dir.
     :param script_input: script input to pass to the script.
-    :param configs: keword arguments dict to pass to _create_process_env(..).
+    :param configs: keyword arguments dict to pass to _create_process_env(..).
     :return: the script's returned when it finished its execution.
     """
     env_dict = _create_process_env(**configs) if configs else None
