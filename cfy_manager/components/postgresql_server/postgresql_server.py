@@ -675,31 +675,15 @@ class PostgresqlServer(BaseComponent):
                 new_ca_key_location=constants.NEW_POSTGRESQL_CA_KEY_FILE_PATH
             )
 
-    def _configure_cluster(self):
-        logger.info('Disabling postgres (will be managed by patroni)')
-        service.stop(POSTGRES_SERVICE_NAME)
-        service.disable(POSTGRES_SERVICE_NAME)
-
-        logger.info('Deploying cluster certificates')
-        # We need access to the certs, which by default we don't have
-        common.chmod('a+x', '/var/lib/patroni')
-
-        self.handle_cluster_certificates()
-        common.chmod('a-x', '/var/lib/patroni')
-
-        logger.info('Deploying patroni initial startup monitor.')
-        self._deploy_patroni_startup_check()
-
-        logger.info('Deploying cluster config files.')
-        self._create_patroni_config(PATRONI_CONFIG_PATH)
-        common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
-        common.chmod('640', PATRONI_CONFIG_PATH)
+    def _configure_etcd_service(self):
+        logger.info('Configuring etcd')
 
         # The etcd name must match one of the cluster node IP/hostnames
         valid_names = [
             node['ip']
             for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
         ]
+
         private_ip = config[MANAGER][PRIVATE_IP]
         public_ip = config[MANAGER][PUBLIC_IP]
         if private_ip in valid_names or public_ip in valid_names:
@@ -726,14 +710,8 @@ class PostgresqlServer(BaseComponent):
                         members=valid_names,
                     )
                 )
-        ip_urlized = network.ipv6_url_compat(private_ip)\
-            if network.is_ipv6(private_ip)\
-            else socket.gethostbyname(private_ip)
-        cluster_nodes = {k: v for k, v in
-                         config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
-        for k, v in cluster_nodes.items():
-            if 'ip' in v:
-                v['ip'] = network.ipv6_url_compat(v['ip'])
+
+        ip_urlized, cluster_nodes = self._get_urlized_ip_and_cluster_nodes()
         etcd_name_suffix = _ip_to_identifier(etcd_name_suffix)
 
         files.deploy(
@@ -746,6 +724,54 @@ class PostgresqlServer(BaseComponent):
             })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
         common.chmod('440', ETCD_CONFIG_PATH)
+        service.configure(
+            'etcd',
+            user='etcd',
+            group='etcd',
+            src_dir='postgresql_server',
+            config_path='config/supervisord',
+            external_configure_params={
+                'ip': ip_urlized,
+                'manager_private_ip': network.ipv6_url_compat(
+                    config[MANAGER][PRIVATE_IP]),
+                'postgresql_server_cluster_nodes': cluster_nodes,
+            }
+        )
+
+    def _get_urlized_ip_and_cluster_nodes(self):
+        private_ip = config[MANAGER][PRIVATE_IP]
+        ip_urlized = network.ipv6_url_compat(private_ip)\
+            if network.is_ipv6(private_ip)\
+            else socket.gethostbyname(private_ip)
+        cluster_nodes = {k: v for k, v in
+                         config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
+        for k, v in cluster_nodes.items():
+            if 'ip' in v:
+                v['ip'] = network.ipv6_url_compat(v['ip'])
+        return ip_urlized, cluster_nodes
+
+    def _configure_cluster(self):
+        logger.info('Disabling postgres (will be managed by patroni)')
+        service.stop(POSTGRES_SERVICE_NAME)
+        service.disable(POSTGRES_SERVICE_NAME)
+
+        logger.info('Deploying cluster certificates')
+        # We need access to the certs, which by default we don't have
+        common.chmod('a+x', '/var/lib/patroni')
+
+        self.handle_cluster_certificates()
+        common.chmod('a-x', '/var/lib/patroni')
+
+        logger.info('Deploying patroni initial startup monitor.')
+        self._deploy_patroni_startup_check()
+
+        logger.info('Deploying cluster config files.')
+        self._create_patroni_config(PATRONI_CONFIG_PATH)
+        common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
+        common.chmod('640', PATRONI_CONFIG_PATH)
+
+        private_ip = config[MANAGER][PRIVATE_IP]
+
         common.chown('postgres', '', '/var/lib/patroni')
         common.chmod('700', '/var/lib/patroni')
         common.chmod('700', '/var/lib/patroni/data')
@@ -774,19 +800,7 @@ class PostgresqlServer(BaseComponent):
         common.run(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
         common.run(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
-        logger.info('Configuring etcd')
-        service.configure(
-            'etcd',
-            user='etcd',
-            group='etcd',
-            src_dir='postgresql_server',
-            config_path='config/supervisord',
-            external_configure_params={
-                'ip': ip_urlized,
-                'manager_private_ip': network.ipv6_url_compat(private_ip),
-                'postgresql_server_cluster_nodes': cluster_nodes,
-            }
-        )
+        self._configure_etcd_service()
         self._start_etcd()
 
         try:
@@ -1818,8 +1832,14 @@ class PostgresqlServer(BaseComponent):
 
         service.enable(POSTGRES_SERVICE_NAME)
 
+    def _upgrade_etcd(self):
+        common.move('/etc/etcd/etcd.conf.rpmsave',
+                    '/etc/etcd/etcd.conf')
+        self._configure_etcd_service()
+        service.enable('etcd')
+
     def _upgrade_cluster_node(self):
-        logger.notice('THIS WILL BE WHERE THINGS HAPPEN')
+        self._upgrade_etcd()
 
     def _get_pg_control_version(self, data_dir: str) -> str:
         result = common.run(
