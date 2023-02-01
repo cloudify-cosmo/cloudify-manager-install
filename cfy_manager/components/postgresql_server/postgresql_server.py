@@ -1252,6 +1252,9 @@ class PostgresqlServer(BaseComponent):
             else:
                 node['errors'].append('Node not running')
 
+            if status.get('pause'):
+                node['errors'].append('Failover disabled')
+
             node['timeline'] = status.get('timeline')
         else:
             node['state'] = 'dead'
