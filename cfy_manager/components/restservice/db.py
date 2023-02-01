@@ -1,12 +1,12 @@
 from contextlib import contextmanager
 import json
+import os
 import time
 import uuid
 from os.path import join
 
 from ...components_constants import (
     ADMIN_PASSWORD,
-    ADMIN_USERNAME,
     AGENT,
     CONFIG,
     HOSTNAME,
@@ -203,18 +203,21 @@ def populate_db(configs, additional_config_files=None):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
-    if (
-        config[MANAGER][SECURITY][ADMIN_USERNAME] and
-        config[MANAGER][SECURITY][ADMIN_PASSWORD]
+    args = ['manager_rest.configure_manager']
+    for file_name in (
+        constants.DEFAULT_CONFIG_PATH,
+        constants.USER_CONFIG_PATH,
     ):
-        args = ['manager_rest.configure_manager']
-        args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
-        for path in config['config_files']:
+        if not os.path.isfile(file_name):
+            continue
+        args += ['--config-file-path', file_name]
+    args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
+    for path in config['config_files']:
+        args += ['--config-file-path', path]
+    if additional_config_files:
+        for path in additional_config_files:
             args += ['--config-file-path', path]
-        if additional_config_files:
-            for path in additional_config_files:
-                args += ['--config-file-path', path]
-        run_script_on_manager_venv('-m', script_args=args)
+    run_script_on_manager_venv('-m', script_args=args)
     logger.notice('DB populated and AMQP resources successfully created')
 
 
