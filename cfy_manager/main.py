@@ -892,11 +892,6 @@ def _get_packages():
     _, rh_version = _get_os_distro()
     if service_is_in_config(MANAGER_SERVICE):
         manager_packages = sources.manager
-        # RedHat version-specific packages
-        if rh_version == "7":
-            manager_packages += sources.manager_rh7
-        elif rh_version == "8":
-            manager_packages += sources.manager_rh8
         # Premium components
         manager_packages += sources.manager_cluster + sources.manager_premium
         packages += manager_packages
