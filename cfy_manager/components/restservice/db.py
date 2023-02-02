@@ -1,9 +1,8 @@
 from contextlib import contextmanager
 import json
-import os
 import time
 import uuid
-from os.path import join
+from os.path import isfile, join
 
 from ...components_constants import (
     ADMIN_PASSWORD,
@@ -204,13 +203,8 @@ def populate_db(configs, additional_config_files=None):
     args_dict = create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
     args = ['manager_rest.configure_manager']
-    for file_name in (
-        constants.DEFAULT_CONFIG_PATH,
-        constants.USER_CONFIG_PATH,
-    ):
-        if not os.path.isfile(file_name):
-            continue
-        args += ['--config-file-path', file_name]
+    if isfile(constants.DEFAULT_CONFIG_PATH):
+        args += ['--config-file-path', constants.DEFAULT_CONFIG_PATH]
     args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
     for path in config['config_files']:
         args += ['--config-file-path', path]
