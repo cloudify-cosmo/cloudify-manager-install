@@ -2041,7 +2041,18 @@ class PostgresqlServer(BaseComponent):
 
         if not upgrade_in_progress:
             logger.debug('Updating DB ID on etcd for patroni')
-            sys_id = self._get_pg_sysid(PATRONI_DATA_DIR)
+            sys_id = None
+            for _ in range(30):
+                try:
+                    sys_id = self._get_pg_sysid(PATRONI_DATA_DIR)
+                    break
+                except ProcessExecutionError as err:
+                    logger.debug(err)
+                    time.sleep(2)
+            if not sys_id:
+                raise ProcessExecutionError(
+                    'Could not get DB ID after 30 attempts.')
+
             self._etcd_command(['set', '/db/postgres/initialize', sys_id],
                                username='root')
 
