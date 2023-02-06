@@ -157,7 +157,7 @@ class PostgresqlServer(BaseComponent):
             initdb_cmd.append('-k')
         common.run(initdb_cmd)
 
-    def _init_postgresql_server(self, encoding='UTF8', locale='en_GB.UTF-8',
+    def _init_postgresql_server(self, encoding='UTF8', locale='en_US.UTF-8',
                                 data_dir=None):
         if data_dir is None:
             if config[POSTGRESQL_SERVER]['cluster']['nodes']:
