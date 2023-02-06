@@ -1811,15 +1811,24 @@ class PostgresqlServer(BaseComponent):
             service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
-    @staticmethod
-    def _get_encoding_and_locale():
-        encoding = common.run(
-            ['psql', '-U', 'postgres', '-c', 'SHOW SERVER_ENCODING', '-t'],
-        ).aggr_stdout.strip()
-
-        locale = common.run(
-            ['psql', '-U', 'postgres', '-c', 'SHOW LC_CTYPE', '-t'],
-        ).aggr_stdout.strip()
+    def _get_encoding_and_locale(self):
+        env_kwargs = {
+            'username': 'postgres',
+            'password': config[POSTGRESQL_SERVER]['postgres_password'],
+            'host': config[MANAGER][PRIVATE_IP],
+        }
+        encoding = db.run_psql_command(
+            'SHOW SERVER_ENCODING',
+            db_key='server_db_name',
+            logger=self.logger,
+            env_kwargs=env_kwargs,
+        )
+        locale = db.run_psql_command(
+            'SHOW LC_CTYPE',
+            db_key='server_db_name',
+            logger=self.logger,
+            env_kwargs=env_kwargs,
+        )
         return encoding, locale
 
     def stop(self, force=True):
@@ -2011,6 +2020,9 @@ class PostgresqlServer(BaseComponent):
                     'DB cluster not healthy prior to upgrade, please check '
                     'health of DB cluster before attempting upgrade again.')
 
+            logger.debug('Getting DB encoding and locale')
+            encoding, locale = self._get_encoding_and_locale()
+
             logger.info('Stopping patroni failover for upgrade.')
             self._patronictl_command(['pause'])
 
@@ -2023,10 +2035,7 @@ class PostgresqlServer(BaseComponent):
             # With patroni paused, postgres sometimes remains running- stop it
             self._pg_command(['-mf', 'stop'], old_pg=True)
 
-            # TODO: Put in something to get old encoding+locale the way the single db does
             logger.debug('Initialising new data dir')
-            encoding = 'UTF8'
-            locale = 'en_US.UTF-8'
             temp_data_dir = PATRONI_DATA_DIR + '.new'
             self._init_db(encoding, locale, temp_data_dir, checksums=True)
 

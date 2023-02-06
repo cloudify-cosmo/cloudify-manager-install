@@ -33,8 +33,9 @@ from cfy_manager.utils import files
 from cfy_manager.utils.network import ipv6_url_compat, ipv6_url_strip
 
 
-def run_psql_command(command, db_key, logger):
-    db_env, base_command = get_psql_env_and_base_command(logger, db_key)
+def run_psql_command(command, db_key, logger, env_kwargs=None):
+    db_env, base_command = get_psql_env_and_base_command(
+        logger, db_key, env_kwargs=env_kwargs)
 
     # Run psql with just the results output without headers (-t),
     # no psqlrc (-X), and not storing history (-n),
@@ -46,7 +47,7 @@ def run_psql_command(command, db_key, logger):
 
 
 def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
-                                  db_override=None):
+                                  db_override=None, env_kwargs=None):
     base_command = []
     pg_config = config[POSTGRESQL_CLIENT]
     pg_cluster_nodes = config[POSTGRESQL_SERVER]['cluster']['nodes']
@@ -66,6 +67,8 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
     if db_key == 'cloudify_db_name' and not peer_authentication:
         db_kwargs['username'] = pg_config['cloudify_username']
         db_kwargs['password'] = pg_config['cloudify_password']
+    if env_kwargs:
+        db_kwargs.update(env_kwargs)
 
     db_name = db_override or pg_config[db_key]
 
@@ -77,9 +80,10 @@ def get_psql_env_and_base_command(logger, db_key='cloudify_db_name',
     return db_env, base_command
 
 
-def generate_db_env(database, logger, username=None, password=None):
+def generate_db_env(database, logger, username=None, password=None,
+                    host=None):
     pg_config = config[POSTGRESQL_CLIENT]
-    host = select_db_host(logger)
+    host = host or select_db_host(logger)
 
     db_env = {
         'PGHOST': ipv6_url_strip(host),
