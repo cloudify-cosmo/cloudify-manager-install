@@ -1909,6 +1909,26 @@ class PostgresqlServer(BaseComponent):
                 return line.split()[-1]
         raise ProcessExecutionError('Could not find DB system identifier.')
 
+    def _remove_client_cert_requirement(self):
+        # We have to do this because client cert handling changed between 9.5
+        # and 14, so if we leave them enabled we're just disabling access.
+        # We do this when we rewrite the patroni conf, but that doesn't cause
+        # these to be updated automagically, so we'll do it here.
+        for path in ['/var/lib/patroni/data/pg_hba.conf',
+                     '/var/lib/patroni/data/patroni.dynamic.json']:
+            common.run(
+                ['sed', '-i', 's/ clientcert=1//g', path],
+            )
+        with open('/var/lib/patroni/data/patroni.dynamic.json') as conf:
+            patroni_conf = json.load(conf)
+        # This should be set currently, but is not recorded in the dynamic
+        # config on disk
+        patroni_conf['pause'] = True
+        self._etcd_command(
+            ['set', '/db/postgres/config', json.dumps(patroni_conf)],
+            username='root',
+        )
+
     def _upgrade_cluster_node(self):
         self._upgrade_etcd()
         service.start('patroni')
@@ -1920,6 +1940,7 @@ class PostgresqlServer(BaseComponent):
                                       'pg_patroni_base.conf')
 
         if upgrade_in_progress:
+            self.logger.info('Updating replica')
             _, nodes = self.get_cluster_status()
 
             leader = False
@@ -1970,6 +1991,8 @@ class PostgresqlServer(BaseComponent):
                 base_conf_path,
             )
         else:
+            self.logger.info('Updating first node, ensuring this node is '
+                             'master.')
             self.set_master(private_ip)
 
             healthy = False
@@ -2013,6 +2036,7 @@ class PostgresqlServer(BaseComponent):
             )
             common.chown(POSTGRES_USER, '', base_conf_path)
 
+            self._remove_client_cert_requirement()
             for conf in ['pg_hba.conf', 'postgresql.conf',
                          'patroni.dynamic.json']:
                 new_path = os.path.join(temp_data_dir, conf)
@@ -2061,15 +2085,14 @@ class PostgresqlServer(BaseComponent):
             logger.info('Database replica prepared, restarting patroni.')
 
         service.start('patroni')
-        if not upgrade_in_progress:
-            # Make sure the 'stop' is cleared, otherwise DB doesn't always
-            # start while patroni is paused. This is only a problem for the
-            # leader which we need to actually be running so the other nodes
-            # can replicate from it.
-            self._pg_command(
-                ['start',
-                 '-l',
-                 '/var/log/cloudify/db_cluster/postgres/upgrade_start.log'])
+        # Make sure the 'stop' is cleared, otherwise DB doesn't always
+        # start while patroni is paused.
+        self._pg_command(
+            ['start',
+             '-l',
+             '/var/log/cloudify/db_cluster/postgres/upgrade_start.log'],
+            # Ignore failures because it sometimes will start
+            ignore_failures=True)
 
         if upgrade_in_progress:
             common.run(
