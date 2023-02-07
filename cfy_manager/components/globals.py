@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 import socket
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from .. import constants
@@ -95,14 +95,14 @@ def _apply_forced_settings():
         config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class Listener:
     host: str
     port: Optional[int] = None
-    server_name: Optional[str] = '_'
-    ssl: Optional[bool] = False
-    cert_path: Optional[str] = None
-    key_path: Optional[str] = None
+    server_name: Optional[str] = field(default='_', compare=False)
+    ssl: Optional[bool] = field(default=False, compare=False)
+    cert_path: Optional[str] = field(default=None, compare=False)
+    key_path: Optional[str] = field(default=None, compare=False)
 
     @staticmethod
     def _validate_config_listener(listener: dict | str):
@@ -111,23 +111,19 @@ class Listener:
 
     @classmethod
     def from_config(cls, original: dict | str, config: dict) -> 'Listener':
+        cls._validate_config_listener()
+
         if isinstance(original, str):
             config_listener = {'host': original}
         else:
             config_listener = original
 
-        listener = cls(**original)
-        if listener.port is None:
-            listener.port = config[MANAGER]['external_rest_port']
-        if listener.ssl is None:
-            listener.ssl = config[MANAGER][SECURITY]['ssl_enabled']
-        return listener
+        if not config_listener.get('port'):
+            config_listener['port'] = config[MANAGER]['external_rest_port']
+        if config_listener.get('ssl') is None:
+            config_listener['ssl'] = config[MANAGER][SECURITY]['ssl_enabled']
+        return cls(**config_listener)
 
-    def __hash__(self):
-        return hash((self.host, self.port))
-
-    def __eq__(self, other):
-        return self.host == other.host and self.port == other.port
 
 def _format_listeners(listeners) -> list[Listener]:
     """Format user-provided listeners, applying defaults."""
