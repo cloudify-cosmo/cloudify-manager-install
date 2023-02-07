@@ -14,9 +14,11 @@
 #  * limitations under the License.
 
 import socket
-from typing import TypedDict
+from dataclasses import dataclass
+from typing import Optional
 
 from .. import constants
+from ..exceptions import BootstrapError
 from ..config import config
 from ..logger import get_logger
 from ..utils.network import ipv6_url_compat
@@ -93,69 +95,80 @@ def _apply_forced_settings():
         config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
 
 
-class Listener(TypedDict, total=False):
+@dataclass(slots=True)
+class Listener:
     host: str
-    port: int
-    server_name: str
-    ssl: bool
-    cert_path: str
-    key_path: str
+    port: Optional[int] = None
+    server_name: Optional[str] = '_'
+    ssl: Optional[bool] = False
+    cert_path: Optional[str] = None
+    key_path: Optional[str] = None
 
+    @staticmethod
+    def _validate_config_listener(listener: dict | str):
+        if not listener:
+            raise BootstrapError(f'listeners: got null value: {listener!r}')
 
-def _format_listener(listener) -> Listener:
-    if not listener:
-        listener = {'host': 'localhost'}
-    elif isinstance(listener, str):
-        listener = {'host': listener}
+    @classmethod
+    def from_config(cls, original: dict | str, config: dict) -> 'Listener':
+        if isinstance(original, str):
+            config_listener = {'host': original}
+        else:
+            config_listener = original
 
-    formatted = listener.copy()
-    if not formatted.get('port'):
-        formatted['port'] = config[MANAGER]['external_rest_port']
-    if not formatted.get('ssl'):
-        formatted['ssl'] = config[MANAGER][SECURITY]['ssl_enabled']
-    return formatted
+        listener = cls(**original)
+        if listener.port is None:
+            listener.port = config[MANAGER]['external_rest_port']
+        if listener.ssl is None:
+            listener.ssl = config[MANAGER][SECURITY]['ssl_enabled']
+        return listener
 
+    def __hash__(self):
+        return hash((self.host, self.port))
+
+    def __eq__(self, other):
+        return self.host == other.host and self.port == other.port
 
 def _format_listeners(listeners) -> list[Listener]:
     """Format user-provided listeners, applying defaults."""
     if not isinstance(listeners, list):
         listeners = [listeners]
-    listeners = [_format_listener(listener) for listener in listeners]
+    listeners = [Listener.from_config(listener) for listener in listeners]
     return listeners
 
 
 def _default_internal_listener() -> Listener:
     """Default "internal" listener, using private_ip"""
-    return {
-        'host': config[MANAGER]['private_ip'],
-        'port': constants.INTERNAL_REST_PORT,
-        'server_name': '_',
-        'ssl': True,
-        'cert_path': constants.INTERNAL_CERT_PATH,
-        'key_path': constants.INTERNAL_KEY_PATH,
-    }
+    return Listener(
+        host=config[MANAGER]['private_ip'],
+        port=constants.INTERNAL_REST_PORT,
+        server_name='_',
+        ssl=True,
+        cert_path=constants.INTERNAL_CERT_PATH,
+        key_path=constants.INTERNAL_KEY_PATH,
+    )
 
 
 def _default_external_listener() -> Listener:
     """Default "external" listener, using public_ip"""
-    return {
-        'host': config[MANAGER]['public_ip'],
-        'port': (
+    return Listener(
+        host=config[MANAGER]['public_ip'],
+        port=(
             config['nginx'].get('port')
             or config[MANAGER]['external_rest_port']
         ),
-        'server_name': '_',
-        'ssl': config[MANAGER][SECURITY]['ssl_enabled'],
-        'cert_path': constants.EXTERNAL_CERT_PATH,
-        'key_path': constants.EXTERNAL_KEY_PATH,
-    }
+        server_name='_',
+        ssl=config[MANAGER][SECURITY]['ssl_enabled'],
+        cert_path=constants.EXTERNAL_CERT_PATH,
+        key_path=constants.EXTERNAL_KEY_PATH,
+    )
 
 
 def _networks_to_listeners():
     networks = config['networks']
     listeners = config[MANAGER][LISTENERS]
     new_listeners = []
-    already_listeners = {listener['host'] for listener in listeners}
+    already_listeners = {listener.host for listener in listeners}
     for network_name, network_addr in networks.items():
         new_listener = _default_internal_listener()
         if network_addr not in already_listeners:
@@ -174,8 +187,8 @@ def _listeners_to_networks():
     new_networks = {}
     already_networks = set(networks.values())
     for listener in listeners:
-        host = listener['host']
-        name = listener['server_name']
+        host = listener.host
+        name = listener.server_name
         if host not in already_networks:
             new_networks[name] = host
     return new_networks
