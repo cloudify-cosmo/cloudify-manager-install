@@ -22,6 +22,7 @@ from cfy_manager.exceptions import (
     DBManagementError,
     ProcessExecutionError,
 )
+from cfy_manager.utils.install import yum_remove
 from ...components_constants import (
     CONFIG,
     ENABLE_REMOTE_CONNECTIONS,
@@ -142,21 +143,29 @@ class PostgresqlServer(BaseComponent):
     DEGRADED = 1
     DOWN = 2
 
-    old_postgresql_settings = None
-
-    def _init_postgresql_server(self):
-        if os.path.exists(PG_HBA_CONF):
+    def _init_db(self, encoding, locale, data_dir, checksums=False):
+        if os.path.exists(os.path.join(data_dir, 'pg_hba.conf')):
             logger.info('PostreSQL Server DATA folder already initialized...')
             return
+
         logger.debug('Initializing PostgreSQL Server DATA folder...')
         initdb_cmd = ['sudo', '-u', 'postgres',
                       join(PGSQL_USR_DIR, 'bin', 'initdb'),
-                      '-D', PGSQL_DATA_DIR]
-        # preserve encoding and locale when upgrading postgresql version
-        if self.old_postgresql_settings:
-            encoding, locale = self.old_postgresql_settings
-            initdb_cmd += ['-E', encoding, '--locale', locale]
+                      '-D', data_dir, '-E', encoding,
+                      '--locale', locale]
+        if checksums:
+            initdb_cmd.append('-k')
         common.run(initdb_cmd)
+
+    def _init_postgresql_server(self, encoding='UTF8', locale='en_US.UTF-8',
+                                data_dir=None):
+        if data_dir is None:
+            if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+                data_dir = PATRONI_DATA_DIR
+            else:
+                data_dir = PGSQL_DATA_DIR
+
+        self._init_db(encoding, locale, data_dir)
 
         logger.debug('Setting PostgreSQL Server logs path...')
         pg_14_logs_path = join(PGSQL_LIB_DIR, '14', 'data', 'log')
@@ -461,6 +470,22 @@ class PostgresqlServer(BaseComponent):
         return common.run(patronictl_base_command + command)
 
     @staticmethod
+    def _pg_command(command, old_pg=False, data_dir=PATRONI_DATA_DIR,
+                    ignore_failures=False):
+        """Execute a command using the old postgres command."""
+        if old_pg:
+            bindir = join(OLD_PGSQL_USR_DIR, 'bin')
+        else:
+            bindir = join(PGSQL_USR_DIR, 'bin')
+        pg_base_command = [
+            'sudo', '-u', 'postgres',
+            f'{bindir}/pg_ctl',
+            '-D', data_dir,
+        ]
+        return common.run(pg_base_command + command,
+                          ignore_failures=ignore_failures)
+
+    @staticmethod
     def _etcd_command(command, ignore_failures=False, stdin=None,
                       local_only=False, username=None):
         """Execute an etcdctl command."""
@@ -680,31 +705,15 @@ class PostgresqlServer(BaseComponent):
                 new_ca_key_location=constants.NEW_POSTGRESQL_CA_KEY_FILE_PATH
             )
 
-    def _configure_cluster(self):
-        logger.info('Disabling postgres (will be managed by patroni)')
-        service.stop(POSTGRES_SERVICE_NAME)
-        service.disable(POSTGRES_SERVICE_NAME)
-
-        logger.info('Deploying cluster certificates')
-        # We need access to the certs, which by default we don't have
-        common.chmod('a+x', '/var/lib/patroni')
-
-        self.handle_cluster_certificates()
-        common.chmod('a-x', '/var/lib/patroni')
-
-        logger.info('Deploying patroni initial startup monitor.')
-        self._deploy_patroni_startup_check()
-
-        logger.info('Deploying cluster config files.')
-        self._create_patroni_config(PATRONI_CONFIG_PATH)
-        common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
-        common.chmod('640', PATRONI_CONFIG_PATH)
+    def _configure_etcd_service(self):
+        logger.info('Configuring etcd')
 
         # The etcd name must match one of the cluster node IP/hostnames
         valid_names = [
             node['ip']
             for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values()
         ]
+
         private_ip = config[MANAGER][PRIVATE_IP]
         public_ip = config[MANAGER][PUBLIC_IP]
         if private_ip in valid_names or public_ip in valid_names:
@@ -731,14 +740,8 @@ class PostgresqlServer(BaseComponent):
                         members=valid_names,
                     )
                 )
-        ip_urlized = network.ipv6_url_compat(private_ip)\
-            if network.is_ipv6(private_ip)\
-            else socket.gethostbyname(private_ip)
-        cluster_nodes = {k: v for k, v in
-                         config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
-        for k, v in cluster_nodes.items():
-            if 'ip' in v:
-                v['ip'] = network.ipv6_url_compat(v['ip'])
+
+        ip_urlized, cluster_nodes = self._get_urlized_ip_and_cluster_nodes()
         etcd_name_suffix = _ip_to_identifier(etcd_name_suffix)
 
         files.deploy(
@@ -751,6 +754,58 @@ class PostgresqlServer(BaseComponent):
             })
         common.chown('etcd', '', ETCD_CONFIG_PATH)
         common.chmod('440', ETCD_CONFIG_PATH)
+        service.configure(
+            'etcd',
+            user='etcd',
+            group='etcd',
+            src_dir='postgresql_server',
+            config_path='config/supervisord',
+            external_configure_params={
+                'ip': ip_urlized,
+                'manager_private_ip': network.ipv6_url_compat(
+                    config[MANAGER][PRIVATE_IP]),
+                'postgresql_server_cluster_nodes': cluster_nodes,
+            }
+        )
+
+    def _get_urlized_ip_and_cluster_nodes(self):
+        private_ip = config[MANAGER][PRIVATE_IP]
+        ip_urlized = network.ipv6_url_compat(private_ip)\
+            if network.is_ipv6(private_ip)\
+            else socket.gethostbyname(private_ip)
+        cluster_nodes = {k: v for k, v in
+                         config[POSTGRESQL_SERVER]['cluster']['nodes'].items()}
+        for k, v in cluster_nodes.items():
+            if 'ip' in v:
+                v['ip'] = network.ipv6_url_compat(v['ip'])
+        return ip_urlized, cluster_nodes
+
+    def _set_postgres_bin_links(self):
+        logger.info('Creating postgres bin links for patroni')
+        for pg_bin in PG_BINS:
+            common.run(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
+                        '/usr/sbin'])
+
+    def _configure_cluster(self):
+        logger.info('Disabling postgres (will be managed by patroni)')
+        service.stop(POSTGRES_SERVICE_NAME)
+        service.disable(POSTGRES_SERVICE_NAME)
+
+        logger.info('Deploying cluster certificates')
+        # We need access to the certs, which by default we don't have
+        common.chmod('a+x', '/var/lib/patroni')
+
+        self.handle_cluster_certificates()
+        common.chmod('a-x', '/var/lib/patroni')
+
+        logger.info('Deploying patroni initial startup monitor.')
+        self._deploy_patroni_startup_check()
+
+        logger.info('Deploying cluster config files.')
+        self._create_patroni_config(PATRONI_CONFIG_PATH)
+
+        private_ip = config[MANAGER][PRIVATE_IP]
+
         common.chown('postgres', '', '/var/lib/patroni')
         common.chmod('700', '/var/lib/patroni')
         common.chmod('700', '/var/lib/patroni/data')
@@ -779,19 +834,7 @@ class PostgresqlServer(BaseComponent):
         common.run(['mv', '-T', tmp_path, POSTGRES_PATRONI_CONFIG_PATH])
         common.run(['chown', 'postgres.', POSTGRES_PATRONI_CONFIG_PATH])
 
-        logger.info('Configuring etcd')
-        service.configure(
-            'etcd',
-            user='etcd',
-            group='etcd',
-            src_dir='postgresql_server',
-            config_path='config/supervisord',
-            external_configure_params={
-                'ip': ip_urlized,
-                'manager_private_ip': network.ipv6_url_compat(private_ip),
-                'postgresql_server_cluster_nodes': cluster_nodes,
-            }
-        )
+        self._configure_etcd_service()
         self._start_etcd()
 
         try:
@@ -903,10 +946,7 @@ class PostgresqlServer(BaseComponent):
                 'this warning can be ignored.'
             )
 
-        logger.info('Creating postgres bin links for patroni')
-        for pg_bin in PG_BINS:
-            common.run(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
-                        '/usr/sbin'])
+        self._set_postgres_bin_links()
 
         logger.info('Starting patroni')
         self._configure_patroni()
@@ -999,9 +1039,12 @@ class PostgresqlServer(BaseComponent):
         # WARNING: Do not use anything other than Popen, this must not block
         subprocess.Popen(['/opt/patroni/bin/patroni_startup_check'])
 
-    def _create_patroni_config(self, patroni_config_path):
+    def _create_patroni_config(self, patroni_config_path,
+                               allow_client_verification=True):
         manager_ip = config['manager'][PRIVATE_IP]
         pgsrv = config[POSTGRESQL_SERVER]
+        client_verification = pgsrv[
+            'ssl_client_verification'] and allow_client_verification
 
         hba_entries = ['hostssl replication replicator 127.0.0.1/32 md5']
         for node in config[POSTGRESQL_SERVER]['cluster']['nodes'].values():
@@ -1009,12 +1052,10 @@ class PostgresqlServer(BaseComponent):
                 self._get_monitoring_user_hba_entry(node['ip']))
         hba_entries.extend([
             'hostssl all all 0.0.0.0/0 md5{0}'.format(
-                ' clientcert=verify-full'
-                if pgsrv['ssl_client_verification'] else '',
+                ' clientcert=verify-full' if client_verification else '',
             ),
             'hostssl all all ::0/0 md5{0}'.format(
-                ' clientcert=verify-full'
-                if pgsrv['ssl_client_verification'] else '',
+                ' clientcert=verify-full' if client_verification else '',
             ),
         ])
 
@@ -1114,6 +1155,8 @@ class PostgresqlServer(BaseComponent):
         yaml.default_flow_style = False
         with open(patroni_config_path, 'w') as f:
             yaml.dump(patroni_conf, f)
+        common.chown('root', 'postgres', PATRONI_CONFIG_PATH)
+        common.chmod('640', PATRONI_CONFIG_PATH)
 
     @staticmethod
     def _format_pg_hba_address(address):
@@ -1768,19 +1811,29 @@ class PostgresqlServer(BaseComponent):
             service.verify_alive(POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully started')
 
-    @staticmethod
-    def _get_encoding_and_locale():
-        encoding = common.run(
-            ['psql', '-U', 'postgres', '-c', 'SHOW SERVER_ENCODING', '-t'],
-        ).aggr_stdout.strip()
-
-        locale = common.run(
-            ['psql', '-U', 'postgres', '-c', 'SHOW LC_CTYPE', '-t'],
-        ).aggr_stdout.strip()
+    def _get_encoding_and_locale(self):
+        env_kwargs = {
+            'username': 'postgres',
+            'password': config[POSTGRESQL_SERVER]['postgres_password'],
+            'host': config[MANAGER][PRIVATE_IP],
+        }
+        encoding = db.run_psql_command(
+            'SHOW SERVER_ENCODING',
+            db_key='server_db_name',
+            logger=self.logger,
+            env_kwargs=env_kwargs,
+        )
+        locale = db.run_psql_command(
+            'SHOW LC_CTYPE',
+            db_key='server_db_name',
+            logger=self.logger,
+            env_kwargs=env_kwargs,
+        )
         return encoding, locale
 
     def stop(self, force=True):
         logger.notice('Stopping PostgreSQL Server...')
+
         if config[POSTGRESQL_SERVER]['cluster']['nodes']:
             service.stop('etcd')
             service.stop('patroni')
@@ -1788,22 +1841,23 @@ class PostgresqlServer(BaseComponent):
             try:
                 service.stop(POSTGRES_SERVICE_NAME)
             except ProcessExecutionError:
-                self.old_postgresql_settings = self._get_encoding_and_locale()
                 service.stop(OLD_POSTGRES_SERVICE_NAME)
-                service.remove(OLD_POSTGRES_SERVICE_NAME)
         logger.notice('PostgreSQL Server successfully stopped')
 
-    def upgrade(self):
-        if not self.old_postgresql_settings:  # not upgrading PostgreSQL ver.
-            return
-
-        logger.notice("Upgrading PostgreSQL database version...")
+    def _upgrade_single_db(self):
         logger.debug('Configuring and initializing new PostgreSQL '
                      'service...')
+        service.remove(OLD_POSTGRES_SERVICE_NAME)
         self._configure_postgresql_server_service()
         service.reread()
-        self._init_postgresql_server()
+        self._init_postgresql_server(encoding=self.orig_encoding,
+                                     locale=self.orig_locale)
 
+        self._run_pg_upgrade(OLD_PGSQL_DATA_DIR, PGSQL_DATA_DIR)
+
+        service.enable(POSTGRES_SERVICE_NAME)
+
+    def _run_pg_upgrade(self, old_data_dir, new_data_dir):
         logger.debug('Upgrading PostgreSQL...')
         bindir = join(PGSQL_USR_DIR, 'bin')
         old_bindir = join(OLD_PGSQL_USR_DIR, 'bin')
@@ -1814,10 +1868,9 @@ class PostgresqlServer(BaseComponent):
         res = common.run(
             ['sudo', '-u', 'postgres', pg_upgrade,
              '--old-bindir', old_bindir, '--new-bindir', bindir,
-             '--old-datadir', OLD_PGSQL_DATA_DIR,
-             '--new-datadir', PGSQL_DATA_DIR,
-             '--link'],
-            ignore_failures=True, cwd='/tmp'
+             '--old-datadir', old_data_dir,
+             '--new-datadir', new_data_dir],
+            cwd='/tmp'
         )
         if 'Upgrade Complete' not in res.aggr_stdout:
             raise ProcessExecutionError(
@@ -1825,8 +1878,276 @@ class PostgresqlServer(BaseComponent):
                 f"{res.aggr_stdout}\n{res.aggr_stderr}")
         logger.info('PostgreSQL database upgrade complete!')
 
-        service.enable(POSTGRES_SERVICE_NAME)
-        self.old_postgresql_settings = None
+    def _upgrade_etcd(self):
+        common.move('/etc/etcd/etcd.conf.rpmsave',
+                    '/etc/etcd/etcd.conf')
+        self._configure_etcd_service()
+        service.enable('etcd')
+
+    def _permit_local_access_for_upgrade(self):
+        hba_path = os.path.join(PATRONI_DATA_DIR, 'pg_hba.conf')
+        common.copy(hba_path, hba_path + '.bak')
+        with open(hba_path) as hba_handle:
+            hba_data = hba_handle.read()
+        hba_data = 'local all all trust\n' + hba_data
+        with open(hba_path, 'w') as hba_handle:
+            hba_handle.write(hba_data)
+
+    def _revert_local_access(self):
+        hba_path = os.path.join(PATRONI_DATA_DIR, 'pg_hba.conf')
+        common.move(hba_path + '.bak', hba_path)
+
+    def _fixup_old_postgres_conf(self):
+        conf_path = os.path.join(PATRONI_DATA_DIR + '.new', 'postgresql.conf')
+        with open(conf_path) as conf_handle:
+            postgres_conf = conf_handle.read()
+        postgres_conf = postgres_conf.replace(OLD_PGSQL_DATA_DIR,
+                                              PGSQL_DATA_DIR)
+        postgres_conf = '\n'.join([
+            line for line in postgres_conf.splitlines()
+            if not line.startswith('wal_keep_segments =')
+        ])
+
+        with open(conf_path, 'w') as conf_handle:
+            conf_handle.write(postgres_conf)
+
+    def _get_pg_sysid(self, data_dir):
+        result = common.run(['/sbin/pg_controldata', data_dir]).aggr_stdout
+        for line in result.splitlines():
+            if line.startswith('Database system identifier:'):
+                return line.split()[-1]
+        raise ProcessExecutionError('Could not find DB system identifier.')
+
+    def _remove_client_cert_requirement(self):
+        # We have to do this because client cert handling changed between 9.5
+        # and 14, so if we leave them enabled we're just disabling access.
+        # We do this when we rewrite the patroni conf, but that doesn't cause
+        # these to be updated automagically, so we'll do it here.
+        for path in ['/var/lib/patroni/data/pg_hba.conf',
+                     '/var/lib/patroni/data/patroni.dynamic.json']:
+            common.run(
+                ['sed', '-i', 's/ clientcert=1//g', path],
+            )
+        with open('/var/lib/patroni/data/patroni.dynamic.json') as conf:
+            patroni_conf = json.load(conf)
+        # This should be set currently, but is not recorded in the dynamic
+        # config on disk
+        patroni_conf['pause'] = True
+        self._etcd_command(
+            ['set', '/db/postgres/config', json.dumps(patroni_conf)],
+            username='root',
+        )
+
+    def _upgrade_cluster_node(self):
+        self._upgrade_etcd()
+        service.start('patroni')
+
+        private_ip = config[MANAGER][PRIVATE_IP]
+        upgrade_in_progress = self._get_raw_node_status(
+            private_ip, 'DB').get('pause')
+        base_conf_path = os.path.join(PGSQL_DATA_DIR,
+                                      'pg_patroni_base.conf')
+
+        if upgrade_in_progress:
+            self.logger.info('Updating replica')
+            _, nodes = self.get_cluster_status()
+
+            leader = False
+            updated_nodes = 0
+            for node in nodes:
+                status = node.get('raw_status', {})
+                if status.get('state') == 'running':
+                    if status.get('role') == 'master':
+                        leader = True
+                    if status.get('server_version') == 140004:
+                        updated_nodes += 1
+            self.logger.debug('Current leader: %s', leader)
+            last_node = updated_nodes == (len(nodes) - 1)
+            self.logger.debug('Last node: %s', last_node)
+
+            if not leader:
+                raise ProcessExecutionError(
+                    'DB leader is not running, aborting upgrade.')
+
+            service.stop('patroni')
+            if os.path.exists(os.path.join(PATRONI_DATA_DIR, 'PG_VERSION')):
+                # Data dir contains data, clean it out
+                # Ensure postgres is really stopped
+                # (paused patroni may mean it isn't)
+                self._pg_command(['-mf', 'stop'], old_pg=True)
+
+                self.logger.debug('Purging outdated data')
+                files.remove(PATRONI_DATA_DIR)
+            else:
+                self.logger.debug('Patroni data dir already removed.')
+            # Ensure data dir exists and has correct perms
+            common.mkdir(PATRONI_DATA_DIR)
+            common.chown('postgres', '', PATRONI_DATA_DIR)
+            common.chmod('700', PATRONI_DATA_DIR)
+
+            # Otherwise, patroni won't rebootstrap a node while paused
+            # ...and if we unpause now, the entire upgrade goes wrong.
+            orig_patroni_line = "return 'running with empty data directory'"
+            new_patroni_line = "print('bootstrapping for cloudify upgrade')"
+            common.run(
+                ['sed', '-i',
+                 f's/{orig_patroni_line}/{new_patroni_line}/',
+                 '/opt/patroni/lib/python3.11/site-packages/patroni/ha.py']
+            )
+
+            common.copy(
+                os.path.join(OLD_PGSQL_DATA_DIR, 'pg_patroni_base.conf'),
+                base_conf_path,
+            )
+        else:
+            self.logger.info('Updating first node, ensuring this node is '
+                             'master.')
+            self.set_master(private_ip)
+
+            healthy = False
+            # Pre-flight check. We really don't want to try to upgrade an
+            # unhealthy cluster. Do this after setting master in case that
+            # reveals/causes an issue.
+            for _ in range(30):
+                time.sleep(2)
+                status, _ = self.get_cluster_status()
+                if status == self.HEALTHY:
+                    healthy = True
+                    break
+
+            if not healthy:
+                raise ProcessExecutionError(
+                    'DB cluster not healthy prior to upgrade, please check '
+                    'health of DB cluster before attempting upgrade again.')
+
+            logger.debug('Getting DB encoding and locale')
+            encoding, locale = self._get_encoding_and_locale()
+
+            logger.info('Stopping patroni failover for upgrade.')
+            self._patronictl_command(['pause'])
+
+            # Sometimes patroni's failover leaves pg_upgrade confused about
+            # master status. This avoids that problem.
+            # Ignore failures in case this command isn't needed.
+            self._pg_command(['promote'], old_pg=True, ignore_failures=True)
+
+            service.stop('patroni')
+            # With patroni paused, postgres sometimes remains running- stop it
+            self._pg_command(['-mf', 'stop'], old_pg=True)
+
+            logger.debug('Initialising new data dir')
+            temp_data_dir = PATRONI_DATA_DIR + '.new'
+            self._init_db(encoding, locale, temp_data_dir, checksums=True)
+
+            common.copy(
+                os.path.join(OLD_PGSQL_DATA_DIR, 'pg_patroni_base.conf'),
+                base_conf_path,
+            )
+            common.chown(POSTGRES_USER, '', base_conf_path)
+
+            self._remove_client_cert_requirement()
+            for conf in ['pg_hba.conf', 'postgresql.conf',
+                         'patroni.dynamic.json']:
+                new_path = os.path.join(temp_data_dir, conf)
+                common.copy(
+                    os.path.join(PATRONI_DATA_DIR, conf),
+                    new_path,
+                )
+                common.chown(POSTGRES_USER, '', new_path)
+
+            self._fixup_old_postgres_conf()
+
+            self._permit_local_access_for_upgrade()
+            self._run_pg_upgrade(PATRONI_DATA_DIR, temp_data_dir)
+            self._revert_local_access()
+
+            logger.info('Replacing obsolete data directory with upgraded')
+            files.remove(PATRONI_DATA_DIR)
+            common.move(temp_data_dir, PATRONI_DATA_DIR)
+
+        # Old packages don't conflict/replace new, so yum leaves them
+        yum_remove(['postgresql95', 'postgresql95-libs',
+                    'postgresql95-contrib', 'postgresql95-server'])
+        self._set_postgres_bin_links()
+        self._create_patroni_config(PATRONI_CONFIG_PATH,
+                                    allow_client_verification=False)
+
+        if not upgrade_in_progress:
+            logger.debug('Updating DB ID on etcd for patroni')
+            sys_id = None
+            for _ in range(30):
+                try:
+                    sys_id = self._get_pg_sysid(PATRONI_DATA_DIR)
+                    break
+                except ProcessExecutionError as err:
+                    logger.debug(err)
+                    time.sleep(2)
+            if not sys_id:
+                raise ProcessExecutionError(
+                    'Could not get DB ID after 30 attempts.')
+
+            self._etcd_command(['set', '/db/postgres/initialize', sys_id],
+                               username='root')
+
+            logger.info('Database leader upgraded, restarting patroni.')
+        else:
+            logger.info('Database replica prepared, restarting patroni.')
+
+        service.start('patroni')
+        # Make sure the 'stop' is cleared, otherwise DB doesn't always
+        # start while patroni is paused.
+        self._pg_command(
+            ['start',
+             '-l',
+             '/var/log/cloudify/db_cluster/postgres/upgrade_start.log'],
+            # Ignore failures because it sometimes will start
+            ignore_failures=True)
+
+        if upgrade_in_progress:
+            common.run(
+                ['sed', '-i',
+                 f's/{new_patroni_line}/{orig_patroni_line}/',
+                 '/opt/patroni/lib/python3.11/site-packages/patroni/ha.py']
+            )
+            if last_node:
+                logger.info('Resuming patroni failover.')
+                self._patronictl_command(['resume'])
+                logger.info('Upgrade should be complete, please check dbs '
+                            'list shows databases becoming healthy.')
+
+    def _get_pg_control_version(self, data_dir: str) -> str:
+        result = common.run(
+            ['/usr/sbin/pg_controldata', '-D', data_dir]
+        ).aggr_stdout.strip()
+        for line in result.splitlines():
+            param, _, value = line.partition(':')
+            if param == 'pg_control version number':
+                return value.strip()
+        raise ProcessExecutionError(
+            'Could not detect postgres version.')
+
+    def _postgres_needs_upgrade(self) -> bool:
+        data_dir = OLD_PGSQL_DATA_DIR
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            data_dir = PATRONI_DATA_DIR
+
+        if not os.path.exists(data_dir):
+            return False
+
+        expected_pg_control_version = '1300'
+        current_pg_control_version = self._get_pg_control_version(data_dir)
+        return expected_pg_control_version != current_pg_control_version
+
+    def upgrade(self):
+        if not self._postgres_needs_upgrade():
+            logger.notice('Postgres version is up to date.')
+            return
+
+        logger.notice("Upgrading PostgreSQL database version...")
+        if config[POSTGRESQL_SERVER]['cluster']['nodes']:
+            self._upgrade_cluster_node()
+        else:
+            self._upgrade_single_db()
 
     @retry(stop_max_attempt_number=60, wait_fixed=1000)
     def _verify_postgres_stopped(self):
