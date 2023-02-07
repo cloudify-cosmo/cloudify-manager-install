@@ -1204,6 +1204,7 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     """Update the current manager using the available yum repos."""
     _prepare_execution(verbose, private_ip, public_ip,
                        config_file=config_file)
+    config['upgrade'] = True
     _validate_components_prepared('restart', config_file)
     components = _get_components()
     validate(components=components, only_install=False)
