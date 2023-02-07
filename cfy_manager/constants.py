@@ -187,3 +187,5 @@ CONFIG_FILE_HELP_MSG = (
     'more than one file is provided, these are merged in order from left '
     'to right.'.format(CLOUDIFY_HOME_DIR)
 )
+
+UPGRADE_IN_PROGRESS = 'upgrade_in_progress'

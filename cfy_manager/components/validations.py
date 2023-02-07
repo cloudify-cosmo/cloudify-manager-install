@@ -31,7 +31,7 @@ from ..service_names import (
 
 from ..config import config
 from ..logger import get_logger
-from ..constants import USER_CONFIG_PATH
+from ..constants import USER_CONFIG_PATH, UPGRADE_IN_PROGRESS
 from ..exceptions import ValidationError
 
 from ..utils.common import run
@@ -449,14 +449,11 @@ def _validate_postgres_inputs():
 
     if manager_service_in_config:
         if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
-            ssl_inputs = config[SSL_INPUTS]
-            required_certs = [
-                'postgresql_client_cert_path',
-                'postgresql_client_key_path',
-                'postgresql_superuser_client_cert_path',
-                'postgresql_superuser_client_key_path',
-            ]
-            if not all(ssl_inputs[entry] for entry in required_certs):
+            required_certs, good_certs = _has_required_client_certs()
+            if not good_certs:
+                if config.get(UPGRADE_IN_PROGRESS):
+                    _disable_db_client_certs()
+                    return
                 certs = ', '.join(required_certs)
                 raise ValidationError(
                     'When using ssl_client_verification, the following certs '
@@ -483,6 +480,21 @@ def _validate_postgres_inputs():
     _validate_postgres_server_and_cloudify_input_difference()
 
 
+def _has_required_client_certs():
+    required_certs = [
+        'postgresql_client_cert_path',
+        'postgresql_client_key_path',
+    ]
+    if not config.get(UPGRADE_IN_PROGRESS):
+        # These are only absolutely required for bootstrap
+        required_certs.extend([
+            'postgresql_superuser_client_cert_path',
+            'postgresql_superuser_client_key_path',
+        ])
+    ssl_inputs = config[SSL_INPUTS]
+    return required_certs, all(ssl_inputs[entry] for entry in required_certs)
+
+
 def _validate_postgres_ssl_certificates_provided():
     error_msg = 'If Postgresql requires SSL communication {0} ' \
                 'for Postgresql must be provided in ' \
@@ -507,20 +519,36 @@ def _validate_postgres_ssl_certificates_provided():
                                  'postgresql_server.ca_path or '
                                  'postgresql_client.ca_path')
             )
-        if not (config[SSL_INPUTS]['postgresql_client_cert_path'] and
-                config[SSL_INPUTS]['postgresql_client_key_path'] and
-                config[SSL_INPUTS]['postgresql_superuser_client_key_path'] and
-                config[SSL_INPUTS]['postgresql_superuser_client_key_path'] and
-                config['postgresql_server']['ca_path']):
-            if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+        if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
+            required_certs, good_certs = _has_required_client_certs()
+            good_certs = (
+                good_certs
+                and bool(config[POSTGRESQL_SERVER]['ca_path'])
+            )
+            if not good_certs:
+                if config.get(UPGRADE_IN_PROGRESS):
+                    _disable_db_client_certs()
+                    return
+                certs = ', '.join(
+                    f'ssl_inputs.{cert}'
+                    for cert in required_certs
+                )
                 raise ValidationError(error_msg.format(
                     'with client verification, a CA certificate, '
                     'a certificate and a key ',
-                    'ssl_inputs.postgresql_client_cert_path, '
-                    'ssl_inputs.postgresql_client_key_path, '
-                    'ssl_inputs.postgresql_superuser_client_cert_path, '
-                    'ssl_inputs.postgresql_superuser_client_key_path, '
+                    f'{certs}, '
                     'and postgresql_server.ca_path'))
+
+
+def _disable_db_client_certs():
+    logger.warning(
+        'Unsuitable client certs for upgrade. '
+        'This is likely caused by changes in postgres '
+        'client cert handling, so client certs will be '
+        'disabled.'
+    )
+    config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] = False
+    config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION] = False
 
 
 def _validate_external_postgres():
@@ -578,16 +606,28 @@ def _validate_external_postgres():
 
 def _validate_postgres_client_certs():
     if config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION]:
-        client_cert_cn = get_cert_cn(
-            config[SSL_INPUTS]['postgresql_client_cert_path'])
+        ssl_props = config[SSL_INPUTS]
+        client_cert_cn = get_cert_cn(ssl_props['postgresql_client_cert_path'])
         if client_cert_cn != 'cloudify':
-            raise ValidationError(
-                'Client certificates require their CN to be set to '
-                '"cloudify" (without quotes). Provided client cert '
-                f'has CN: {client_cert_cn}'
-            )
+            if config.get(UPGRADE_IN_PROGRESS):
+                config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] = False
+                return
+            else:
+                raise ValidationError(
+                    'Client certificates require their CN to be set to '
+                    '"cloudify" (without quotes). Provided client cert '
+                    f'has CN: {client_cert_cn}'
+                )
+
+        # It is acceptable not to have superuser cert on upgrade,
+        # though if we do have it, we'll test t.
+        if (
+            config.get(UPGRADE_IN_PROGRESS)
+            and not ssl_props['postgresql_superuser_client_cert_path']
+        ):
+            return
         client_su_cert_cn = get_cert_cn(
-            config[SSL_INPUTS]['postgresql_superuser_client_cert_path'])
+            ssl_props['postgresql_superuser_client_cert_path'])
         client_su_name = config[POSTGRESQL_CLIENT]['server_username']
         if client_su_cert_cn != client_su_name:
             raise ValidationError(

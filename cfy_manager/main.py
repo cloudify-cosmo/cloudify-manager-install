@@ -63,6 +63,7 @@ from .constants import (
     CA_CERT_FILENAME,
     EXTERNAL_CA_CERT_FILENAME,
     EXTERNAL_CA_CERT_PATH,
+    UPGRADE_IN_PROGRESS,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -1204,6 +1205,7 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     """Update the current manager using the available yum repos."""
     _prepare_execution(verbose, private_ip, public_ip,
                        config_file=config_file)
+    config[UPGRADE_IN_PROGRESS] = True
     _validate_components_prepared('restart', config_file)
     components = _get_components()
     validate(components=components, only_install=False)
