@@ -31,7 +31,7 @@ from ..service_names import (
 
 from ..config import config
 from ..logger import get_logger
-from ..constants import USER_CONFIG_PATH
+from ..constants import USER_CONFIG_PATH, UPGRADE_IN_PROGRESS
 from ..exceptions import ValidationError
 
 from ..utils.common import run
@@ -451,7 +451,7 @@ def _validate_postgres_inputs():
         if config[POSTGRESQL_SERVER][SSL_CLIENT_VERIFICATION]:
             required_certs, good_certs = _has_required_client_certs()
             if not good_certs:
-                if 'upgrade' in config:
+                if config.get(UPGRADE_IN_PROGRESS):
                     _disable_db_client_certs()
                     return
                 certs = ', '.join(required_certs)
@@ -485,7 +485,7 @@ def _has_required_client_certs():
         'postgresql_client_cert_path',
         'postgresql_client_key_path',
     ]
-    if 'upgrade' not in config:
+    if not config.get(UPGRADE_IN_PROGRESS):
         # These are only absolutely required for bootstrap
         required_certs.extend([
             'postgresql_superuser_client_cert_path',
@@ -526,7 +526,7 @@ def _validate_postgres_ssl_certificates_provided():
                 and bool(config[POSTGRESQL_SERVER]['ca_path'])
             )
             if not good_certs:
-                if 'upgrade' in config:
+                if config.get(UPGRADE_IN_PROGRESS):
                     _disable_db_client_certs()
                     return
                 certs = ', '.join(
@@ -609,7 +609,7 @@ def _validate_postgres_client_certs():
         ssl_props = config[SSL_INPUTS]
         client_cert_cn = get_cert_cn(ssl_props['postgresql_client_cert_path'])
         if client_cert_cn != 'cloudify':
-            if 'upgrade' in config:
+            if config.get(UPGRADE_IN_PROGRESS):
                 config[POSTGRESQL_CLIENT][SSL_CLIENT_VERIFICATION] = False
                 return
             else:
@@ -622,7 +622,7 @@ def _validate_postgres_client_certs():
         # It is acceptable not to have superuser cert on upgrade,
         # though if we do have it, we'll test t.
         if (
-            'upgrade' in config
+            config.get(UPGRADE_IN_PROGRESS)
             and not ssl_props['postgresql_superuser_client_cert_path']
         ):
             return
