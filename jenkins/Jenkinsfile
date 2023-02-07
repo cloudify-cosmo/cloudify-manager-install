@@ -64,10 +64,19 @@ pipeline {
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to separate workspace"
             container('py311'){
               dir("${env.WORKSPACE}/flake8") {
-                echo 'install flake 8'
-                sh 'pip install flake8 --user'
-                echo 'run flake8'
+                sh 'pip install flake8'
                 sh 'python -m flake8'
+              }
+            }
+          }
+        }
+        stage('test') {
+          steps{
+            container('py311'){
+              dir("${env.WORKSPACE}/${env.PROJECT}") {
+                sh 'python -m venv testenv'
+                sh 'testenv/bin/pip install --upgrade pytest pip setuptools .'
+                sh 'testenv/bin/pytest -sv cfy_manager'
               }
             }
           }
@@ -78,10 +87,9 @@ pipeline {
             container('python') {
               dir("${env.WORKSPACE}/rpms") {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
-                  echo 'Install requests'
                   sh 'pip install requests'
-                  sh script:"""#!/bin/bash
-                     source ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
+                  sh script:"""
+                     . ${env.WORKSPACE}/${env.PROJECT}/packaging/source_branch
                      chmod +x ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms
                      ${env.WORKSPACE}/${env.PROJECT}/jenkins/fetch_rpms -d ${env.WORKSPACE}/rpms
                      """, label: 'Fetch RPM artifacts stored on Jenkins'
