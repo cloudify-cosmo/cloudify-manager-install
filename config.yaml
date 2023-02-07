@@ -1,5 +1,5 @@
 manager:
-  # The manager's private IP address. This is the address which will be used by
+  # The manager's private IP address. This is the address which will be used by beep
   # agent hosts to connect to the Manager's fileserver and message broker.
   private_ip: ''
 
