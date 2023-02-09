@@ -178,6 +178,10 @@ class PostgresqlServer(BaseComponent):
         common.mkdir(PGSQL_SOCK_DIR)
         common.chown(POSTGRES_USER, POSTGRES_GROUP, PGSQL_SOCK_DIR)
 
+        # Let's have the links on both single and cluster so that they're in
+        # a consistent place when we want them
+        self._set_postgres_bin_links()
+
     @staticmethod
     def _configure_postgresql_server_service():
         service.configure(
@@ -1847,13 +1851,16 @@ class PostgresqlServer(BaseComponent):
     def _upgrade_single_db(self):
         logger.debug('Configuring and initializing new PostgreSQL '
                      'service...')
+        service.start(OLD_POSTGRES_SERVICE_NAME)
+        encoding, locale = self._get_encoding_and_locale()
+        service.stop(OLD_POSTGRES_SERVICE_NAME)
         service.remove(OLD_POSTGRES_SERVICE_NAME)
         self._configure_postgresql_server_service()
         service.reread()
-        self._init_postgresql_server(encoding=self.orig_encoding,
-                                     locale=self.orig_locale)
+        self._init_postgresql_server(encoding=encoding, locale=locale)
 
         self._run_pg_upgrade(OLD_PGSQL_DATA_DIR, PGSQL_DATA_DIR)
+        self._remove_old_pg_packages()
 
         service.enable(POSTGRES_SERVICE_NAME)
 
@@ -1911,9 +1918,17 @@ class PostgresqlServer(BaseComponent):
         with open(conf_path, 'w') as conf_handle:
             conf_handle.write(postgres_conf)
 
-    def _get_pg_sysid(self, data_dir):
-        result = common.run(['/sbin/pg_controldata', data_dir]).aggr_stdout
-        for line in result.splitlines():
+    def _get_pg_controldata(self, data_dir: str) -> str:
+        for controldata_path in [
+            '/sbin/pg_controldata',
+            # Prior to 7, we don't link in /usr/sbin on non-cluster DBs
+            '/usr/pgsql-9.5/bin/pg_controldata',
+        ]:
+            if os.path.exists(controldata_path):
+                return common.run([controldata_path, data_dir]).aggr_stdout
+
+    def _get_pg_sysid(self, data_dir: str) -> str:
+        for line in self._get_pg_controldata(data_dir).splitlines():
             if line.startswith('Database system identifier:'):
                 return line.split()[-1]
         raise ProcessExecutionError('Could not find DB system identifier.')
@@ -2065,9 +2080,7 @@ class PostgresqlServer(BaseComponent):
             files.remove(PATRONI_DATA_DIR)
             common.move(temp_data_dir, PATRONI_DATA_DIR)
 
-        # Old packages don't conflict/replace new, so yum leaves them
-        yum_remove(['postgresql95', 'postgresql95-libs',
-                    'postgresql95-contrib', 'postgresql95-server'])
+        self._remove_old_pg_packages()
         self._set_postgres_bin_links()
         self._create_patroni_config(PATRONI_CONFIG_PATH,
                                     allow_client_verification=False)
@@ -2115,11 +2128,14 @@ class PostgresqlServer(BaseComponent):
                 logger.info('Upgrade should be complete, please check dbs '
                             'list shows databases becoming healthy.')
 
+    def _remove_old_pg_packages(self):
+        self.logger.info('Removing postgres 9.5 packages')
+        # Old packages don't conflict/replace new, so yum leaves them
+        yum_remove(['postgresql95', 'postgresql95-libs',
+                    'postgresql95-contrib', 'postgresql95-server'])
+
     def _get_pg_control_version(self, data_dir: str) -> str:
-        result = common.run(
-            ['/usr/sbin/pg_controldata', '-D', data_dir]
-        ).aggr_stdout.strip()
-        for line in result.splitlines():
+        for line in self._get_pg_controldata(data_dir).splitlines():
             param, _, value = line.partition(':')
             if param == 'pg_control version number':
                 return value.strip()
