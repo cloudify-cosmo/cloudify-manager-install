@@ -1664,21 +1664,13 @@ class PostgresqlServer(BaseComponent):
             sync_nodes = self._get_sync_replicas(
                 master_status['raw_status']
             )
-            if sync_nodes:
-                if self._get_patroni_id(candidate) in sync_nodes:
-                    logger.info(
-                        '{addr} has become synchronous replica.'.format(
-                            addr=candidate,
-                        )
+            if sync_nodes and self._get_patroni_id(candidate) in sync_nodes:
+                logger.info(
+                    '{addr} has become synchronous replica.'.format(
+                        addr=candidate,
                     )
-                    break
-                else:
-                    raise DBManagementError(
-                        '{addr} did not manage to become synchronous '
-                        'replica. Before you retry, please ensure the DB '
-                        'cluster is healthy and the managers are in '
-                        'maintenance mode.'.format(addr=candidate)
-                    )
+                )
+                return
             else:
                 logger.info(
                     'Waiting for {addr} to become synchronous '
@@ -1687,6 +1679,12 @@ class PostgresqlServer(BaseComponent):
                     )
                 )
                 time.sleep(1)
+        raise DBManagementError(
+            '{addr} did not manage to become synchronous '
+            'replica. Before you retry, please ensure the DB '
+            'cluster is healthy and the managers are in '
+            'maintenance mode.'.format(addr=candidate)
+        )
 
     def set_master(self, address):
         master_address, replicas = self._get_cluster_addresses()
