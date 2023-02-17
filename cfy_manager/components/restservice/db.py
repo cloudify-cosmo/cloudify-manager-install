@@ -113,9 +113,8 @@ def run_db_migration():
                cwd='/opt/manager/resources/cloudify/migrations')
     current_db = common.run(
         ['/opt/manager/env/bin/alembic', 'current'],
-        stdout=-1,
-        cwd='/opt/manager/resources/cloudify/migrations',
-    ).stdout
+        cwd='/opt/manager/resources/cloudify/migrations'
+    ).aggr_stdout.strip()
     logger.notice(f'DB successfully migrated to schema revision: {current_db}')
 
 
