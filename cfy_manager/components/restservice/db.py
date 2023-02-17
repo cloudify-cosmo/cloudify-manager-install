@@ -107,6 +107,18 @@ def _create_database(db_name, user):
         'server_db_name', logger)
 
 
+def run_db_migration():
+    logger.notice('Running DB migrations...')
+    common.run(['/opt/manager/env/bin/alembic', 'upgrade', 'head'],
+               cwd='/opt/manager/resources/cloudify/migrations')
+    current_db = common.run(
+        ['/opt/manager/env/bin/alembic', 'current'],
+        stdout=-1,
+        cwd='/opt/manager/resources/cloudify/migrations',
+    ).stdout
+    logger.notice(f'DB successfully migrated to schema revision: {current_db}')
+
+
 def get_provider_context():
     context = {'cloudify': config[PROVIDER_CONTEXT]}
     context['cloudify']['cloudify_agent'] = config[AGENT]

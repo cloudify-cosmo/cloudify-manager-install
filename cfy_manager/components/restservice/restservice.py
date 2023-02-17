@@ -577,6 +577,7 @@ class RestService(BaseComponent):
         self._validate_config_defaults()
         super().upgrade()
         self._deploy_restservice_files()
+        db.run_db_migration()
         run_script_on_manager_venv('/opt/manager/scripts/load_permissions.py')
         run_script_on_manager_venv(
             '/opt/manager/scripts/create_system_filters.py')
