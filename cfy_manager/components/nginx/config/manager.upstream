@@ -13,6 +13,18 @@ upstream cloudify-rest {
   server 127.0.0.1:{{ restservice.port }};
 }
 
+{% set internal_rest_ports = [manager.internal_rest_port] + manager.additional_internal_rest_listeners %}
+{% set external_rest_port = nginx.port or 443 %}
+{#
+  we only have a separate external ssl listener, when the same addr + port
+  is not already an _internal_ ssl listener.
+  If the internal and external listeners would be the same, then only the
+  internal listener will exist.
+#}
+{% set has_external_ssl_listener =
+  (manager.public_ip != manager.private_ip) or (external_rest_port not in internal_rest_ports)
+%}
+
 {%- if manager.external_rest_protocol == 'http' -%}
 # REST and UI server.
 server {
@@ -37,13 +49,13 @@ server {
   # Serves the File Server and proxy for the Cloudify-API.
   include "/etc/nginx/conf.d/authd-location.cloudify";
 }
-{%- else -%}
+{%- elif has_external_ssl_listener -%}
 # REST and UI external server
 server {
   # server listening for external requests
-  listen              {{ nginx.port | default('443', true) }} ssl http2;
+  listen              {{ external_rest_port }} ssl http2;
   {% if ipv6_enabled -%}
-  listen              [::]:{{ nginx.port | default('443', true) }} ssl http2;
+  listen              [::]:{{ external_rest_port }} ssl http2;
   {%- endif %}
   server_name         {{ manager.public_ip }};
 
@@ -95,12 +107,13 @@ server {
 {% endif %}
 {%- endif -%}
 
+{% for internal_port in internal_rest_ports %}
 # REST and UI internal server - always SSL enabled
 server {
   # server listening for internal requests
-  listen              {{ constants.INTERNAL_REST_PORT }} ssl default_server http2;
+  listen              {{ internal_port }} ssl default_server http2;
   {% if ipv6_enabled -%}
-  listen              [::]:{{ constants.INTERNAL_REST_PORT }} ssl default_server http2;
+  listen              [::]:{{ internal_port }} ssl default_server http2;
   {%- endif %}
 
   server_name         _;
@@ -118,3 +131,4 @@ server {
   # Serves the File Server and proxy for the Cloudify-API.
   include "/etc/nginx/conf.d/authd-location.cloudify";{% endif %}
 }
+{% endfor %}

@@ -18,7 +18,6 @@ from ...service_names import (NGINX, MANAGER, MANAGER_SERVICE,
                               MONITORING_SERVICE)
 from ... import constants
 from ...config import config
-from ...exceptions import ValidationError
 from ...logger import get_logger
 from ...utils import (
     common,
@@ -368,26 +367,6 @@ class Nginx(BaseComponent):
         common.move(f.name, HTPASSWD_FILE)
         common.chown('nginx', 'nginx', HTPASSWD_FILE)
         common.chmod('600', HTPASSWD_FILE)
-
-    def _verify_nginx(self):
-        # TODO: This code requires the restservice to be installed, but
-        # restservice depends on rabbitmq, which in turn requires the
-        # certificates created in nginx (here).
-        # So we need to find an other way to validate it
-        logger.info('Verifying NGINX service is up...')
-        nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
-            config[NGINX]['internal_rest_port']
-        )
-        output = common.run([
-            'curl',
-            nginx_url,
-            '--cacert', constants.CA_CERT_PATH,
-            # only output the http code
-            '-o', '/dev/null',
-            '-w', '%{http_code}'
-        ])
-        if output.aggr_stdout.strip() not in {'200', '401'}:
-            raise ValidationError('Nginx HTTP check error: {0}'.format(output))
 
     def _configure_wait_on_restart_wrapper_service(self):
         deploy(
