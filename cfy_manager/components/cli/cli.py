@@ -13,7 +13,7 @@ from ...logger import (get_logger,
                        set_file_handlers_level,
                        get_file_handlers_level)
 from ...utils import common
-from ...constants import CA_CERT_PATH, INTERNAL_REST_PORT
+from ...constants import CA_CERT_PATH
 
 logger = get_logger(CLI)
 PROFILE_NAME = 'manager-local'
@@ -72,7 +72,10 @@ class Cli(BaseComponent):
         else:
             set_cmd += ['--ssl', 'off']
         if config['nginx']['port']:
-            set_cmd += ['--rest-port', '{0}'.format(INTERNAL_REST_PORT)]
+            set_cmd += [
+                '--rest-port',
+                '{0}'.format(config[MANAGER]['internal_rest_port']),
+            ]
 
         logger.info('Setting CLI for the root user...')
         with _hide_logs():

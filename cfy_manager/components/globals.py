@@ -63,7 +63,7 @@ def _set_ip_config():
     config[MANAGER]['file_server_root'] = constants.MANAGER_RESOURCES_HOME
     config[MANAGER]['file_server_url'] = 'https://{0}:{1}/resources'.format(
         ipv6_url_compat(private_ip),
-        constants.INTERNAL_REST_PORT
+        config[MANAGER]['internal_rest_port'],
     )
 
     config.setdefault('networks', {})
