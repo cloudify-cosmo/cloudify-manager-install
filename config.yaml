@@ -38,6 +38,22 @@ manager:
   # When not using a cluster, this setting is ignored.
   cluster_filesystem_replication: true
 
+  # internal_rest_port is the port that agents will connect to the REST-service on,
+  # using the address set in private_ip or networks.
+  # If this is set to 443, and private_ip is the same as public_ip, then
+  # ssl_inputs.external_rest_cert must not be set: internal_rest_cert is used
+  # instead.
+  # This can be set to any port, but best possibilities are
+  # 443, or 53333 (the default prior to Cloudify 7)
+  # Note: internal REST access always uses TLS.
+  internal_rest_port: 443
+
+  # Additional ports that will ALSO serve the REST-service. This is useful when
+  # upgrading a Cloudify Manager, so that already-deployed agents can continue
+  # to access the Manager on the previously-configured port.
+  additional_internal_rest_listeners:
+    - 53333
+
 cli:
   # If set to true, Cloudify CLI will not be installed
   skip_installation: false
