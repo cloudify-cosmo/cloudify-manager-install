@@ -18,7 +18,6 @@ from ...service_names import (NGINX, MANAGER, MANAGER_SERVICE,
                               MONITORING_SERVICE)
 from ... import constants
 from ...config import config
-from ...exceptions import ValidationError
 from ...logger import get_logger
 from ...utils import (
     common,
