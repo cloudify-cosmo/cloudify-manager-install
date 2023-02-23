@@ -232,8 +232,8 @@ def _generate_ssl_certificate(
     cn: str,
     cert_path: str | Path,
     key_path: str | Path,
-    sign_cert: str | Path = None,
-    sign_key: str | Path = None,
+    sign_cert_path: str | Path = None,
+    sign_key_path: str | Path = None,
     sign_key_password: str = None,
     key_perms: int = 0o440,
     cert_perms: int = 0o444,
@@ -333,21 +333,26 @@ def generate_internal_ssl_cert(ips, cn):
         cn,
         const.INTERNAL_CERT_PATH,
         const.INTERNAL_KEY_PATH,
-        sign_cert=const.CA_CERT_PATH,
-        sign_key=const.CA_KEY_PATH
+        sign_cert_path=const.CA_CERT_PATH,
+        sign_key_path=const.CA_KEY_PATH
     )
     return cert_path, key_path
 
 
-def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
-                               sign_key_password=None):
+def generate_external_ssl_cert(
+    ips,
+    cn,
+    sign_cert_path=None,
+    sign_key_path=None,
+    sign_key_password=None,
+):
     return _generate_ssl_certificate(
         ips,
         cn,
         const.EXTERNAL_CERT_PATH,
         const.EXTERNAL_KEY_PATH,
-        sign_cert=sign_cert,
-        sign_key=sign_key,
+        sign_cert_path=sign_cert_path,
+        sign_key_path=sign_key_path,
         sign_key_password=sign_key_password
     )
 
@@ -416,8 +421,8 @@ def create_internal_certs(manager_hostname=None,
             # We only support ipsetter on nodes with managers, so the fact
             # that this would break if used on a node containing only rmq
             # doesn't matter
-            sign_cert=const.CA_CERT_PATH,
-            sign_key=const.CA_KEY_PATH,
+            sign_cert_path=const.CA_CERT_PATH,
+            sign_key_path=const.CA_KEY_PATH,
         )
 
     store_cert_metadata(
@@ -458,8 +463,8 @@ def create_external_certs(private_ip=None,
         cn=public_ip,
         cert_path=const.EXTERNAL_CERT_PATH,
         key_path=const.EXTERNAL_KEY_PATH,
-        sign_cert=sign_cert,
-        sign_key=sign_key,
+        sign_cert_path=sign_cert,
+        sign_key_path=sign_key,
         sign_key_password=sign_key_password
     )
 

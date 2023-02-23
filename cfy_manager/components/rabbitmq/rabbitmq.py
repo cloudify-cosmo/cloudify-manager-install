@@ -471,8 +471,8 @@ class RabbitMQ(BaseComponent):
             cn=rabbit_host,
             cert_path=config[RABBITMQ]['cert_path'],
             key_path=config[RABBITMQ]['key_path'],
-            sign_cert=sign_cert,
-            sign_key=sign_key,
+            sign_cert_path=sign_cert,
+            sign_key_path=sign_key,
             owner='rabbitmq',
             group='rabbitmq',
         )

@@ -253,8 +253,8 @@ def _generate_certs():
         cn=hostname,
         cert_path=config[PROMETHEUS]['cert_path'],
         key_path=config[PROMETHEUS]['key_path'],
-        sign_cert=sign_cert,
-        sign_key=sign_key,
+        sign_cert_path=sign_cert,
+        sign_key_path=sign_key,
     )
     if has_ca_key:
         common.copy(constants.CA_CERT_PATH, constants.MONITORING_CA_CERT_PATH)
