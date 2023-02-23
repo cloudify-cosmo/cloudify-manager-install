@@ -1,9 +1,12 @@
-import os
 import argh
+import grp
 import json
+import os
+import pwd
 import string
 from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
 
 from . import network
 from .common import chown, chmod, copy, move, run
@@ -224,46 +227,44 @@ def _ca_config():
         remove(temp_config_path)
 
 
-def _generate_ssl_certificate(ips,
-                              cn,
-                              cert_path,
-                              key_path,
-                              sign_cert=None,
-                              sign_key=None,
-                              sign_key_password=None,
-                              key_perms='440',
-                              cert_perms='444',
-                              owner='cfyuser',
-                              group='cfyuser'):
+def _generate_ssl_certificate(
+    ips: list[str],
+    cn: str,
+    cert_path: str | Path,
+    key_path: str | Path,
+    sign_cert: str | Path = None,
+    sign_key: str | Path = None,
+    sign_key_password: str = None,
+    key_perms: int = 0o440,
+    cert_perms: int = 0o444,
+    owner: str | int = 'cfyuser',
+    group: str | int = 'cfyuser',
+):
     """Generate a public SSL certificate and a private SSL key
 
     :param ips: the ips (or names) to be used for subjectAltNames
-    :type ips: List[str]
     :param cn: the subject commonName for the new certificate
-    :type cn: str
     :param cert_path: path to save the new certificate to
-    :type cert_path: str
     :param key_path: path to save the key for the new certificate to
-    :type key_path: str
     :param sign_cert: path to the signing cert (self-signed by default)
-    :type sign_cert: str
     :param sign_key: path to the signing cert's key (self-signed by default)
-    :type sign_key: str
     :param key_perms: permissions to apply to created key file
-    :type key_perms: str
     :param cert_perms: permissions to apply to created cert file
-    :type cert_perms: str
     :param owner: owner of key and certificate
-    :type owner: str
     :param group: group of key and certificate
-    :type owner: str
     :return: The path to the cert and key files on the manager
     """
+    if isinstance(owner, str):
+        owner = pwd.getpwnam(owner).pw_uid
+    if isinstance(group, str):
+        group = grp.getgrnam(group).gr_gid
+
     # Remove duplicates from ips and ensure CN is in SANs
     subject_altnames = _format_ips(ips, cn)
+
     logger.debug(
-        'Generating SSL certificate {0} and key {1} with subjectAltNames: {2}'
-        .format(cert_path, key_path, subject_altnames)
+        'Generating SSL certificate %s and key %s with subjectAltNames: %s',
+        cert_path, key_path, subject_altnames,
     )
 
     csr_path = '{0}.csr'.format(cert_path)
@@ -283,8 +284,9 @@ def _generate_ssl_certificate(ips,
             # Don't try to change cert/key ownership if we're not root
             # (this indicates we're running non-sudo-commands such as
             # generate-test-cert)
-            chown(owner, group, key_path)
-            chmod(key_perms, key_path)
+            os.chown(key_path, owner, group)
+            os.chmod(key_path, key_perms)
+
         x509_command = [
             'openssl', 'x509',
             '-days', '3650',
@@ -304,7 +306,7 @@ def _generate_ssl_certificate(ips,
             if sign_key_password:
                 x509_command += [
                     '-passin',
-                    u'pass:{0}'.format(sign_key_password).encode('utf-8')
+                    f'pass:{sign_key_password}',
                 ]
         else:
             x509_command += [
@@ -315,13 +317,13 @@ def _generate_ssl_certificate(ips,
             # Don't try to change cert/key ownership if we're not root
             # (this indicates we're running non-sudo-commands such as
             # generate-test-cert)
-            chown(owner, group, cert_path)
-            chmod(cert_perms, cert_path)
+            os.chown(key_path, owner, group)
+            os.chmod(cert_path, cert_perms)
         remove(csr_path)
 
-    logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
-        cert_path, key_path
-    ))
+    logger.debug(
+        'Generated SSL certificate: %s and key: %s', cert_path, key_path
+    )
     return cert_path, key_path
 
 
