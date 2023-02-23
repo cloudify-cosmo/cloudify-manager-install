@@ -1,12 +1,17 @@
 import argh
 import grp
+import itertools
 import json
 import os
 import pwd
 import string
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from . import network
 from .common import chown, chmod, copy, move, run
@@ -112,29 +117,6 @@ def _ca_cert_deployed():
         return os.path.exists(const.CA_CERT_PATH)
 
 
-def _format_ips(ips, cn=None):
-    altnames = set(ips)
-
-    if cn:
-        altnames.add(cn)
-
-    subject_altdns = [
-        'DNS:{name}'.format(name=name)
-        for name in altnames
-    ]
-
-    subject_altips = []
-    for name in altnames:
-        if network.parse_ip(name):
-            subject_altips.append('IP:{name}'.format(name=name))
-
-    subjects = subject_altdns + subject_altips
-
-    cert_metadata = ','.join(subjects)
-
-    return cert_metadata
-
-
 def store_cert_metadata(hostname=None,
                         new_brokers=None,
                         new_managers=None,
@@ -173,20 +155,6 @@ def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):
         return {}
 
 
-CSR_CONFIG_TEMPLATE = """
-[req]
-distinguished_name = req_distinguished_name
-x509_extensions = v3_ext
-[ req_distinguished_name ]
-commonName = _common_name # ignored, _default is used instead
-commonName_default = {cn}
-[ v3_ext ]
-basicConstraints=CA:false
-authorityKeyIdentifier=keyid:true
-subjectKeyIdentifier=hash
-subjectAltName={metadata}
-"""
-
 CA_CONFIG = """
 [req]
 distinguished_name = req_distinguished_name
@@ -198,23 +166,6 @@ commonName_default = Cloudify generated certificate
 basicConstraints=CA:true
 subjectKeyIdentifier=hash
 """
-
-
-@contextmanager
-def _csr_config(cn, metadata):
-    """Prepare a config file for creating a ssl CSR.
-
-    :param cn: the subject commonName
-    :param metadata: string to use as the subjectAltName, should be formatted
-                     like "IP:1.2.3.4,DNS:www.com"
-    """
-    csr_config = CSR_CONFIG_TEMPLATE.format(cn=cn, metadata=metadata)
-    temp_config_path = write_to_tempfile(csr_config)
-
-    try:
-        yield temp_config_path
-    finally:
-        remove(temp_config_path)
 
 
 @contextmanager
@@ -259,67 +210,72 @@ def _generate_ssl_certificate(
     if isinstance(group, str):
         group = grp.getgrnam(group).gr_gid
 
-    # Remove duplicates from ips and ensure CN is in SANs
-    subject_altnames = _format_ips(ips, cn)
+    names = set()
+    for addr in itertools.chain(ips, [cn]):
+        if parsed_ip := network.parse_ip(addr):
+            names.add(x509.IPAddress(parsed_ip))
+            # don't break here: still add the IP as a DNS name:
+            # some browsers require that
+        names.add(x509.DNSName(addr))
 
     logger.debug(
         'Generating SSL certificate %s and key %s with subjectAltNames: %s',
-        cert_path, key_path, subject_altnames,
+        cert_path, key_path, names,
     )
 
-    csr_path = '{0}.csr'.format(cert_path)
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=4096,
+    )
+    subject = issuer = x509.Name([
+        x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, cn),
+    ])
 
-    with _csr_config(cn, subject_altnames) as conf_path:
-        run([
-            'openssl', 'req',
-            '-newkey', 'rsa:2048',
-            '-nodes',
-            '-batch',
-            '-sha256',
-            '-config', conf_path,
-            '-out', csr_path,
-            '-keyout', key_path,
-        ])
-        if os.geteuid() == 0:
-            # Don't try to change cert/key ownership if we're not root
-            # (this indicates we're running non-sudo-commands such as
-            # generate-test-cert)
-            os.chown(key_path, owner, group)
-            os.chmod(key_path, key_perms)
+    if sign_cert_path and sign_key_path:
+        with open(sign_key_path, 'rb') as sign_key_file:
+            sign_key = serialization.load_pem_private_key(
+                sign_key_file.read(),
+                password=sign_key_password.encode(),
+            )
+        with open(sign_cert_path, 'rb') as sign_cert_file:
+            sign_cert = x509.load_pem_x509_certificate(sign_cert_file.read())
+        issuer = sign_cert.subject
+    else:
+        sign_key = key
 
-        x509_command = [
-            'openssl', 'x509',
-            '-days', '3650',
-            '-sha256',
-            '-req', '-in', csr_path,
-            '-out', cert_path,
-            '-extensions', 'v3_ext',
-            '-extfile', conf_path
-        ]
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        # allow for up to 1 day of time drift, in case other nodes have
+        # unsynced clocks
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
+        # valid for 10 years
+        .not_valid_after(datetime.utcnow() + timedelta(days=3650))
+        .add_extension(x509.SubjectAlternativeName(names), critical=False)
+        .sign(sign_key, hashes.SHA256())
+    )
 
-        if sign_cert and sign_key:
-            x509_command += [
-                '-CA', sign_cert,
-                '-CAkey', sign_key,
-                '-CAcreateserial'
-            ]
-            if sign_key_password:
-                x509_command += [
-                    '-passin',
-                    f'pass:{sign_key_password}',
-                ]
-        else:
-            x509_command += [
-                '-signkey', key_path
-            ]
-        run(x509_command)
-        if os.geteuid() == 0:
-            # Don't try to change cert/key ownership if we're not root
-            # (this indicates we're running non-sudo-commands such as
-            # generate-test-cert)
-            os.chown(key_path, owner, group)
-            os.chmod(cert_path, cert_perms)
-        remove(csr_path)
+    with open(key_path, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        key_file.write(key_pem)
+    with open(cert_path, 'wb') as cert_file:
+        cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
+
+    if os.geteuid() == 0:
+        # Don't try to change cert/key ownership if we're not root
+        # (this indicates we're running non-sudo-commands such as
+        # generate-test-cert)
+        os.chown(cert_path, owner, group)
+        os.chmod(cert_path, cert_perms)
+        os.chown(key_path, owner, group)
+        os.chmod(key_path, key_perms)
 
     logger.debug(
         'Generated SSL certificate: %s and key: %s', cert_path, key_path

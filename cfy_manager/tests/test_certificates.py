@@ -109,8 +109,8 @@ def test_generate_signed_cert(tmpdir, ca_cert):
         cn='localhost',
         cert_path=tmpdir / 'cert.pem',
         key_path=tmpdir / 'key.pem',
-        sign_cert=ca_cert.cert_path,
-        sign_key=ca_cert.key_path,
+        sign_cert_path=ca_cert.cert_path,
+        sign_key_path=ca_cert.key_path,
         sign_key_password=ca_cert.key_password,
         owner=os.geteuid(),
         group=os.getegid(),
@@ -125,3 +125,9 @@ def test_generate_signed_cert(tmpdir, ca_cert):
         padding.PKCS1v15(),
         cert.signature_hash_algorithm,
     )
+
+    # check issuer name - it should be the signing cert's CN, not our own
+    issuer_cn_oid = cert.issuer.get_attributes_for_oid(
+        x509.oid.NameOID.COMMON_NAME)
+    assert len(issuer_cn_oid) == 1
+    assert issuer_cn_oid[0].value == 'test'
