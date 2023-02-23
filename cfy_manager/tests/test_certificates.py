@@ -143,3 +143,36 @@ def test_generate_signed_cert(tmpdir, ca_cert):
         x509.oid.NameOID.COMMON_NAME)
     assert len(issuer_cn_oid) == 1
     assert issuer_cn_oid[0].value == 'test'
+
+
+def test_generate_ca_cert(tmpdir):
+    cert_path = tmpdir / 'ca_cert.pem'
+    key_path = tmpdir / 'ca_key.pem'
+
+    certificates.generate_ca_cert(cert_path, key_path)
+
+    with open(cert_path, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+    with open(key_path, 'rb') as key_file:
+        key = serialization.load_pem_private_key(
+            key_file.read(), password=None)
+
+    # check that subject == issuer == hardcoded name
+    subject_cn = cert.subject.get_attributes_for_oid(
+        x509.oid.NameOID.COMMON_NAME)[0].value
+    issuer_cn = cert.issuer.get_attributes_for_oid(
+        x509.oid.NameOID.COMMON_NAME)[0].value
+    assert subject_cn == issuer_cn == 'Cloudify generated certificate'
+
+    # check that the cert is marked as a CA
+    constraints = cert.extensions.get_extension_for_class(
+        x509.BasicConstraints)
+    assert constraints.value.ca
+
+    # check that the cert is indeed signed by the key
+    key.public_key().verify(
+        cert.signature,
+        cert.tbs_certificate_bytes,
+        padding.PKCS1v15(),
+        cert.signature_hash_algorithm,
+    )

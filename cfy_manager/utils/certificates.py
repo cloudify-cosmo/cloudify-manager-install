@@ -5,7 +5,6 @@ import json
 import os
 import pwd
 import string
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -25,7 +24,7 @@ from ..constants import (
     SSL_CERTS_TARGET_DIR,
 )
 from ..exceptions import ProcessExecutionError
-from .files import write, write_to_tempfile, remove
+from .files import write
 
 from ..logger import get_logger, setup_console_logger
 from .. import constants as const
@@ -156,29 +155,6 @@ def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):
         return json.loads(run(['cat', filename]).aggr_stdout)
     except ProcessExecutionError:
         return {}
-
-
-CA_CONFIG = """
-[req]
-distinguished_name = req_distinguished_name
-x509_extensions = v3_ext
-[ req_distinguished_name ]
-commonName = _common_name # ignored, _default is used instead
-commonName_default = Cloudify generated certificate
-[ v3_ext ]
-basicConstraints=CA:true
-subjectKeyIdentifier=hash
-"""
-
-
-@contextmanager
-def _ca_config():
-    temp_config_path = write_to_tempfile(CA_CONFIG)
-
-    try:
-        yield temp_config_path
-    finally:
-        remove(temp_config_path)
 
 
 def _generate_ssl_certificate(
@@ -318,18 +294,43 @@ def generate_external_ssl_cert(
 
 def generate_ca_cert(cert_path=const.CA_CERT_PATH,
                      key_path=const.CA_KEY_PATH):
-    with _ca_config() as conf_path:
-        run([
-            'openssl', 'req',
-            '-x509',
-            '-nodes',
-            '-newkey', 'rsa:2048',
-            '-days', '3650',
-            '-batch',
-            '-out', cert_path,
-            '-keyout', key_path,
-            '-config', conf_path,
-        ])
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=CERT_SIZE,
+    )
+    subject = issuer = x509.Name([
+        x509.NameAttribute(
+            x509.oid.NameOID.COMMON_NAME,
+            'Cloudify generated certificate',
+        ),
+    ])
+
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        # allow for up to 1 day of time drift, in case other nodes have
+        # unsynced clocks
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
+        # valid for 10 years
+        .not_valid_after(datetime.utcnow() + timedelta(days=3650))
+        .add_extension(
+            x509.BasicConstraints(ca=True, path_length=None),
+            critical=False,
+        )
+        .sign(key, hashes.SHA256())
+    )
+    with open(key_path, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        key_file.write(key_pem)
+    with open(cert_path, 'wb') as cert_file:
+        cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
 
 
 def remove_key_encryption(src_key_path,
