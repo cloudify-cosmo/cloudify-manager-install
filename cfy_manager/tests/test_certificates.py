@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+import mock
 import pytest
 
 from cryptography import x509
@@ -10,6 +11,17 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from cfy_manager.utils import certificates
+
+
+@pytest.fixture(autouse=True)
+def _mock_small_cert_size():
+    """Mock CERT_SIZE to a small value.
+
+    In tests, we don't need to create large certs. Making the size small
+    makes these tests faster by an order of magnitude.
+    """
+    with mock.patch('cfy_manager.utils.certificates.CERT_SIZE', 512):
+        yield
 
 
 def test_generate_self_signed_cert(tmpdir):

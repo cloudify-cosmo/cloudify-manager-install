@@ -34,6 +34,9 @@ from cfy_manager.exceptions import ValidationError
 logger = get_logger('Certificates')
 
 
+CERT_SIZE = 4096
+
+
 def get_cert_cn(cert_path):
     raw = run(
         ['openssl', 'x509', '-noout', '-subject', '-in', cert_path]
@@ -225,7 +228,7 @@ def _generate_ssl_certificate(
 
     key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=4096,
+        key_size=CERT_SIZE,
     )
     subject = issuer = x509.Name([
         x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, cn),
