@@ -2,8 +2,8 @@ import ipaddress
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from unittest import mock
 
-import mock
 import pytest
 
 from cryptography import x509
