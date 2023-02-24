@@ -208,7 +208,9 @@ def _generate_ssl_certificate(
         with open(sign_key_path, 'rb') as sign_key_file:
             sign_key = serialization.load_pem_private_key(
                 sign_key_file.read(),
-                password=sign_key_password.encode(),
+                password=(
+                    sign_key_password.encode() if sign_key_password else None
+                ),
             )
         with open(sign_cert_path, 'rb') as sign_cert_file:
             sign_cert = x509.load_pem_x509_certificate(sign_cert_file.read())
