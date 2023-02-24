@@ -217,3 +217,37 @@ def test_check_signed_by_false(tmpdir, ca_cert):
 def test_get_cert_cn(tmpdir, ca_cert):
     cn = certificates.get_cert_cn(ca_cert.cert_path)
     assert cn == 'test'
+
+
+def test_check_cert_key_match(tmpdir, ca_cert):
+    other_cert_path, other_key_path = certificates._generate_ssl_certificate(
+        ips=['127.0.0.1'],
+        cn='localhost',
+        cert_path=tmpdir / 'cert.pem',
+        key_path=tmpdir / 'key.pem',
+        owner=os.geteuid(),
+        group=os.getegid(),
+    )
+
+    certificates.check_cert_key_match(
+        ca_cert.cert_path,
+        ca_cert.key_path,
+        password=ca_cert.key_password,
+    )
+    certificates.check_cert_key_match(
+        other_cert_path,
+        other_key_path,
+    )
+
+    with pytest.raises(ValidationError):
+        certificates.check_cert_key_match(
+            ca_cert.cert_path,
+            other_key_path,
+        )
+
+    with pytest.raises(ValidationError):
+        certificates.check_cert_key_match(
+            other_cert_path,
+            ca_cert.key_path,
+            password=ca_cert.key_password,
+        )

@@ -676,18 +676,20 @@ def validate_certificates(cert_filename=None, key_filename=None,
 def check_cert_key_match(cert_filename, key_filename, password=None):
     check_ssl_file(key_filename, kind='Key', password=password)
     check_ssl_file(cert_filename, kind='Cert')
-    key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
-                           '-in', key_filename]
-    if password:
-        key_modulus_command += [
-            '-passin',
-            u'pass:{0}'.format(password).encode('utf-8')
-        ]
-    cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
-                            '-in', cert_filename]
-    key_modulus = run(key_modulus_command).aggr_stdout.strip()
-    cert_modulus = run(cert_modulus_command).aggr_stdout.strip()
-    if cert_modulus != key_modulus:
+
+    with open(cert_filename, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
+    with open(key_filename, 'rb') as key_file:
+        key = serialization.load_pem_private_key(
+            key_file.read(),
+            password=password.encode() if password else None,
+        )
+
+    cert_pubkey = cert.public_key()
+    key_pubkey = key.public_key()
+
+    if cert_pubkey.public_numbers().n != key_pubkey.public_numbers().n:
         raise ValidationError(
             'Key {key_path} does not match the cert {cert_path}'.format(
                 key_path=key_filename,
