@@ -10,6 +10,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
+from cfy_manager.exceptions import ValidationError
 from cfy_manager.utils import certificates
 
 
@@ -101,6 +102,10 @@ def ca_cert(tmpdir):
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.utcnow())
         .not_valid_after(datetime.utcnow() + timedelta(days=1))
+        .add_extension(
+            x509.BasicConstraints(ca=True, path_length=None),
+            critical=False,
+        )
         .sign(key, hashes.SHA256())
     )
     with open(cert_path, 'wb') as cert_file:
@@ -176,3 +181,34 @@ def test_generate_ca_cert(tmpdir):
         padding.PKCS1v15(),
         cert.signature_hash_algorithm,
     )
+
+
+def test_check_signed_by_true(tmpdir, ca_cert):
+    cert_path, _ = certificates._generate_ssl_certificate(
+        ips=['127.0.0.1'],
+        cn='localhost',
+        cert_path=tmpdir / 'cert.pem',
+        key_path=tmpdir / 'key.pem',
+        sign_cert_path=ca_cert.cert_path,
+        sign_key_path=ca_cert.key_path,
+        sign_key_password=ca_cert.key_password,
+        owner=os.geteuid(),
+        group=os.getegid(),
+    )
+
+    certificates._check_signed_by(ca_cert.cert_path, cert_path)  # doesnt throw
+
+
+def test_check_signed_by_false(tmpdir, ca_cert):
+    # generate a self-signed cert: no sign_key_path supplied
+    cert_path, _ = certificates._generate_ssl_certificate(
+        ips=['127.0.0.1'],
+        cn='localhost',
+        cert_path=tmpdir / 'cert.pem',
+        key_path=tmpdir / 'key.pem',
+        owner=os.geteuid(),
+        group=os.getegid(),
+    )
+
+    with pytest.raises(ValidationError):
+        certificates._check_signed_by(ca_cert.cert_path, cert_path)

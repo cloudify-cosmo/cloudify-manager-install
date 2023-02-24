@@ -9,8 +9,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from cryptography import x509
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from . import network
 from .common import chown, chmod, copy, move, run
@@ -727,17 +728,20 @@ def check_ssl_file(filename, kind='Key', password=None):
 
 
 def _check_signed_by(ca_filename, cert_filename):
-    ca_check_command = [
-        'openssl', 'verify',
-        '-CAfile', ca_filename,
-        # also give openssl the cert itself so that it can look up
-        # intermediaries, if any
-        '-untrusted', cert_filename,
-        cert_filename
-    ]
+    with open(ca_filename, 'rb') as ca_file:
+        ca_cert = x509.load_pem_x509_certificate(ca_file.read())
+
+    with open(cert_filename, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
     try:
-        run(ca_check_command)
-    except ProcessExecutionError:
+        ca_cert.public_key().verify(
+            cert.signature,
+            cert.tbs_certificate_bytes,
+            padding.PKCS1v15(),
+            cert.signature_hash_algorithm,
+        )
+    except InvalidSignature:
         raise ValidationError(
             'Provided certificate {cert} was not signed by provided '
             'CA {ca}'.format(
