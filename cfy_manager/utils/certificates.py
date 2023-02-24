@@ -596,9 +596,14 @@ def get_ca_filename(new_ca_location, default_ca_location):
 
 
 def certs_identical(cert_a, cert_b):
-    content_a = run(['openssl', 'x509', '-noout', '-modulus', '-in', cert_a])
-    content_b = run(['openssl', 'x509', '-noout', '-modulus', '-in', cert_b])
-    return content_a.aggr_stdout == content_b.aggr_stdout
+    with open(cert_a, 'rb') as cert_a_file:
+        cert_a = x509.load_pem_x509_certificate(cert_a_file.read())
+    with open(cert_b, 'rb') as cert_b_file:
+        cert_b = x509.load_pem_x509_certificate(cert_b_file.read())
+
+    cert_a_modulus = cert_a.public_key().public_numbers().n
+    cert_b_modulus = cert_b.public_key().public_numbers().n
+    return cert_a_modulus == cert_b_modulus
 
 
 def clean_certs():

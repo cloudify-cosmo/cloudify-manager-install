@@ -251,3 +251,17 @@ def test_check_cert_key_match(tmpdir, ca_cert):
             ca_cert.key_path,
             password=ca_cert.key_password,
         )
+
+
+def test_certs_identical(tmpdir, ca_cert):
+    other_cert_path, _ = certificates._generate_ssl_certificate(
+        ips=['127.0.0.1'],
+        cn='localhost',
+        cert_path=tmpdir / 'cert.pem',
+        key_path=tmpdir / 'key.pem',
+        owner=os.geteuid(),
+        group=os.getegid(),
+    )
+
+    assert certificates.certs_identical(ca_cert.cert_path, ca_cert.cert_path)
+    assert not certificates.certs_identical(ca_cert.cert_path, other_cert_path)
