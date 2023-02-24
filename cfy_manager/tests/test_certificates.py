@@ -280,3 +280,31 @@ def test_check_ssl_file(tmpdir, ca_cert):
     certificates.check_ssl_file(ca_cert.key_path, kind='Key',
                                 password=ca_cert.key_password)
     certificates.check_ssl_file(ca_cert.cert_path, kind='Cert')
+
+
+def test_remove_key_encryption(tmpdir, ca_cert):
+    source_key = tmpdir / 'source.pem'
+    target_key = tmpdir / 'target.pem'
+    password = 'password1'
+
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=512,
+    )
+    with open(source_key, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=(
+                serialization.BestAvailableEncryption(password.encode())
+            ),
+        )
+        key_file.write(key_pem)
+
+    certificates.remove_key_encryption(source_key, target_key, password)
+
+    with open(target_key, 'rb') as key_file:
+        serialization.load_pem_private_key(
+            key_file.read(),
+            password=None,
+        )

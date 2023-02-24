@@ -332,12 +332,18 @@ def generate_ca_cert(cert_path=const.CA_CERT_PATH,
 def remove_key_encryption(src_key_path,
                           dst_key_path,
                           key_password):
-    run([
-        'openssl', 'rsa',
-        '-in', src_key_path,
-        '-out', dst_key_path,
-        '-passin', u'pass:{0}'.format(key_password).encode('utf-8')
-    ])
+    with open(src_key_path, 'rb') as key_file:
+        key = serialization.load_pem_private_key(
+            key_file.read(),
+            password=key_password.encode(),
+        )
+    with open(dst_key_path, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        key_file.write(key_pem)
 
 
 @argh.arg('--metadata',
