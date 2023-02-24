@@ -38,21 +38,14 @@ CERT_SIZE = 4096
 
 
 def get_cert_cn(cert_path):
-    raw = run(
-        ['openssl', 'x509', '-noout', '-subject', '-in', cert_path]
-    ).aggr_stdout
-    # The raw value will be something like "subject=CN = *.cloudify.co"
-    # or "subject=C = US, O = DigiCert Inc, OU = www.digicert.com, CN = DigiCert Global Root CA"  # noqa
-    _subject, _, sections = raw.partition('=')
-    for section in sections.split(','):
-        section_type, section_value = section.split('=', 1)
-        # In some cases we see a leading slash on the subject
-        # e.g. "subject = /CN=cloudify"
-        # It can also have surrounding spaces.
-        section_type = section_type.strip().lstrip('/').lower()
-        if section_type == 'cn':
-            return section_value.strip()
-    return None
+    with open(cert_path, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
+    try:
+        return cert.subject.get_attributes_for_oid(
+            x509.oid.NameOID.COMMON_NAME)[0].value
+    except IndexError:
+        return None
 
 
 def handle_ca_cert(logger, generate_if_missing=True):

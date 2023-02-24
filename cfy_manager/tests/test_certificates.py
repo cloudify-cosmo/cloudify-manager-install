@@ -212,3 +212,8 @@ def test_check_signed_by_false(tmpdir, ca_cert):
 
     with pytest.raises(ValidationError):
         certificates._check_signed_by(ca_cert.cert_path, cert_path)
+
+
+def test_get_cert_cn(tmpdir, ca_cert):
+    cn = certificates.get_cert_cn(ca_cert.cert_path)
+    assert cn == 'test'
