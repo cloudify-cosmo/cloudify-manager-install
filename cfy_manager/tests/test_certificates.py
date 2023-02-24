@@ -265,3 +265,18 @@ def test_certs_identical(tmpdir, ca_cert):
 
     assert certificates.certs_identical(ca_cert.cert_path, ca_cert.cert_path)
     assert not certificates.certs_identical(ca_cert.cert_path, other_cert_path)
+
+
+def test_check_ssl_file(tmpdir, ca_cert):
+    with pytest.raises(ValidationError):
+        certificates.check_ssl_file(tmpdir / 'nonexistent')
+
+    with pytest.raises(ValidationError):
+        certificates.check_ssl_file(ca_cert.cert_path, kind='Key')
+
+    with pytest.raises(ValidationError):
+        certificates.check_ssl_file(ca_cert.key_path, kind='Cert')
+
+    certificates.check_ssl_file(ca_cert.key_path, kind='Key',
+                                password=ca_cert.key_password)
+    certificates.check_ssl_file(ca_cert.cert_path, kind='Cert')

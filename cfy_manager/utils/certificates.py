@@ -710,23 +710,22 @@ def check_ssl_file(filename, kind='Key', password=None):
             '{0} file {1} does not exist'
             .format(kind, filename))
     if kind == 'Key':
-        check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
-        if password:
-            check_command += [
-                '-passin',
-                u'pass:{0}'.format(password).encode('utf-8')
-            ]
+        try:
+            with open(filename, 'rb') as key_file:
+                serialization.load_pem_private_key(
+                    key_file.read(),
+                    password=password.encode() if password else None,
+                )
+        except ValueError as e:
+            raise ValidationError(f'Cert file {filename} is invalid: {e}')
     elif kind == 'Cert':
-        check_command = ['openssl', 'x509', '-in', filename, '-noout']
+        try:
+            with open(filename, 'rb') as cert_file:
+                x509.load_pem_x509_certificate(cert_file.read())
+        except ValueError as e:
+            raise ValidationError(f'Cert file {filename} is invalid: {e}')
     else:
         raise ValueError('Unknown kind: {0}'.format(kind))
-    proc = run(check_command, ignore_failures=True)
-    if proc.returncode != 0:
-        password_err = ''
-        if password:
-            password_err = ' (or the provided password is incorrect)'
-        raise ValidationError('{0} file {1} is invalid{2}'
-                              .format(kind, filename, password_err))
 
 
 def _check_signed_by(ca_filename, cert_filename):
