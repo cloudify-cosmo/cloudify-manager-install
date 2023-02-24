@@ -37,6 +37,27 @@ logger = get_logger('Certificates')
 CERT_SIZE = 4096
 
 
+def load_pem_private_key(key_path, password=None):
+    with open(key_path, 'rb') as key_file:
+        key_data = key_file.read()
+        try:
+            return serialization.load_pem_private_key(
+                key_data,
+                password=password.encode() if password else None,
+            )
+        except TypeError:
+            if password:
+                # a password was provided, but the key is not encrypted,
+                # so the password is not necessary. Just load the key again,
+                # without a password this time.
+                # (this is consistent with what `openssl rsa` does)
+                return serialization.load_pem_private_key(
+                    key_data,
+                    password=None,
+                )
+            raise
+
+
 def get_cert_cn(cert_path):
     with open(cert_path, 'rb') as cert_file:
         cert = x509.load_pem_x509_certificate(cert_file.read())
@@ -205,13 +226,10 @@ def _generate_ssl_certificate(
     ])
 
     if sign_cert_path and sign_key_path:
-        with open(sign_key_path, 'rb') as sign_key_file:
-            sign_key = serialization.load_pem_private_key(
-                sign_key_file.read(),
-                password=(
-                    sign_key_password.encode() if sign_key_password else None
-                ),
-            )
+        sign_key = load_pem_private_key(
+            sign_key_path,
+            password=sign_key_password,
+        )
         with open(sign_cert_path, 'rb') as sign_cert_file:
             sign_cert = x509.load_pem_x509_certificate(sign_cert_file.read())
         issuer = sign_cert.subject
@@ -332,11 +350,7 @@ def generate_ca_cert(cert_path=const.CA_CERT_PATH,
 def remove_key_encryption(src_key_path,
                           dst_key_path,
                           key_password):
-    with open(src_key_path, 'rb') as key_file:
-        key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=key_password.encode(),
-        )
+    key = load_pem_private_key(src_key_path, password=key_password)
     with open(dst_key_path, 'wb') as key_file:
         key_pem = key.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -691,11 +705,7 @@ def check_cert_key_match(cert_filename, key_filename, password=None):
     with open(cert_filename, 'rb') as cert_file:
         cert = x509.load_pem_x509_certificate(cert_file.read())
 
-    with open(key_filename, 'rb') as key_file:
-        key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=password.encode() if password else None,
-        )
+    key = load_pem_private_key(key_filename, password=password)
 
     cert_pubkey = cert.public_key()
     key_pubkey = key.public_key()
@@ -717,11 +727,7 @@ def check_ssl_file(filename, kind='Key', password=None):
             .format(kind, filename))
     if kind == 'Key':
         try:
-            with open(filename, 'rb') as key_file:
-                serialization.load_pem_private_key(
-                    key_file.read(),
-                    password=password.encode() if password else None,
-                )
+            load_pem_private_key(filename, password=password)
         except ValueError as e:
             raise ValidationError(f'Cert file {filename} is invalid: {e}')
     elif kind == 'Cert':
