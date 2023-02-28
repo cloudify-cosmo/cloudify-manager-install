@@ -120,7 +120,7 @@ PG_BINS = [
     'reindexdb', 'vacuumdb', 'vacuumlo',
 ]
 
-PG_HBA_LISTEN_ALL_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
+PG_HBA_HOST_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
 PG_HBA_HOSTSSL_REGEX_PATTERN = \
     r'hostssl\s+all\s+all\s+0\.0\.0\.0\/0\s+md5\s+.*'
 
@@ -311,7 +311,7 @@ class PostgresqlServer(BaseComponent):
             suffix=suffix,
         )
 
-    def _write_new_hba_file(self, lines, enable_remote_connections):
+    def _write_new_hba_file(self, lines):
         fd, temp_hba_path = mkstemp()
         os.close(fd)
         with open(temp_hba_path, 'a') as f:
@@ -319,8 +319,8 @@ class PostgresqlServer(BaseComponent):
                 if line.startswith(('host', 'local')):
                     line = line.replace('ident', 'md5')
                 f.write(line)
-            if not re.search(PG_HBA_LISTEN_ALL_REGEX_PATTERN,
-                             '\n'.join(lines)) and enable_remote_connections\
+            if not re.search(PG_HBA_HOST_REGEX_PATTERN, '\n'.join(lines))\
+                    and config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]\
                     and not config[POSTGRESQL_SERVER]['ssl_only_connections']:
                 f.write('host all all 0.0.0.0/0 md5\n')
                 f.write('host all all ::0/0 md5\n')
@@ -351,13 +351,12 @@ class PostgresqlServer(BaseComponent):
         if config[POSTGRESQL_SERVER][SSL_ENABLED]:
             self.handle_all_in_one_certificates()
 
-    def _update_configuration(self, enable_remote_connections):
+    def _update_configuration(self):
         logger.info('Updating PostgreSQL Server configuration...')
         logger.debug('Modifying {0}'.format(PG_HBA_CONF))
         common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
         lines = files.read(PG_HBA_CONF).splitlines(True)
-        temp_hba_path = self._write_new_hba_file(lines,
-                                                 enable_remote_connections)
+        temp_hba_path = self._write_new_hba_file(lines)
         common.move(temp_hba_path, PG_HBA_CONF)
         common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
@@ -1763,9 +1762,7 @@ class PostgresqlServer(BaseComponent):
             service.remove(POSTGRES_SERVICE_NAME)
         else:
             self._init_postgresql_server()
-            enable_remote_connections = \
-                config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
-            self._update_configuration(enable_remote_connections)
+            self._update_configuration()
             service.enable(POSTGRES_SERVICE_NAME)
 
         self.start()
@@ -1857,11 +1854,7 @@ class PostgresqlServer(BaseComponent):
         self._configure_postgresql_server_service()
         service.reread()
         self._init_postgresql_server(encoding=encoding, locale=locale)
-
-        enable_remote_connections = \
-            config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
-        self._update_configuration(enable_remote_connections)
-
+        self._update_configuration()
         self._run_pg_upgrade(OLD_PGSQL_DATA_DIR, PGSQL_DATA_DIR)
         self._remove_old_pg_packages()
 
