@@ -1850,6 +1850,7 @@ class PostgresqlServer(BaseComponent):
         logger.debug('Configuring and initializing new PostgreSQL '
                      'service...')
         service.start(OLD_POSTGRES_SERVICE_NAME)
+        service.verify_alive(OLD_POSTGRES_SERVICE_NAME)
         encoding, locale = self._get_encoding_and_locale()
         service.stop(OLD_POSTGRES_SERVICE_NAME)
         service.remove(OLD_POSTGRES_SERVICE_NAME)
