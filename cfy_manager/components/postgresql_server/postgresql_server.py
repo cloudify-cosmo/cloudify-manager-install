@@ -1858,6 +1858,10 @@ class PostgresqlServer(BaseComponent):
         service.reread()
         self._init_postgresql_server(encoding=encoding, locale=locale)
 
+        enable_remote_connections = \
+            config[POSTGRESQL_SERVER][ENABLE_REMOTE_CONNECTIONS]
+        self._update_configuration(enable_remote_connections)
+
         self._run_pg_upgrade(OLD_PGSQL_DATA_DIR, PGSQL_DATA_DIR)
         self._remove_old_pg_packages()
 
