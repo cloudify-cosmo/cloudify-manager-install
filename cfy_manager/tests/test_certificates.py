@@ -196,7 +196,7 @@ def test_check_signed_by_true(tmpdir, ca_cert):
         group=os.getegid(),
     )
 
-    certificates._check_signed_by(ca_cert.cert_path, cert_path)  # doesnt throw
+    assert certificates.is_signed_by(ca_cert.cert_path, cert_path)
 
 
 def test_check_signed_by_false(tmpdir, ca_cert):
@@ -210,8 +210,7 @@ def test_check_signed_by_false(tmpdir, ca_cert):
         group=os.getegid(),
     )
 
-    with pytest.raises(ValidationError):
-        certificates._check_signed_by(ca_cert.cert_path, cert_path)
+    assert not certificates.is_signed_by(ca_cert.cert_path, cert_path)
 
 
 def test_get_cert_cn(tmpdir, ca_cert):

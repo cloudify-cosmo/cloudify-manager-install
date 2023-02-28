@@ -693,7 +693,12 @@ def validate_certificates(cert_filename=None, key_filename=None,
     if ca_filename:
         check_ssl_file(ca_filename, kind='Cert')
         if cert_filename:
-            _check_signed_by(ca_filename, cert_filename)
+            if not is_signed_by(ca_filename, cert_filename):
+                raise ValidationError(
+                    f'Provided certificate {cert_filename} was not signed '
+                    f'by provided CA {ca_filename}'
+                )
+
         if ca_key_filename and os.path.exists(ca_key_filename):
             check_cert_key_match(ca_filename, ca_key_filename, password)
 
@@ -740,7 +745,7 @@ def check_ssl_file(filename, kind='Key', password=None):
         raise ValueError('Unknown kind: {0}'.format(kind))
 
 
-def _check_signed_by(ca_filename, cert_filename):
+def is_signed_by(ca_filename, cert_filename):
     with open(ca_filename, 'rb') as ca_file:
         ca_cert = x509.load_pem_x509_certificate(ca_file.read())
 
@@ -755,10 +760,6 @@ def _check_signed_by(ca_filename, cert_filename):
             cert.signature_hash_algorithm,
         )
     except InvalidSignature:
-        raise ValidationError(
-            'Provided certificate {cert} was not signed by provided '
-            'CA {ca}'.format(
-                cert=cert_filename,
-                ca=ca_filename,
-            )
-        )
+        return False
+    else:
+        return True
