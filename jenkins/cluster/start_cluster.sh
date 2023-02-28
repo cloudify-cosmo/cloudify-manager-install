@@ -29,6 +29,7 @@ function create_certs(){
   pushd ${TMPDIR}
     generate_certs
   popd
+  openssl rsa -aes256 -passout pass:secret_ca_password -in ${TMPDIR}/ca.key -out ${TMPDIR}/ca.encrypted.key
 }
 
 function run_queue1(){
@@ -142,7 +143,6 @@ function run_manager1(){
       manager1_config.yaml > ${TMPDIR}/rendered_manager1_config.yaml
   cat ${TMPDIR}/rendered_manager1_config.yaml
     # Generate ca encrypted key
-  openssl rsa -aes256 -passout pass:secret_ca_password -in ${TMPDIR}/ca.key -out ${TMPDIR}/ca.encrypted.key
   sudo docker cp ${TMPDIR}/rendered_manager1_config.yaml ${NODE1_NAME}:/etc/cloudify/manager_config.yaml
   sudo docker cp ${TMPDIR}/manager_1_key.pem ${NODE1_NAME}:/etc/cloudify/manager_key.pem
   sudo docker cp ${TMPDIR}/manager_1_cert.pem ${NODE1_NAME}:/etc/cloudify/manager_cert.pem

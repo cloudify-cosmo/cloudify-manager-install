@@ -40,6 +40,7 @@ from ..utils.certificates import (
     check_certificates,
     check_ssl_file,
     get_cert_cn,
+    is_signed_by,
 )
 from ..utils.network import is_ipv6
 
@@ -320,9 +321,7 @@ def _validate_ssl_and_external_certificates_match():
 
 
 def _is_cert_self_signed(cert_file):
-    result = run(['openssl', 'verify', '-CAfile', cert_file, cert_file],
-                 ignore_failures=True)
-    return result.returncode == 0
+    return is_signed_by(cert_file, cert_file)
 
 
 def _validate_external_ssl_cert_and_ca():

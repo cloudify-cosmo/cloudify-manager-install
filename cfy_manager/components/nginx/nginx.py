@@ -76,8 +76,8 @@ class Nginx(BaseComponent):
         certificates.generate_external_ssl_cert(
             ips=[external_rest_host, internal_rest_host],
             cn=hostname,
-            sign_cert=ca_cert,
-            sign_key=ca_key,
+            sign_cert_path=ca_cert,
+            sign_key_path=ca_key,
             sign_key_password=key_password,
         )
         certificates.store_cert_metadata(
