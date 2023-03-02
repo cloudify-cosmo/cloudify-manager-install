@@ -410,7 +410,7 @@ def _check_internal_cert_sans():
             expected = x509.IPAddress(parsed_ip)
         else:
             expected = x509.DNSName(expected_addr)
-        if not expected in internal_sans:
+        if expected not in internal_sans:
             missing_addrs.append(expected_addr)
     if missing_addrs:
         raise ValidationError(
