@@ -23,7 +23,8 @@ from ..utils.network import ipv6_url_compat
 from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER
+    POSTGRESQL_SERVER,
+    NGINX,
 )
 
 from . import DATABASE_SERVICE, MANAGER_SERVICE
@@ -33,7 +34,8 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
     HOSTNAME,
-    ENABLE_REMOTE_CONNECTIONS
+    ENABLE_REMOTE_CONNECTIONS,
+    SSL_INPUTS,
 )
 
 
@@ -91,6 +93,49 @@ def _apply_forced_settings():
         config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
 
 
+def _set_nginx_listeners():
+    if config.get(NGINX, {}).get('listeners'):
+        return
+
+    nginx_port = config[NGINX].get('port')
+    if config[MANAGER][SECURITY]['ssl_enabled']:
+        config[NGINX]['nonssl_access_blocked'] = nginx_port is None
+
+        listeners = []
+        if config[SSL_INPUTS]['external_cert_path']:
+            listeners.append({
+                'port': nginx_port or 443,
+                'server_name': config[MANAGER]['public_ip'],
+                'ssl': True,
+                'cert_path': constants.EXTERNAL_CERT_PATH,
+                'key_path': constants.EXTERNAL_KEY_PATH,
+            })
+        listeners.append({
+            'port': 443,
+            'server_name': '_',
+            'ssl': True,
+            'cert_path': constants.INTERNAL_CERT_PATH,
+            'key_path': constants.INTERNAL_KEY_PATH,
+        })
+
+    else:
+        listeners = [
+            {
+                'port': nginx_port or 80,
+                'server_name': '_',
+                'ssl': False,
+            },
+            {
+                'port': 443,
+                'server_name': '_',
+                'ssl': True,
+                'cert_path': constants.INTERNAL_CERT_PATH,
+                'key_path': constants.INTERNAL_KEY_PATH,
+            },
+        ]
+    config[NGINX]['listeners'] = listeners
+
+
 def set_globals(only_install=False):
     if only_install:
         return
@@ -98,3 +143,4 @@ def set_globals(only_install=False):
     _set_ip_config()
     _set_external_port_and_protocol()
     _set_hostname()
+    _set_nginx_listeners()
