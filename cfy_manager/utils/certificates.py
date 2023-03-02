@@ -69,6 +69,16 @@ def get_cert_cn(cert_path):
         return None
 
 
+def get_cert_sans(cert_path):
+    """Return a list of SubjectAlternativeNames on the given cert"""
+    with open(cert_path, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
+    return cert.extensions.get_extension_for_class(
+        x509.SubjectAlternativeName,
+    ).value
+
+
 def handle_ca_cert(logger, generate_if_missing=True):
     """
     The user might provide both the CA key and the CA cert, or just the
