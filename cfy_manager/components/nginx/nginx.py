@@ -47,14 +47,15 @@ class Nginx(BaseComponent):
         logger.info('Generating internal certificate...')
         networks = config['networks']
         hostname = config[MANAGER][HOSTNAME]
+        addresses = list(networks.values()) + [config[MANAGER][PUBLIC_IP]]
         certificates.store_cert_metadata(
             hostname,
-            new_managers=list(networks.values()),
+            new_managers=addresses,
             new_networks=list(networks.keys()),
         )
 
         certificates.generate_internal_ssl_cert(
-            ips=list(networks.values()),
+            ips=addresses,
             cn=hostname
         )
 

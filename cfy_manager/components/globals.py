@@ -23,7 +23,8 @@ from ..utils.network import ipv6_url_compat
 from ..service_names import (
     MANAGER,
     POSTGRESQL_CLIENT,
-    POSTGRESQL_SERVER
+    POSTGRESQL_SERVER,
+    NGINX,
 )
 
 from . import DATABASE_SERVICE, MANAGER_SERVICE
@@ -33,7 +34,8 @@ from ..components_constants import (
     SERVICES_TO_INSTALL,
     SSL_ENABLED,
     HOSTNAME,
-    ENABLE_REMOTE_CONNECTIONS
+    ENABLE_REMOTE_CONNECTIONS,
+    SSL_INPUTS,
 )
 
 
@@ -45,12 +47,12 @@ def _set_external_port_and_protocol():
     if config[MANAGER][SECURITY]['ssl_enabled']:
         logger.info('SSL is enabled, setting rest port to 443 and '
                     'rest protocol to https...')
-        external_rest_port = 443
+        external_rest_port = config[NGINX].get('port') or 443
         external_rest_protocol = 'https'
     else:
         logger.info('SSL is disabled, setting rest port '
                     'to 80 and rest protocols to http...')
-        external_rest_port = 80
+        external_rest_port = config[NGINX].get('port') or 80
         external_rest_protocol = 'http'
 
     config[MANAGER]['external_rest_port'] = external_rest_port
@@ -91,6 +93,48 @@ def _apply_forced_settings():
         config[POSTGRESQL_CLIENT][SSL_ENABLED] = True
 
 
+def _set_nginx_listeners():
+    if config.get(NGINX, {}).get('listeners'):
+        return
+
+    if config[MANAGER][SECURITY]['ssl_enabled']:
+        config[NGINX]['nonssl_access_blocked'] = True
+
+        listeners = []
+        if config[SSL_INPUTS]['external_cert_path']:
+            listeners.append({
+                'port': config[MANAGER]['external_rest_port'],
+                'server_name': config[MANAGER]['public_ip'],
+                'ssl': True,
+                'cert_path': constants.EXTERNAL_CERT_PATH,
+                'key_path': constants.EXTERNAL_KEY_PATH,
+            })
+        listeners.append({
+            'port': config[MANAGER]['internal_rest_port'],
+            'server_name': '_',
+            'ssl': True,
+            'cert_path': constants.INTERNAL_CERT_PATH,
+            'key_path': constants.INTERNAL_KEY_PATH,
+        })
+
+    else:
+        listeners = [
+            {
+                'port': config[MANAGER]['external_rest_port'],
+                'server_name': '_',
+                'ssl': False,
+            },
+            {
+                'port': config[MANAGER]['internal_rest_port'],
+                'server_name': '_',
+                'ssl': True,
+                'cert_path': constants.INTERNAL_CERT_PATH,
+                'key_path': constants.INTERNAL_KEY_PATH,
+            },
+        ]
+    config[NGINX]['listeners'] = listeners
+
+
 def set_globals(only_install=False):
     if only_install:
         return
@@ -98,3 +142,4 @@ def set_globals(only_install=False):
     _set_ip_config()
     _set_external_port_and_protocol()
     _set_hostname()
+    _set_nginx_listeners()
