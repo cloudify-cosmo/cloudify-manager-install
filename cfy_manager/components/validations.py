@@ -6,6 +6,7 @@ from getpass import getuser
 from collections import namedtuple
 from ipaddress import ip_address
 from distutils.version import LooseVersion
+from cryptography import x509
 
 from cfy_manager.utils.common import service_is_in_config
 from ..components_constants import (
@@ -41,8 +42,9 @@ from ..utils.certificates import (
     check_ssl_file,
     get_cert_cn,
     is_signed_by,
+    get_cert_sans,
 )
-from ..utils.network import is_ipv6
+from ..utils.network import is_ipv6, parse_ip
 
 logger = get_logger(VALIDATIONS)
 
@@ -377,6 +379,57 @@ def _validate_cert_inputs():
     elif config[POSTGRESQL_CLIENT]['ca_path']:
         check_ssl_file(config[POSTGRESQL_CLIENT]['ca_path'],
                        kind='Cert')
+
+    if config[SSL_INPUTS].get('internal_cert_path'):
+        _check_internal_cert_sans()
+    if config[SSL_INPUTS].get('external_cert_path'):
+        _check_external_cert_sans()
+
+
+def _check_internal_cert_sans():
+    internal_sans = get_cert_sans(config[SSL_INPUTS]['internal_cert_path'])
+    networks = config['networks']
+    missing_addrs = []
+    expected_addrs = list(networks.values())
+
+    if (
+        parse_ip(config[MANAGER][PUBLIC_IP]) and
+        config[MANAGER]['external_rest_protocol'] == 'https' and
+        (config[MANAGER]['external_rest_port'] ==
+         config[MANAGER]['internal_rest_port'])
+    ):
+        # if public ip is not a dns name, and "external" listens on ssl on the
+        # same port as "internal", then the internal cert must contain the
+        # external IP as well, because SNI doesn't work for IP addresses
+        # (only domain names), so requests for the external ip, are going
+        # to get the internal cert
+        expected_addrs.append(config[MANAGER][PUBLIC_IP])
+
+    for expected_addr in expected_addrs:
+        if parsed_ip := parse_ip(expected_addr):
+            expected = x509.IPAddress(parsed_ip)
+        else:
+            expected = x509.DNSName(expected_addr)
+        if not expected in internal_sans:
+            missing_addrs.append(expected_addr)
+    if missing_addrs:
+        raise ValidationError(
+            "These addresses must be present on the internal cert, "
+            f"but are missing: {', '.join(missing_addrs)}"
+        )
+
+
+def _check_external_cert_sans():
+    external_sans = get_cert_sans(config[SSL_INPUTS]['external_cert_path'])
+    if parsed_ip := parse_ip(config[MANAGER][PUBLIC_IP]):
+        expected = x509.IPAddress(parsed_ip)
+    else:
+        expected = x509.DNSName(config[MANAGER][PUBLIC_IP])
+    if expected not in external_sans:
+        raise ValidationError(
+            "External cert must contain the public "
+            f"address: {config[MANAGER][PUBLIC_IP]}"
+        )
 
 
 def _validate_postgres_server_and_cloudify_input_difference():
