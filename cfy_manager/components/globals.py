@@ -47,12 +47,12 @@ def _set_external_port_and_protocol():
     if config[MANAGER][SECURITY]['ssl_enabled']:
         logger.info('SSL is enabled, setting rest port to 443 and '
                     'rest protocol to https...')
-        external_rest_port = 443
+        external_rest_port = config[NGINX].get('port') or 443
         external_rest_protocol = 'https'
     else:
         logger.info('SSL is disabled, setting rest port '
                     'to 80 and rest protocols to http...')
-        external_rest_port = 80
+        external_rest_port = config[NGINX].get('port') or 80
         external_rest_protocol = 'http'
 
     config[MANAGER]['external_rest_port'] = external_rest_port
@@ -97,21 +97,20 @@ def _set_nginx_listeners():
     if config.get(NGINX, {}).get('listeners'):
         return
 
-    nginx_port = config[NGINX].get('port')
     if config[MANAGER][SECURITY]['ssl_enabled']:
-        config[NGINX]['nonssl_access_blocked'] = nginx_port is None
+        config[NGINX]['nonssl_access_blocked'] = True
 
         listeners = []
         if config[SSL_INPUTS]['external_cert_path']:
             listeners.append({
-                'port': nginx_port or 443,
+                'port': config[MANAGER]['external_rest_port'],
                 'server_name': config[MANAGER]['public_ip'],
                 'ssl': True,
                 'cert_path': constants.EXTERNAL_CERT_PATH,
                 'key_path': constants.EXTERNAL_KEY_PATH,
             })
         listeners.append({
-            'port': 443,
+            'port': config[MANAGER]['internal_rest_port'],
             'server_name': '_',
             'ssl': True,
             'cert_path': constants.INTERNAL_CERT_PATH,
@@ -121,12 +120,12 @@ def _set_nginx_listeners():
     else:
         listeners = [
             {
-                'port': nginx_port or 80,
+                'port': config[MANAGER]['external_rest_port'],
                 'server_name': '_',
                 'ssl': False,
             },
             {
-                'port': 443,
+                'port': config[MANAGER]['internal_rest_port'],
                 'server_name': '_',
                 'ssl': True,
                 'cert_path': constants.INTERNAL_CERT_PATH,
