@@ -162,6 +162,7 @@ class Stage(BaseComponent):
         stage_config = json.loads(files.read(config_path))
 
         stage_config['ip'] = ipv6_url_compat(config[MANAGER][PRIVATE_IP])
+        stage_config['port'] = config[MANAGER]['internal_rest_port']
         content = json.dumps(stage_config, indent=4, sort_keys=True)
         files.write(contents=content, destination=config_path,
                     owner=STAGE_USER, group=STAGE_GROUP, mode=0o640)

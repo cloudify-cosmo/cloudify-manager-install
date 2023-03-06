@@ -128,7 +128,8 @@ class Composer(BaseComponent):
 
         composer_config['managerConfig']['ip'] = \
             ipv6_url_compat(config[MANAGER][PRIVATE_IP])
-
+        composer_config['managerConfig']['port'] = \
+            config[MANAGER]['internal_rest_port']
         certs = {
             'cert': DB_CLIENT_CERT_PATH,
             'key': DB_CLIENT_KEY_PATH,
