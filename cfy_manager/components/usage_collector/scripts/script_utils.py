@@ -8,7 +8,7 @@ from logging.handlers import WatchedFileHandler
 
 from manager_rest import config, premium_enabled
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import get_storage_manager, models, storage_utils
+from manager_rest.storage import models, storage_utils, db
 
 DAYS_LOCK = 1
 HOURS_LOCK = 2
@@ -28,28 +28,14 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 
-@contextmanager
-def get_storage_manager_instance():
-    """Configure and yield a storage_manager instance.
-    This is to be used only OUTSIDE of the context of the REST API.
-    """
-    try:
-        with _get_flask_app().app_context():
-            sm = get_storage_manager()
-            yield sm
-    finally:
-        config.reset(config.Config())
-
-
 def collect_metadata(data):
     pkg_distribution = pkg_resources.get_distribution('cloudify-rest-service')
     manager_version = pkg_distribution.version
 
-    with get_storage_manager_instance() as sm:
-        usage_collector_info = (sm.list(models.UsageCollector))[0]
-        manager_id = str(usage_collector_info.manager_id)
-        licenses = sm.list(models.License)
-        customer_id = str(licenses[0].customer_id) if licenses else None
+    usage_collector_info = models.UsageCollector.query.first()
+    manager_id = str(usage_collector_info.manager_id)
+    licenses = models.License.query.all()
+    customer_id = str(licenses[0].customer_id) if licenses else None
 
     data['metadata'] = {
         'manager_id': manager_id,
@@ -65,13 +51,12 @@ def collect_metadata(data):
 
 
 def send_data(data, url, interval_type):
-    with get_storage_manager_instance() as sm:
-        usage_collector_info = (sm.list(models.UsageCollector))[0]
-        if interval_type == HOURS_INTERVAL:
-            usage_collector_info.hourly_timestamp = int(time.time())
-        else:
-            usage_collector_info.daily_timestamp = int(time.time())
-        sm.update(usage_collector_info)
+    usage_collector_info = models.UsageCollector.query.first()
+    if interval_type == HOURS_INTERVAL:
+        usage_collector_info.hourly_timestamp = int(time.time())
+    else:
+        usage_collector_info.daily_timestamp = int(time.time())
+    db.session.commit()
     logger.info('The sent data: {0}'.format(data))
     data = {'data': json.dumps(data)}
     post(url, data=data)
@@ -88,19 +73,16 @@ def usage_collector_lock(lock_number):
 
 
 def _try_usage_collector_lock(lock_number):
-    with _get_flask_app().app_context():
-        return storage_utils.try_acquire_lock_on_table(lock_number)
+    return storage_utils.try_acquire_lock_on_table(lock_number)
 
 
 def _unlock_usage_collector(lock_number):
     logger.debug('Unlocking usage_collector table')
-    with _get_flask_app().app_context():
-        storage_utils.unlock_table(lock_number)
+    storage_utils.unlock_table(lock_number)
 
 
 def should_send_data(interval_type):
-    with get_storage_manager_instance() as sm:
-        usage_collector_info = (sm.list(models.UsageCollector))[0]
+    usage_collector_info = models.UsageCollector.query.first()
     timestamp = _get_timestamp(usage_collector_info, interval_type)
     if timestamp is None:
         return True
@@ -123,11 +105,6 @@ def _get_timestamp(usage_collector_info, interval_type):
             else usage_collector_info.daily_timestamp)
 
 
-def _get_flask_app():
-    config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
-    return setup_flask_app()
-
-
 def _is_inside_docker():
     """ Check whether running inside a docker container"""
     with open('/proc/1/cgroup', 'rt') as f:
@@ -138,3 +115,11 @@ def _is_inside_kubernetes():
     """ Check whether running inside a docker container"""
     with open('/proc/1/cgroup', 'rt') as f:
         return 'kubepods' in f.read()
+
+
+@contextmanager
+def setup_appctx():
+    config.instance.load_from_file(RESTSERVICE_CONFIG_PATH)
+    app = setup_flask_app()
+    with app.app_context():
+        yield app

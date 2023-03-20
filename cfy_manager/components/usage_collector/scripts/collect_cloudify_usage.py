@@ -8,16 +8,18 @@ from multiprocessing import cpu_count
 from cloudify.models_states import ExecutionState
 
 from manager_rest import config, server
-from manager_rest.storage import models
-from script_utils import (logger,
-                          send_data,
-                          DAYS_LOCK,
-                          DAYS_INTERVAL,
-                          collect_metadata,
-                          should_send_data,
-                          usage_collector_lock,
-                          RESTSERVICE_CONFIG_PATH,
-                          get_storage_manager_instance)
+from manager_rest.storage import models, get_storage_manager
+from script_utils import (
+    logger,
+    send_data,
+    DAYS_LOCK,
+    DAYS_INTERVAL,
+    collect_metadata,
+    should_send_data,
+    usage_collector_lock,
+    RESTSERVICE_CONFIG_PATH,
+    setup_appctx,
+)
 
 
 GIGA_SIZE = 1024 * 1024 * 1024
@@ -57,62 +59,64 @@ def _collect_system_data(data):
 
 
 def _collect_cloudify_data(data):
-    with get_storage_manager_instance() as sm:
-        plugins_list = [plugin.package_name.lower()
-                        for plugin in sm.list(models.Plugin,
-                                              all_tenants=True,
-                                              get_all_results=True)]
-        executions = _summarize_executions(sm)
-        nodes = _summarize_nodes(sm)
-        usage_collector_metrics = models.UsageCollector.query.first()
+    plugins_list = [
+        plugin.package_name.lower()
+        for plugin in models.Plugin.query.all()
+    ]
+    sm = get_storage_manager()
+    executions = _summarize_executions(sm)
+    nodes = _summarize_nodes(sm)
+    usage_collector_metrics = models.UsageCollector.query.first()
 
-        data['cloudify_usage'] = {
-            'tenants_count': sm.count(models.Tenant),
-            'users_count': sm.count(models.User),
-            'users_by_role':  _summarize_users_by_role(sm),
-            'usergroups_count': sm.count(models.Group),
-            'sites_count': sm.count(models.Site),
-            'blueprints_count': sm.count(models.Blueprint),
-            'deployments_count': sm.count(models.Deployment),
-            'environments_count': len(sm.list(
-                models.Deployment,
-                filters=_licensed_environments_filter())),
-            'executions_count': executions['total'],
-            'executions_succeeded': executions['succeeded'],
-            'executions_failed': executions['failed'],
-            'executions_by_type': executions['types'],
-            'secrets_count': sm.count(models.Secret),
-            'nodes_count': nodes['total'],
-            'nodes_by_type': nodes['types'],
-            'node_instances_count': sm.count(models.NodeInstance),
-            'plugins_count': len(plugins_list),
-            'aws_plugin': _find_substring_in_list(plugins_list, 'aws'),
-            'azure_plugin': _find_substring_in_list(plugins_list, 'azure'),
-            'gcp_plugin': _find_substring_in_list(plugins_list, 'gcp'),
-            'openstack_plugin': _find_substring_in_list(plugins_list,
-                                                        'openstack'),
-            'agents_count': sm.count(models.Agent),
-            'compute_count': sm.count(models.NodeInstance,
-                                      filters={models.NodeInstance.state:
-                                               'started'},
-                                      distinct_by=models.NodeInstance.host_id),
+    data['cloudify_usage'] = {
+        'tenants_count': models.Tenant.query.count(),
+        'users_count': models.User.query.count(),
+        'users_by_role':  _summarize_users_by_role(),
+        'usergroups_count': models.Group.query.count(),
+        'sites_count': models.Site.query.count(),
+        'blueprints_count': models.Blueprint.query.count(),
+        'deployments_count': models.Deployment.query.count(),
+        'environments_count': len(sm.list(
+            models.Deployment,
+            filters=_licensed_environments_filter())),
+        'executions_count': executions['total'],
+        'executions_succeeded': executions['succeeded'],
+        'executions_failed': executions['failed'],
+        'executions_by_type': executions['types'],
+        'secrets_count': models.Secret.query.count(),
+        'nodes_count': nodes['total'],
+        'nodes_by_type': nodes['types'],
+        'node_instances_count': models.NodeInstance.query.count(),
+        'plugins_count': len(plugins_list),
+        'aws_plugin': _find_substring_in_list(plugins_list, 'aws'),
+        'azure_plugin': _find_substring_in_list(plugins_list, 'azure'),
+        'gcp_plugin': _find_substring_in_list(plugins_list, 'gcp'),
+        'openstack_plugin': _find_substring_in_list(plugins_list,
+                                                    'openstack'),
+        'agents_count': models.Agent.query.count(),
+        'compute_count': (
+            models.NodeInstance
+            .query
+            .filter(models.NodeInstance.state == 'started')
+            .distinct(models.NodeInstance.host_id)
+            .count()
+        ),
+        'max_deployments': usage_collector_metrics.max_deployments,
+        'max_blueprints': usage_collector_metrics.max_blueprints,
+        'max_users': usage_collector_metrics.max_users,
+        'max_tenants': usage_collector_metrics.max_tenants,
+        'total_deployments': usage_collector_metrics.total_deployments,
+        'total_blueprints': usage_collector_metrics.total_blueprints,
+        'total_executions': usage_collector_metrics.max_tenants,
+        'total_logins': usage_collector_metrics.total_logins,
+        'total_logged_in_users':
+            usage_collector_metrics.total_logged_in_users,
+    }
+    data['cloudify_usage'].update(_get_first_and_last_login(sm))
 
-            'max_deployments': usage_collector_metrics.max_deployments,
-            'max_blueprints': usage_collector_metrics.max_blueprints,
-            'max_users': usage_collector_metrics.max_users,
-            'max_tenants': usage_collector_metrics.max_tenants,
-            'total_deployments': usage_collector_metrics.total_deployments,
-            'total_blueprints': usage_collector_metrics.total_blueprints,
-            'total_executions': usage_collector_metrics.max_tenants,
-            'total_logins': usage_collector_metrics.total_logins,
-            'total_logged_in_users':
-                usage_collector_metrics.total_logged_in_users,
-        }
-        data['cloudify_usage'].update(_get_first_and_last_login(sm))
 
-
-def _summarize_users_by_role(sm):
-    users_list = sm.list(models.User)
+def _summarize_users_by_role():
+    users_list = models.User.query.all()
     roles = {}
     for user in users_list:
         if user.role == 'sys_admin':
@@ -193,8 +197,7 @@ def _collect_cloudify_config(data):
 
 
 def _is_clustered():
-    with get_storage_manager_instance() as sm:
-        managers = sm.list(models.Manager)
+    managers = models.Manager.query.all()
     return len(managers) > 1
 
 
@@ -231,4 +234,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with setup_appctx():
+        main()
