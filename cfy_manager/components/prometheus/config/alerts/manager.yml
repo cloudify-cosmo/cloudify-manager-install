@@ -11,6 +11,22 @@ groups:
           process_manager: supervisord
       - record: manager_service
         expr: manager_service_supervisord
+      - record: nginx_up
+        expr: manager_service_supervisord{name="nginx"}
+      - record: amqp_postgres_up
+        expr: manager_service_supervisord{name="cloudify-amqp-postgres"}
+      - record: mgmtworker_up
+        expr: manager_service_supervisord{name="cloudify-mgmtworker"}
+      - record: rest_service_up
+        expr: manager_service_supervisord{name="cloudify-restservice"}
+      - record: api_service_up
+        expr: manager_service_supervisord{name="cloudify-api"}
+      - record: execution_scheduler_up
+        expr: manager_service_supervisord{name="cloudify-execution-scheduler"}
+      - record: console_up
+        expr: manager_service_supervisord{name="cloudify-console"}
+      - record: composer_up
+        expr: manager_service_supervisord{name="cloudify-composer"}
 
       # Alerting rules
       - alert: manager_down
