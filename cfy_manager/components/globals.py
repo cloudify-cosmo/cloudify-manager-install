@@ -35,7 +35,6 @@ from ..components_constants import (
     SSL_ENABLED,
     HOSTNAME,
     ENABLE_REMOTE_CONNECTIONS,
-    SSL_INPUTS,
 )
 
 
@@ -97,18 +96,31 @@ def _set_nginx_listeners():
     if config.get(NGINX, {}).get('listeners'):
         return
 
+    # add the "external" listener, ssl or non-ssl, based on the config
     if config[MANAGER][SECURITY]['ssl_enabled']:
         config[NGINX]['nonssl_access_blocked'] = True
 
-        listeners = []
-        if config[SSL_INPUTS]['external_cert_path']:
-            listeners.append({
-                'port': config[MANAGER]['external_rest_port'],
-                'server_name': config[MANAGER]['public_ip'],
-                'ssl': True,
-                'cert_path': constants.EXTERNAL_CERT_PATH,
-                'key_path': constants.EXTERNAL_KEY_PATH,
-            })
+        listeners = [{
+            'port': config[MANAGER]['external_rest_port'],
+            'server_name': config[MANAGER]['public_ip'],
+            'ssl': True,
+            'cert_path': constants.EXTERNAL_CERT_PATH,
+            'key_path': constants.EXTERNAL_KEY_PATH,
+        }]
+    else:
+        listeners = [{
+            'port': config[MANAGER]['external_rest_port'],
+            'server_name': '_',
+            'ssl': False,
+        }]
+
+    # add the "internal" listener - always ssl, might be multiple ports,
+    # in case the user configured additional "internal" ports
+    internal_ports = [config[MANAGER]['internal_rest_port']]
+    internal_ports.extend(
+        config[MANAGER].get('additional_internal_rest_listeners') or []
+    )
+    for internal_port in internal_ports:
         listeners.append({
             'port': config[MANAGER]['internal_rest_port'],
             'server_name': '_',
@@ -116,22 +128,6 @@ def _set_nginx_listeners():
             'cert_path': constants.INTERNAL_CERT_PATH,
             'key_path': constants.INTERNAL_KEY_PATH,
         })
-
-    else:
-        listeners = [
-            {
-                'port': config[MANAGER]['external_rest_port'],
-                'server_name': '_',
-                'ssl': False,
-            },
-            {
-                'port': config[MANAGER]['internal_rest_port'],
-                'server_name': '_',
-                'ssl': True,
-                'cert_path': constants.INTERNAL_CERT_PATH,
-                'key_path': constants.INTERNAL_KEY_PATH,
-            },
-        ]
     config[NGINX]['listeners'] = listeners
 
 
