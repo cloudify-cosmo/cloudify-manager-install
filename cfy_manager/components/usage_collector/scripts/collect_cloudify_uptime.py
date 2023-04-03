@@ -1,10 +1,13 @@
-from script_utils import (logger,
-                          send_data,
-                          HOURS_LOCK,
-                          HOURS_INTERVAL,
-                          collect_metadata,
-                          should_send_data,
-                          usage_collector_lock)
+from script_utils import (
+    logger,
+    send_data,
+    HOURS_LOCK,
+    HOURS_INTERVAL,
+    collect_metadata,
+    should_send_data,
+    usage_collector_lock,
+    setup_appctx,
+)
 
 
 CLOUDIFY_ENDPOINT_UPTIME_URL = 'https://api.cloudify.co/cloudifyUptime'
@@ -27,4 +30,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with setup_appctx():
+        main()

@@ -460,8 +460,10 @@ def _update_manager_targets(private_ip, cluster_config, uninstalling):
         # Monitor stage directly and via nginx
         http_200_targets.append('http://127.0.0.1:8088')
         # Monitor cloudify's internal port
-        http_200_targets.append('https://{}:53333/api/v3.1/ok'
-                                .format(private_ip))
+        internal_rest_port = config[MANAGER]['internal_rest_port']
+        http_200_targets.append(
+            f'https://{private_ip}:{internal_rest_port}/api/v3.1/ok'
+        )
         # Monitor cloudify restservice
         http_200_targets.append('http://127.0.0.1:8100/api/v3.1/ok')
         # Monitor cloudify-api's openapi.json

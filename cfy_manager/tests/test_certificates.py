@@ -307,3 +307,24 @@ def test_remove_key_encryption(tmpdir, ca_cert):
             key_file.read(),
             password=None,
         )
+
+
+def test_get_cert_sans(tmpdir, ca_cert):
+    cert_path, _ = certificates._generate_ssl_certificate(
+        ips=['192.168.2.4', 'example.com'],
+        cn='localhost',
+        cert_path=tmpdir / 'cert.pem',
+        key_path=tmpdir / 'key.pem',
+        sign_cert_path=ca_cert.cert_path,
+        sign_key_path=ca_cert.key_path,
+        sign_key_password=ca_cert.key_password,
+        owner=os.geteuid(),
+        group=os.getegid(),
+    )
+    sans = certificates.get_cert_sans(cert_path)
+    assert set(sans) == {
+        x509.DNSName('localhost'),
+        x509.DNSName('example.com'),
+        x509.DNSName('192.168.2.4'),
+        x509.IPAddress(ipaddress.IPv4Address('192.168.2.4')),
+    }

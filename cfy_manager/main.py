@@ -865,6 +865,7 @@ def validate_command(verbose=False,
         config_file=config_file,
     )
     components = _get_components()
+    set_globals()
     validate(components=components)
     validate_dependencies(components=components)
 
@@ -1027,6 +1028,7 @@ def configure(verbose=False,
     _validate_components_prepared('configure', config_file)
     logger.notice('Configuring desired components...')
     components = _get_components()
+    set_globals()
     validate(components=components)
     set_globals()
 
@@ -1208,6 +1210,7 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     config[UPGRADE_IN_PROGRESS] = True
     _validate_components_prepared('restart', config_file)
     components = _get_components()
+    set_globals()
     validate(components=components, only_install=False)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
