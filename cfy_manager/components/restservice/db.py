@@ -216,7 +216,6 @@ def populate_db(configs, additional_config_files=None):
     args = ['manager_rest.configure_manager']
     if isfile(constants.DEFAULT_CONFIG_PATH):
         args += ['--config-file-path', constants.DEFAULT_CONFIG_PATH]
-    args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
     for path in config['config_files']:
         args += ['--config-file-path', path]
     if additional_config_files:
