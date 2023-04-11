@@ -72,6 +72,18 @@ pipeline {
             }
           }
         }
+        stage('tests') {
+          steps{
+            container('py311'){
+              dir("${env.WORKSPACE}/${env.PROJECT}") {
+                sh 'pip install pip setuptools --upgrade'
+                sh 'pip install pytest --user'
+                sh 'pip install . --user'
+                sh 'pytest -svx cfy_manager'
+              }
+            }
+          }
+        }
         stage('fetch_rpms') {
           steps {
             sh script:"mkdir -p ${env.WORKSPACE}/rpms", label: "creating RPMs folder"

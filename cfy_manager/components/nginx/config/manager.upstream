@@ -13,42 +13,18 @@ upstream cloudify-rest {
   server 127.0.0.1:{{ restservice.port }};
 }
 
-{%- if manager.external_rest_protocol == 'http' -%}
-# REST and UI server.
+{% for listener in nginx.listeners -%}
 server {
-  # server listening
-  listen              *:{{ nginx.port | default('80', true) }};
+  listen              {{ listener.port }} {% if listener.ssl %}ssl http2{% endif %};
   {% if ipv6_enabled -%}
-  listen              [::]:{{ nginx.port | default('80', true) }};
+  listen              [::]:{{ listener.port }} {% if listener.ssl %}ssl http2{% endif %};
   {%- endif %}
-  server_name         _;
+  server_name         {{ listener.server_name }};
 
-  include "/etc/nginx/conf.d/logs-conf.cloudify";
-
-  # serve the UI
-  include "/etc/nginx/conf.d/ui-locations.cloudify";
-
-  # serve the Composer
-  include "/etc/nginx/conf.d/composer-location.cloudify";
-
-  # Serves the Rest Service (backed by the cloudify-rest upstream).
-  include "/etc/nginx/conf.d/rest-location.cloudify";
-
-  # Serves the File Server and proxy for the Cloudify-API.
-  include "/etc/nginx/conf.d/authd-location.cloudify";
-}
-{%- else -%}
-# REST and UI external server
-server {
-  # server listening for external requests
-  listen              {{ nginx.port | default('443', true) }} ssl http2;
-  {% if ipv6_enabled -%}
-  listen              [::]:{{ nginx.port | default('443', true) }} ssl http2;
-  {%- endif %}
-  server_name         {{ manager.public_ip }};
-
-  ssl_certificate     {{ constants.EXTERNAL_CERT_PATH }};
-  ssl_certificate_key {{ constants.EXTERNAL_KEY_PATH }};
+  {% if listener.ssl %}
+  ssl_certificate     {{ listener.cert_path }};
+  ssl_certificate_key {{ listener.key_path }};
+  {% endif %}
 
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -66,12 +42,9 @@ server {
   # Serves the File Server and proxy for the Cloudify-API.
   include "/etc/nginx/conf.d/authd-location.cloudify";
 }
+{% endfor %}
 
-{#
-  if port is set by the user, then it is non-standard and not 443, so
-  let's skip the standard 80 port as well
-#}
-{% if nginx.port is none %}
+{% if nginx.nonssl_access_blocked %}
 server {
   listen 80;
   {% if ipv6_enabled -%}
@@ -93,28 +66,3 @@ server {
   }
 }
 {% endif %}
-{%- endif -%}
-
-# REST and UI internal server - always SSL enabled
-server {
-  # server listening for internal requests
-  listen              {{ constants.INTERNAL_REST_PORT }} ssl default_server http2;
-  {% if ipv6_enabled -%}
-  listen              [::]:{{ constants.INTERNAL_REST_PORT }} ssl default_server http2;
-  {%- endif %}
-
-  server_name         _;
-
-  ssl_certificate     {{ constants.INTERNAL_CERT_PATH }};
-  ssl_certificate_key {{ constants.INTERNAL_KEY_PATH }};
-
-  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-  include "/etc/nginx/conf.d/logs-conf.cloudify";
-{% if 'manager_service' in services_to_install %}
-  # Serves the Rest Service (backed by the cloudify-rest upstream).
-  include "/etc/nginx/conf.d/rest-location.cloudify";
-
-  # Serves the File Server and proxy for the Cloudify-API.
-  include "/etc/nginx/conf.d/authd-location.cloudify";{% endif %}
-}

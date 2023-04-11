@@ -112,6 +112,12 @@ class MgmtWorker(BaseComponent):
 
     def upgrade(self):
         self._deploy_admin_token()
+        # Reconfigure mgmtworker for changed port in CM 7+
+        service.configure(
+            'cloudify-mgmtworker',
+            external_configure_params=self._mgmtworker_render_context(),
+        )
+        service.enable('cloudify-mgmtworker')
         super(MgmtWorker, self).upgrade()
 
     def configure(self):

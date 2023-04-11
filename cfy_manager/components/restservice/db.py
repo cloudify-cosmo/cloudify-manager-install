@@ -2,12 +2,10 @@ from contextlib import contextmanager
 import json
 import time
 import uuid
-from os.path import join
+from os.path import isfile, join
 
-from .manager_config import make_manager_config
 from ...components_constants import (
     ADMIN_PASSWORD,
-    ADMIN_USERNAME,
     AGENT,
     CONFIG,
     HOSTNAME,
@@ -109,6 +107,17 @@ def _create_database(db_name, user):
         'server_db_name', logger)
 
 
+def run_db_migration():
+    logger.notice('Running DB migrations...')
+    common.run(['/opt/manager/env/bin/alembic', 'upgrade', 'head'],
+               cwd='/opt/manager/resources/cloudify/migrations')
+    current_db = common.run(
+        ['/opt/manager/env/bin/alembic', 'current'],
+        cwd='/opt/manager/resources/cloudify/migrations'
+    ).aggr_stdout.strip()
+    logger.notice(f'DB successfully migrated to schema revision: {current_db}')
+
+
 def get_provider_context():
     context = {'cloudify': config[PROVIDER_CONTEXT]}
     context['cloudify']['cloudify_agent'] = config[AGENT]
@@ -123,7 +132,6 @@ def create_populate_db_args_dict():
     args_dict = {
         'db_migrate_dir': join(constants.MANAGER_RESOURCES_HOME, 'cloudify',
                                'migrations'),
-        'config': make_manager_config(),
         'premium': 'premium' if is_premium_installed() else 'community',
         'db_nodes': _create_db_nodes_info(),
         'usage_collector': _create_usage_collector_info(),
@@ -188,7 +196,7 @@ def run_script(script_name, script_input=None, configs=None):
 
     :param script_name: script name inside the SCRIPTS_PATH dir.
     :param script_input: script input to pass to the script.
-    :param configs: keword arguments dict to pass to _create_process_env(..).
+    :param configs: keyword arguments dict to pass to _create_process_env(..).
     :return: the script's returned when it finished its execution.
     """
     env_dict = _create_process_env(**configs) if configs else None
@@ -205,18 +213,16 @@ def populate_db(configs, additional_config_files=None):
     logger.notice('Populating DB and creating AMQP resources...')
     args_dict = create_populate_db_args_dict()
     run_script('create_tables_and_add_defaults.py', args_dict, configs)
-    if (
-        config[MANAGER][SECURITY][ADMIN_USERNAME] and
-        config[MANAGER][SECURITY][ADMIN_PASSWORD]
-    ):
-        args = ['manager_rest.configure_manager']
-        args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
-        for path in config['config_files']:
+    args = ['manager_rest.configure_manager']
+    if isfile(constants.DEFAULT_CONFIG_PATH):
+        args += ['--config-file-path', constants.DEFAULT_CONFIG_PATH]
+    args += ['--config-file-path', join(CONFIG_PATH, 'authorization.conf')]
+    for path in config['config_files']:
+        args += ['--config-file-path', path]
+    if additional_config_files:
+        for path in additional_config_files:
             args += ['--config-file-path', path]
-        if additional_config_files:
-            for path in additional_config_files:
-                args += ['--config-file-path', path]
-        run_script_on_manager_venv('-m', script_args=args)
+    run_script_on_manager_venv('-m', script_args=args)
     logger.notice('DB populated and AMQP resources successfully created')
 
 

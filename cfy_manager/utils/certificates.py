@@ -1,9 +1,17 @@
-import os
 import argh
+import grp
+import itertools
 import json
+import os
+import pwd
 import string
-from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
+
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from . import network
 from .common import chown, chmod, copy, move, run
@@ -17,7 +25,7 @@ from ..constants import (
     SSL_CERTS_TARGET_DIR,
 )
 from ..exceptions import ProcessExecutionError
-from .files import write, write_to_tempfile, remove
+from .files import write
 
 from ..logger import get_logger, setup_console_logger
 from .. import constants as const
@@ -26,22 +34,49 @@ from cfy_manager.exceptions import ValidationError
 logger = get_logger('Certificates')
 
 
+CERT_SIZE = 4096
+
+
+def load_pem_private_key(key_path, password=None):
+    with open(key_path, 'rb') as key_file:
+        key_data = key_file.read()
+        try:
+            return serialization.load_pem_private_key(
+                key_data,
+                password=password.encode() if password else None,
+            )
+        except TypeError:
+            if password:
+                # a password was provided, but the key is not encrypted,
+                # so the password is not necessary. Just load the key again,
+                # without a password this time.
+                # (this is consistent with what `openssl rsa` does)
+                return serialization.load_pem_private_key(
+                    key_data,
+                    password=None,
+                )
+            raise
+
+
 def get_cert_cn(cert_path):
-    raw = run(
-        ['openssl', 'x509', '-noout', '-subject', '-in', cert_path]
-    ).aggr_stdout
-    # The raw value will be something like "subject=CN = *.cloudify.co"
-    # or "subject=C = US, O = DigiCert Inc, OU = www.digicert.com, CN = DigiCert Global Root CA"  # noqa
-    _subject, _, sections = raw.partition('=')
-    for section in sections.split(','):
-        section_type, section_value = section.split('=', 1)
-        # In some cases we see a leading slash on the subject
-        # e.g. "subject = /CN=cloudify"
-        # It can also have surrounding spaces.
-        section_type = section_type.strip().lstrip('/').lower()
-        if section_type == 'cn':
-            return section_value.strip()
-    return None
+    with open(cert_path, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
+    try:
+        return cert.subject.get_attributes_for_oid(
+            x509.oid.NameOID.COMMON_NAME)[0].value
+    except IndexError:
+        return None
+
+
+def get_cert_sans(cert_path):
+    """Return a list of SubjectAlternativeNames on the given cert"""
+    with open(cert_path, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
+    return cert.extensions.get_extension_for_class(
+        x509.SubjectAlternativeName,
+    ).value
 
 
 def handle_ca_cert(logger, generate_if_missing=True):
@@ -109,29 +144,6 @@ def _ca_cert_deployed():
         return os.path.exists(const.CA_CERT_PATH)
 
 
-def _format_ips(ips, cn=None):
-    altnames = set(ips)
-
-    if cn:
-        altnames.add(cn)
-
-    subject_altdns = [
-        'DNS:{name}'.format(name=name)
-        for name in altnames
-    ]
-
-    subject_altips = []
-    for name in altnames:
-        if network.parse_ip(name):
-            subject_altips.append('IP:{name}'.format(name=name))
-
-    subjects = subject_altdns + subject_altips
-
-    cert_metadata = ','.join(subjects)
-
-    return cert_metadata
-
-
 def store_cert_metadata(hostname=None,
                         new_brokers=None,
                         new_managers=None,
@@ -170,158 +182,107 @@ def load_cert_metadata(filename=const.CERT_METADATA_FILE_PATH):
         return {}
 
 
-CSR_CONFIG_TEMPLATE = """
-[req]
-distinguished_name = req_distinguished_name
-x509_extensions = v3_ext
-[ req_distinguished_name ]
-commonName = _common_name # ignored, _default is used instead
-commonName_default = {cn}
-[ v3_ext ]
-basicConstraints=CA:false
-authorityKeyIdentifier=keyid:true
-subjectKeyIdentifier=hash
-subjectAltName={metadata}
-"""
-
-CA_CONFIG = """
-[req]
-distinguished_name = req_distinguished_name
-x509_extensions = v3_ext
-[ req_distinguished_name ]
-commonName = _common_name # ignored, _default is used instead
-commonName_default = Cloudify generated certificate
-[ v3_ext ]
-basicConstraints=CA:true
-subjectKeyIdentifier=hash
-"""
-
-
-@contextmanager
-def _csr_config(cn, metadata):
-    """Prepare a config file for creating a ssl CSR.
-
-    :param cn: the subject commonName
-    :param metadata: string to use as the subjectAltName, should be formatted
-                     like "IP:1.2.3.4,DNS:www.com"
-    """
-    csr_config = CSR_CONFIG_TEMPLATE.format(cn=cn, metadata=metadata)
-    temp_config_path = write_to_tempfile(csr_config)
-
-    try:
-        yield temp_config_path
-    finally:
-        remove(temp_config_path)
-
-
-@contextmanager
-def _ca_config():
-    temp_config_path = write_to_tempfile(CA_CONFIG)
-
-    try:
-        yield temp_config_path
-    finally:
-        remove(temp_config_path)
-
-
-def _generate_ssl_certificate(ips,
-                              cn,
-                              cert_path,
-                              key_path,
-                              sign_cert=None,
-                              sign_key=None,
-                              sign_key_password=None,
-                              key_perms='440',
-                              cert_perms='444',
-                              owner='cfyuser',
-                              group='cfyuser'):
+def _generate_ssl_certificate(
+    ips: list[str],
+    cn: str,
+    cert_path: str | Path,
+    key_path: str | Path,
+    sign_cert_path: str | Path = None,
+    sign_key_path: str | Path = None,
+    sign_key_password: str = None,
+    key_perms: int = 0o440,
+    cert_perms: int = 0o444,
+    owner: str | int = 'cfyuser',
+    group: str | int = 'cfyuser',
+):
     """Generate a public SSL certificate and a private SSL key
 
     :param ips: the ips (or names) to be used for subjectAltNames
-    :type ips: List[str]
     :param cn: the subject commonName for the new certificate
-    :type cn: str
     :param cert_path: path to save the new certificate to
-    :type cert_path: str
     :param key_path: path to save the key for the new certificate to
-    :type key_path: str
     :param sign_cert: path to the signing cert (self-signed by default)
-    :type sign_cert: str
     :param sign_key: path to the signing cert's key (self-signed by default)
-    :type sign_key: str
     :param key_perms: permissions to apply to created key file
-    :type key_perms: str
     :param cert_perms: permissions to apply to created cert file
-    :type cert_perms: str
     :param owner: owner of key and certificate
-    :type owner: str
     :param group: group of key and certificate
-    :type owner: str
     :return: The path to the cert and key files on the manager
     """
-    # Remove duplicates from ips and ensure CN is in SANs
-    subject_altnames = _format_ips(ips, cn)
+    if isinstance(owner, str):
+        owner = pwd.getpwnam(owner).pw_uid
+    if isinstance(group, str):
+        group = grp.getgrnam(group).gr_gid
+
+    names = set()
+    for addr in itertools.chain(ips, [cn]):
+        if parsed_ip := network.parse_ip(addr):
+            names.add(x509.IPAddress(parsed_ip))
+            # don't break here: still add the IP as a DNS name:
+            # some browsers require that
+        names.add(x509.DNSName(addr))
+
     logger.debug(
-        'Generating SSL certificate {0} and key {1} with subjectAltNames: {2}'
-        .format(cert_path, key_path, subject_altnames)
+        'Generating SSL certificate %s and key %s with subjectAltNames: %s',
+        cert_path, key_path, names,
     )
 
-    csr_path = '{0}.csr'.format(cert_path)
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=CERT_SIZE,
+    )
+    subject = issuer = x509.Name([
+        x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, cn),
+    ])
 
-    with _csr_config(cn, subject_altnames) as conf_path:
-        run([
-            'openssl', 'req',
-            '-newkey', 'rsa:2048',
-            '-nodes',
-            '-batch',
-            '-sha256',
-            '-config', conf_path,
-            '-out', csr_path,
-            '-keyout', key_path,
-        ])
-        if os.geteuid() == 0:
-            # Don't try to change cert/key ownership if we're not root
-            # (this indicates we're running non-sudo-commands such as
-            # generate-test-cert)
-            chown(owner, group, key_path)
-            chmod(key_perms, key_path)
-        x509_command = [
-            'openssl', 'x509',
-            '-days', '3650',
-            '-sha256',
-            '-req', '-in', csr_path,
-            '-out', cert_path,
-            '-extensions', 'v3_ext',
-            '-extfile', conf_path
-        ]
+    if sign_cert_path and sign_key_path:
+        sign_key = load_pem_private_key(
+            sign_key_path,
+            password=sign_key_password,
+        )
+        with open(sign_cert_path, 'rb') as sign_cert_file:
+            sign_cert = x509.load_pem_x509_certificate(sign_cert_file.read())
+        issuer = sign_cert.subject
+    else:
+        sign_key = key
 
-        if sign_cert and sign_key:
-            x509_command += [
-                '-CA', sign_cert,
-                '-CAkey', sign_key,
-                '-CAcreateserial'
-            ]
-            if sign_key_password:
-                x509_command += [
-                    '-passin',
-                    u'pass:{0}'.format(sign_key_password).encode('utf-8')
-                ]
-        else:
-            x509_command += [
-                '-signkey', key_path
-            ]
-        run(x509_command)
-        if os.geteuid() == 0:
-            # Don't try to change cert/key ownership if we're not root
-            # (this indicates we're running non-sudo-commands such as
-            # generate-test-cert)
-            chown(owner, group, cert_path)
-            chmod(cert_perms, cert_path)
-        remove(csr_path)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        # allow for up to 1 day of time drift, in case other nodes have
+        # unsynced clocks
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
+        # valid for 10 years
+        .not_valid_after(datetime.utcnow() + timedelta(days=3650))
+        .add_extension(x509.SubjectAlternativeName(names), critical=False)
+        .sign(sign_key, hashes.SHA256())
+    )
 
-    logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
-        cert_path, key_path
-    ))
+    with open(key_path, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        key_file.write(key_pem)
+    with open(cert_path, 'wb') as cert_file:
+        cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
+
+    if os.geteuid() == 0:
+        # Don't try to change cert/key ownership if we're not root
+        # (this indicates we're running non-sudo-commands such as
+        # generate-test-cert)
+        os.chown(cert_path, owner, group)
+        os.chmod(cert_path, cert_perms)
+        os.chown(key_path, owner, group)
+        os.chmod(key_path, key_perms)
+
+    logger.debug(
+        'Generated SSL certificate: %s and key: %s', cert_path, key_path
+    )
     return cert_path, key_path
 
 
@@ -331,50 +292,82 @@ def generate_internal_ssl_cert(ips, cn):
         cn,
         const.INTERNAL_CERT_PATH,
         const.INTERNAL_KEY_PATH,
-        sign_cert=const.CA_CERT_PATH,
-        sign_key=const.CA_KEY_PATH
+        sign_cert_path=const.CA_CERT_PATH,
+        sign_key_path=const.CA_KEY_PATH
     )
     return cert_path, key_path
 
 
-def generate_external_ssl_cert(ips, cn, sign_cert=None, sign_key=None,
-                               sign_key_password=None):
+def generate_external_ssl_cert(
+    ips,
+    cn,
+    sign_cert_path=None,
+    sign_key_path=None,
+    sign_key_password=None,
+):
     return _generate_ssl_certificate(
         ips,
         cn,
         const.EXTERNAL_CERT_PATH,
         const.EXTERNAL_KEY_PATH,
-        sign_cert=sign_cert,
-        sign_key=sign_key,
+        sign_cert_path=sign_cert_path,
+        sign_key_path=sign_key_path,
         sign_key_password=sign_key_password
     )
 
 
 def generate_ca_cert(cert_path=const.CA_CERT_PATH,
                      key_path=const.CA_KEY_PATH):
-    with _ca_config() as conf_path:
-        run([
-            'openssl', 'req',
-            '-x509',
-            '-nodes',
-            '-newkey', 'rsa:2048',
-            '-days', '3650',
-            '-batch',
-            '-out', cert_path,
-            '-keyout', key_path,
-            '-config', conf_path,
-        ])
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=CERT_SIZE,
+    )
+    subject = issuer = x509.Name([
+        x509.NameAttribute(
+            x509.oid.NameOID.COMMON_NAME,
+            'Cloudify generated certificate',
+        ),
+    ])
+
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        # allow for up to 1 day of time drift, in case other nodes have
+        # unsynced clocks
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
+        # valid for 10 years
+        .not_valid_after(datetime.utcnow() + timedelta(days=3650))
+        .add_extension(
+            x509.BasicConstraints(ca=True, path_length=None),
+            critical=False,
+        )
+        .sign(key, hashes.SHA256())
+    )
+    with open(key_path, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        key_file.write(key_pem)
+    with open(cert_path, 'wb') as cert_file:
+        cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
 
 
 def remove_key_encryption(src_key_path,
                           dst_key_path,
                           key_password):
-    run([
-        'openssl', 'rsa',
-        '-in', src_key_path,
-        '-out', dst_key_path,
-        '-passin', u'pass:{0}'.format(key_password).encode('utf-8')
-    ])
+    key = load_pem_private_key(src_key_path, password=key_password)
+    with open(dst_key_path, 'wb') as key_file:
+        key_pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        key_file.write(key_pem)
 
 
 @argh.arg('--metadata',
@@ -414,8 +407,8 @@ def create_internal_certs(manager_hostname=None,
             # We only support ipsetter on nodes with managers, so the fact
             # that this would break if used on a node containing only rmq
             # doesn't matter
-            sign_cert=const.CA_CERT_PATH,
-            sign_key=const.CA_KEY_PATH,
+            sign_cert_path=const.CA_CERT_PATH,
+            sign_key_path=const.CA_KEY_PATH,
         )
 
     store_cert_metadata(
@@ -456,8 +449,8 @@ def create_external_certs(private_ip=None,
         cn=public_ip,
         cert_path=const.EXTERNAL_CERT_PATH,
         key_path=const.EXTERNAL_KEY_PATH,
-        sign_cert=sign_cert,
-        sign_key=sign_key,
+        sign_cert_path=sign_cert,
+        sign_key_path=sign_key,
         sign_key_password=sign_key_password
     )
 
@@ -633,9 +626,14 @@ def get_ca_filename(new_ca_location, default_ca_location):
 
 
 def certs_identical(cert_a, cert_b):
-    content_a = run(['openssl', 'x509', '-noout', '-modulus', '-in', cert_a])
-    content_b = run(['openssl', 'x509', '-noout', '-modulus', '-in', cert_b])
-    return content_a.aggr_stdout == content_b.aggr_stdout
+    with open(cert_a, 'rb') as cert_a_file:
+        cert_a = x509.load_pem_x509_certificate(cert_a_file.read())
+    with open(cert_b, 'rb') as cert_b_file:
+        cert_b = x509.load_pem_x509_certificate(cert_b_file.read())
+
+    cert_a_modulus = cert_a.public_key().public_numbers().n
+    cert_b_modulus = cert_b.public_key().public_numbers().n
+    return cert_a_modulus == cert_b_modulus
 
 
 def clean_certs():
@@ -705,7 +703,12 @@ def validate_certificates(cert_filename=None, key_filename=None,
     if ca_filename:
         check_ssl_file(ca_filename, kind='Cert')
         if cert_filename:
-            _check_signed_by(ca_filename, cert_filename)
+            if not is_signed_by(ca_filename, cert_filename):
+                raise ValidationError(
+                    f'Provided certificate {cert_filename} was not signed '
+                    f'by provided CA {ca_filename}'
+                )
+
         if ca_key_filename and os.path.exists(ca_key_filename):
             check_cert_key_match(ca_filename, ca_key_filename, password)
 
@@ -713,18 +716,16 @@ def validate_certificates(cert_filename=None, key_filename=None,
 def check_cert_key_match(cert_filename, key_filename, password=None):
     check_ssl_file(key_filename, kind='Key', password=password)
     check_ssl_file(cert_filename, kind='Cert')
-    key_modulus_command = ['openssl', 'rsa', '-noout', '-modulus',
-                           '-in', key_filename]
-    if password:
-        key_modulus_command += [
-            '-passin',
-            u'pass:{0}'.format(password).encode('utf-8')
-        ]
-    cert_modulus_command = ['openssl', 'x509', '-noout', '-modulus',
-                            '-in', cert_filename]
-    key_modulus = run(key_modulus_command).aggr_stdout.strip()
-    cert_modulus = run(cert_modulus_command).aggr_stdout.strip()
-    if cert_modulus != key_modulus:
+
+    with open(cert_filename, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
+    key = load_pem_private_key(key_filename, password=password)
+
+    cert_pubkey = cert.public_key()
+    key_pubkey = key.public_key()
+
+    if cert_pubkey.public_numbers().n != key_pubkey.public_numbers().n:
         raise ValidationError(
             'Key {key_path} does not match the cert {cert_path}'.format(
                 key_path=key_filename,
@@ -740,41 +741,35 @@ def check_ssl_file(filename, kind='Key', password=None):
             '{0} file {1} does not exist'
             .format(kind, filename))
     if kind == 'Key':
-        check_command = ['openssl', 'rsa', '-in', filename, '-check', '-noout']
-        if password:
-            check_command += [
-                '-passin',
-                u'pass:{0}'.format(password).encode('utf-8')
-            ]
+        try:
+            load_pem_private_key(filename, password=password)
+        except ValueError as e:
+            raise ValidationError(f'Cert file {filename} is invalid: {e}')
     elif kind == 'Cert':
-        check_command = ['openssl', 'x509', '-in', filename, '-noout']
+        try:
+            with open(filename, 'rb') as cert_file:
+                x509.load_pem_x509_certificate(cert_file.read())
+        except ValueError as e:
+            raise ValidationError(f'Cert file {filename} is invalid: {e}')
     else:
         raise ValueError('Unknown kind: {0}'.format(kind))
-    proc = run(check_command, ignore_failures=True)
-    if proc.returncode != 0:
-        password_err = ''
-        if password:
-            password_err = ' (or the provided password is incorrect)'
-        raise ValidationError('{0} file {1} is invalid{2}'
-                              .format(kind, filename, password_err))
 
 
-def _check_signed_by(ca_filename, cert_filename):
-    ca_check_command = [
-        'openssl', 'verify',
-        '-CAfile', ca_filename,
-        # also give openssl the cert itself so that it can look up
-        # intermediaries, if any
-        '-untrusted', cert_filename,
-        cert_filename
-    ]
+def is_signed_by(ca_filename, cert_filename):
+    with open(ca_filename, 'rb') as ca_file:
+        ca_cert = x509.load_pem_x509_certificate(ca_file.read())
+
+    with open(cert_filename, 'rb') as cert_file:
+        cert = x509.load_pem_x509_certificate(cert_file.read())
+
     try:
-        run(ca_check_command)
-    except ProcessExecutionError:
-        raise ValidationError(
-            'Provided certificate {cert} was not signed by provided '
-            'CA {ca}'.format(
-                cert=cert_filename,
-                ca=ca_filename,
-            )
+        ca_cert.public_key().verify(
+            cert.signature,
+            cert.tbs_certificate_bytes,
+            padding.PKCS1v15(),
+            cert.signature_hash_algorithm,
         )
+    except InvalidSignature:
+        return False
+    else:
+        return True

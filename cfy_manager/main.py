@@ -63,6 +63,7 @@ from .constants import (
     CA_CERT_FILENAME,
     EXTERNAL_CA_CERT_FILENAME,
     EXTERNAL_CA_CERT_PATH,
+    UPGRADE_IN_PROGRESS,
 )
 from .encryption.encryption import update_encryption_key
 from .exceptions import BootstrapError
@@ -864,6 +865,7 @@ def validate_command(verbose=False,
         config_file=config_file,
     )
     components = _get_components()
+    set_globals()
     validate(components=components)
     validate_dependencies(components=components)
 
@@ -892,11 +894,6 @@ def _get_packages():
     _, rh_version = _get_os_distro()
     if service_is_in_config(MANAGER_SERVICE):
         manager_packages = sources.manager
-        # RedHat version-specific packages
-        if rh_version == "7":
-            manager_packages += sources.manager_rh7
-        elif rh_version == "8":
-            manager_packages += sources.manager_rh8
         # Premium components
         manager_packages += sources.manager_cluster + sources.manager_premium
         packages += manager_packages
@@ -1031,6 +1028,7 @@ def configure(verbose=False,
     _validate_components_prepared('configure', config_file)
     logger.notice('Configuring desired components...')
     components = _get_components()
+    set_globals()
     validate(components=components)
     set_globals()
 
@@ -1209,8 +1207,10 @@ def upgrade(verbose=False, private_ip=None, public_ip=None, config_file=None):
     """Update the current manager using the available yum repos."""
     _prepare_execution(verbose, private_ip, public_ip,
                        config_file=config_file)
+    config[UPGRADE_IN_PROGRESS] = True
     _validate_components_prepared('restart', config_file)
     components = _get_components()
+    set_globals()
     validate(components=components, only_install=False)
     upgrade_components = _get_components()
     packages_to_update, _ = _get_packages()
