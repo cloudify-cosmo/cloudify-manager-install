@@ -79,7 +79,7 @@ node_templates:
                 InstanceType: m5.xlarge
                 UserData: { get_attribute: [cloud_init, cloud_config] }
                 BlockDeviceMappings:
-                  - DeviceName: "/1dev/xvda"
+                  - DeviceName: "/dev/xvda"
                     Ebs:
                       DeleteOnTermination: true
                       VolumeSize: 30
