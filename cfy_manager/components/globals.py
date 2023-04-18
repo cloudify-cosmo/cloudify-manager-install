@@ -122,7 +122,7 @@ def _set_nginx_listeners():
     )
     for internal_port in internal_ports:
         listeners.append({
-            'port': config[MANAGER]['internal_rest_port'],
+            'port': internal_port,
             'server_name': '_',
             'ssl': True,
             'cert_path': constants.INTERNAL_CERT_PATH,
