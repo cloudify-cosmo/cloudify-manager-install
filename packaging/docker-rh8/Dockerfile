@@ -10,10 +10,11 @@ RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
 RUN yum makecache --refresh
-RUN yum install -y https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/libnsl-2.28-189.5.el8_6.$arch.rpm \
-    https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/glibc-2.28-189.5.el8_6.$arch.rpm \
-    https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/glibc-common-2.28-189.5.el8_6.$arch.rpm \
-    https://repo.almalinux.org/almalinux/8/BaseOS/$arch/os/Packages/glibc-langpack-en-2.28-189.5.el8_6.$arch.rpm
+
+RUN yum install -y https://repository.cloudifysource.org/cloudify/components/libnsl-2.28-189.el8.$arch.rpm \
+    https://repository.cloudifysource.org/cloudify/components/glibc-2.28-189.5.el8.$arch.rpm \
+    https://repository.cloudifysource.org/cloudify/components/glibc-common-2.28-189.el8.$arch.rpm \
+    https://repository.cloudifysource.org/cloudify/components/glibc-langpack-en-2.28-189.el8.$arch.rpm
 RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools which cronie \
     initscripts openssh-clients sudo \
