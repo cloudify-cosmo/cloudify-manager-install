@@ -14,7 +14,9 @@ RUN yum makecache --refresh
 RUN yum install -y https://repository.cloudifysource.org/cloudify/components/libnsl-2.28-189.el8.$arch.rpm \
     https://repository.cloudifysource.org/cloudify/components/glibc-2.28-189.el8.$arch.rpm \
     https://repository.cloudifysource.org/cloudify/components/glibc-common-2.28-189.el8.$arch.rpm \
-    https://repository.cloudifysource.org/cloudify/components/glibc-langpack-en-2.28-189.el8.$arch.rpm
+    https://repository.cloudifysource.org/cloudify/components/glibc-langpack-en-2.28-189.el8.$arch.rpm \
+    https://repository.cloudifysource.org/cloudify/components/glibc-minimal-langpack-2.28-189.el8.$arch.rpm
+
 RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools which cronie \
     initscripts openssh-clients sudo \
