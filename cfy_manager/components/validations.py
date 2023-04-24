@@ -420,16 +420,22 @@ def _check_internal_cert_sans():
 
 
 def _check_external_cert_sans():
-    external_sans = get_cert_sans(config[SSL_INPUTS]['external_cert_path'])
-    if parsed_ip := parse_ip(config[MANAGER][PUBLIC_IP]):
-        expected = x509.IPAddress(parsed_ip)
-    else:
-        expected = x509.DNSName(config[MANAGER][PUBLIC_IP])
-    if expected not in external_sans:
+    if parse_ip(config[MANAGER][PUBLIC_IP]):
+        # we can't really cope with this, because SNI doesn't work for
+        # IP addresses, so nginx would end up returning this certificate
+        # for all requests
         raise ValidationError(
-            "External cert must contain the public "
-            f"address: {config[MANAGER][PUBLIC_IP]}"
+            "When public_ip is an IP address (not a hostname or FQDN), "
+            "the external certificate cannot be provided"
         )
+    else:
+        external_sans = get_cert_sans(config[SSL_INPUTS]['external_cert_path'])
+        expected = x509.DNSName(config[MANAGER][PUBLIC_IP])
+        if expected not in external_sans:
+            raise ValidationError(
+                "External cert must contain the public "
+                f"address: {config[MANAGER][PUBLIC_IP]}"
+            )
 
 
 def _validate_postgres_server_and_cloudify_input_difference():
