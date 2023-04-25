@@ -1,6 +1,6 @@
 manager:
   private_ip: CONTAINER_IP
-  public_ip: CONTAINER_IP
+  public_ip: manager.local
   hostname: manager1
   security:
     ssl_enabled: true
