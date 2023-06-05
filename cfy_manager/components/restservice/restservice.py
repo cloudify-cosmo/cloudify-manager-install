@@ -4,7 +4,7 @@ import base64
 import random
 import string
 import subprocess
-from os.path import join, exists
+from os.path import join, exists, isfile
 from collections import namedtuple
 
 import requests
@@ -80,15 +80,24 @@ class RestService(BaseComponent):
         logger.info('Deploying REST authorization, REST Service configuration'
                     ' and Cloudify licenses public key...')
         resource = namedtuple('Resource', 'src dst')
-        resources = [
-            resource(
-                src=join(CONFIG_PATH, 'authorization.conf'),
-                dst=REST_AUTHORIZATION_CONFIG_PATH
-            ),
-            resource(
-                src=join(CONFIG_PATH, 'license_key.pem.pub'),
-                dst=CLOUDIFY_LICENSE_PUBLIC_KEY_PATH
-            )]
+        resources = []
+
+        if isfile(join(CONFIG_PATH, 'authorization.conf')):
+            resources.append(
+                resource(
+                    src=join(CONFIG_PATH, 'authorization.conf'),
+                    dst=REST_AUTHORIZATION_CONFIG_PATH
+                )
+            )
+
+        if isfile(join(CONFIG_PATH, 'license_key.pem.pub')):
+            resources.append(
+                resource(
+                    src=join(CONFIG_PATH, 'license_key.pem.pub'),
+                    dst=CLOUDIFY_LICENSE_PUBLIC_KEY_PATH
+                )
+            )
+
         for resource in resources:
             deploy(resource.src, resource.dst)
             common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP,
