@@ -13,6 +13,17 @@ upstream cloudify-rest {
   server 127.0.0.1:{{ restservice.port }};
 }
 
+
+{% if nginx.rate_limit.enabled %}
+map $http_execution_token $no_token_limit {
+  default $binary_remote_addr;
+  "~.+" "";
+}
+
+limit_req_zone $no_token_limit zone=ratelimit:10m rate={{ nginx.rate_limit.rate }};
+{% endif %}
+
+
 {% for listener in nginx.listeners -%}
 server {
   listen              {{ listener.port }} {% if listener.ssl %}ssl http2{% endif %};
@@ -27,6 +38,10 @@ server {
   {% endif %}
 
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+  {% if nginx.rate_limit.enabled %}
+  limit_req zone=ratelimit burst={{ nginx.rate_limit.burst }} delay={{ nginx.rate_limit.delay }};
+  {% endif %}
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 
@@ -51,6 +66,10 @@ server {
   listen              [::]:80;
   {%- endif %}
   server_name _;
+
+  {% if nginx.rate_limit.enabled %}
+  limit_req zone=ratelimit;
+  {% endif %}
 
   # For REST API requests, return HTTP 400.
   # We don't want to automatically redirect API requests which
