@@ -316,7 +316,9 @@ class PostgresqlServer(BaseComponent):
         os.close(fd)
         with open(temp_hba_path, 'a') as f:
             for line in lines:
-                if line.startswith(('host', 'local')):
+                if line.startswith('host') and 'trust' in line:
+                    line = line.replace('trust', 'md5')
+                elif line.startswith('local'):
                     line = line.replace('ident', 'md5')
                 f.write(line)
             if not re.search(PG_HBA_HOST_REGEX_PATTERN, '\n'.join(lines))\
