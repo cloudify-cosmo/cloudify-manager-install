@@ -8,7 +8,7 @@ import time
 import json
 import subprocess
 import pkg_resources
-from platform import architecture
+from platform import machine
 from tempfile import NamedTemporaryFile
 from traceback import format_exception
 import zipfile
@@ -908,7 +908,7 @@ def _get_packages():
 
     if service_is_in_config(QUEUE_SERVICE):
         queue_packages = sources.queue
-        if rh_version == "8" and architecture() == "x86_64":
+        if rh_version == "8" and machine() == "x86_64":
             queue_packages += sources.queue_rh8_x86
         else:
             queue_packages += sources.queue_other
