@@ -12,13 +12,13 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
 RUN yum makecache --refresh
 
-RUN dnf clean all && dnf check && dnf check-update
-
 RUN yum update -y && yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools \
     which cronie initscripts \
     openssh-clients sudo systemd-sysv \
-    dbus-glib ncurses libpq compat-openssl10 iproute
+    dbus-glib ncurses libpq compat-openssl10 iproute \
+    && yum clean all -y
+    
 
 EXPOSE 80 443 5671 53333
 COPY $config /tmp/config.yaml
