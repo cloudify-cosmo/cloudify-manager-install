@@ -13,8 +13,9 @@ RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.
 RUN yum makecache --refresh
 
 RUN yum update -y && yum install -y openssl-1.1.1k libselinux-utils \
-    logrotate python3-setuptools which cronie \
-    initscripts openssh-clients sudo \
+    logrotate python3-setuptools python3-backports python3-backports-ssl_match_hostname \
+    which cronie initscripts tcp_wrappers-libs \
+    openssh-clients sudo systemd-sysv \
     dbus-glib ncurses libpq compat-openssl10 iproute
 
 EXPOSE 80 443 5671 53333
