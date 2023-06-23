@@ -9,21 +9,21 @@ ARG gid=1500
 RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
+RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
 RUN yum makecache --refresh
-RUN yum install -y https://repository.cloudifysource.org/cloudify/components/libnsl-2.28-189.el8.$arch.rpm \
+RUN yum update -y && yum install -y https://repository.cloudifysource.org/cloudify/components/libnsl-2.28-189.el8.$arch.rpm \
     https://repository.cloudifysource.org/cloudify/components/glibc-2.28-189.el8.$arch.rpm \
     https://repository.cloudifysource.org/cloudify/components/glibc-common-2.28-189.el8.$arch.rpm \
     https://repository.cloudifysource.org/cloudify/components/glibc-langpack-en-2.28-189.el8.$arch.rpm \
     https://repository.cloudifysource.org/cloudify/components/glibc-minimal-langpack-2.28-189.el8.$arch.rpm
 
-RUN yum update -y && yum install -y openssl-1.1.1k libselinux-utils \
+RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools which cronie \
     initscripts openssh-clients sudo \
     dbus-glib ncurses libpq compat-openssl10 iproute
 
 EXPOSE 80 443 5671 53333
 COPY $config /tmp/config.yaml
-RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
 
 # `curl && yum install && rm` is the method that results in the lowest
 # overhead for the image size, even smaller than `yum install $url`.
