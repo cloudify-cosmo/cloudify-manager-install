@@ -23,6 +23,7 @@ RUN yum install -y openssl-1.1.1k libselinux-utils \
 
 EXPOSE 80 443 5671 53333
 COPY $config /tmp/config.yaml
+RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
 
 # `curl && yum install && rm` is the method that results in the lowest
 # overhead for the image size, even smaller than `yum install $url`.
