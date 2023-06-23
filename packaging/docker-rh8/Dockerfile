@@ -14,7 +14,7 @@ RUN yum makecache --refresh
 
 RUN yum update -y && yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools \
-    which cronie initscripts tcp_wrappers-libs \
+    which cronie initscripts \
     openssh-clients sudo systemd-sysv \
     dbus-glib ncurses libpq compat-openssl10 iproute
 
