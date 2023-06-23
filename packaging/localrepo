@@ -1,5 +1,5 @@
 [cloudify]
-name=Cloudify Manager local rpeo
+name=Cloudify Manager local repo
 baseurl=file:///opt/cloudify/sources
 enabled=1
 gpgcheck=0
