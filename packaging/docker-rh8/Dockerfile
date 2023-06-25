@@ -12,8 +12,8 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
 RUN yum makecache --refresh
 
-RUN yum update -y && yum -y install epel-release && \
-    yum clean all -y
+RUN yum update -y && yum -y install epel-release \
+    && yum clean all -y
 
 RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools \
