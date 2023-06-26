@@ -12,8 +12,19 @@ RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 RUN sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
 RUN yum makecache --refresh
 
-RUN yum update -y && yum -y install epel-release \
-    && yum clean all -y
+RUN yum install -y https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-8-x86_64/postgresql14-14.4-1PGDG.rhel8.x86_64.rpm \
+    https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-8-x86_64/postgresql14-devel-14.4-1PGDG.rhel8.x86_64.rpm \
+    https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-8-x86_64/postgresql14-libs-14.4-1PGDG.rhel8.x86_64.rpm \
+    https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-8-x86_64/postgresql14-server-14.4-1PGDG.rhel8.x86_64.rpm
+
+RUN yum update -y && yum groupinstall -y "Development Tools" \
+                  && yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
+                  && yum install -y epel-release \
+                  && yum clean all 
+
+RUN /usr/bin/crb enable \
+    && yum install -y dnf-plugins-core \
+    && yum clean all 
 
 RUN yum install -y openssl-1.1.1k libselinux-utils \
     logrotate python3-setuptools \
