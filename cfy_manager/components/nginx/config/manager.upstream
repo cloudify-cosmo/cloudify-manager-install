@@ -26,7 +26,7 @@ limit_req_zone $no_token_limit zone=ratelimit:10m rate={{ nginx.rate_limit.rate 
 
 {% for listener in nginx.listeners -%}
 server {
-  listen              {{ listener.port }} {% if listener.ssl %}ssl http2{% endif %};
+  listen              {{ listener.port }} {% if listener.ssl %}ssl http2{% endif %}{% if listener.server_name == "_" %} default_server{% endif %};
   {% if ipv6_enabled -%}
   listen              [::]:{{ listener.port }} {% if listener.ssl %}ssl http2{% endif %};
   {%- endif %}
