@@ -293,10 +293,10 @@ def using_systemd_service(service_name):
         return False
 
     if subprocess.run(
-        ['/bin/systemctl', 'is-enabled', service_name],
+        ['/bin/systemctl', 'is-active', service_name],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-    ).stdout.decode('utf-8').strip().lower() == 'enabled':
+    ).stdout.decode('utf-8').strip().lower() == 'active':
         logger.notice('Using system %s', service_name)
         return True
 
