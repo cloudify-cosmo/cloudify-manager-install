@@ -2,6 +2,7 @@ ARG base_image=centos:7
 FROM $base_image
 
 ARG rpm_file
+ARG lightweight=""
 ARG config=config.yaml
 ARG arch=x86_64
 ARG uid=1500
@@ -34,6 +35,10 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && rm -fr /opt/cloudify/sources/*.rpm -fr \
     && rm /etc/yum.repos.d/Cloudify-Local.repo \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \
+    # in "lightweight" mode, the UI is not installed
+    # ...really, it is uninstalled. For the 7.x branch, we can't edit the code
+    # itself to not install it, but we can uninstall it afterwards.
+    && if [ "$lightweight" ]; then yum erase -y cloudify-composer cloudify-stage; fi \
     && yum clean all
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
