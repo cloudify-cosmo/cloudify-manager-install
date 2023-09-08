@@ -85,7 +85,7 @@ def remove(paths, ignore_failure=False):
         paths = [paths]
     for path in paths:
         logger.debug('Removing %s...', path)
-        if os.path.ismount(path):
+        if os.path.isdir(path) and os.path.ismount(path):
             logger.debug('Mount point found in %s, deleting contents', path)
             remove(
                 [os.path.join(path, subpath) for subpath in os.listdir(path)],
