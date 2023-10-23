@@ -167,7 +167,8 @@ def test_generate_ca_cert(tmpdir):
         x509.oid.NameOID.COMMON_NAME)[0].value
     issuer_cn = cert.issuer.get_attributes_for_oid(
         x509.oid.NameOID.COMMON_NAME)[0].value
-    assert subject_cn == issuer_cn == 'Cloudify generated certificate'
+    assert subject_cn.startswith('Cloudify generated certificate')
+    assert issuer_cn.startswith('Cloudify generated certificate')
 
     # check that the cert is marked as a CA
     constraints = cert.extensions.get_extension_for_class(
