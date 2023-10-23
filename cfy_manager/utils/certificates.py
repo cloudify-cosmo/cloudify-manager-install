@@ -4,6 +4,7 @@ import itertools
 import json
 import os
 import pwd
+import random
 import string
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -316,6 +317,16 @@ def generate_external_ssl_cert(
     )
 
 
+def _generate_ca_cert_name():
+    # append a random suffix to the CA subject name so that multiple generated
+    # CAs dont have the same name, so that in tests, where we do generate
+    # test CAs many times, we don't hit conflicts.
+    # Note: if multiple CAs of the same subject name are put in a single
+    # CA bundle, only the first matching one is used
+    suffix = ''.join(random.choice(string.ascii_letters) for _ in range(8))
+    return 'Cloudify generated certificate ' + suffix
+
+
 def generate_ca_cert(cert_path=const.CA_CERT_PATH,
                      key_path=const.CA_KEY_PATH):
     key = rsa.generate_private_key(
@@ -325,7 +336,7 @@ def generate_ca_cert(cert_path=const.CA_CERT_PATH,
     subject = issuer = x509.Name([
         x509.NameAttribute(
             x509.oid.NameOID.COMMON_NAME,
-            'Cloudify generated certificate',
+            _generate_ca_cert_name(),
         ),
     ])
 
