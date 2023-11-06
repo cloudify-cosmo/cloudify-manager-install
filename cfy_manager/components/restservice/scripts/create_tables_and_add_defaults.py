@@ -7,8 +7,6 @@ import json
 import logging
 import argparse
 
-from flask_migrate import upgrade
-
 from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import db, models, get_storage_manager
@@ -25,9 +23,6 @@ def _init_db_tables(db_migrate_dir):
     # Clean up the DB, in case it's not a clean install
     db.drop_all()
     db.engine.execute('DROP TABLE IF EXISTS alembic_version;')
-
-    logger.info('Creating tables in the DB')
-    upgrade(directory=db_migrate_dir)
 
 
 def _insert_db_nodes(db_nodes):
