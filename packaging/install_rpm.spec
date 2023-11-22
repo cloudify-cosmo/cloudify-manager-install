@@ -43,6 +43,7 @@ sudo tar xf %{S:0} -C /
 # Create the venv with the custom Python symlinked in
 mkdir -p $(dirname %_venv)
 /opt/python3.11/bin/python3.11 -m venv %_venv
+%_venv/bin/pip install setuptools --upgrade
 %_venv/bin/pip install ${RPM_SOURCE_DIR}
 # Make sure the http.py spurious critical log is in the expected location (line 849)
 # We're doing this because the socket is already secured by filesystem permissions and
