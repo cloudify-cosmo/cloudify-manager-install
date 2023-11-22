@@ -39,7 +39,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     # ...really, it is uninstalled. For the 7.x branch, we can't edit the code
     # itself to not install it, but we can uninstall it afterwards.
     && if [ "$lightweight" ]; then yum erase -y cloudify-composer cloudify-stage; fi \
-    && yum clean all
+    && yum clean all \
     && yum update -y
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
