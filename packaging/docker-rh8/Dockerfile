@@ -41,7 +41,8 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     && rm -fr /opt/cloudify/sources/*.rpm -fr \
     && rm /etc/yum.repos.d/Cloudify-Local.repo \
     && if [ "$arch" != "aarch64" ]; then yum autoremove -y; fi \
-    && yum clean all
+    && yum clean all \
+    && yum update -y
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
