@@ -11,7 +11,7 @@ ARG gid=1500
 RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
-RUN yum update -y && yum install -y openssl-1.0.2k libselinux-utils \
+RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
     initscripts tcp_wrappers-libs openssh-clients sudo \
@@ -40,6 +40,7 @@ RUN curl -o /tmp/cloudify-manager-install.rpm $rpm_file \
     # itself to not install it, but we can uninstall it afterwards.
     && if [ "$lightweight" ]; then yum erase -y cloudify-composer cloudify-stage; fi \
     && yum clean all
+    && yum update -y
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
