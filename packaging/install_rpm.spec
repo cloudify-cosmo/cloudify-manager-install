@@ -60,6 +60,7 @@ cp -R /opt/python3.11 %{buildroot}/opt
 mkdir -p %{buildroot}/usr/bin
 mkdir -p %{buildroot}/etc/cloudify
 mkdir -p %{buildroot}/opt/cloudify
+mkdir -p %{buildroot}/run/cloudify
 mkdir -p %{buildroot}/etc/supervisord.d
 cp ${RPM_SOURCE_DIR}/config.yaml %{buildroot}/etc/cloudify/config.yaml
 cp ${RPM_SOURCE_DIR}/rpms %{buildroot}/opt/cloudify/sources -Lfr
@@ -127,3 +128,4 @@ cfy_manager install
 /usr/bin/supervisorctl
 /usr/bin/supervisord
 %attr(751,cfyuser,cfylogs) /var/log/cloudify
+%attr(750,cfyuser,cfyuser) /run/cloudify
