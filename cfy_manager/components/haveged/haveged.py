@@ -41,3 +41,9 @@ class Haveged(BaseComponent):
             # We don't manage this
             return
         super().start()
+
+    def stop(self, force=True):
+        if self._using_systemd_haveged():
+            # We don't manage this
+            return
+        super().stop(force)
