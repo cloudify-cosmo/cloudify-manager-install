@@ -28,7 +28,6 @@ Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  createrepo, gcc, postgresql-devel
 Requires(pre):  shadow-utils
-Requires:       python3 >= 3.6
 
 Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
 
