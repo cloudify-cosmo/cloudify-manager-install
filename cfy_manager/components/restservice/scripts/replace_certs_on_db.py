@@ -16,6 +16,7 @@
 
 from __future__ import print_function
 
+import os
 import json
 import argparse
 from datetime import datetime
@@ -38,7 +39,7 @@ def update_cert(cert_path, name):
             instance.value = cert
             instance.updated_at = datetime.now()
             sm.update(instance)
-            print('Replaced cert {0} on DB'.format(name))
+            print('Replaced cert {0} on DB'.format(instance.name))
             return
 
     print('CA cert {0} was already replaced'.format(name))
@@ -66,7 +67,7 @@ def main():
     args = parser.parse_args()
     init_flask_app()
 
-    with open(args.input, 'r') as f:
+    with open(os.path.basename(args.input), 'r') as f:
         script_input = json.load(f)
 
     update_cert(script_input.get('cert_path'), script_input.get('name'))

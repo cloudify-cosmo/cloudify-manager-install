@@ -1,4 +1,5 @@
 import argparse
+import os
 import json
 import uuid
 
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    with open(args.input) as f:
+    with open(os.path.basename(args.input)) as f:
         inputs = json.load(f)
 
     config.instance.load_configuration(from_db=False)

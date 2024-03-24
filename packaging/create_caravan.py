@@ -109,13 +109,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-p', '--path',
         help='Path to plugins urls json',
-        default='http://repository.cloudifysource.org/'
+        default='https://repository.cloudifysource.org/'
                 'cloudify/wagons/plugins.json',
     )
 
     args = parser.parse_args()
 
     build_caravan(
-        dir=args.dir,
+        dir=os.path.basename(args.dir),
         name=args.name,
         path=args.path)

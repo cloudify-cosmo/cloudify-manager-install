@@ -62,7 +62,7 @@ if __name__ == '__main__':
         required=True,
     )
     args = parser.parse_args()
-    with open(args.input, 'r') as f:
+    with open(os.path.basename(args.input), 'r') as f:
         args_dict = json.load(f)
 
     with setup_flask_app().app_context():

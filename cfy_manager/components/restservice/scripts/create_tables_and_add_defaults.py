@@ -66,7 +66,7 @@ if __name__ == '__main__':
         secret_key=config.instance.security_secret_key
     )
 
-    with open(args.input, 'r') as f:
+    with open(os.path.basename(args.input), 'r') as f:
         script_config = json.load(f)
 
     if script_config.get('db_migrate_dir'):
