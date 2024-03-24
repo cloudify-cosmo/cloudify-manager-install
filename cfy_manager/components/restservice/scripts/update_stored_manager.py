@@ -1,4 +1,5 @@
 import argparse
+import os
 import json
 import uuid
 
@@ -133,7 +134,12 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    with open(args.input) as f:
+
+    config_path = args.input
+    if os.path.abspath(config_path) != config_path:
+        exit("Invalid config file path")
+
+    with open(config_path) as f:
         inputs = json.load(f)
 
     config.instance.load_configuration(from_db=False)
