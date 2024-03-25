@@ -62,7 +62,12 @@ if __name__ == '__main__':
         required=True,
     )
     args = parser.parse_args()
-    with open(os.path.basename(args.input), 'r') as f:
+
+    config_path = args.input
+    if os.path.abspath(config_path) != config_path:
+        exit("Invalid config file path")
+
+    with open(config_path, 'r') as f:
         args_dict = json.load(f)
 
     with setup_flask_app().app_context():

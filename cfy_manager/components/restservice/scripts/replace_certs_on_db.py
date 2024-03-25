@@ -65,9 +65,14 @@ def main():
     )
 
     args = parser.parse_args()
+
+    config_path = args.input
+    if os.path.abspath(config_path) != config_path:
+        exit("Invalid config file path")
+
     init_flask_app()
 
-    with open(os.path.basename(args.input), 'r') as f:
+    with open(config_path, 'r') as f:
         script_input = json.load(f)
 
     update_cert(script_input.get('cert_path'), script_input.get('name'))

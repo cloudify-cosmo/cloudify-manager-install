@@ -65,8 +65,11 @@ if __name__ == '__main__':
         hash_salt=config.instance.security_hash_salt,
         secret_key=config.instance.security_secret_key
     )
+    config_path = args.input
+    if os.path.abspath(config_path) != config_path:
+        exit("Invalid config file path")
 
-    with open(os.path.basename(args.input), 'r') as f:
+    with open(config_path, 'r') as f:
         script_config = json.load(f)
 
     if script_config.get('db_migrate_dir'):
