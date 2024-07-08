@@ -1,0 +1,98 @@
+{
+    "@base_version": "7.1.0",
+    "@creation_date": "2024-03-21 09:31:14",
+    "@milestone": ".dev1",
+    "repos": [
+        {
+            "branch_name": "master",
+            "name": "cloudify-agent",
+            "sha_id": "ac7a1120fd63a3b543c034847dc0249b9ffb370f",
+            "tag": "7.1.0.dev1",
+            "version": "7.1.0.dev1"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-cli",
+            "sha_id": "21fc04aef5771b581e9dccb5364735c5c0768f63",
+            "tag": "7.1.0.dev1",
+            "version": "7.1.0.dev1"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-hello-world-example",
+            "sha_id": "0b3b27e43418ac9769068860048a0fefff6d2a43",
+            "tag": "7.1.0.dev1",
+            "version": null
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-plugin-template",
+            "sha_id": "aa272964c95705af723cdb13948988080391b680",
+            "tag": "7.1.0.dev1",
+            "version": "1.0"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-common",
+            "sha_id": "6d81d06ded9ddef53290f3a9346726a85f94a1bf",
+            "tag": "7.1.0.dev1",
+            "version": "7.1.0.dev1"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-premium",
+            "sha_id": "b0d44874e98854b3a4f7b28730b6b79d5297da85",
+            "tag": "7.1.0.dev1",
+            "version": "7.1.0.dev1"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-versions",
+            "sha_id": "6d17e0e3ca5195adf3b1d347852a79b30dce01a5",
+            "tag": "7.1.0.dev1",
+            "version": null
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-system-tests",
+            "sha_id": "025ddb5799d71b66ae766800af103a1d00a43260",
+            "tag": "7.1.0.dev1",
+            "version": "7.1.0.dev1"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-stage",
+            "sha_id": "23a5affbb4c18dbe878ccae7430ed891f7f0793e",
+            "tag": "7.1.0.dev1",
+            "version": null
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-manager",
+            "sha_id": "72ab8aaa48b05917be818a1ea60cd2ef210ce4d0",
+            "tag": "7.1.0.dev1",
+            "version": null
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-nodecellar-example",
+            "sha_id": "ce5d88bf5fedfbd3a7bdfaa5937cf9b494204789",
+            "tag": "7.1.0.dev1",
+            "version": null
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-manager-install",
+            "sha_id": "a06a5ce80f162bff952f9149dc1382dda83831c8",
+            "tag": "7.1.0.dev1",
+            "version": "7.1.0.dev1"
+        },
+        {
+            "branch_name": "master",
+            "name": "cloudify-blueprint-composer",
+            "sha_id": "7537651f134e98d8608976ee654698cd6c604a64",
+            "tag": "7.1.0.dev1",
+            "version": null
+        }
+    ]
+}
