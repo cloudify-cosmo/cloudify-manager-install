@@ -53,11 +53,11 @@ setup(
     install_requires=[
         'ruamel.yaml==0.16.10',
         'markupsafe==2.1.1',
-        'jinja2>3,<4',
+        'jinja2>=3.1.4,<4',
         'argh==0.26.2',
         'netifaces==0.10.9',
         'psutil==5.7.2',
-        'requests>=2.18,<3.0.0',
+        'requests>=2.32.0,<3.0.0',
         'retrying==1.3.3',
         'cryptography',
         'distro',    # replacing deprecated platform.linux_distribution
