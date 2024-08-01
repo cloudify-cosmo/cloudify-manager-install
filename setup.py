@@ -37,7 +37,7 @@ extra_files.append(join('..', 'config.yaml'))
 
 setup(
     name='cloudify-manager-install',
-    version='7.0.4',
+    version='7.0.5.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
