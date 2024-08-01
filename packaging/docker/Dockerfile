@@ -11,6 +11,11 @@ ARG gid=1500
 RUN groupadd -g $gid cfyuser
 RUN useradd -ms /bin/bash -g $gid --home-dir /etc/cloudify -u $uid cfyuser
 
+RUN echo "Fix mirrorlist no longer available. See https://serverfault.com/questions/1161816/mirrorlist-centos-org-no-longer-resolve#answer-1161847" && \
+    find /etc/yum.repos.d/ -type f -name "*.repo" -print0 | xargs -0 sed -i 's/mirror.centos.org/vault.centos.org/g' && \
+    find /etc/yum.repos.d/ -type f -name "*.repo" -print0 | xargs -0 sed -i 's/^#.*baseurl=http/baseurl=http/g' && \
+    find /etc/yum.repos.d/ -type f -name "*.repo" -print0 | xargs -0 sed -i 's/^mirrorlist=http/#mirrorlist=http/g'
+
 RUN yum install -y openssl-1.0.2k libselinux-utils \
     logrotate python-setuptools python-backports \
     python-backports-ssl_match_hostname which cronie \
