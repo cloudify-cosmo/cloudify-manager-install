@@ -59,7 +59,7 @@ setup(
         'psutil==5.7.2',
         'requests>=2.32.0,<3.0.0',
         'retrying==1.3.3',
-        'cryptography',
+        'cryptography==43.0.0',
         'distro',    # replacing deprecated platform.linux_distribution
         # supervisor is not used in this package directly, but it is
         # installed here to provide the `supervisord` executable
