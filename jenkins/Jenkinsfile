@@ -224,9 +224,9 @@ pipeline {
                       source .venv/bin/activate
                       cfy profile use ${env.MANAGER_IP} -u ${env.MANAGER_USERNAME} -p ${env.MANAGER_PASSWORD} -t ${env.MANAGER_TENANT} --ssl
                       pushd 'bp'
-                        cfy install -b ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
+                        cfy install -b ec2-manager-install-blueprint-${env.BUILD_NUMBER} ec2-manager-install-blueprint.yaml
                       popd
-                      cfy deployments capabilities ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --json > capabilities.json
+                      cfy deployments capabilities ec2-manager-install-blueprint-${env.BUILD_NUMBER} --json > capabilities.json
                       jq -r '.key_content.value' capabilities.json > ~/.ssh/ec2_ssh_key && chmod 600 ~/.ssh/ec2_ssh_key
                       sleep 160
                       ssh-keyscan -H \$(jq -r '.endpoint.value' capabilities.json) >> ~/.ssh/known_hosts
@@ -372,7 +372,7 @@ sudo /home/centos/${env.PROJECT}/jenkins/validate_status.sh "${env.CONTAINER_NAM
                   echo 'Uninstall and delete blueprint from manager'
                   sh """#!/bin/bash
                     source .venv/bin/activate
-                    cfy uninstall ec2-manager-install-blueprint-${env.BRANCH_NAME}-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
+                    cfy uninstall ec2-manager-install-blueprint-${env.BUILD_NUMBER} --force --allow-custom-parameters -p ignore_failures=true
                   """
                 }
               }
