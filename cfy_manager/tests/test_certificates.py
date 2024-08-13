@@ -21,7 +21,7 @@ def _mock_small_cert_size():
     In tests, we don't need to create large certs. Making the size small
     makes these tests faster by an order of magnitude.
     """
-    with mock.patch('cfy_manager.utils.certificates.CERT_SIZE', 512):
+    with mock.patch('cfy_manager.utils.certificates.CERT_SIZE', 1024):
         yield
 
 
@@ -77,7 +77,7 @@ def ca_cert(tmpdir):
 
     key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=512,  # no need for a big key in tests
+        key_size=1024,  # cryptography 42.0.3/changelog/3.3
     )
     key_password = 'key_password1'
 
@@ -289,7 +289,7 @@ def test_remove_key_encryption(tmpdir, ca_cert):
 
     key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=512,
+        key_size=1024,
     )
     with open(source_key, 'wb') as key_file:
         key_pem = key.private_bytes(
