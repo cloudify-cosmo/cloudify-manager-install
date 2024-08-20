@@ -1,5 +1,6 @@
 %define _tmpdir /tmp/prometheus
-%define _url    https://github.com/prometheus/prometheus/releases/download/v2.50.1/prometheus-2.50.1.linux-%{arch}.tar.gz
+%define PROMETHEUS_VERSION 2.53.2
+%define _url https://github.com/prometheus/prometheus/releases/download/v%{PROMETHEUS_VERSION}/prometheus-%{PROMETHEUS_VERSION}.linux-%{arch}.tar.gz
 
 # Prevent mangling shebangs (RH8 build default), which fails
 #  with the test files of networkx<2 due to RH8 not having python2.
@@ -11,7 +12,7 @@
 %endif
 
 Name:           prometheus
-Version:        2.50.1
+Version:        %{PROMETHEUS_VERSION}
 Release:        1%{?dist}
 Summary:        The Prometheus monitoring system and time series database.
 Group:          Applications/Multimedia
