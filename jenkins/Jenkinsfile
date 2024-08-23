@@ -165,7 +165,7 @@ pipeline {
                 """
               sh script: """
                 pushd rpms
-                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME}
+                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} --fallback-branch 7.0.5-build
                 popd
                 """, label: 'fetching requirements'
               echo 'prepare to build rpm'
