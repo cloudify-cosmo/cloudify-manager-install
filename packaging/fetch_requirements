@@ -233,7 +233,7 @@ def get_package_urls_file(edition, branch, repo_destination_path,
     if architecture == "aarch64":
         package_yaml_path = 'packages-urls/manager-packages-aarch.yaml'
         plugin_package_yaml_path = 'packages-urls/plugin-packages-aarch.yaml'
-    elif redhat_version == "8":
+    elif redhat_version == 8:
         package_yaml_path = 'packages-urls/manager-packages-rh8.yaml'
         plugin_package_yaml_path = 'packages-urls/plugin-packages-rh8.yaml'
 
@@ -459,8 +459,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--redhat-version',
         help='CentOS/RHEL version for which to get package resources. '
-             'Currently supported are 7 (default) and 8',
-        default='7',
+             'As of cloudify 7.0.5, only 8 is supported by cloudify-manager-installer',
+        default=8,
     )
 
     args = parser.parse_args()
