@@ -165,7 +165,7 @@ pipeline {
                 """
               sh script: """
                 pushd rpms
-                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME}
+                  /root/rpmbuild/SOURCES/packaging/fetch_requirements --edition premium -b ${BRANCH_NAME} --fallback-branch 7.0.5-build
                 popd
                 """, label: 'fetching requirements'
               echo 'prepare to build rpm'
@@ -292,8 +292,8 @@ cd ~/cloudify-manager-install
 echo 'Build manager container'
 set -eux
 ls -la .
-pushd packaging/docker
-  docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm --tag ${env.IMAGE_NAME} .
+pushd packaging/docker-rh8
+  docker build --network host --build-arg  rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el8.x86_64.rpm --tag ${env.IMAGE_NAME} .
 popd
 pushd jenkins/Dockerfiles/test
   docker build -t test-manager-image .
@@ -340,8 +340,8 @@ cd ~/cloudify-manager-install
 echo 'Build manager container'
 set -eux
 ls -la .
-pushd packaging/docker
-  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el7.x86_64.rpm --tag ${env.IMAGE_NAME} .
+pushd packaging/docker-rh8
+  docker build --network host --build-arg rpm_file=https://cloudify-release-eu.s3.amazonaws.com/cloudify/${env.S3_BUILD_PATH}/cloudify-manager-install-${env.VERSION}-${env.PRERELEASE}.el8.x86_64.rpm --tag ${env.IMAGE_NAME} .
 popd
 set -eux
 pushd jenkins/cluster

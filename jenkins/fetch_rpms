@@ -30,11 +30,16 @@ REPOS_RPMS = {
 }
 
 
-def get_cloudify_package_names(branch, package_pattern):
+def get_cloudify_package_names(branch, package_pattern, redhat_version=8):
+    if redhat_version == 8:
+        packages_list_file_name = 'manager-packages-rh8.yaml'
+    else:
+        packages_list_file_name = 'manager-packages.yaml'
+
     content = requests.get('https://raw.githubusercontent.com'
                            '/cloudify-cosmo/cloudify-premium/'
-                           '{0}/packages-urls/manager-packages.yaml'
-                           ''.format(branch),
+                           '{0}/packages-urls/{1}'
+                           ''.format(branch, packages_list_file_name),
                            auth=(os.environ['GITHUB_USERNAME'],
                                  os.environ['GITHUB_TOKEN'])
                            )

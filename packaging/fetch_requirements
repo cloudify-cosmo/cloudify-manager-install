@@ -167,9 +167,8 @@ def git_clone_and_checkout(branch, repo, repo_destination_path):
         repo_destination_path,
     ])
 
-
 def get_package_urls_file(edition, branch, repo_destination_path,
-                          architecture=None, redhat_version=7):
+                          architecture=None, redhat_version=8, fallback_branch='master'):
     """
         Get the package urls list, returning the paths to the file (in a dict).
         If the given branch does not exists, will default to repo's master.
@@ -221,11 +220,11 @@ def get_package_urls_file(edition, branch, repo_destination_path,
     # passwords onto the screen.
     try:
         git_clone_and_checkout(branch, repo, repo_destination_path)
-    except subprocess.CalledProcessError:
-        print('Could not git clone: {repo}, defaults to master'
-              .format(repo=output_repo))
+    except subprocess.SubprocessError:
+        print('Could not git clone: {repo}, defaults to {fallback}'
+              .format(repo=output_repo, fallback=fallback_branch))
         git_clone_and_checkout(
-            os.getenv('CORE_BRANCH', 'master'),
+            os.getenv('CORE_BRANCH', fallback_branch),
             repo, repo_destination_path
         )
 
@@ -234,7 +233,7 @@ def get_package_urls_file(edition, branch, repo_destination_path,
     if architecture == "aarch64":
         package_yaml_path = 'packages-urls/manager-packages-aarch.yaml'
         plugin_package_yaml_path = 'packages-urls/plugin-packages-aarch.yaml'
-    elif redhat_version == "8":
+    elif redhat_version == 8:
         package_yaml_path = 'packages-urls/manager-packages-rh8.yaml'
         plugin_package_yaml_path = 'packages-urls/plugin-packages-rh8.yaml'
 
@@ -381,7 +380,7 @@ def download_listed_resources(resource_file, destination_path, concurrency=5):
 
 
 def retrieve_resources(edition, branch, dev_branch, architecture=None,
-                       redhat_version="7"):
+                       redhat_version=8, fallback_branch='master'):
     """
         Retrieve all of the required resources for the installer.
     """
@@ -392,7 +391,8 @@ def retrieve_resources(edition, branch, dev_branch, architecture=None,
         current_branch,
         package_urls_destination,
         architecture,
-        redhat_version
+        redhat_version,
+        fallback_branch
     )
     if dev_branch:
         update_resources_url_on_dev_branch(
@@ -437,6 +437,15 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--fallback-branch',
+        help=(
+            'Which branch of cloudify versions/premium repo to get package '
+            'list from in case branch from -b arg does not exist.'
+        ),
+        default='master',
+    )
+
+    parser.add_argument(
         '--dev-branch',
         help='Dev branch to get package resources from.',
         default='',
@@ -450,8 +459,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--redhat-version',
         help='CentOS/RHEL version for which to get package resources. '
-             'Currently supported are 7 (default) and 8',
-        default='7',
+             'As of cloudify 7.0.5, only 8 is supported by cloudify-manager-installer',
+        default=8,
     )
 
     args = parser.parse_args()
@@ -461,4 +470,5 @@ if __name__ == '__main__':
         dev_branch=args.dev_branch,
         architecture=args.architecture,
         redhat_version=args.redhat_version,
+        fallback_branch=args.fallback_branch
     )

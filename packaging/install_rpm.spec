@@ -27,7 +27,7 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  createrepo, gcc, postgresql-devel
-Requires(pre):  shadow-utils
+Requires(pre):  python3, shadow-utils
 
 Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
 
