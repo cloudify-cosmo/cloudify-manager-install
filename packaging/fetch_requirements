@@ -461,6 +461,7 @@ if __name__ == '__main__':
         help='CentOS/RHEL version for which to get package resources. '
              'As of cloudify 7.0.5, only 8 is supported by cloudify-manager-installer',
         default=8,
+        type=int,
     )
 
     args = parser.parse_args()
