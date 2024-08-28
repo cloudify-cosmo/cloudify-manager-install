@@ -6,7 +6,6 @@ import time
 import shlex
 import shutil
 import socket
-import sys
 import logging
 import subprocess
 from functools import wraps
@@ -49,13 +48,6 @@ def run(command, retries=0, stdin=u'', ignore_failures=False,
     if not env:
         env = {}
         env.update(os.environ)
-    # Use actual python interpreter to install
-    # any deps that require python (like nodejs)
-    python_bin_path = sys.executable.removesuffix('/python')
-    if env.get('PATH'):
-        env['PATH'] = f"{python_bin_path}:{env.get('PATH')}"
-    else:
-        env['PATH'] = python_bin_path
     env = {k.encode('utf-8'): v.encode('utf-8') for k, v in env.items()}
     if 'LANG' not in env:
         env['LANG'] = 'en_US.utf-8'
