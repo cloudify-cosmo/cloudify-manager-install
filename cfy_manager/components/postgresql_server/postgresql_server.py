@@ -109,16 +109,6 @@ POSTGRES_PATRONI_CONFIG_PATH = '/var/lib/pgsql/14/data/pg_patroni_base.conf'
 
 # Postgres bin files needing symlinking for patroni
 PG_BIN_DIR = '/usr/pgsql-14/bin'
-PG_BINS = [
-    'clusterdb', 'createdb', 'createuser', 'dropdb', 'dropuser',
-    'pg_amcheck', 'pg_archivecleanup', 'pg_basebackup', 'pg_checksums',
-    'pg_config', 'pg_controldata', 'pg_ctl', 'pg_dump', 'pg_dumpall',
-    'pg_isready', 'pg_receivewal', 'pg_recvlogical', 'pg_resetwal',
-    'pg_restore', 'pg_rewind', 'pg_test_fsync', 'pg_test_timing', 'pg_upgrade',
-    'pg_verifybackup', 'pg_waldump', 'pgbench', 'postgres',
-    'postgresql-14-check-db-dir', 'postgresql-14-setup', 'postmaster', 'psql',
-    'reindexdb', 'vacuumdb', 'vacuumlo',
-]
 
 PG_HBA_HOST_REGEX_PATTERN = r'host\s+all\s+all\s+0\.0\.0\.0\/0\s+md5'
 PG_HBA_HOSTSSL_REGEX_PATTERN = \
@@ -134,6 +124,14 @@ POSTGRESQL_MAINTENANCE_WORK_MEM_MIN_BYTES = 64 * 1024 * 1024
 POSTGRESQL_WAL_BUFFERS_MAX_BYTES = 2047 * 1024 * 1024
 
 logger = get_logger(POSTGRESQL_SERVER)
+
+
+def _pgsql_bins_names():
+    return [
+        filename for filename in os.listdir(PG_BIN_DIR)
+        if os.path.isfile(os.path.join(PG_BIN_DIR, filename))
+        and os.access(os.path.join(PG_BIN_DIR, filename), os.X_OK)
+    ]
 
 
 class PostgresqlServer(BaseComponent):
@@ -787,7 +785,7 @@ class PostgresqlServer(BaseComponent):
 
     def _set_postgres_bin_links(self):
         logger.info('Creating postgres bin links for patroni')
-        for pg_bin in PG_BINS:
+        for pg_bin in _pgsql_bins_names():
             common.run(['ln', '-s', '-f', os.path.join(PG_BIN_DIR, pg_bin),
                         '/usr/sbin'])
 
@@ -1798,7 +1796,8 @@ class PostgresqlServer(BaseComponent):
             service.remove(POSTGRES_SERVICE_NAME)
         logger.info('Removing postgres bin links')
         files.remove(
-            [os.path.join('/usr/sbin', pg_bin) for pg_bin in PG_BINS],
+            [os.path.join('/usr/sbin', pg_bin)
+                for pg_bin in _pgsql_bins_names()],
             ignore_failure=True)
 
     def start(self):
