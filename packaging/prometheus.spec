@@ -1,5 +1,5 @@
 %define _tmpdir /tmp/prometheus
-%define PROMETHEUS_VERSION 2.54.1-cloudify-rebuild
+%define PROMETHEUS_VERSION 2.54.1_cloudify_rebuild
 %define _url https://repository.cloudifysource.org/cloudify/components/prometheus-%{PROMETHEUS_VERSION}.linux-%{arch}.tar.gz
 
 # Prevent mangling shebangs (RH8 build default), which fails

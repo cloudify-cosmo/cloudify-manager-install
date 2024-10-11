@@ -1,5 +1,5 @@
 %define _tmpdir /tmp/node_exporter
-%define NODE_EXPORTER_VERSION 1.8.2-cloudify-rebuild
+%define NODE_EXPORTER_VERSION 1.8.2_cloudify_rebuild
 %define _url https://repository.cloudifysource.org/cloudify/components/node_exporter-%{NODE_EXPORTER_VERSION}.linux-%{arch}.tar.gz
 
 Name:           node_exporter

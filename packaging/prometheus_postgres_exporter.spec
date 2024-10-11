@@ -1,8 +1,8 @@
 %define _tmpdir /tmp/postgres_exporter
-%define _url https://repository.cloudifysource.org/cloudify/components/postgres_exporter-0.15.0-cloudify-rebuild.linux-%{arch}.tar.gz
+%define _url https://repository.cloudifysource.org/cloudify/components/postgres_exporter-0.15.0_cloudify_rebuild.linux-%{arch}.tar.gz
 
 Name:           postgres_exporter
-Version:        0.15.0-cloudify-rebuild
+Version:        0.15.0_cloudify_rebuild
 Release:        1%{?dist}
 Summary:        Prometheus postgres_exporter
 Group:          Applications/Multimedia

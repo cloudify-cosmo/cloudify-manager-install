@@ -1,8 +1,8 @@
 %define _tmpdir /tmp/blackbox_exporter
-%define _url https://repository.cloudifysource.org/cloudify/components/blackbox_exporter-0.25.0-cloudify-rebuild.linux-%{arch}.tar.gz
+%define _url https://repository.cloudifysource.org/cloudify/components/blackbox_exporter-0.25.0_cloudify_rebuild.linux-%{arch}.tar.gz
 
 Name:           blackbox_exporter
-Version:        0.25.0-cloudify-rebuild
+Version:        0.25.0_cloudify_rebuild
 Release:        1%{?dist}
 Summary:        Prometheus blackbox_exporter
 Group:          Applications/Multimedia
