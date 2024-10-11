@@ -1,6 +1,6 @@
 %define _tmpdir /tmp/prometheus
-%define PROMETHEUS_VERSION 2.53.2
-%define _url https://github.com/prometheus/prometheus/releases/download/v%{PROMETHEUS_VERSION}/prometheus-%{PROMETHEUS_VERSION}.linux-%{arch}.tar.gz
+%define PROMETHEUS_VERSION 2.54.1_cloudify_rebuild
+%define _url https://repository.cloudifysource.org/cloudify/components/prometheus-%{PROMETHEUS_VERSION}.linux-%{arch}.tar.gz
 
 # Prevent mangling shebangs (RH8 build default), which fails
 #  with the test files of networkx<2 due to RH8 not having python2.
