@@ -1,6 +1,7 @@
 %define _tmpdir /tmp/node_exporter
-%define NODE_EXPORTER_VERSION 1.8.2
-%define _url    https://github.com/prometheus/node_exporter/releases/download/v%{NODE_EXPORTER_VERSION}/node_exporter-%{NODE_EXPORTER_VERSION}.linux-%{arch}.tar.gz
+%define NODE_EXPORTER_VERSION 1.8.2-cloudify-rebuild
+%define _url https://repository.cloudifysource.org/cloudify/components/node_exporter-%{NODE_EXPORTER_VERSION}.linux-%{arch}.tar.gz
+
 Name:           node_exporter
 Version:        %{NODE_EXPORTER_VERSION}
 Release:        1%{?dist}
