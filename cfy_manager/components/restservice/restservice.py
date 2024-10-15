@@ -127,7 +127,8 @@ class RestService(BaseComponent):
         }
         write(rest_conf, REST_CONFIG_PATH, json_dump=True,
               owner=constants.CLOUDIFY_USER,
-              group=constants.CLOUDIFY_GROUP)
+              group=constants.CLOUDIFY_GROUP,
+              mode=0o660)
 
     def _generate_flask_security_config(self):
         logger.info('Generating random hash salt and secret key...')
