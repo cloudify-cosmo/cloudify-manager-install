@@ -549,7 +549,7 @@ validations:
   supported_distros: [centos, rhel, redhat, rocky]
 
   # The supported versions of the above distros
-  supported_distro_versions: ['7', '8']
+  supported_distro_versions: ['7', '8', '9']
 
   # Environment variables that must be set. Values are regexps that the
   # environment variable must contain, or a list of regexps.

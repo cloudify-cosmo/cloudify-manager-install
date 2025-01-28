@@ -23,6 +23,7 @@ def _yum_install(packages, disable_all_repos=True):
     ] + packages
     if not disable_all_repos:
         install_cmd.remove('--disablerepo=*')
+        install_cmd.insert(2,'--nobest')
     run(install_cmd, stderr=subprocess.STDOUT)
 
 

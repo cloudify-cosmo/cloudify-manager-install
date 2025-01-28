@@ -41,3 +41,8 @@ COMPONENTS_DEPENDENCIES_RH8 = COMPONENTS_DEPENDENCIES.copy()
 COMPONENTS_DEPENDENCIES_RH8['default'] = \
     ['sudo', 'logrotate', 'yum', 'python3-setuptools']
 COMPONENTS_DEPENDENCIES_RH8['Nginx'] = ['openssl-1.1.1k']
+
+COMPONENTS_DEPENDENCIES_RH9 = COMPONENTS_DEPENDENCIES.copy()
+COMPONENTS_DEPENDENCIES_RH9['default'] = \
+    ['sudo', 'logrotate', 'yum', 'python3-setuptools']
+COMPONENTS_DEPENDENCIES_RH9['Nginx'] = []

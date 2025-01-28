@@ -908,7 +908,7 @@ def _get_packages():
 
     if service_is_in_config(QUEUE_SERVICE):
         queue_packages = sources.queue
-        if rh_version == "8" and machine() == "x86_64":
+        if rh_version in ["8","9"] and machine() == "x86_64":
             queue_packages += sources.queue_rh8_x86
         else:
             queue_packages += sources.queue_other
@@ -975,7 +975,10 @@ def install(verbose=False,
     set_globals(only_install=only_install)
     packages_to_install, packages_per_service_dict = _get_packages()
     update_yaml_file(INSTALLED_PACKAGES, packages_per_service_dict)
-    yum_install(packages_to_install)
+    if rh_version in ["9"] and machine() == "x86_64":
+        yum_install(packages_to_install,False)
+    else:
+        yum_install(packages_to_install)
 
     _configure_supervisord()
 

@@ -16,7 +16,8 @@
 from ..components_dependencies import (
     DEPENDENCIES_ERROR_MESSAGES,
     COMPONENTS_DEPENDENCIES,
-    COMPONENTS_DEPENDENCIES_RH8)
+    COMPONENTS_DEPENDENCIES_RH8,
+    COMPONENTS_DEPENDENCIES_RH9)
 from ...exceptions import ValidationError
 from ...utils.install import is_package_installed
 from ...utils import service
@@ -76,6 +77,11 @@ class BaseComponent(object):
             dependencies_list = \
                 COMPONENTS_DEPENDENCIES_RH8['default'] + \
                 COMPONENTS_DEPENDENCIES_RH8[self.__class__.__name__]
+        elif rh_version == "9":
+            dependencies_list = \
+                COMPONENTS_DEPENDENCIES_RH9['default'] + \
+                COMPONENTS_DEPENDENCIES_RH9[self.__class__.__name__]
+
         for dependency in dependencies_list:
             dependencies_dict.update({
                 dependency: DEPENDENCIES_ERROR_MESSAGES[dependency]})
