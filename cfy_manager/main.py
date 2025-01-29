@@ -972,6 +972,7 @@ def install(verbose=False,
         only_install=only_install,
     )
     logger.notice('Installing desired components...')
+    _, rh_version = _get_os_distro()
     set_globals(only_install=only_install)
     packages_to_install, packages_per_service_dict = _get_packages()
     update_yaml_file(INSTALLED_PACKAGES, packages_per_service_dict)
