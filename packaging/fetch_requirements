@@ -236,6 +236,9 @@ def get_package_urls_file(edition, branch, repo_destination_path,
     elif redhat_version == 8:
         package_yaml_path = 'packages-urls/manager-packages-rh8.yaml'
         plugin_package_yaml_path = 'packages-urls/plugin-packages-rh8.yaml'
+    elif redhat_version == 9:
+        package_yaml_path = 'packages-urls/manager-packages-rh9.yaml'
+        plugin_package_yaml_path = 'packages-urls/plugin-packages-rh9.yaml'
 
     return {
         'manager': os.path.join(repo_destination_path, package_yaml_path),
