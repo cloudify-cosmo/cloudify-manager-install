@@ -46,3 +46,4 @@ COMPONENTS_DEPENDENCIES_RH9 = COMPONENTS_DEPENDENCIES.copy()
 COMPONENTS_DEPENDENCIES_RH9['default'] = \
     ['sudo', 'logrotate', 'yum', 'python3-setuptools']
 COMPONENTS_DEPENDENCIES_RH9['Nginx'] = []
+COMPONENTS_DEPENDENCIES_RH9['RestService'] = ['openldap-compat']
