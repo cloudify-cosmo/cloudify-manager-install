@@ -11,6 +11,7 @@ DEPENDENCIES_ERROR_MESSAGES = {
     'python-backports': 'required by python',
     'python-backports-ssl_match_hostname': 'required by python',
     'python3-setuptools': 'required by python',
+    'openldap-compat': 'required for LDAP connectivity',
 }
 
 COMPONENTS_DEPENDENCIES = {
