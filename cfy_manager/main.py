@@ -908,8 +908,10 @@ def _get_packages():
 
     if service_is_in_config(QUEUE_SERVICE):
         queue_packages = sources.queue
-        if rh_version in ["8","9"] and machine() == "x86_64":
+        if rh_version in ["8"] and machine() == "x86_64":
             queue_packages += sources.queue_rh8_x86
+        elif rh_version in ["9"] and machine() == "x86_64":
+            queue_packages += sources.queue_rh9_x86
         else:
             queue_packages += sources.queue_other
         # Premium components

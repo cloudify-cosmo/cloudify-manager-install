@@ -31,6 +31,9 @@ db_cluster = [
     'libestr', 'libfastjson', 'etcd', 'patroni'
 ]
 queue_rh8_x86 = ['erlang']
+queue_rh9_x86 = [
+    'erlang','initscripts','lz4','pcre-devel','openldap-compat'
+]
 queue_other = ['esl-erlang']
 queue = ['libtool-ltdl', 'unixODBC',
          'rabbitmq-server', 'cloudify-rabbitmq']
